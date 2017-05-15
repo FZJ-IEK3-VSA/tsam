@@ -5,7 +5,7 @@ tsam is a python package which uses different machine learning algorithms for th
 
 A publication will follow soon which validates the methods and describes their capabilites.
 
- [![TODO:ZENODO](TODO: zenodo)](TODO: zenodo link)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.579998.svg)](https://doi.org/10.5281/zenodo.579998)
  
 ## Features
 * flexible read-in and handling of multidimensional time-series via the pandas module
