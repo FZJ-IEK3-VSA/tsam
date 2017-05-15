@@ -1,0 +1,12 @@
+# directories
+__pycache__/
+trash/
+example/.ipynb_checkpoints/
+
+# file types to ignore
+*.pyc
+*.egg-info
+*.log
+
+# results in the example folder
+example/testperiods.csv
