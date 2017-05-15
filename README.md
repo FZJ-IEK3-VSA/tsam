@@ -44,9 +44,9 @@ Read in the time series data set with pandas
 Initialize an aggregation object and define the number of typical periods, the length of a single period and the aggregation method
 	
 	aggregation = tsam.TimeSeriesAggregation(raw, 
-											noTypicalPeriods = 8, 
-											hoursPerPeriod = 24, 
-											clusterMethod = 'hierarchical')
+			noTypicalPeriods = 8, 
+			hoursPerPeriod = 24, 
+			clusterMethod = 'hierarchical')
 
 Run the aggregation to typical periods
 	
