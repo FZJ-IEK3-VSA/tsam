@@ -27,11 +27,11 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         Specify the time limit of the solver.
     threads: int, optional, default: 7
         Threads to use by the optimization solver.
-    solver: str, optional, default: gurobi
+    solver: str, optional, default: 'glpk'
     """
 
     def __init__(self, n_clusters = 8, distance_metric = 'euclidean',
-                 timelimit = 100, threads = 7, solver = 'gurobi'):
+                 timelimit = 100, threads = 7, solver = 'glpk'):
 
         self.n_clusters = n_clusters
 
