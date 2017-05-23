@@ -56,7 +56,7 @@ Store the results as .csv file
 	
 	typPeriods.to_csv('typperiods.csv')
 
-A more detailed example showing the capabilites of tsa is found [`here`](https://134.94.251.61/l-kotzur/tsa/blob/opensource/example/aggregation_example.ipynb) as jupyter notebook. 
+A more detailed example showing the capabilites of tsa is found [`here`](https://github.com/FZJ-IEK3-VSA/tsam/blob/master/example/aggregation_example.ipynb) as jupyter notebook. 
 
 The example time series are based on a department [publication](http://www.mdpi.com/1996-1073/10/3/361) and the [test reference years of the DWD](http://www.dwd.de/DE/leistungen/testreferenzjahre/testreferenzjahre.html).
 
