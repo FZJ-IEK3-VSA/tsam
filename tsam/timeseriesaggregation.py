@@ -595,12 +595,7 @@ class TimeSeriesAggregation(object):
         series in the typical Periods fits the mean value of the original time
         series, without changing the values of the extremePeriods.
         '''
-        clusterPeriodNoOccur = {}
-        for typPeriod in range(len(clusterPeriods)):
-            clusterPeriodNoOccur[typPeriod] = 0
-        for daynum in clusterOrder:
-            clusterPeriodNoOccur[daynum] += 1
-        weightingVec = pd.Series(clusterPeriodNoOccur).values
+        weightingVec = pd.Series(self.clusterPeriodNoOccur).values
         typicalPeriods = pd.DataFrame(
             clusterPeriods, columns=self.normalizedPeriodlyProfiles.columns)
         idx_wo_peak = np.delete(typicalPeriods.index, extremeClusterIdx)
@@ -783,6 +778,11 @@ class TimeSeriesAggregation(object):
                                      addMeanMax = self.addMeanMax)
         else:
             self.extremeClusterIdx = []
+
+        # get number of appearance of the the typical periods
+        nums,counts = np.unique(self.clusterOrder, return_counts=True)
+        self.clusterPeriodNoOccur = {num: counts[ii] for ii,num in enumerate(nums)}
+        
 
         if self.rescaleClusterPeriods:
             self.clusterPeriods = self._rescaleClusterPeriods(
