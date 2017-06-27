@@ -110,7 +110,7 @@ def aggregatePeriods(candidates, n_clusters=8,
         clusterCenters = k_means.cluster_centers_
 
     elif clusterMethod == 'k_medoids':
-        from tsa.utils.k_medoids_exact import KMedoids
+        from tsam.utils.k_medoids_exact import KMedoids
         k_medoid = KMedoids(n_clusters = n_clusters) 
 
         clusterOrder = k_medoid.fit_predict(candidates)
