@@ -5,8 +5,8 @@ tsam is a python package which uses different machine learning algorithms for th
 
 A publication will follow soon which validates the methods and describes their capabilites.
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.579998.svg)](https://doi.org/10.5281/zenodo.579998)
- 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597956.svg)](https://doi.org/10.5281/zenodo.597956)
+
 ## Features
 * flexible read-in and handling of multidimensional time-series via the pandas module
 * different aggregation methods implemented (averaging, k-mean, exact k-medoid, hierarchical), which are based on scikit-learn or pyomo
