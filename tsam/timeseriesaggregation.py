@@ -474,6 +474,9 @@ class TimeSeriesAggregation(object):
         self.extremePeriods = {}
         extremePeriodNo = []
         
+        ccList = [center.tolist() for center in clusterCenters]
+        
+        
         # check which extreme periods exist in the profile and add them to
         # self.extremePeriods dict
         for column in self.timeSeries.columns:
@@ -481,7 +484,9 @@ class TimeSeriesAggregation(object):
             if column in addPeakMax:
                 stepNo = groupedSeries[column].max(axis=1).idxmax()
                 # add only if stepNo is not already in extremePeriods
-                if not stepNo in extremePeriodNo:
+                # if it is not already a cluster center
+                if (not stepNo in extremePeriodNo) and not (
+                        groupedSeries.ix[stepNo].values.tolist() in ccList):
                     self.extremePeriods[column + ' max.'] = \
                         {'stepNo': stepNo,
                          'profile': groupedSeries.ix[stepNo].values,
@@ -491,7 +496,9 @@ class TimeSeriesAggregation(object):
             if column in addPeakMin:
                 stepNo = groupedSeries[column].min(axis=1).idxmin()
                 # add only if stepNo is not already in extremePeriods
-                if not stepNo in extremePeriodNo:
+                # if it is not already a cluster center
+                if (not stepNo in extremePeriodNo) and not (
+                        groupedSeries.ix[stepNo].values.tolist() in ccList):
                     self.extremePeriods[column + ' min.'] = \
                         {'stepNo': stepNo,
                          'profile': groupedSeries.ix[stepNo].values,
@@ -501,7 +508,9 @@ class TimeSeriesAggregation(object):
             if column in addMeanMax:
                 stepNo = groupedSeries[column].mean(axis=1).idxmax()
                 # add only if stepNo is not already in extremePeriods
-                if not stepNo in extremePeriodNo:
+                # if it is not already a cluster center
+                if (not stepNo in extremePeriodNo) and not (
+                        groupedSeries.ix[stepNo].values.tolist() in ccList):
                     self.extremePeriods[column + ' daily min.'] = \
                         {'stepNo': stepNo,
                          'profile': groupedSeries.ix[stepNo].values,
@@ -510,8 +519,10 @@ class TimeSeriesAggregation(object):
                     
             if column in addMeanMin:
                 stepNo = groupedSeries[column].mean(axis=1).idxmin()
-                # add only if stepNo is not already in extremePeriods
-                if not stepNo in extremePeriodNo:
+                # add only if stepNo is not already in extremePeriods and
+                # if it is not already a cluster center
+                if (not stepNo in extremePeriodNo) and not (
+                        groupedSeries.ix[stepNo].values.tolist() in ccList):
                     self.extremePeriods[column + ' daily min.'] = \
                         {'stepNo': stepNo,
                          'profile': groupedSeries.ix[stepNo].values,
@@ -644,7 +655,6 @@ class TimeSeriesAggregation(object):
                 diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
                 a += 1
         return typicalPeriods.values
-
 
 
     def _clusterSortedPeriods(self, candidates, n_init=20):
