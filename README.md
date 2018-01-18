@@ -29,6 +29,8 @@ Or install directly via python as
 
 	python setup.py install
 	
+In order to use the k-medoid clustering, make sure that you have installed a MILP solver. As default solver GLPK is used. Nevertheless, we recommend commercial solvers (Gurobi or CPLEX) in case you have access to a license since they have much better performance.
+	
 	
 ## Examples
 
