@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='tsam',
-    version='0.9.2',
+    version='0.9.4',
     author='Leander Kotzur',
     url='',
     packages = ['tsam',
