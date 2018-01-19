@@ -3,6 +3,7 @@
 # tsam - Time Series Aggregation Module
 tsam is a python package which uses different machine learning algorithms for the aggregation of typical periods. It is applicable for all type of time series, eather weather data, load data or both simultaneously. The module is able to significantly reduce input time series for energy system models, and therefore the model's complexity and computational time. 
 
+
 A publication which validates the methods and describes their cababilites is found [`here`](https://www.sciencedirect.com/science/article/pii/S0960148117309783). The manuscript is found [`here`](https://arxiv.org/abs/1708.00420). If you want to use tsam in a published work, please kindly cite that publication. 
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597956.svg)](https://doi.org/10.5281/zenodo.597956)
