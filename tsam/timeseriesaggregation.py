@@ -210,16 +210,16 @@ class TimeSeriesAggregation(object):
                     cluster where the extreme period belongs to with the periodly
                     profile of the extreme period. (Worst case system design)
         addPeakMin: list, optional, default: ['Temperature', 'T','T_e']
-            List of columns which's minimal value shall be added to the 
+            List of column names which's minimal value shall be added to the 
             typical periods.
         addPeakMax: list, optional, default: ['EDemand', 'HDemand', 'E-Load','bElecLoad'],
-            List of columns which's maximal value shall be added to the 
+            List of column names which's maximal value shall be added to the 
             typical periods.
         addMeanMin: list, optional, default: ['Photovoltaic', 'GHI', 'DNI', 'Wind'],
-            List of columns where the period with the cumulative minimal value
+            List of column names where the period with the cumulative minimal value
             shall be added to the typical periods.
         addMeanMax: list, optional, default: []      
-            List of columns where the period with the cumulative maximal value
+            List of column names where the period with the cumulative maximal value
             shall be added to the typical periods.
         '''
         self.timeSeries = timeSeries
@@ -529,11 +529,10 @@ class TimeSeriesAggregation(object):
                          'column': column}
                     extremePeriodNo.append(stepNo)
                     
-                    
-        # preprocess extreme periods
         for periodType in self.extremePeriods:
+            # get current related clusters of extreme periods
             self.extremePeriods[periodType]['clusterNo'] = clusterOrder[
-                self.extremePeriods[periodType]['stepNo']]
+                self.extremePeriods[periodType]['stepNo']]            
 
         # init new cluster structure
         newClusterCenters = []
@@ -569,12 +568,19 @@ class TimeSeriesAggregation(object):
                 cluster_dist = sum(
                     (groupedSeries.ix[i].values - clusterCenters[cPeriod])**2)
                 for ii, extremPeriodType in enumerate(self.extremePeriods):
+                    # exclude other extreme periods from adding to the new 
+                    # cluster center
+                    isOtherExtreme = False
+                    for otherExPeriod in self.extremePeriods:
+                        if (i == self.extremePeriods[otherExPeriod]['stepNo'] 
+                            and otherExPeriod != extremPeriodType):
+                            isOtherExtreme = True
                     # calculate distance to extreme periods
                     extperiod_dist = sum(
                         (groupedSeries.ix[i].values -
                          self.extremePeriods[extremPeriodType]['profile'])**2)
                     # choose new cluster relation
-                    if extperiod_dist < cluster_dist:
+                    if extperiod_dist < cluster_dist and not isOtherExtreme:
                         newClusterOrder[i] = self.extremePeriods[
                             extremPeriodType]['newClusterNo']
 
