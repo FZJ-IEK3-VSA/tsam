@@ -3,13 +3,13 @@
 # tsam - Time Series Aggregation Module
 tsam is a python package which uses different machine learning algorithms for the aggregation of typical periods. It is applicable for all type of time series, eather weather data, load data or both simultaneously. The module is able to significantly reduce input time series for energy system models, and therefore the model's complexity and computational time. 
 
-A publication which validates the methods and describes their cababilites is found [`here`](https://www.sciencedirect.com/science/article/pii/S0960148117309783). The manuscript is found [`here`](https://arxiv.org/abs/1708.00420).
+A publication which validates the methods and describes their cababilites is found [`here`](https://www.sciencedirect.com/science/article/pii/S0960148117309783). The manuscript is found [`here`](https://arxiv.org/abs/1708.00420). If you want to use tsam in a published work, please kindly cite that publication. 
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597956.svg)](https://doi.org/10.5281/zenodo.597956)
 
 ## Features
 * flexible read-in and handling of multidimensional time-series via the pandas module
-* different aggregation methods implemented (averaging, k-mean, exact k-medoid, hierarchical), which are based on scikit-learn or pyomo
+* different aggregation methods implemented (averaging, k-means, exact k-medoids, hierarchical), which are based on scikit-learn or pyomo
 * flexible integration of extreme periods as own cluster centers
 * weighting for the case of multidimensional time-series to represent their relevance
 
@@ -29,7 +29,7 @@ Or install directly via python as
 
 	python setup.py install
 	
-In order to use the k-medoid clustering, make sure that you have installed a MILP solver. As default solver GLPK is used. Nevertheless, we recommend commercial solvers (Gurobi or CPLEX) in case you have access to a license since they have much better performance.
+In order to use the k-medoids clustering, make sure that you have installed a MILP solver. As default solver GLPK is used. Nevertheless, in case you have access to a license we recommend commercial solvers (e.g. Gurobi or CPLEX) since they have a better performance.
 	
 	
 ## Examples
@@ -64,29 +64,17 @@ The example time series are based on a department [publication](http://www.mdpi.
 
 ## License
 
-Copyright (C) 2016-2017 Leander Kotzur (FZJ IEK-3), Peter Markewitz (FZJ IEK-3), Martin Robinius (FZJ IEK-3), Detlef Stolten (FZJ IEK-3)
+MIT License
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+Copyright (C) 2016-2018 Leander Kotzur (FZJ IEK-3), Peter Markewitz (FZJ IEK-3), Martin Robinius (FZJ IEK-3), Detlef Stolten (FZJ IEK-3)
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>
+You should have received a copy of the MIT License along with this program.
+If not, see https://opensource.org/licenses/MIT
 
 ## About Us 
 <a href="http://www.fz-juelich.de/iek/iek-3/EN/Forschung/_Process-and-System-Analysis/_node.html"><img src="http://fz-juelich.de/SharedDocs/Bilder/IEK/IEK-3/Abteilungen2015/VSA_DepartmentPicture_2017.jpg?__blob=normal" alt="Abteilung VSA"></a> 
 
 We are the [Process and Systems Analysis](http://www.fz-juelich.de/iek/iek-3/EN/Forschung/_Process-and-System-Analysis/_node.html) department at the [Institute of Energy and Climate Research: Electrochemical Process Engineering (IEK-3)](http://www.fz-juelich.de/iek/iek-3/EN/Home/home_node.html) belonging to the Forschungszentrum Jülich. Our interdisciplinary department's research is focusing on energy-related process and systems analyses. Data searches and system simulations are used to determine energy and mass balances, as well as to evaluate performance, emissions and costs of energy systems. The results are used for performing comparative assessment studies between the various systems. Our current priorities include the development of energy strategies, in accordance with the German Federal Government’s greenhouse gas reduction targets, by designing new infrastructures for sustainable and secure energy supply chains and by conducting cost analysis studies for integrating new technologies into future energy market frameworks.
-
-#### Selected publications:
-
-* <a href="http://www.sciencedirect.com/science/article/pii/S0360319915001913">Power to gas: Technological overview, systems analysis and economic assessment for a case study in Germany</a>
-* <a href="http://www.mdpi.com/1996-1073/10/4/451">Power-to-Steel: Reducing CO2 through the Integration of Renewable Energy and Hydrogen into the German Steel Industry</a>
-* <a href="http://www.sciencedirect.com/science/article/pii/S0306261916309199">Early power to gas applications: Reducing wind farm forecast errors and providing secondary control reserve</a>
-* <a href="http://www.mdpi.com/1996-1073/10/3/361">A Top-Down Spatially Resolved Electrical Load Model</a>
-* <a href="http://www.sciencedirect.com/science/article/pii/S0360319917310054">Long-term power-to-gas potential from wind and solar power: A country analysis for Italy</a>
-* <a href="http://pubs.rsc.org/en/Content/ArticleLanding/2015/EE/c5ee02591e">Closing the loop: captured CO2 as a feedstock in the chemical industry</a>
 
 
 ## Acknowledgement
