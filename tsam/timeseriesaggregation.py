@@ -154,9 +154,9 @@ class TimeSeriesAggregation(object):
                  evalSumPeriods = False, sortValues = False, sameMean = False,
                  rescaleClusterPeriods=True, weightDict={},
                  extremePeriodMethod = 'None', 
-                 addPeakMin = ['Temperature', 'T','T_e'],
-                 addPeakMax = ['EDemand', 'HDemand', 'E-Load','bElecLoad'],
-                 addMeanMin = ['Photovoltaic', 'GHI', 'DNI', 'Wind'],
+                 addPeakMin = [],
+                 addPeakMax = [],
+                 addMeanMin = [],
                  addMeanMax = []):
         '''
         Initialize the periodly clusters.
@@ -209,15 +209,15 @@ class TimeSeriesAggregation(object):
                 'replace_cluster_center': replaces the cluster center of the
                     cluster where the extreme period belongs to with the periodly
                     profile of the extreme period. (Worst case system design)
-        addPeakMin: list, optional, default: ['Temperature', 'T','T_e']
+        addPeakMin: list, optional, default: []
             List of column names which's minimal value shall be added to the 
-            typical periods.
-        addPeakMax: list, optional, default: ['EDemand', 'HDemand', 'E-Load','bElecLoad'],
+            typical periods. E.g.: ['Temperature']
+        addPeakMax: list, optional, default: []
             List of column names which's maximal value shall be added to the 
-            typical periods.
-        addMeanMin: list, optional, default: ['Photovoltaic', 'GHI', 'DNI', 'Wind'],
+            typical periods. E.g. ['EDemand', 'HDemand']
+        addMeanMin: list, optional, default: []
             List of column names where the period with the cumulative minimal value
-            shall be added to the typical periods.
+            shall be added to the typical periods. E.g. ['Photovoltaic']
         addMeanMax: list, optional, default: []      
             List of column names where the period with the cumulative maximal value
             shall be added to the typical periods.
@@ -270,6 +270,23 @@ class TimeSeriesAggregation(object):
                                  'in initialization of object of class ' +
                                  (type(self).__name__))
         
+        # check if extreme periods exist in the dataframe
+        for peak in self.addPeakMin:
+            if peak not in self.timeSeries.columns:
+                raise ValueError(peak + ' listed in "addPeakMin"' + 
+                                 ' does not occure as timeSeries column')
+        for peak in self.addPeakMax:
+            if peak not in self.timeSeries.columns:
+                raise ValueError(peak + ' listed in "addPeakMax"' + 
+                                 ' does not occure as timeSeries column')
+        for peak in self.addMeanMin:
+            if peak not in self.timeSeries.columns:
+                raise ValueError(peak + ' listed in "addMeanMin"' + 
+                                 ' does not occure as timeSeries column')
+        for peak in self.addMeanMax:
+            if peak not in self.timeSeries.columns:
+                raise ValueError(peak + ' listed in "addMeanMax"' + 
+                                 ' does not occure as timeSeries column')
         
         # set or check resolution
         if self.resolution is None:
