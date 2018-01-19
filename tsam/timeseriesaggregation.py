@@ -455,10 +455,9 @@ class TimeSeriesAggregation(object):
     def _addExtremePeriods(self, groupedSeries, clusterCenters,
                         clusterOrder, 
                         extremePeriodMethod='new_cluster_center',
-                        addPeakMin = ['Temperature', 'T','T_e'],
-                        addPeakMax = ['EDemand', 'HDemand', 'E-Load', 
-                                      'bElecLoad'],
-                        addMeanMin = ['Photovoltaic', 'GHI', 'DNI', 'Wind'],
+                        addPeakMin = [],
+                        addPeakMax = [],
+                        addMeanMin = [],
                         addMeanMax = [] ):
         '''
         Adds different extreme periods based on the to the clustered data,
