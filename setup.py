@@ -5,7 +5,7 @@ with open( os.path.join(dir_path,'requirements.txt') ) as f:
 
 setuptools.setup(
     name='tsam',
-    version='0.9.4',
+    version='0.9.5',
     author='Leander Kotzur',
     url='',
     include_package_data=True, # includes all files in sdist that are tracked in git, additionall using the MANIFEST.in to exclude some of them
