@@ -2,6 +2,7 @@
 __pycache__/
 trash/
 example/.ipynb_checkpoints/
+*.eggs/
 
 # file types to ignore
 *.pyc
