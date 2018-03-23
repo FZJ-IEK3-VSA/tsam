@@ -757,11 +757,6 @@ class TimeSeriesAggregation(object):
         -------
         self.clusterPeriods
             All typical Periods in normalized form.
-        self.clusterOrder
-            The order of the cluster Periods related to the original profile.
-        self.clusterPeriodDict
-            Cluster Periods as dictionary with the profile names as keys in
-            original scaling.
         '''
         self._preProcessTimeSeries()
 
