@@ -4,7 +4,9 @@
 tsam is a python package which uses different machine learning algorithms for the aggregation of typical periods. It is applicable for all type of time series, eather weather data, load data or both simultaneously. The module is able to significantly reduce input time series for energy system models, and therefore the model's complexity and computational time. 
 
 
-A publication which validates the methods and describes their cababilites is found [`here`](https://www.sciencedirect.com/science/article/pii/S0960148117309783). The manuscript is found [`here`](https://arxiv.org/abs/1708.00420). If you want to use tsam in a published work, please kindly cite that publication. 
+A publication which validates the methods and describes their cababilites is found [**here**](https://www.sciencedirect.com/science/article/pii/S0960148117309783). The manuscript is found [`here`](https://arxiv.org/abs/1708.00420). If you want to use tsam in a published work, please kindly cite that publication. 
+
+A [**second publication**](https://www.sciencedirect.com/science/article/pii/S0306261918300242) introduces a method how to model states (e.g. state of charge of storage) between the aggregated typical periods.
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597956.svg)](https://doi.org/10.5281/zenodo.597956)
 
@@ -35,31 +37,44 @@ In order to use the k-medoids clustering, make sure that you have installed a MI
 	
 ## Examples
 
-A small example how tsam can be used is decribed as follows
+### Basic workflow
 
+A small example how tsam can be used is decribed as follows
+```python
 	import pandas as pd
 	import tsam.timeseriesaggregation as tsam
+```
+
 
 Read in the time series data set with pandas
-	
+```python
 	raw = pd.read_csv('testdata.csv', index_col = 0)
+```
 
 Initialize an aggregation object and define the number of typical periods, the length of a single period and the aggregation method
-	
+```python
 	aggregation = tsam.TimeSeriesAggregation(raw, 
 						noTypicalPeriods = 8, 
 						hoursPerPeriod = 24, 
 						clusterMethod = 'hierarchical')
+```
 
 Run the aggregation to typical periods
-	
+```python
 	typPeriods = aggregation.createTypicalPeriods()
+```
 
 Store the results as .csv file
 	
+```python
 	typPeriods.to_csv('typperiods.csv')
+```
 
-A more detailed example showing the capabilites of tsam is found [`here`](https://github.com/FZJ-IEK3-VSA/tsam/blob/master/example/aggregation_example.ipynb) as jupyter notebook. 
+### Detailed examples
+
+A [**first example**](example/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook. 
+
+A [**second example**](example/aggregation_example.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
 
 The example time series are based on a department [publication](http://www.mdpi.com/1996-1073/10/3/361) and the [test reference years of the DWD](http://www.dwd.de/DE/leistungen/testreferenzjahre/testreferenzjahre.html).
 
