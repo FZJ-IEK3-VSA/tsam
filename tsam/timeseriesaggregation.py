@@ -97,6 +97,12 @@ def aggregatePeriods(candidates, n_clusters=8,
         Chosen clustering algorithm. Possible values are 
         'averaging','k_means','exact k_medoid' or 'hierarchical'
     '''
+
+    if clusterMethod == 'hierarchical':
+        clusterCenterIndices = []
+    else:
+        clusterCenterIndices = None
+
     # cluster the data
     if clusterMethod == 'averaging':
         n_sets = len(candidates)
@@ -153,8 +159,9 @@ def aggregatePeriods(candidates, n_clusters=8,
             innerDistMatrix = euclidean_distances(candidates[indice])
             mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
             clusterCenters.append(candidates[indice][mindistIdx])
+            clusterCenterIndices.append(indice[0][mindistIdx])
 
-    return clusterCenters, clusterOrder
+    return clusterCenters, clusterCenterIndices, clusterOrder
 
 
 
@@ -723,7 +730,7 @@ class TimeSeriesAggregation(object):
         distanceMedoid_iter = []
 
         for i in range(n_init):
-            altClusterCenters, clusterOrders_C = aggregatePeriods(
+            altClusterCenters, clusterCenterIndices, clusterOrders_C = aggregatePeriods(
                 sortedClusterValues, n_clusters=self.noTypicalPeriods, n_iter=30,
                 clusterMethod = self.clusterMethod)
 
@@ -800,7 +807,8 @@ class TimeSeriesAggregation(object):
         cluster_duration = time.time()
         if not self.sortValues:
             # cluster the data
-            self.clusterCenters, self._clusterOrder = aggregatePeriods(
+            self.clusterCenters, self.clusterCenterIndices, \
+                self._clusterOrder = aggregatePeriods(
                 candidates, n_clusters=self.noTypicalPeriods, n_iter=100,
                 clusterMethod=self.clusterMethod)
         else:
