@@ -1,4 +1,5 @@
 # directories
+.idea/
 __pycache__/
 trash/
 example/.ipynb_checkpoints/
