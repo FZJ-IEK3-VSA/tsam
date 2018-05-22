@@ -19,7 +19,7 @@ setuptools.setup(
     install_requires = required_packages,
     setup_requires = ['setuptools-git'],
     classifiers=[
-        'Development Status :: 0.9 - Prerelase',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: End Users/Desktop',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
