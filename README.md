@@ -4,11 +4,9 @@
 tsam is a python package which uses different machine learning algorithms for the aggregation of typical periods. It is applicable for all type of time series, eather weather data, load data or both simultaneously. The module is able to significantly reduce input time series for energy system models, and therefore the model's complexity and computational time. 
 
 
-A publication which validates the methods and describes their cababilites is found [**here**](https://www.sciencedirect.com/science/article/pii/S0960148117309783). The manuscript is found [`here`](https://arxiv.org/abs/1708.00420). If you want to use tsam in a published work, please kindly cite that publication. 
+If you want to use tsam in a published work, please [**kindly cite following publication**](https://www.sciencedirect.com/science/article/pii/S0960148117309783) which validates the methods and describes their cababilites. The manuscript is found [**here**](https://arxiv.org/abs/1708.00420). 
 
 A [**second publication**](https://www.sciencedirect.com/science/article/pii/S0306261918300242) introduces a method how to model states (e.g. state of charge of storage) between the aggregated typical periods.
-
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597956.svg)](https://doi.org/10.5281/zenodo.597956)
 
 ## Features
 * flexible read-in and handling of multidimensional time-series via the pandas module
@@ -18,8 +16,11 @@ A [**second publication**](https://www.sciencedirect.com/science/article/pii/S03
 
 
 ## Installation
+Directly install via pip as follows:
 
-First clone a local copy of the repository to your computer
+	pip install tsam
+
+Alternatively, clone a local copy of the repository to your computer
 
 	git clone https://github.com/FZJ-IEK3-VSA/tsam.git
 	
@@ -72,9 +73,9 @@ Store the results as .csv file
 
 ### Detailed examples
 
-A [**first example**](example/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook. 
+A [**first example**](https://github.com/FZJ-IEK3-VSA/tsam/blob/master/example/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook. 
 
-A [**second example**](example/aggregation_example.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
+A [**second example**](https://github.com/FZJ-IEK3-VSA/tsam/blob/master/example/aggregation_optiinput.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
 
 The example time series are based on a department [publication](http://www.mdpi.com/1996-1073/10/3/361) and the [test reference years of the DWD](http://www.dwd.de/DE/leistungen/testreferenzjahre/testreferenzjahre.html).
 
@@ -95,6 +96,9 @@ We are the [Process and Systems Analysis](http://www.fz-juelich.de/iek/iek-3/EN/
 
 ## Acknowledgement
 
-This work was supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050 – A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/).
+This work was supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050   A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/).
 
 <a href="https://www.helmholtz.de/en/"><img src="https://www.helmholtz.de/fileadmin/user_upload/05_aktuelles/Marke_Design/logos/HG_LOGO_S_ENG_RGB.jpg" alt="Helmholtz Logo" width="200px" style="float:right"></a>
+
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597956.svg)](https://doi.org/10.5281/zenodo.597956)
