@@ -80,7 +80,7 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
 
 
 def aggregatePeriods(candidates, n_clusters=8,
-                     n_iter=100, clusterMethod='k_means'):
+                     n_iter=100, clusterMethod='k_means', solver='glpk'):
     '''
     Clusters the data based on one of the cluster methods:
         'averaging','k_means','exact k_medoid' or 'hierarchical'
@@ -138,7 +138,7 @@ def aggregatePeriods(candidates, n_clusters=8,
 
     elif clusterMethod == 'k_medoids':
         from tsam.utils.k_medoids_exact import KMedoids
-        k_medoid = KMedoids(n_clusters=n_clusters)
+        k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
 
         clusterOrder = k_medoid.fit_predict(candidates)
         clusterCenters = k_medoid.cluster_centers_
@@ -180,7 +180,7 @@ class TimeSeriesAggregation(object):
                  hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
                  rescaleClusterPeriods=True, weightDict=None,
-                 extremePeriodMethod='None',
+                 extremePeriodMethod='None', solver='glpk',
                  addPeakMin=None,
                  addPeakMax=None,
                  addMeanMin=None,
@@ -236,6 +236,8 @@ class TimeSeriesAggregation(object):
                 'replace_cluster_center': replaces the cluster center of the
                     cluster where the extreme period belongs to with the periodly
                     profile of the extreme period. (Worst case system design)
+        solver: string, optional (default: 'glpk' )
+            Solver that is used for k_medoids clustering.
         addPeakMin: list, optional, default: []
             List of column names which's minimal value shall be added to the
             typical periods. E.g.: ['Temperature']
@@ -280,6 +282,8 @@ class TimeSeriesAggregation(object):
         self.rescaleClusterPeriods = rescaleClusterPeriods
 
         self.weightDict = weightDict
+
+        self.solver = solver
 
         self.addPeakMin = addPeakMin
 
@@ -617,11 +621,11 @@ class TimeSeriesAggregation(object):
                     'newClusterNo'] = i + len(clusterCenters)
 
             for i, cPeriod in enumerate(newClusterOrder):
-                # caclulate euclidean distance to cluster center            
+                # caclulate euclidean distance to cluster center
                 cluster_dist = sum(
                     (groupedSeries.ix[i].values - clusterCenters[cPeriod]) ** 2)
                 for ii, extremPeriodType in enumerate(self.extremePeriods):
-                    # exclude other extreme periods from adding to the new 
+                    # exclude other extreme periods from adding to the new
                     # cluster center
                     isOtherExtreme = False
                     for otherExPeriod in self.extremePeriods:
@@ -736,9 +740,11 @@ class TimeSeriesAggregation(object):
         distanceMedoid_iter = []
 
         for i in range(n_init):
-            altClusterCenters, clusterCenterIndices, clusterOrders_C = aggregatePeriods(
-                sortedClusterValues, n_clusters=self.noTypicalPeriods, n_iter=30,
-                clusterMethod=self.clusterMethod)
+            altClusterCenters, clusterCenterIndices, clusterOrders_C = (
+                aggregatePeriods(
+                    sortedClusterValues, n_clusters=self.noTypicalPeriods,
+                    n_iter=30, solver=self.solver,
+                    clusterMethod=self.clusterMethod))
 
             clusterCenters_C = []
             distanceMedoid_C = []
@@ -814,7 +820,7 @@ class TimeSeriesAggregation(object):
             self.clusterCenters, self.clusterCenterIndices, \
                 self._clusterOrder = aggregatePeriods(
                 candidates, n_clusters=self.noTypicalPeriods, n_iter=100,
-                clusterMethod=self.clusterMethod)
+                solver=self.solver, clusterMethod=self.clusterMethod)
         else:
             self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
                 candidates)
