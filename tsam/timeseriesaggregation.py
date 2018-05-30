@@ -820,7 +820,7 @@ class TimeSeriesAggregation(object):
             self.clusterCenters, self.clusterCenterIndices, \
                 self._clusterOrder = aggregatePeriods(
                 candidates, n_clusters=self.noTypicalPeriods, n_iter=100,
-                clusterMethod=self.clusterMethod)
+                solver=self.solver, clusterMethod=self.clusterMethod)
         else:
             self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
                 candidates)
