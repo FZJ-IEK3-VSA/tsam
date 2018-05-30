@@ -744,7 +744,7 @@ class TimeSeriesAggregation(object):
                 aggregatePeriods(
                     sortedClusterValues, n_clusters=self.noTypicalPeriods,
                     n_iter=30, solver=self.solver,
-                    clusterMethod=self.clusterMethod)
+                    clusterMethod=self.clusterMethod))
 
             clusterCenters_C = []
             distanceMedoid_C = []
