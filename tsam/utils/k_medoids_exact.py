@@ -16,7 +16,7 @@ import pyomo.opt as opt
 class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
     """
     k-medoids class.
-    
+
     Parameters
     ----------
     n_clusters: int, optional, default: 8
@@ -30,17 +30,17 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
     solver: str, optional, default: 'glpk'
     """
 
-    def __init__(self, n_clusters = 8, distance_metric = 'euclidean',
-                 timelimit = 100, threads = 7, solver = 'glpk'):
+    def __init__(self, n_clusters=8, distance_metric='euclidean',
+                 timelimit=100, threads=7, solver='glpk'):
 
         self.n_clusters = n_clusters
 
         self.distance_metric = distance_metric
 
         self.solver = solver
-        
+
         self.timelimit = timelimit
-        
+
         self.threads = threads
 
     def _check_init_args(self):
@@ -82,13 +82,13 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         # apply distance metric to get the distance matrix
         D = self.distance_func(X)
-        
+
         # run exact optimization
         r_y, r_x, best_inertia = self._k_medoids_exact(D, self.n_clusters)
-        
-        
+
+
         labels_raw = r_x.argmax(axis=0)
-        
+
         count = 0
         translator = {}
         cluster_centers_ = []
@@ -100,7 +100,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         labels_ = []
         for label in labels_raw:
             labels_.append(translator[label])
-            
+
         self.labels_ = labels_
         self.cluster_centers_ = cluster_centers_
 
@@ -166,65 +166,65 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         inertia = np.sum(np.min(Xt, axis=1))
 
         return inertia
-        
+
     def _k_medoids_exact(self, distances, n_clusters):
         """
         Parameters
         ----------
         distances : int, required
             Pairwise distances between each row.
-        n_clusters : int, required 
+        n_clusters : int, required
             Number of clusters.
         """
         # Create model
         M=pyomo.ConcreteModel()
-        
+
         # get distance matrix
-        M.d = distances    
-        
+        M.d = distances
+
         # set number of clusters
-        M.no_k = n_clusters    
-        
+        M.no_k = n_clusters
+
         # Distances is a symmetrical matrix, extract its length
         length = distances.shape[0]
-            
+
         # get indices
         M.i = [j for j in range(length)]
         M.j = [j for j in range(length)]
-        
+
         # initialize vars
         M.z = pyomo.Var(M.i, M.j, within=pyomo.Binary)
         M.y = pyomo.Var(M.i, within=pyomo.Binary)
-        
-        
+
+
         # get objective
-        def objRule(M): 
-            return sum(sum(M.d[i,j] * M.z[i,j] for j in M.j) for i in M.i) 
+        def objRule(M):
+            return sum(sum(M.d[i,j] * M.z[i,j] for j in M.j) for i in M.i)
         M.obj=pyomo.Objective(rule=objRule)
-        
+
         # s.t.
-        # Assign all candidates to clusters 
-        def candToClusterRule(M,j): 
+        # Assign all candidates to clusters
+        def candToClusterRule(M,j):
             return sum(M.z[i,j] for i in M.i) == 1
-        M.candToClusterCon = pyomo.Constraint(M.j, rule=candToClusterRule)   
-        
+        M.candToClusterCon = pyomo.Constraint(M.j, rule=candToClusterRule)
+
         # no of clusters
         def noClustersRule(M):
             return sum(M.y[i] for i in M.i) == M.no_k
-        M.noClustersCon = pyomo.Constraint(rule=noClustersRule) 
-        
+        M.noClustersCon = pyomo.Constraint(rule=noClustersRule)
+
         # cluster relation
         def clusterRelationRule(M,i,j):
             return M.z[i,j] <= M.y[i]
-        M.clusterRelationCon = pyomo.Constraint(M.i,M.j, rule=clusterRelationRule) 
-        
-        
+        M.clusterRelationCon = pyomo.Constraint(M.i,M.j, rule=clusterRelationRule)
+
+
         # create optimization problem
         optprob = opt.SolverFactory(self.solver)
         if self.solver =='gurobi':
-            optprob.set_options("Threads=" + str(self.threads) + 
-                    " TimeLimit=" + str(self.timelimit)) 
-                    
+            optprob.set_options("Threads=" + str(self.threads) +
+                    " TimeLimit=" + str(self.timelimit))
+
         results = optprob.solve(M,tee=False)
         # check that it does not fail
         if self.solver=='gurobi' and results['Solver'][0]['Termination condition'].index == 11:
@@ -232,13 +232,13 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
             return False
         elif self.solver=='gurobi' and not results['Solver'][0]['Termination condition'].index in [2,7,8,9,10]: # optimal
             raise ValueError(results['Solver'][0]['Termination message'])
-        
+
         # Get results
-        r_x = np.array([[round(M.z[i,j].value) for i in range(length)] 
+        r_x = np.array([[round(M.z[i,j].value) for i in range(length)]
                                   for j in range(length)])
-    
+
         r_y = np.array([round(M.y[j].value) for j in range(length)])
-    
+
         r_obj = pyomo.value(M.obj)
-        
+
         return (r_y, r_x.T, r_obj)
