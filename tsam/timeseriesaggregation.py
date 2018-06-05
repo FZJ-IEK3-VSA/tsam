@@ -160,6 +160,20 @@ def aggregatePeriods(candidates, n_clusters=8,
             mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
             clusterCenters.append(candidates[indice][mindistIdx])
             clusterCenterIndices.append(indice[0][mindistIdx])
+            
+    elif clusterMethod == 'k_shape':
+        from kshape.core import kshape, zscore
+        clusters = kshape(zscore(candidates, axis = 1),n_clusters)
+        clusterCenters = []
+        clusterOrder = np.zeros(len(candidates))
+        count = 0
+        for cluster in clusters:
+            clusterCenters.append(cluster[0])
+            for j in cluster[1]:
+                clusterOrder[j] = count
+            count = count + 1
+        clusterOrder = clusterOrder.astype(int)
+    
 
     return clusterCenters, clusterCenterIndices, clusterOrder
 
@@ -168,7 +182,7 @@ class TimeSeriesAggregation(object):
     '''
     Clusters time series data to typical periods.
     '''
-    CLUSTER_METHODS = ['averaging', 'k_medoids', 'k_means', 'hierarchical']
+    CLUSTER_METHODS = ['averaging', 'k_medoids', 'k_means', 'hierarchical','k_shape']
 
     EXTREME_PERIOD_METHODS = [
         'None',
