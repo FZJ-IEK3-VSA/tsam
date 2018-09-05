@@ -603,7 +603,7 @@ class TimeSeriesAggregation(object):
         extremeClusterIdx = []
 
         # integrate extreme periods to clusters
-        if self.extremePeriodMethod == 'append':
+        if extremePeriodMethod == 'append':
             # attach extreme periods to cluster centers
             for i, cluster_center in enumerate(clusterCenters):
                 newClusterCenters.append(cluster_center)
@@ -613,7 +613,7 @@ class TimeSeriesAggregation(object):
                     self.extremePeriods[periodType]['profile'])
                 newClusterOrder[self.extremePeriods[periodType]['stepNo']] = i + len(clusterCenters)
 
-        elif self.extremePeriodMethod == 'new_cluster_center':
+        elif extremePeriodMethod == 'new_cluster_center':
             for i, cluster_center in enumerate(clusterCenters):
                 newClusterCenters.append(cluster_center)
             # attach extrem periods to cluster centers and consider for all periods
@@ -646,7 +646,7 @@ class TimeSeriesAggregation(object):
                         newClusterOrder[i] = self.extremePeriods[
                             extremPeriodType]['newClusterNo']
 
-        elif self.extremePeriodMethod == 'replace_cluster_center':
+        elif extremePeriodMethod == 'replace_cluster_center':
             # Worst Case Clusterperiods
             newClusterCenters = clusterCenters
             for periodType in self.extremePeriods:
@@ -660,7 +660,7 @@ class TimeSeriesAggregation(object):
 
         else:
             raise NotImplementedError('Chosen "extremePeriodMethod": ' +
-                                      str(self.extremePeriodMethod) + ' is ' +
+                                      str(extremePeriodMethod) + ' is ' +
                                       'not implemented.')
 
         return newClusterCenters, newClusterOrder, extremeClusterIdx
