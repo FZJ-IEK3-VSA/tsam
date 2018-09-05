@@ -16,6 +16,11 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 pd.set_option('mode.chained_assignment', None)
 
+# max iterator while resacling cluster profiles
+MAX_ITERATOR = 20
+
+# tolerance while rescaling cluster periods to meet the annual sum of the original profile
+TOLERANCE = 1e-6
 
 def unstackToPeriods(timeSeries, timeStepsPerPeriod):
     """
@@ -691,9 +696,12 @@ class TimeSeriesAggregation(object):
             if column in self.weightDict:
                 scale_ub = scale_ub * self.weightDict[column]
 
+            # difference between predicted and original sum
             diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
+
+            # use while loop to rescale cluster periods
             a = 0
-            while diff > 0.1 and a < 20:
+            while diff > sum_raw * TOLERANCE and a < MAX_ITERATOR:
                 # rescale values
                 typicalPeriods.loc[idx_wo_peak, column] = \
                     (typicalPeriods[column].ix[idx_wo_peak].values *
@@ -715,6 +723,9 @@ class TimeSeriesAggregation(object):
                         axis=1))
                 diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
                 a += 1
+            if a == MAX_ITERATOR:
+                warnings.warn(
+                    'Max iteration number reached while rescaling the cluster periods')
         return typicalPeriods.values
 
     def _clusterSortedPeriods(self, candidates, n_init=20):
