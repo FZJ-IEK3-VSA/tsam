@@ -166,6 +166,14 @@ def aggregatePeriods(candidates, n_clusters=8,
             clusterCenters.append(candidates[indice][mindistIdx])
             clusterCenterIndices.append(indice[0][mindistIdx])
 
+    elif clusterMethod == 'adjacent_periods':
+        pass
+
+    else:
+        raise ValueError('Chosen method "' + str(clusterMethod) + '" does not exist')
+
+
+
     return clusterCenters, clusterCenterIndices, clusterOrder
 
 
