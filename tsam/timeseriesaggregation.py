@@ -167,7 +167,34 @@ def aggregatePeriods(candidates, n_clusters=8,
             clusterCenterIndices.append(indice[0][mindistIdx])
 
     elif clusterMethod == 'adjacent_periods':
-        pass
+        from sklearn.cluster import AgglomerativeClustering
+        #Calculate the connectivity matrix of the candidate periods
+        candidate_num=len(candidates)
+        connectivity = []
+        for i in range(candidate_num):
+            vector=[]
+            for j in range(candidate_num):
+                if j==(i+1)%candidate_num or j==(i-1)%candidate_num:
+                    vector.append(1)
+                else:
+                    vector.append(0)
+            connectivity.append(vector)
+            
+        #Use the 'hierarchical' method BUT with the connectivity matrix
+        clustering = AgglomerativeClustering(
+            n_clusters=n_clusters, linkage='ward',connectivity=connectivity)
+
+        clusterOrder = clustering.fit_predict(candidates)
+
+        from sklearn.metrics.pairwise import euclidean_distances
+        # set cluster center as medoid
+        clusterCenters = []
+        for clusterNum in np.unique(clusterOrder):
+            indice = np.where(clusterOrder == clusterNum)
+            innerDistMatrix = euclidean_distances(candidates[indice])
+            mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
+            clusterCenters.append(candidates[indice][mindistIdx])
+            clusterCenterIndices.append(indice[0][mindistIdx])
 
     else:
         raise ValueError('Chosen method "' + str(clusterMethod) + '" does not exist')
