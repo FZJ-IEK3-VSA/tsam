@@ -2,7 +2,7 @@
 .idea/
 __pycache__/
 trash/
-example/.ipynb_checkpoints/
+*ipynb_checkpoints/
 *.eggs/
 
 # file types to ignore
