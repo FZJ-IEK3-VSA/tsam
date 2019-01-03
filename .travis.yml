@@ -1,7 +1,7 @@
 # Modified from
 # https://github.com/PyPSA/PyPSA/master/.travis.yml
 language: python
-sudo: false # Use container-based infrastructure
+sudo: false 
 
 before_install:
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -10,7 +10,6 @@ before_install:
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  # Useful for debugging any issues with conda
   - conda info -a
 
 install:
