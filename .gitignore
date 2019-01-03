@@ -2,6 +2,7 @@
 .idea/
 __pycache__/
 trash/
+*.pytest_cache/
 *ipynb_checkpoints/
 *.eggs/
 

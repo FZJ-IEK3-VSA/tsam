@@ -1,0 +1,8 @@
+name: tsam
+
+channels:
+  - conda-forge
+
+dependencies:
+  - pytest
+  - pytest-cov
