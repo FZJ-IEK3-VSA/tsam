@@ -10,9 +10,9 @@ import tsam.timeseriesaggregation as tsam
 
 def test_hierarchical():
 
-    raw = pd.read_csv(os.path.join('..','examples','testdata.csv'), index_col = 0)
+    raw = pd.read_csv(os.path.join(os.path.dirname(__file__),'..','examples','testdata.csv'), index_col = 0)
 
-    results = pd.read_csv(os.path.join('..','examples','results','testperiods_hierarchical.csv'), index_col = [0,1])
+    results = pd.read_csv(os.path.join(os.path.dirname(__file__),'..','examples','results','testperiods_hierarchical.csv'), index_col = [0,1])
 
     starttime = time.time()
 
