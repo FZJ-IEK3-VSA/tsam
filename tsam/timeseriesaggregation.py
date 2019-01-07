@@ -186,6 +186,7 @@ class TimeSeriesAggregation(object):
                  evalSumPeriods=False, sortValues=False, sameMean=False,
                  rescaleClusterPeriods=True, weightDict=None,
                  extremePeriodMethod='None', solver='glpk',
+                 roundOutput = None,
                  addPeakMin=None,
                  addPeakMax=None,
                  addMeanMin=None,
@@ -243,6 +244,8 @@ class TimeSeriesAggregation(object):
                     profile of the extreme period. (Worst case system design)
         solver: string, optional (default: 'glpk' )
             Solver that is used for k_medoids clustering.
+        roundOutput: int, optional (default: None )
+            Decimals to what the output time series get round.
         addPeakMin: list, optional, default: []
             List of column names which's minimal value shall be added to the
             typical periods. E.g.: ['Temperature']
@@ -289,6 +292,8 @@ class TimeSeriesAggregation(object):
         self.weightDict = weightDict
 
         self.solver = solver
+
+        self.roundOutput = roundOutput
 
         self.addPeakMin = addPeakMin
 
@@ -493,6 +498,9 @@ class TimeSeriesAggregation(object):
 
         unnormalizedTimeSeries = self._unnormalizeTimeSeries(
             normalizedTimeSeries, sameMean=self.sameMean)
+
+        if self.roundOutput is not None:
+            unnormalizedTimeSeries = unnormalizedTimeSeries.round(decimals = self.roundOutput)
 
         return unnormalizedTimeSeries
 
