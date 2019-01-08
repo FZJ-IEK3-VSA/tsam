@@ -2,13 +2,14 @@
 .idea/
 __pycache__/
 trash/
-example/.ipynb_checkpoints/
+*.pytest_cache/
+*ipynb_checkpoints/
 *.eggs/
 
 # file types to ignore
 *.pyc
 *.egg-info
 *.log
+*.lp
+*.glp
 
-# results in the example folder
-example/testperiods.csv

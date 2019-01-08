@@ -1,0 +1,23 @@
+# Modified from
+# https://github.com/PyPSA/PyPSA/master/.travis.yml
+language: python
+sudo: false 
+
+before_install:
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+
+install:
+  - conda create -q -n tsam python=3.6
+  - conda env update -q -n tsam --file=requirements.yml
+  - conda env update -q -n tsam --file=requirements_dev.yml
+  - source activate tsam
+  - pip install --no-cache-dir .
+
+script:
+  - pytest --cov tsam --cov-report term-missing
