@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python
-  - sklearn>=0.0
+  - scikit-learn
   - pandas>=0.18.1
   - numpy>=1.11.0
   - glpk
