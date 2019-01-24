@@ -552,10 +552,10 @@ class TimeSeriesAggregation(object):
                 stepNo = groupedSeries[column].max(axis=1).idxmax()
                 # add only if stepNo is not already in extremePeriods
                 # if it is not already a cluster center
-                if stepNo not in extremePeriodNo and groupedSeries.ix[stepNo].values.tolist() not in ccList:
+                if stepNo not in extremePeriodNo and groupedSeries.loc[stepNo,:].values.tolist() not in ccList:
                     self.extremePeriods[column + ' max.'] = \
                         {'stepNo': stepNo,
-                         'profile': groupedSeries.ix[stepNo].values,
+                         'profile': groupedSeries.loc[stepNo,:].values,
                          'column': column}
                     extremePeriodNo.append(stepNo)
 
@@ -563,10 +563,10 @@ class TimeSeriesAggregation(object):
                 stepNo = groupedSeries[column].min(axis=1).idxmin()
                 # add only if stepNo is not already in extremePeriods
                 # if it is not already a cluster center
-                if stepNo not in extremePeriodNo and groupedSeries.ix[stepNo].values.tolist() not in ccList:
+                if stepNo not in extremePeriodNo and groupedSeries.loc[stepNo,:].values.tolist() not in ccList:
                     self.extremePeriods[column + ' min.'] = \
                         {'stepNo': stepNo,
-                         'profile': groupedSeries.ix[stepNo].values,
+                         'profile': groupedSeries.loc[stepNo,:].values,
                          'column': column}
                     extremePeriodNo.append(stepNo)
 
@@ -574,10 +574,10 @@ class TimeSeriesAggregation(object):
                 stepNo = groupedSeries[column].mean(axis=1).idxmax()
                 # add only if stepNo is not already in extremePeriods
                 # if it is not already a cluster center
-                if stepNo not in extremePeriodNo and groupedSeries.ix[stepNo].values.tolist() not in ccList:
+                if stepNo not in extremePeriodNo and groupedSeries.loc[stepNo,:].values.tolist() not in ccList:
                     self.extremePeriods[column + ' daily min.'] = \
                         {'stepNo': stepNo,
-                         'profile': groupedSeries.ix[stepNo].values,
+                         'profile': groupedSeries.loc[stepNo,:].values,
                          'column': column}
                     extremePeriodNo.append(stepNo)
 
@@ -585,10 +585,10 @@ class TimeSeriesAggregation(object):
                 stepNo = groupedSeries[column].mean(axis=1).idxmin()
                 # add only if stepNo is not already in extremePeriods and
                 # if it is not already a cluster center
-                if stepNo not in extremePeriodNo and groupedSeries.ix[stepNo].values.tolist() not in ccList:
+                if stepNo not in extremePeriodNo and groupedSeries.loc[stepNo,:].values.tolist() not in ccList:
                     self.extremePeriods[column + ' daily min.'] = \
                         {'stepNo': stepNo,
-                         'profile': groupedSeries.ix[stepNo].values,
+                         'profile': groupedSeries.loc[stepNo,:].values,
                          'column': column}
                     extremePeriodNo.append(stepNo)
 
@@ -628,7 +628,7 @@ class TimeSeriesAggregation(object):
             for i, cPeriod in enumerate(newClusterOrder):
                 # caclulate euclidean distance to cluster center
                 cluster_dist = sum(
-                    (groupedSeries.ix[i].values - clusterCenters[cPeriod]) ** 2)
+                    (groupedSeries.iloc[i].values - clusterCenters[cPeriod]) ** 2)
                 for ii, extremPeriodType in enumerate(self.extremePeriods):
                     # exclude other extreme periods from adding to the new
                     # cluster center
@@ -639,7 +639,7 @@ class TimeSeriesAggregation(object):
                             isOtherExtreme = True
                     # calculate distance to extreme periods
                     extperiod_dist = sum(
-                        (groupedSeries.ix[i].values -
+                        (groupedSeries.iloc[i].values -
                          self.extremePeriods[extremPeriodType]['profile']) ** 2)
                     # choose new cluster relation
                     if extperiod_dist < cluster_dist and not isOtherExtreme:
@@ -681,11 +681,11 @@ class TimeSeriesAggregation(object):
             sum_raw = self.normalizedPeriodlyProfiles[column].sum().sum()
             sum_peak = sum(
                 weightingVec[extremeClusterIdx] *
-                typicalPeriods[column].ix[extremeClusterIdx].sum(
+                typicalPeriods[column].loc[extremeClusterIdx,:].sum(
                     axis=1))
             sum_clu_wo_peak = sum(
                 weightingVec[idx_wo_peak] *
-                typicalPeriods[column].ix[idx_wo_peak].sum(
+                typicalPeriods[column].loc[idx_wo_peak,:].sum(
                     axis=1))
 
             # define the upper scale dependent on the weighting of the series
@@ -704,7 +704,7 @@ class TimeSeriesAggregation(object):
             while diff > sum_raw * TOLERANCE and a < MAX_ITERATOR:
                 # rescale values
                 typicalPeriods.loc[idx_wo_peak, column] = \
-                    (typicalPeriods[column].ix[idx_wo_peak].values *
+                    (typicalPeriods[column].loc[idx_wo_peak,:].values *
                      (sum_raw - sum_peak) / sum_clu_wo_peak)
 
                 # reset values higher than the upper sacle or less than zero
@@ -719,7 +719,7 @@ class TimeSeriesAggregation(object):
                 # calc new sum and new diff to orig data
                 sum_clu_wo_peak = sum(
                     weightingVec[idx_wo_peak] *
-                    typicalPeriods[column].ix[idx_wo_peak].sum(
+                    typicalPeriods[column].loc[idx_wo_peak,:].sum(
                         axis=1))
                 diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
                 a += 1
