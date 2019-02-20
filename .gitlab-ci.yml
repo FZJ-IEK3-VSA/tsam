@@ -1,0 +1,13 @@
+language: python
+sudo: false 
+
+
+conda:
+  image: continuumio/miniconda:latest
+
+  script:
+    - conda env update -q --file=requirements.yml
+    - conda env update -q --file=requirements_dev.yml
+    - source activate tsam
+    - pip install --no-cache-dir .
+    - pytest --cov tsam --cov-report term-missing
