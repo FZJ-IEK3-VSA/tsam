@@ -75,9 +75,9 @@ Store the results as .csv file
 
 ### Detailed examples
 
-A [**first example**](https://github.com/FZJ-IEK3-VSA/tsam/blob/master/examples/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook. 
+A [**first example**](/examples/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook. 
 
-A [**second example**](https://github.com/FZJ-IEK3-VSA/tsam/blob/master/examples/aggregation_optiinput.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
+A [**second example**](/examples/aggregation_optiinput.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
 
 The example time series are based on a department [publication](https://www.mdpi.com/1996-1073/10/3/361) and the [test reference years of the DWD](https://www.dwd.de/DE/leistungen/testreferenzjahre/testreferenzjahre.html).
 
@@ -98,8 +98,6 @@ We are the [Process and Systems Analysis](https://www.fz-juelich.de/iek/iek-3/EN
 ## Contributions and Users
 
 Within the BMWi funded project [**METIS**](http://www.metis-platform.net/) we extend the methodology together with the RWTH-Aachen ([**Prof. Aaron Praktiknjo**](https://www.wiwi.rwth-aachen.de/cms/Wirtschaftswissenschaften/Die-Fakultaet/Institute-und-Lehrstuehle/Professoren/~jgfr/Praktiknjo-Aaron/?allou=1&lidx=1)), the EDOM Team at FAU ([**PD Lars Schewe**](https://www.mso.math.fau.de/de/edom/team/schewe-lars/dr-lars-schewe/)) and the [**Jülich Supercomputing Centre**](https://www.fz-juelich.de/ias/jsc/DE/Home/home_node.html).
-
-<a href="http://www.metis-platform.net/"><img src="http://www.metis-platform.net/metis-platform/SharedDocs/Bilder/DE/kick-off.jpg?__blob=normal" alt="METIS Team" width="400px" style="float:center"></a> 
 
 ## Acknowledgement
 
