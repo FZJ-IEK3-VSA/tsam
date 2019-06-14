@@ -22,6 +22,10 @@ MAX_ITERATOR = 20
 # tolerance while rescaling cluster periods to meet the annual sum of the original profile
 TOLERANCE = 1e-6
 
+
+# minimal weight that overwrites a weighting of zero in order to carry the profile through the aggregation process
+MIN_WEIGHT = 1e-6
+
 def unstackToPeriods(timeSeries, timeStepsPerPeriod):
     """
     Extend the timeseries to an integer multiple of the period length and
@@ -469,12 +473,11 @@ class TimeSeriesAggregation(object):
             sameMean=self.sameMean)
 
         for column in self.weightDict:
-            if self.weightDict[column] == 0:
-                self.normalizedTimeSeries[
-                    column] = self.normalizedTimeSeries[column] * 0.0001
-            else:
-                self.normalizedTimeSeries[column] = self.normalizedTimeSeries[
-                                                        column] * self.weightDict[column]
+            if self.weightDict[column] < MIN_WEIGHT:
+                print('weight of "'+ str(column) + '" set to the minmal tolerable weighting')
+                self.weightDict[column] = MIN_WEIGHT
+            self.normalizedTimeSeries[column] = self.normalizedTimeSeries[
+                                                    column] * self.weightDict[column]
 
         self.normalizedPeriodlyProfiles, self.timeIndex = unstackToPeriods(
             self.normalizedTimeSeries, self.timeStepsPerPeriod)
@@ -489,12 +492,8 @@ class TimeSeriesAggregation(object):
         Neutralizes the weighting the time series back and unnormalizes them.
         '''
         for column in self.weightDict:
-            if self.weightDict[column] == 0:
-                normalizedTimeSeries[
-                    column] = normalizedTimeSeries[column] / 0.0001
-            else:
-                normalizedTimeSeries[column] = normalizedTimeSeries[
-                                                   column] / self.weightDict[column]
+            normalizedTimeSeries[column] = normalizedTimeSeries[
+                                                column] / self.weightDict[column]
 
         unnormalizedTimeSeries = self._unnormalizeTimeSeries(
             normalizedTimeSeries, sameMean=self.sameMean)
@@ -732,8 +731,12 @@ class TimeSeriesAggregation(object):
                 diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
                 a += 1
             if a == MAX_ITERATOR:
+                deviation = str(round((diff/sum_raw)*100,2))
                 warnings.warn(
-                    'Max iteration number reached while rescaling the cluster periods')
+                    'Max iteration number reached for "'+ str(column)
+                    +'" while rescaling the cluster periods.' + 
+                    ' The integral of the aggregated time series deviates by: ' 
+                    + deviation + '%')
         return typicalPeriods.values
 
     def _clusterSortedPeriods(self, candidates, n_init=20):
