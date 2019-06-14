@@ -7,7 +7,7 @@ with open(os.path.join(dir_path,'README.md'), "r") as fh:
 
 setuptools.setup(
     name='tsam',
-    version='1.0.3',
+    version='1.0.4',
     author='Leander Kotzur',
     author_email='l.kotzur@fz-juelich.de',
     description='Time series aggregation module (tsam) to create typical periods',
