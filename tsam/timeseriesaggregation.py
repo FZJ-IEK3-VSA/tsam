@@ -892,6 +892,11 @@ class TimeSeriesAggregation(object):
 
         self.typicalPeriods = self._postProcessTimeSeries(clustered_data_raw)
 
+        # check if original time series boundaries are not exceeded
+        if np.array(self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)).any():
+            warnings.warn("Something went wrong: At least one maximal value of the aggregated time series exceeds the maximal value the input time series")
+        if np.array(self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)).any():
+            warnings.warn("Something went wrong: At least one minimal value of the aggregated time series exceeds the minimal value the input time series")
         return self.typicalPeriods
 
     def prepareEnersysInput(self):
