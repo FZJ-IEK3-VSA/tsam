@@ -414,19 +414,15 @@ class TimeSeriesAggregation(object):
         ---------
         normalized time series
         '''
-        normalizedTimeSeries = pd.DataFrame()
-        for column in self.timeSeries:
-            if not self.timeSeries[column].max() == self.timeSeries[column].min():  # ignore constant timeseries
-                normalizedTimeSeries[column] = (
-                                                   self.timeSeries[column] -
-                                                   self.timeSeries[column].min()) / \
-                                               (self.timeSeries[column].max() -
-                                                self.timeSeries[column].min())
-                if sameMean:
-                    normalizedTimeSeries[column] = normalizedTimeSeries[
-                                                       column] / normalizedTimeSeries[column].mean()
-            else:
-                normalizedTimeSeries[column] = self.timeSeries[column]
+        from sklearn import preprocessing
+        min_max_scaler = preprocessing.MinMaxScaler()
+        normalizedTimeSeries = pd.DataFrame(min_max_scaler.fit_transform(self.timeSeries),
+                                            columns=self.timeSeries.columns,
+                                            index=self.timeSeries.index)
+
+        if sameMean:
+            normalizedTimeSeries /= normalizedTimeSeries.mean()
+
         return normalizedTimeSeries
 
     def _unnormalizeTimeSeries(self, normalizedTimeSeries, sameMean=False):
