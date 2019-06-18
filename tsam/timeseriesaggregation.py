@@ -465,7 +465,7 @@ class TimeSeriesAggregation(object):
         puts them into the correct matrix format.
         '''
         # first sort the time series in order to avoid bug mention in #18
-        self.timeSeries = self.timeSeries.reindex(sorted(self.timeSeries.columns), axis=1)
+        self.timeSeries.sort_index(axis=1, inplace=True)
 
         # normalize the time series and group them to periodly profiles
         self.normalizedTimeSeries = self._normalizeTimeSeries(
