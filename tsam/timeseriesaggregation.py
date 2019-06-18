@@ -790,7 +790,7 @@ class TimeSeriesAggregation(object):
         distanceMedoid_iter = []
 
         for i in range(n_init):
-            altClusterCenters, clusterCenterIndices, clusterOrders_C = (
+            altClusterCenters, self.clusterCenterIndices, clusterOrders_C = (
                 aggregatePeriods(
                     sortedClusterValues, n_clusters=self.noTypicalPeriods,
                     n_iter=30, solver=self.solver,
