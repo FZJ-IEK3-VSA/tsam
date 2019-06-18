@@ -89,7 +89,8 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
 
 
 def aggregatePeriods(candidates, n_clusters=8,
-                     n_iter=100, clusterMethod='k_means', solver='glpk'):
+                     n_iter=100, clusterMethod='k_means', solver='glpk', predefClusterOrder=None,
+                     predefClusterCenterIndices=None):
     '''
     Clusters the data based on one of the cluster methods:
         'averaging','k_means','exact k_medoid' or 'hierarchical'
@@ -154,21 +155,27 @@ def aggregatePeriods(candidates, n_clusters=8,
     #
 
     elif clusterMethod == 'hierarchical':
-        from sklearn.cluster import AgglomerativeClustering
-        clustering = AgglomerativeClustering(
-            n_clusters=n_clusters, linkage='ward')
+        if all(v is not None for v in [predefClusterOrder, predefClusterCenterIndices]):
+            clusterOrder = predefClusterOrder
+            clusterCenterIndices = predefClusterCenterIndices
+            clusterCenters = candidates[predefClusterCenterIndices]
 
-        clusterOrder = clustering.fit_predict(candidates)
+        else:
+            from sklearn.cluster import AgglomerativeClustering
+            clustering = AgglomerativeClustering(
+                n_clusters=n_clusters, linkage='ward')
 
-        from sklearn.metrics.pairwise import euclidean_distances
-        # set cluster center as medoid
-        clusterCenters = []
-        for clusterNum in np.unique(clusterOrder):
-            indice = np.where(clusterOrder == clusterNum)
-            innerDistMatrix = euclidean_distances(candidates[indice])
-            mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
-            clusterCenters.append(candidates[indice][mindistIdx])
-            clusterCenterIndices.append(indice[0][mindistIdx])
+            clusterOrder = clustering.fit_predict(candidates)
+
+            from sklearn.metrics.pairwise import euclidean_distances
+            # set cluster center as medoid
+            clusterCenters = []
+            for clusterNum in np.unique(clusterOrder):
+                indice = np.where(clusterOrder == clusterNum)
+                innerDistMatrix = euclidean_distances(candidates[indice])
+                mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
+                clusterCenters.append(candidates[indice][mindistIdx])
+                clusterCenterIndices.append(indice[0][mindistIdx])
 
     return clusterCenters, clusterCenterIndices, clusterOrder
 
@@ -189,7 +196,8 @@ class TimeSeriesAggregation(object):
                  hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
                  rescaleClusterPeriods=True, weightDict=None,
-                 extremePeriodMethod='None', solver='glpk',
+                 extremePeriodMethod='None', predefClusterOrder=None,
+                 predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
                  addPeakMin=None,
                  addPeakMax=None,
@@ -294,6 +302,10 @@ class TimeSeriesAggregation(object):
         self.rescaleClusterPeriods = rescaleClusterPeriods
 
         self.weightDict = weightDict
+
+        self.predefClusterOrder = predefClusterOrder
+
+        self.predefClusterCenterIndices = predefClusterCenterIndices
 
         self.solver = solver
 
@@ -769,7 +781,8 @@ class TimeSeriesAggregation(object):
                 aggregatePeriods(
                     sortedClusterValues, n_clusters=self.noTypicalPeriods,
                     n_iter=30, solver=self.solver,
-                    clusterMethod=self.clusterMethod))
+                    clusterMethod=self.clusterMethod, predefClusterOrder=self.predefClusterOrder,
+                    predefClusterCenterIndices=self.predefClusterCenterIndices))
 
             clusterCenters_C = []
             distanceMedoid_C = []
@@ -845,7 +858,8 @@ class TimeSeriesAggregation(object):
             self.clusterCenters, self.clusterCenterIndices, \
                 self._clusterOrder = aggregatePeriods(
                 candidates, n_clusters=self.noTypicalPeriods, n_iter=100,
-                solver=self.solver, clusterMethod=self.clusterMethod)
+                solver=self.solver, clusterMethod=self.clusterMethod, predefClusterOrder=self.predefClusterOrder,
+                predefClusterCenterIndices=self.predefClusterCenterIndices)
         else:
             self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
                 candidates)
