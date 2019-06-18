@@ -437,26 +437,17 @@ class TimeSeriesAggregation(object):
         sameMean: boolean, optional (default: False)
             Has to have the same value as in _normalizeTimeSeries.
         '''
-        unnormalizedTimeSeries = pd.DataFrame()
-        for column in self.timeSeries:
-            if not self.timeSeries[column].max() == self.timeSeries[column].min():  # ignore constant timeseries
-                if sameMean:
-                    unnormalizedTimeSeries[column] = \
-                        normalizedTimeSeries[column] * \
-                        (self.timeSeries[column].mean() -
-                         self.timeSeries[column].min()) / \
-                        (self.timeSeries[column].max() -
-                         self.timeSeries[column].min())
-                else:
-                    unnormalizedTimeSeries[
-                        column] = normalizedTimeSeries[column]
-                unnormalizedTimeSeries[column] = \
-                    unnormalizedTimeSeries[column] * \
-                    (self.timeSeries[column].max() -
-                     self.timeSeries[column].min()) + \
-                    self.timeSeries[column].min()
-            else:
-                unnormalizedTimeSeries[column] = normalizedTimeSeries[column]
+        from sklearn import preprocessing
+        min_max_scaler = preprocessing.MinMaxScaler()
+        min_max_scaler.fit(self.timeSeries)
+        unnormalizedTimeSeries = pd.DataFrame(min_max_scaler.inverse_transform(
+            normalizedTimeSeries),
+            columns=normalizedTimeSeries.columns,
+            index=normalizedTimeSeries.index)
+
+        if sameMean:
+            unnormalizedTimeSeries *= unnormalizedTimeSeries.mean()
+
         return unnormalizedTimeSeries
 
     def _preProcessTimeSeries(self):
