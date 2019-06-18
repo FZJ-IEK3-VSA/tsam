@@ -160,6 +160,19 @@ def aggregatePeriods(candidates, n_clusters=8,
             clusterCenterIndices = predefClusterCenterIndices
             clusterCenters = candidates[predefClusterCenterIndices]
 
+        elif predefClusterOrder is not None and predefClusterCenterIndices is None:
+            clusterOrder = predefClusterOrder
+
+            from sklearn.metrics.pairwise import euclidean_distances
+            # set cluster center as medoid
+            clusterCenters = []
+            for clusterNum in np.unique(clusterOrder):
+                indice = np.where(clusterOrder == clusterNum)
+                innerDistMatrix = euclidean_distances(candidates[indice])
+                mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
+                clusterCenters.append(candidates[indice][mindistIdx])
+                clusterCenterIndices.append(indice[0][mindistIdx])
+
         else:
             from sklearn.cluster import AgglomerativeClustering
             clustering = AgglomerativeClustering(
