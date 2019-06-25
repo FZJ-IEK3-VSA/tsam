@@ -184,7 +184,7 @@ def medoidRepresentation(candidates, clusterOrder):
         clusterCenters.append(candidates[indice][mindistIdx])
         clusterCenterIndices.append(indice[0][mindistIdx])
 
-    return np.array(clusterCenters), np.array(clusterCenterIndices)
+    return clusterCenters, clusterCenterIndices
 
 
 def meanRepresentation(candidates, clusterOrder):
@@ -206,7 +206,7 @@ def meanRepresentation(candidates, clusterOrder):
         indice = np.where(clusterOrder == clusterNum)
         currentMean = candidates[indice].mean(axis=0)
         clusterCenters.append(currentMean)
-    return np.array(clusterCenters)
+    return clusterCenters
 
 
 
