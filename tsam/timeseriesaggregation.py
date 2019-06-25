@@ -147,7 +147,7 @@ def aggregatePeriods(candidates, n_clusters=8,
         k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
 
         clusterOrder = k_medoid.fit_predict(candidates)
-        clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
+        clusterCenters = k_medoid.cluster_centers_
 
     elif clusterMethod == 'hierarchical':
         from sklearn.cluster import AgglomerativeClustering
