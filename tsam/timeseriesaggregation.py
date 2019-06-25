@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn import preprocessing
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -309,6 +310,9 @@ class TimeSeriesAggregation(object):
 
         self._check_init_args()
 
+        # internal attributes 
+        self._normalizedMean = None
+
         return
 
     def _check_init_args(self):
@@ -414,14 +418,14 @@ class TimeSeriesAggregation(object):
         ---------
         normalized time series
         '''
-        from sklearn import preprocessing
         min_max_scaler = preprocessing.MinMaxScaler()
         normalizedTimeSeries = pd.DataFrame(min_max_scaler.fit_transform(self.timeSeries),
                                             columns=self.timeSeries.columns,
                                             index=self.timeSeries.index)
-
+        
+        self._normalizedMean = normalizedTimeSeries.mean()
         if sameMean:
-            normalizedTimeSeries /= normalizedTimeSeries.mean()
+            normalizedTimeSeries /= self._normalizedMean
 
         return normalizedTimeSeries
 
@@ -440,13 +444,14 @@ class TimeSeriesAggregation(object):
         from sklearn import preprocessing
         min_max_scaler = preprocessing.MinMaxScaler()
         min_max_scaler.fit(self.timeSeries)
+
+        if sameMean:
+            normalizedTimeSeries *= self._normalizedMean
+
         unnormalizedTimeSeries = pd.DataFrame(min_max_scaler.inverse_transform(
             normalizedTimeSeries),
             columns=normalizedTimeSeries.columns,
             index=normalizedTimeSeries.index)
-
-        if sameMean:
-            unnormalizedTimeSeries *= unnormalizedTimeSeries.mean()
 
         return unnormalizedTimeSeries
 
@@ -457,6 +462,9 @@ class TimeSeriesAggregation(object):
         '''
         # first sort the time series in order to avoid bug mention in #18
         self.timeSeries.sort_index(axis=1, inplace=True)
+
+        # convert the dataframe to floats
+        self.timeSeries = self.timeSeries.astype(float)
 
         # normalize the time series and group them to periodly profiles
         self.normalizedTimeSeries = self._normalizeTimeSeries(
