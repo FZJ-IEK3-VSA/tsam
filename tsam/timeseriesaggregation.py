@@ -13,7 +13,9 @@ import pandas as pd
 import numpy as np
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics.pairwise import euclidean_distances
 from sklearn import preprocessing
+    
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -108,10 +110,7 @@ def aggregatePeriods(candidates, n_clusters=8,
         'averaging','k_means','exact k_medoid' or 'hierarchical'
     '''
 
-    if clusterMethod == 'hierarchical':
-        clusterCenterIndices = []
-    else:
-        clusterCenterIndices = None
+    clusterCenterIndices = None
 
     # cluster the data
     if clusterMethod == 'averaging':
@@ -129,11 +128,7 @@ def aggregatePeriods(candidates, n_clusters=8,
             clusterOrder.append([n_clusters - 1] *
                                 int(n_sets - cluster_size * n_clusters))
         clusterOrder = np.hstack(np.array(clusterOrder))
-        clusterCenters = []
-        for clusterNum in np.unique(clusterOrder):
-            indice = np.where(clusterOrder == clusterNum)
-            currentMean = candidates[indice].mean(axis=0)
-            clusterCenters.append(currentMean)
+        clusterCenters = meanRepresentation(candidates, clusterOrder)
 
     if clusterMethod == 'k_means':
         from sklearn.cluster import KMeans
@@ -144,15 +139,15 @@ def aggregatePeriods(candidates, n_clusters=8,
             tol=1e-4)
 
         clusterOrder = k_means.fit_predict(candidates)
-        clusterCenters = k_means.cluster_centers_
+        # get with own mean representation to avoid numerical trouble caused by sklearn
+        clusterCenters = meanRepresentation(candidates, clusterOrder)
 
     elif clusterMethod == 'k_medoids':
         from tsam.utils.k_medoids_exact import KMedoids
         k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
 
         clusterOrder = k_medoid.fit_predict(candidates)
-        clusterCenters = k_medoid.cluster_centers_
-    #
+        clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
 
     elif clusterMethod == 'hierarchical':
         from sklearn.cluster import AgglomerativeClustering
@@ -160,18 +155,59 @@ def aggregatePeriods(candidates, n_clusters=8,
             n_clusters=n_clusters, linkage='ward')
 
         clusterOrder = clustering.fit_predict(candidates)
-
-        from sklearn.metrics.pairwise import euclidean_distances
-        # set cluster center as medoid
-        clusterCenters = []
-        for clusterNum in np.unique(clusterOrder):
-            indice = np.where(clusterOrder == clusterNum)
-            innerDistMatrix = euclidean_distances(candidates[indice])
-            mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
-            clusterCenters.append(candidates[indice][mindistIdx])
-            clusterCenterIndices.append(indice[0][mindistIdx])
+        # represent hierarchical aggregation with medoid
+        clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
 
     return clusterCenters, clusterCenterIndices, clusterOrder
+
+
+def medoidRepresentation(candidates, clusterOrder):
+    '''
+    Represents the candidates of a given cluster group (clusterOrder)
+    by its medoid, measured with the euclidean distance.
+
+    Parameters
+    ----------
+    candidates: np.ndarray, required
+        Dissimilarity matrix where each row represents a candidate
+    clusterOrder: np.array, required
+        Integer array where the index refers to the candidate and the
+        Integer entry to the group.
+    '''
+    # set cluster center as medoid
+    clusterCenters = []
+    clusterCenterIndices = []
+    for clusterNum in np.unique(clusterOrder):
+        indice = np.where(clusterOrder == clusterNum)
+        innerDistMatrix = euclidean_distances(candidates[indice])
+        mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
+        clusterCenters.append(candidates[indice][mindistIdx])
+        clusterCenterIndices.append(indice[0][mindistIdx])
+
+    return np.array(clusterCenters), np.array(clusterCenterIndices)
+
+
+def meanRepresentation(candidates, clusterOrder):
+    '''
+    Represents the candidates of a given cluster group (clusterOrder)
+    by its mean.
+
+    Parameters
+    ----------
+    candidates: np.ndarray, required
+        Dissimilarity matrix where each row represents a candidate
+    clusterOrder: np.array, required
+        Integer array where the index refers to the candidate and the
+        Integer entry to the group.
+    '''
+    # set cluster centers as means of the group candidates
+    clusterCenters = []
+    for clusterNum in np.unique(clusterOrder):
+        indice = np.where(clusterOrder == clusterNum)
+        currentMean = candidates[indice].mean(axis=0)
+        clusterCenters.append(currentMean)
+    return np.array(clusterCenters)
+
 
 
 class TimeSeriesAggregation(object):
