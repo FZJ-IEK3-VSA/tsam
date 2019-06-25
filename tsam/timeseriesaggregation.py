@@ -414,19 +414,15 @@ class TimeSeriesAggregation(object):
         ---------
         normalized time series
         '''
-        normalizedTimeSeries = pd.DataFrame()
-        for column in self.timeSeries:
-            if not self.timeSeries[column].max() == self.timeSeries[column].min():  # ignore constant timeseries
-                normalizedTimeSeries[column] = (
-                                                   self.timeSeries[column] -
-                                                   self.timeSeries[column].min()) / \
-                                               (self.timeSeries[column].max() -
-                                                self.timeSeries[column].min())
-                if sameMean:
-                    normalizedTimeSeries[column] = normalizedTimeSeries[
-                                                       column] / normalizedTimeSeries[column].mean()
-            else:
-                normalizedTimeSeries[column] = self.timeSeries[column]
+        from sklearn import preprocessing
+        min_max_scaler = preprocessing.MinMaxScaler()
+        normalizedTimeSeries = pd.DataFrame(min_max_scaler.fit_transform(self.timeSeries),
+                                            columns=self.timeSeries.columns,
+                                            index=self.timeSeries.index)
+
+        if sameMean:
+            normalizedTimeSeries /= normalizedTimeSeries.mean()
+
         return normalizedTimeSeries
 
     def _unnormalizeTimeSeries(self, normalizedTimeSeries, sameMean=False):
@@ -441,26 +437,17 @@ class TimeSeriesAggregation(object):
         sameMean: boolean, optional (default: False)
             Has to have the same value as in _normalizeTimeSeries.
         '''
-        unnormalizedTimeSeries = pd.DataFrame()
-        for column in self.timeSeries:
-            if not self.timeSeries[column].max() == self.timeSeries[column].min():  # ignore constant timeseries
-                if sameMean:
-                    unnormalizedTimeSeries[column] = \
-                        normalizedTimeSeries[column] * \
-                        (self.timeSeries[column].mean() -
-                         self.timeSeries[column].min()) / \
-                        (self.timeSeries[column].max() -
-                         self.timeSeries[column].min())
-                else:
-                    unnormalizedTimeSeries[
-                        column] = normalizedTimeSeries[column]
-                unnormalizedTimeSeries[column] = \
-                    unnormalizedTimeSeries[column] * \
-                    (self.timeSeries[column].max() -
-                     self.timeSeries[column].min()) + \
-                    self.timeSeries[column].min()
-            else:
-                unnormalizedTimeSeries[column] = normalizedTimeSeries[column]
+        from sklearn import preprocessing
+        min_max_scaler = preprocessing.MinMaxScaler()
+        min_max_scaler.fit(self.timeSeries)
+        unnormalizedTimeSeries = pd.DataFrame(min_max_scaler.inverse_transform(
+            normalizedTimeSeries),
+            columns=normalizedTimeSeries.columns,
+            index=normalizedTimeSeries.index)
+
+        if sameMean:
+            unnormalizedTimeSeries *= unnormalizedTimeSeries.mean()
+
         return unnormalizedTimeSeries
 
     def _preProcessTimeSeries(self):
@@ -469,7 +456,7 @@ class TimeSeriesAggregation(object):
         puts them into the correct matrix format.
         '''
         # first sort the time series in order to avoid bug mention in #18
-        self.timeSeries = self.timeSeries.reindex(sorted(self.timeSeries.columns), axis=1)
+        self.timeSeries.sort_index(axis=1, inplace=True)
 
         # normalize the time series and group them to periodly profiles
         self.normalizedTimeSeries = self._normalizeTimeSeries(
