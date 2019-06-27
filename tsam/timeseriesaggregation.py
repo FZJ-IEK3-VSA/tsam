@@ -13,6 +13,9 @@ import pandas as pd
 import numpy as np
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics.pairwise import euclidean_distances
+from sklearn import preprocessing
+    
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -107,10 +110,7 @@ def aggregatePeriods(candidates, n_clusters=8,
         'averaging','k_means','exact k_medoid' or 'hierarchical'
     '''
 
-    if clusterMethod == 'hierarchical':
-        clusterCenterIndices = []
-    else:
-        clusterCenterIndices = None
+    clusterCenterIndices = None
 
     # cluster the data
     if clusterMethod == 'averaging':
@@ -128,11 +128,7 @@ def aggregatePeriods(candidates, n_clusters=8,
             clusterOrder.append([n_clusters - 1] *
                                 int(n_sets - cluster_size * n_clusters))
         clusterOrder = np.hstack(np.array(clusterOrder))
-        clusterCenters = []
-        for clusterNum in np.unique(clusterOrder):
-            indice = np.where(clusterOrder == clusterNum)
-            currentMean = candidates[indice].mean(axis=0)
-            clusterCenters.append(currentMean)
+        clusterCenters = meanRepresentation(candidates, clusterOrder)
 
     if clusterMethod == 'k_means':
         from sklearn.cluster import KMeans
@@ -143,7 +139,8 @@ def aggregatePeriods(candidates, n_clusters=8,
             tol=1e-4)
 
         clusterOrder = k_means.fit_predict(candidates)
-        clusterCenters = k_means.cluster_centers_
+        # get with own mean representation to avoid numerical trouble caused by sklearn
+        clusterCenters = meanRepresentation(candidates, clusterOrder)
 
     elif clusterMethod == 'k_medoids':
         from tsam.utils.k_medoids_exact import KMedoids
@@ -151,7 +148,6 @@ def aggregatePeriods(candidates, n_clusters=8,
 
         clusterOrder = k_medoid.fit_predict(candidates)
         clusterCenters = k_medoid.cluster_centers_
-    #
 
     elif clusterMethod == 'hierarchical':
         from sklearn.cluster import AgglomerativeClustering
@@ -159,18 +155,59 @@ def aggregatePeriods(candidates, n_clusters=8,
             n_clusters=n_clusters, linkage='ward')
 
         clusterOrder = clustering.fit_predict(candidates)
-
-        from sklearn.metrics.pairwise import euclidean_distances
-        # set cluster center as medoid
-        clusterCenters = []
-        for clusterNum in np.unique(clusterOrder):
-            indice = np.where(clusterOrder == clusterNum)
-            innerDistMatrix = euclidean_distances(candidates[indice])
-            mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
-            clusterCenters.append(candidates[indice][mindistIdx])
-            clusterCenterIndices.append(indice[0][mindistIdx])
+        # represent hierarchical aggregation with medoid
+        clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
 
     return clusterCenters, clusterCenterIndices, clusterOrder
+
+
+def medoidRepresentation(candidates, clusterOrder):
+    '''
+    Represents the candidates of a given cluster group (clusterOrder)
+    by its medoid, measured with the euclidean distance.
+
+    Parameters
+    ----------
+    candidates: np.ndarray, required
+        Dissimilarity matrix where each row represents a candidate
+    clusterOrder: np.array, required
+        Integer array where the index refers to the candidate and the
+        Integer entry to the group.
+    '''
+    # set cluster center as medoid
+    clusterCenters = []
+    clusterCenterIndices = []
+    for clusterNum in np.unique(clusterOrder):
+        indice = np.where(clusterOrder == clusterNum)
+        innerDistMatrix = euclidean_distances(candidates[indice])
+        mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
+        clusterCenters.append(candidates[indice][mindistIdx])
+        clusterCenterIndices.append(indice[0][mindistIdx])
+
+    return clusterCenters, clusterCenterIndices
+
+
+def meanRepresentation(candidates, clusterOrder):
+    '''
+    Represents the candidates of a given cluster group (clusterOrder)
+    by its mean.
+
+    Parameters
+    ----------
+    candidates: np.ndarray, required
+        Dissimilarity matrix where each row represents a candidate
+    clusterOrder: np.array, required
+        Integer array where the index refers to the candidate and the
+        Integer entry to the group.
+    '''
+    # set cluster centers as means of the group candidates
+    clusterCenters = []
+    for clusterNum in np.unique(clusterOrder):
+        indice = np.where(clusterOrder == clusterNum)
+        currentMean = candidates[indice].mean(axis=0)
+        clusterCenters.append(currentMean)
+    return clusterCenters
+
 
 
 class TimeSeriesAggregation(object):
@@ -309,6 +346,9 @@ class TimeSeriesAggregation(object):
 
         self._check_init_args()
 
+        # internal attributes 
+        self._normalizedMean = None
+
         return
 
     def _check_init_args(self):
@@ -414,19 +454,15 @@ class TimeSeriesAggregation(object):
         ---------
         normalized time series
         '''
-        normalizedTimeSeries = pd.DataFrame()
-        for column in self.timeSeries:
-            if not self.timeSeries[column].max() == self.timeSeries[column].min():  # ignore constant timeseries
-                normalizedTimeSeries[column] = (
-                                                   self.timeSeries[column] -
-                                                   self.timeSeries[column].min()) / \
-                                               (self.timeSeries[column].max() -
-                                                self.timeSeries[column].min())
-                if sameMean:
-                    normalizedTimeSeries[column] = normalizedTimeSeries[
-                                                       column] / normalizedTimeSeries[column].mean()
-            else:
-                normalizedTimeSeries[column] = self.timeSeries[column]
+        min_max_scaler = preprocessing.MinMaxScaler()
+        normalizedTimeSeries = pd.DataFrame(min_max_scaler.fit_transform(self.timeSeries),
+                                            columns=self.timeSeries.columns,
+                                            index=self.timeSeries.index)
+        
+        self._normalizedMean = normalizedTimeSeries.mean()
+        if sameMean:
+            normalizedTimeSeries /= self._normalizedMean
+
         return normalizedTimeSeries
 
     def _unnormalizeTimeSeries(self, normalizedTimeSeries, sameMean=False):
@@ -441,26 +477,18 @@ class TimeSeriesAggregation(object):
         sameMean: boolean, optional (default: False)
             Has to have the same value as in _normalizeTimeSeries.
         '''
-        unnormalizedTimeSeries = pd.DataFrame()
-        for column in self.timeSeries:
-            if not self.timeSeries[column].max() == self.timeSeries[column].min():  # ignore constant timeseries
-                if sameMean:
-                    unnormalizedTimeSeries[column] = \
-                        normalizedTimeSeries[column] * \
-                        (self.timeSeries[column].mean() -
-                         self.timeSeries[column].min()) / \
-                        (self.timeSeries[column].max() -
-                         self.timeSeries[column].min())
-                else:
-                    unnormalizedTimeSeries[
-                        column] = normalizedTimeSeries[column]
-                unnormalizedTimeSeries[column] = \
-                    unnormalizedTimeSeries[column] * \
-                    (self.timeSeries[column].max() -
-                     self.timeSeries[column].min()) + \
-                    self.timeSeries[column].min()
-            else:
-                unnormalizedTimeSeries[column] = normalizedTimeSeries[column]
+        from sklearn import preprocessing
+        min_max_scaler = preprocessing.MinMaxScaler()
+        min_max_scaler.fit(self.timeSeries)
+
+        if sameMean:
+            normalizedTimeSeries *= self._normalizedMean
+
+        unnormalizedTimeSeries = pd.DataFrame(min_max_scaler.inverse_transform(
+            normalizedTimeSeries),
+            columns=normalizedTimeSeries.columns,
+            index=normalizedTimeSeries.index)
+
         return unnormalizedTimeSeries
 
     def _preProcessTimeSeries(self):
@@ -469,7 +497,10 @@ class TimeSeriesAggregation(object):
         puts them into the correct matrix format.
         '''
         # first sort the time series in order to avoid bug mention in #18
-        self.timeSeries = self.timeSeries.reindex(sorted(self.timeSeries.columns), axis=1)
+        self.timeSeries.sort_index(axis=1, inplace=True)
+
+        # convert the dataframe to floats
+        self.timeSeries = self.timeSeries.astype(float)
 
         # normalize the time series and group them to periodly profiles
         self.normalizedTimeSeries = self._normalizeTimeSeries(
