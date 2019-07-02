@@ -55,8 +55,8 @@ def test_cluster_order():
     orig2 = orig_raw_predefClusterOrderAndClusterCenters[typPeriods_predefClusterOrderAndClusterCenters.columns].unstack().loc[sortedDaysOrig2,:].stack()
     test2 = typPeriods_predefClusterOrderAndClusterCenters.unstack().loc[sortedDaysTest2,:].stack()
 
-    np.testing.assert_array_almost_equal(orig1.values, test1.values,decimal=4)
-    np.testing.assert_array_almost_equal(orig2.values, test2.values, decimal=4)
+    np.testing.assert_array_almost_equal(orig1.values, test1[orig1.columns].values,decimal=4)
+    np.testing.assert_array_almost_equal(orig2.values, test2[orig1.columns].values, decimal=4)
 
 if __name__ == "__main__":
     test_cluster_order()
