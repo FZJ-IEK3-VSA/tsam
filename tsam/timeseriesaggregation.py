@@ -92,7 +92,7 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
 
 
 def aggregatePeriods(candidates, n_clusters=8,
-                     n_iter=100, clusterMethod='k_means', solver='glpk'):
+                     n_iter=100, clusterMethod='k_means', solver='glpk', ):
     '''
     Clusters the data based on one of the cluster methods:
         'averaging','k_means','exact k_medoid' or 'hierarchical'
@@ -153,7 +153,6 @@ def aggregatePeriods(candidates, n_clusters=8,
         from sklearn.cluster import AgglomerativeClustering
         clustering = AgglomerativeClustering(
             n_clusters=n_clusters, linkage='ward')
-
         clusterOrder = clustering.fit_predict(candidates)
         # represent hierarchical aggregation with medoid
         clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
@@ -226,7 +225,8 @@ class TimeSeriesAggregation(object):
                  hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
                  rescaleClusterPeriods=True, weightDict=None,
-                 extremePeriodMethod='None', solver='glpk',
+                 extremePeriodMethod='None', predefClusterOrder=None,
+                 predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
                  addPeakMin=None,
                  addPeakMax=None,
@@ -283,6 +283,12 @@ class TimeSeriesAggregation(object):
                 'replace_cluster_center': replaces the cluster center of the
                     cluster where the extreme period belongs to with the periodly
                     profile of the extreme period. (Worst case system design)
+        predefClusterOrder: list or array, optional (default: None)
+            Instead of aggregating a time series, a predefined grouping is taken
+            which is given by this list.
+        predefClusterCenterIndices: list or array, optional (default: None)
+            If predefClusterOrder is give, this list can define the representative
+            cluster candidates. Otherwise the medoid is taken.
         solver: string, optional (default: 'glpk' )
             Solver that is used for k_medoids clustering.
         roundOutput: int, optional (default: None )
@@ -331,6 +337,10 @@ class TimeSeriesAggregation(object):
         self.rescaleClusterPeriods = rescaleClusterPeriods
 
         self.weightDict = weightDict
+
+        self.predefClusterOrder = predefClusterOrder
+
+        self.predefClusterCenterIndices = predefClusterCenterIndices
 
         self.solver = solver
 
@@ -439,6 +449,19 @@ class TimeSeriesAggregation(object):
         # check rescaleClusterPeriods
         if not isinstance(self.rescaleClusterPeriods, bool):
             raise ValueError("rescaleClusterPeriods has to be boolean")
+
+        # check predefClusterOrder
+        if self.predefClusterOrder is not None:
+            if not isinstance(self.predefClusterOrder, (list, np.ndarray)):
+                raise ValueError("predefClusterOrder has to be an array or list")
+            if self.predefClusterCenterIndices is not None:
+                # check predefClusterCenterIndices
+                if not isinstance(self.predefClusterCenterIndices, (list, np.ndarray)):
+                    raise ValueError("predefClusterCenterIndices has to be an array or list")
+        elif self.predefClusterCenterIndices is not None:
+            raise ValueError('If "predefClusterCenterIndices" is defined, "predefClusterOrder" needs to be defined as well')
+
+
 
     def _normalizeTimeSeries(self, sameMean=False):
         '''
@@ -796,7 +819,7 @@ class TimeSeriesAggregation(object):
         distanceMedoid_iter = []
 
         for i in range(n_init):
-            altClusterCenters, clusterCenterIndices, clusterOrders_C = (
+            altClusterCenters, self.clusterCenterIndices, clusterOrders_C = (
                 aggregatePeriods(
                     sortedClusterValues, n_clusters=self.noTypicalPeriods,
                     n_iter=30, solver=self.solver,
@@ -870,17 +893,29 @@ class TimeSeriesAggregation(object):
             delClusterParams = None
             candidates = self.normalizedPeriodlyProfiles.values
 
-        cluster_duration = time.time()
-        if not self.sortValues:
-            # cluster the data
-            self.clusterCenters, self.clusterCenterIndices, \
-                self._clusterOrder = aggregatePeriods(
-                candidates, n_clusters=self.noTypicalPeriods, n_iter=100,
-                solver=self.solver, clusterMethod=self.clusterMethod)
+
+        # skip aggregation procedure for the case of a predifined cluster sequence and get only the correct representation
+        if not self.predefClusterOrder is None:
+            self._clusterOrder = self.predefClusterOrder
+            # check if representatives are defined
+            if not self.predefClusterCenterIndices is None:
+                self.clusterCenterIndices = self.predefClusterCenterIndices
+                self.clusterCenters = candidates[self.predefClusterCenterIndices]
+            else:
+                # otherwise take the medoids
+                self.clusterCenters, self.clusterCenterIndices = medoidRepresentation(candidates, self._clusterOrder)
         else:
-            self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
-                candidates)
-        self.clusteringDuration = time.time() - cluster_duration
+            cluster_duration = time.time()
+            if not self.sortValues:
+                # cluster the data
+                self.clusterCenters, self.clusterCenterIndices, \
+                    self._clusterOrder = aggregatePeriods(
+                    candidates, n_clusters=self.noTypicalPeriods, n_iter=100,
+                    solver=self.solver, clusterMethod=self.clusterMethod)
+            else:
+                self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
+                    candidates)
+            self.clusteringDuration = time.time() - cluster_duration
 
         # get cluster centers without additional evaluation values
         self.clusterPeriods = []
