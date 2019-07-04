@@ -77,9 +77,9 @@ Store the results as .csv file
 
 ### Detailed examples
 
-A [**first example**](/example/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook. 
+A [**first example**](https://github.com/FZJ-IEK3-VSA/tsam/blob/master/example/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook. 
 
-A [**second example**](/example/aggregation_optiinput.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
+A [**second example**](https://github.com/FZJ-IEK3-VSA/tsam/blob/master/example/aggregation_optiinput.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
 
 The example time series are based on a department [publication](http://www.mdpi.com/1996-1073/10/3/361) and the [test reference years of the DWD](http://www.dwd.de/DE/leistungen/testreferenzjahre/testreferenzjahre.html).
 
