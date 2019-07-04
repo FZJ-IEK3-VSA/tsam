@@ -23,7 +23,7 @@ def test_preprocess():
 
     orig = pd.read_csv(os.path.join(os.path.dirname(__file__),'..','examples','results','preprocessed_wind.csv'), index_col = [0], header = [0,1])
 
-    np.testing.assert_array_almost_equal(test.values, orig.values,decimal=4)
+    np.testing.assert_array_almost_equal(test.values, orig.values,decimal=15)
 
     
 if __name__ == "__main__":
