@@ -617,7 +617,8 @@ class TimeSeriesAggregation(object):
                 # add only if stepNo is not already in extremePeriods
                 # if it is not already a cluster center
                 if stepNo not in extremePeriodNo and groupedSeries.loc[stepNo,:].values.tolist() not in ccList:
-                    self.extremePeriods[column + ' max.'] = \
+                    max_col = self._append_col_with(column, ' max.')
+                    self.extremePeriods[max_col] = \
                         {'stepNo': stepNo,
                          'profile': groupedSeries.loc[stepNo,:].values,
                          'column': column}
@@ -628,7 +629,8 @@ class TimeSeriesAggregation(object):
                 # add only if stepNo is not already in extremePeriods
                 # if it is not already a cluster center
                 if stepNo not in extremePeriodNo and groupedSeries.loc[stepNo,:].values.tolist() not in ccList:
-                    self.extremePeriods[column + ' min.'] = \
+                    min_col = self._append_col_with(column, ' min.')
+                    self.extremePeriods[min_col] = \
                         {'stepNo': stepNo,
                          'profile': groupedSeries.loc[stepNo,:].values,
                          'column': column}
@@ -639,7 +641,8 @@ class TimeSeriesAggregation(object):
                 # add only if stepNo is not already in extremePeriods
                 # if it is not already a cluster center
                 if stepNo not in extremePeriodNo and groupedSeries.loc[stepNo,:].values.tolist() not in ccList:
-                    self.extremePeriods[column + ' daily min.'] = \
+                    mean_max_col = self._append_col_with(column, ' daily max.')
+                    self.extremePeriods[mean_max_col] = \
                         {'stepNo': stepNo,
                          'profile': groupedSeries.loc[stepNo,:].values,
                          'column': column}
@@ -650,7 +653,8 @@ class TimeSeriesAggregation(object):
                 # add only if stepNo is not already in extremePeriods and
                 # if it is not already a cluster center
                 if stepNo not in extremePeriodNo and groupedSeries.loc[stepNo,:].values.tolist() not in ccList:
-                    self.extremePeriods[column + ' daily min.'] = \
+                    mean_min_col = self._append_col_with(column, ' daily min.')
+                    self.extremePeriods[mean_min_col] = \
                         {'stepNo': stepNo,
                          'profile': groupedSeries.loc[stepNo,:].values,
                          'column': column}
@@ -728,6 +732,16 @@ class TimeSeriesAggregation(object):
                                       'not implemented.')
 
         return newClusterCenters, newClusterOrder, extremeClusterIdx
+
+    def _append_col_with(self, column, append_with=' max.'):
+        """Appends a string to the column name. For MultiIndexes, which turn out to be
+        tuples when this method is called, only last level is changed"""
+        if isinstance(column, str):
+            return column + append_with
+        elif isinstance(column, tuple):
+            col = list(column)
+            col[-1] = col[-1] + append_with
+            return tuple(col)
 
     def _rescaleClusterPeriods(
             self, clusterOrder, clusterPeriods, extremeClusterIdx):
