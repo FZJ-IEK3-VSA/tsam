@@ -208,7 +208,6 @@ def meanRepresentation(candidates, clusterOrder):
     return clusterCenters
 
 
-
 class TimeSeriesAggregation(object):
     '''
     Clusters time series data to typical periods.
@@ -225,6 +224,7 @@ class TimeSeriesAggregation(object):
                  hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
                  rescaleClusterPeriods=True, weightDict=None,
+                 durationRepresentation = False,
                  extremePeriodMethod='None', predefClusterOrder=None,
                  predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
@@ -291,6 +291,9 @@ class TimeSeriesAggregation(object):
             cluster candidates. Otherwise the medoid is taken.
         solver: string, optional (default: 'glpk' )
             Solver that is used for k_medoids clustering.
+        durationRepresentation: bool, optional (default: False)
+            Alternative representation of the aggregated clusters such that
+            the duration curves of the candidates are fitted.
         roundOutput: int, optional (default: None )
             Decimals to what the output time series get round.
         addPeakMin: list, optional, default: []
@@ -343,6 +346,8 @@ class TimeSeriesAggregation(object):
         self.predefClusterCenterIndices = predefClusterCenterIndices
 
         self.solver = solver
+
+        self.durationRepresentation = durationRepresentation
 
         self.roundOutput = roundOutput
 
@@ -449,6 +454,19 @@ class TimeSeriesAggregation(object):
         # check rescaleClusterPeriods
         if not isinstance(self.rescaleClusterPeriods, bool):
             raise ValueError("rescaleClusterPeriods has to be boolean")
+        
+        if not isinstance(self.durationRepresentation, bool):
+            raise ValueError("durationRepresentation has to be boolean")
+        if self.durationRepresentation:
+            warnings.warn('durationRepresentation" is in development phase ' + 
+                'and can significantly slow down the aggregation for large scale time series')
+            if self.rescaleClusterPeriods:
+                warnings.warn('If "durationRepresentation" is activated it is recommended to turn ' + 
+                '"rescaleClusterPeriods" off.')
+            if (self.addPeakMin or self.addPeakMax or self.addMeanMin or self.addMeanMax) and extremePeriodMethod is not 'None':
+                warnings.warn('If "durationRepresentation" is activated it is recommended to deactivate ' + 
+                'the inclusion of extreme periods since they are allready respected.')
+        return
 
         # check predefClusterOrder
         if self.predefClusterOrder is not None:
@@ -922,6 +940,14 @@ class TimeSeriesAggregation(object):
         for i, cluster_center in enumerate(self.clusterCenters):
             self.clusterPeriods.append(cluster_center[:delClusterParams])
 
+
+        # get alternative cluster center representation
+        if self.durationRepresentation:
+            from tsam.utils.duration_representation import duration_representation
+            self.clusterPeriods = duration_representation(self.normalizedPeriodlyProfiles, 
+                                                            self._clusterOrder,
+                                                            solver = self.solver)
+            
         if not self.extremePeriodMethod == 'None':
             # overwrite clusterPeriods and clusterOrder
             self.clusterPeriods, self._clusterOrder, self.extremeClusterIdx = \
@@ -951,12 +977,12 @@ class TimeSeriesAggregation(object):
                 1 - float(len(self.timeSeries) % self.timeStepsPerPeriod) / self.timeStepsPerPeriod)
 
         # put the clustered data in pandas format and scale back
-        clustered_data_raw = pd.DataFrame(
+        self.normalizedTypicalPeriods = pd.DataFrame(
             self.clusterPeriods,
             columns=self.normalizedPeriodlyProfiles.columns).stack(
             level='TimeStep')
-
-        self.typicalPeriods = self._postProcessTimeSeries(clustered_data_raw)
+        
+        self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
 
         # check if original time series boundaries are not exceeded
         if np.array(self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)).any():
