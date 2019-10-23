@@ -466,8 +466,7 @@ class TimeSeriesAggregation(object):
             if (self.addPeakMin or self.addPeakMax or self.addMeanMin or self.addMeanMax) and extremePeriodMethod is not 'None':
                 warnings.warn('If "durationRepresentation" is activated it is recommended to deactivate ' + 
                 'the inclusion of extreme periods since they are allready respected.')
-        return
-
+        
         # check predefClusterOrder
         if self.predefClusterOrder is not None:
             if not isinstance(self.predefClusterOrder, (list, np.ndarray)):
@@ -479,7 +478,7 @@ class TimeSeriesAggregation(object):
         elif self.predefClusterCenterIndices is not None:
             raise ValueError('If "predefClusterCenterIndices" is defined, "predefClusterOrder" needs to be defined as well')
 
-
+        return
 
     def _normalizeTimeSeries(self, sameMean=False):
         '''
