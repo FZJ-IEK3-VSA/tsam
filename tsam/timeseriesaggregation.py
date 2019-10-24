@@ -221,10 +221,10 @@ class TimeSeriesAggregation(object):
         'replace_cluster_center']
 
     def __init__(self, timeSeries, resolution=None, noTypicalPeriods=10,
-                 hoursPerPeriod=24, clusterMethod='hierarchical',
+                 noSegments=10, hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
                  rescaleClusterPeriods=True, weightDict=None,
-                 durationRepresentation = False,
+                 durationRepresentation = False, segmentation = False,
                  extremePeriodMethod='None', predefClusterOrder=None,
                  predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
@@ -327,6 +327,8 @@ class TimeSeriesAggregation(object):
 
         self.noTypicalPeriods = noTypicalPeriods
 
+        self.noSegments = noSegments
+
         self.clusterMethod = clusterMethod
 
         self.extremePeriodMethod = extremePeriodMethod
@@ -348,6 +350,8 @@ class TimeSeriesAggregation(object):
         self.solver = solver
 
         self.durationRepresentation = durationRepresentation
+
+        self.segmentation = segmentation
 
         self.roundOutput = roundOutput
 
@@ -980,7 +984,11 @@ class TimeSeriesAggregation(object):
             self.clusterPeriods,
             columns=self.normalizedPeriodlyProfiles.columns).stack(
             level='TimeStep')
-        
+
+        if self.segmentation:
+            from tsam.utils.segmentation import segmentation
+            self.normalizedTypicalPeriods = segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod)
+
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
 
         # check if original time series boundaries are not exceeded
@@ -1062,7 +1070,8 @@ class TimeSeriesAggregation(object):
 
         new_data = []
         for label in self._clusterOrder:
-            new_data.append(self.clusterPeriods[label])
+            #new_data.append(self.clusterPeriods[label])
+            new_data.append(self.normalizedTypicalPeriods.loc[label,:].unstack().values)
 
         # back in matrix
         clustered_data_df = \
