@@ -463,10 +463,10 @@ class TimeSeriesAggregation(object):
             if self.rescaleClusterPeriods:
                 warnings.warn('If "durationRepresentation" is activated it is recommended to turn ' + 
                 '"rescaleClusterPeriods" off.')
-            if (self.addPeakMin or self.addPeakMax or self.addMeanMin or self.addMeanMax) and extremePeriodMethod is not 'None':
+            if (self.addPeakMin or self.addPeakMax or self.addMeanMin or self.addMeanMax) and self.extremePeriodMethod is not 'None':
                 warnings.warn('If "durationRepresentation" is activated it is recommended to deactivate ' + 
                 'the inclusion of extreme periods since they are allready respected.')
-        
+
         # check predefClusterOrder
         if self.predefClusterOrder is not None:
             if not isinstance(self.predefClusterOrder, (list, np.ndarray)):
@@ -866,7 +866,7 @@ class TimeSeriesAggregation(object):
                     # append to cluster center
                     clusterCenters_C.append(medoid_C)
 
-                    # calculate metrix for evaluation
+                    # calculate matrix for evaluation
                     distanceMedoid_C.append(
                         abs(candidates[indice] - medoid_C).sum())
 
@@ -911,7 +911,7 @@ class TimeSeriesAggregation(object):
             candidates = self.normalizedPeriodlyProfiles.values
 
 
-        # skip aggregation procedure for the case of a predifined cluster sequence and get only the correct representation
+        # skip aggregation procedure for the case of a predefined cluster sequence and get only the correct representation
         if not self.predefClusterOrder is None:
             self._clusterOrder = self.predefClusterOrder
             # check if representatives are defined
@@ -969,7 +969,7 @@ class TimeSeriesAggregation(object):
             self.clusterPeriods = self._rescaleClusterPeriods(
                 self._clusterOrder, self.clusterPeriods, self.extremeClusterIdx)
 
-        # if additional time steps have been added, reduce the number of occurance of the typical period
+        # if additional time steps have been added, reduce the number of occurrence of the typical period
         # which is related to these time steps
         if not len(self.timeSeries) % self.timeStepsPerPeriod == 0:
             self._clusterPeriodNoOccur[self._clusterOrder[-1]] -= (
@@ -992,7 +992,7 @@ class TimeSeriesAggregation(object):
 
     def prepareEnersysInput(self):
         '''
-        Creates all dictionaries and lists which are required for the energysystem
+        Creates all dictionaries and lists which are required for the energy system
         optimization input.
         '''
         warnings.warn(
@@ -1019,7 +1019,7 @@ class TimeSeriesAggregation(object):
     @property
     def clusterOrder(self):
         '''
-        How often does an typical period occure in the original time series
+        How often does a typical period occur in the original time series
         '''
         if not hasattr(self, '_clusterOrder'):
             self.createTypicalPeriods()
@@ -1028,7 +1028,7 @@ class TimeSeriesAggregation(object):
     @property
     def clusterPeriodNoOccur(self):
         '''
-        How often does an typical period occure in the original time series
+        How often does a typical period occur in the original time series
         '''
         if not hasattr(self, 'clusterOrder'):
             self.createTypicalPeriods()
@@ -1094,7 +1094,7 @@ class TimeSeriesAggregation(object):
         if not hasattr(self, '_clusterOrder'):
             self.createTypicalPeriods()
 
-        # create aggregated period and timestep index lists
+        # create aggregated period and time step index lists
         periodIndex = []
         stepIndex = []
         for label in self._clusterOrder:
@@ -1112,7 +1112,7 @@ class TimeSeriesAggregation(object):
 
     def accuracyIndicators(self):
         '''
-        Compares the predicted data with the orginal time series.
+        Compares the predicted data with the original time series.
 
         Returns
         -------
