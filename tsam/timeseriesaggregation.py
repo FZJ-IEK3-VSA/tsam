@@ -248,6 +248,9 @@ class TimeSeriesAggregation(object):
             Value which defines the length of a cluster period.
         noTypicalPeriods: int, optional, default: 10
             Number of typical Periods - equivalent to the number of clusters.
+        noSegments: int, optional, default: 10
+            Number of segments in which the typical periods shoul be subdivided - equivalent to the number of
+            inner-period clusters.
         clusterMethod: {'averaging','k_means','k_medoids','hierarchical'},
                         optional, default: 'hierarchical'
             Chosen clustering method.
@@ -433,6 +436,10 @@ class TimeSeriesAggregation(object):
             raise ValueError('The combination of hoursPerPeriod and the '
                              + 'resulution does not result in an integer '
                              + 'number of time steps per period')
+        if self.noSegments > self.timeStepsPerPeriod:
+            warnings.warn("The number of segments must be less than or equal to the number of time steps per period. "
+                          "Segment number is decreased to number of time steps per period.")
+            self.noSegments = self.timeStepsPerPeriod
 
         # check clusterMethod
         if self.clusterMethod not in self.CLUSTER_METHODS:
@@ -987,7 +994,7 @@ class TimeSeriesAggregation(object):
 
         if self.segmentation:
             from tsam.utils.segmentation import segmentation
-            self.normalizedTypicalPeriods = segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod)
+            self.normalizedTypicalPeriods = segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod)[-1]
 
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
 

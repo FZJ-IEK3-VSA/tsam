@@ -9,42 +9,67 @@ from tsam.timeseriesaggregation import meanRepresentation
 
 
 def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod):
+    '''
+    Agglomerative clustering of adjacent time steps within a set of typical periods in order to further reduce the
+    temporal resolution within typical periods and to further reduce complexity of input data.
 
+    Parameters
+    ----------
+    normalizedTypicalPeriods: pd.DataFrame, required
+        MultiIndex DataFrame containing the typical periods as first index, the time steps within the periods as second
+        index and the attributes as columns.
+    noSegments: int, required
+        Number of segments in which the typical periods shoul be subdivided - equivalent to the number of
+        inner-period clusters.
+    timeStepsPerPeriod: int, required
+        Number of time steps per period
+
+    Returns
+    -------
+    segmentedNormalizedTypicalPeriods: pd.DataFrame
+        MultiIndex DataFrame similar to normalizedTypicalPeriods but with segments instead of time steps. Moreover, two
+        additional index levels define the length of each segment and the time step index at which each segment starts.
+    predictedSegmentedNormalizedTypicalPeriods: pd.DataFrame
+        MultiIndex DataFrame with the same shape of normalizedTypicalPeriods, but with overwritten values derived from
+        segmentation used for prediction of the original periods and accuracy indicators.
+    '''
+    # Initialize lists for predicted and segmented DataFrame
     segmentedNormalizedTypicalPeriodsList = []
     predictedSegmentedNormalizedTypicalPeriodsList = []
-    # Do for each typical period
+    # do for each typical period
     for i in normalizedTypicalPeriods.index.get_level_values(0).unique():
-        # Make numpy array with rows containing the segmenatation candidates (time steps)
+        # make numpy array with rows containing the segmenatation candidates (time steps)
         # and columns as dimensions of the
         segmentationCandidates = np.asarray(normalizedTypicalPeriods.loc[i,:])
-        # Produce adjacency matrix: Each time step is only connected to its preceding and succeeding one
+        # produce adjacency matrix: Each time step is only connected to its preceding and succeeding one
         adjacencyMatrix = np.eye(timeStepsPerPeriod, k=1) + np.eye(timeStepsPerPeriod, k=-1)
-        # Execute clustering of adjacent time steps
+        # execute clustering of adjacent time steps
         clustering = AgglomerativeClustering(n_clusters=noSegments, linkage='ward', connectivity=adjacencyMatrix)
         clusterOrder = clustering.fit_predict(segmentationCandidates)
-        # Determine the indices where the segments change and the number of time steps in each segment
-        indices, segmentNoOccur = np.unique(clusterOrder, return_index=True, return_counts=True)[1:3]
+        # determine the indices where the segments change and the number of time steps in each segment
+        segNo, indices, segmentNoOccur = np.unique(clusterOrder, return_index=True, return_counts=True)
         clusterOrderUnique = [clusterOrder[index] for index in sorted(indices)]
-        # Determine the segments's values
+        # determine the segments' values
         clusterCenters = meanRepresentation(segmentationCandidates, clusterOrder)
-
+        # predict each time step of the period by representing it with the corresponding segment's values
         predictedSegmentedNormalizedTypicalPeriods = pd.DataFrame(
             clusterCenters,
             columns=normalizedTypicalPeriods.columns).reindex(clusterOrder).reset_index(drop=True)
+        # represent the period by the segments in the right order only instead of each time step
         segmentedNormalizedTypicalPeriods = pd.DataFrame(
             clusterCenters,
-            columns=normalizedTypicalPeriods.columns).reindex(clusterOrderUnique)
-        segmentDuration = pd.DataFrame(segmentNoOccur, columns=['Segment Duration']).reindex(clusterOrderUnique)
-
-        result = pd.concat([segmentedNormalizedTypicalPeriods, segmentDuration], axis=1).set_index(np.sort(indices))
-
+            columns=normalizedTypicalPeriods.columns).reindex(clusterOrderUnique).set_index(np.sort(indices))
+        # keep additional information on the lengths of the segments in the right order
+        segmentDuration = pd.DataFrame(segmentNoOccur, columns=['Segment Duration']).reindex(clusterOrderUnique).set_index(np.sort(indices))
+        # create DataFrame with reduced number of segments together with three indices per period:
+        # 1. The segment number
+        # 2. The segment duration
+        # 3. The index of the original time step, at which the segment starts
+        result=segmentedNormalizedTypicalPeriods.set_index([pd.Index(segNo, name='Time Step'), segmentDuration['Segment Duration'], pd.Index(np.sort(indices), name='Original Start Step')])
+        # append predicted and segmented DataFrame to list to create a big DataFrame for all periods
         predictedSegmentedNormalizedTypicalPeriodsList.append(predictedSegmentedNormalizedTypicalPeriods)
         segmentedNormalizedTypicalPeriodsList.append(result)
-
+    # create a big DataFrame for all periods for predicted segmented time steps and segments and return
     predictedSegmentedNormalizedTypicalPeriods = pd.concat(predictedSegmentedNormalizedTypicalPeriodsList, keys=normalizedTypicalPeriods.index.get_level_values(0).unique()).rename_axis(['','TimeStep'])
-    segmentedNormalizedTypicalPeriods = pd.concat(segmentedNormalizedTypicalPeriodsList, keys=normalizedTypicalPeriods.index.get_level_values(0).unique()).rename_axis(['','TimeStep'])
-    # print(segmentedNormalizedTypicalPeriods.drop(columns='Segment Duration'))
-    # print(predictedSegmentedNormalizedTypicalPeriods)
-    # print(normalizedTypicalPeriods)
-
-    return predictedSegmentedNormalizedTypicalPeriods
+    segmentedNormalizedTypicalPeriods = pd.concat(segmentedNormalizedTypicalPeriodsList, keys=normalizedTypicalPeriods.index.get_level_values(0).unique())
+    return segmentedNormalizedTypicalPeriods, predictedSegmentedNormalizedTypicalPeriods
