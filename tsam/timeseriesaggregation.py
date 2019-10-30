@@ -994,7 +994,8 @@ class TimeSeriesAggregation(object):
 
         if self.segmentation:
             from tsam.utils.segmentation import segmentation
-            self.normalizedTypicalPeriods = segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod)[-1]
+            self.segmentedNormalizedTypicalPeriods, self.predictedSegmentedNormalizedTypicalPeriods = segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod)
+            self.normalizedTypicalPeriods = self.predictedSegmentedNormalizedTypicalPeriods
 
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
 
@@ -1123,6 +1124,16 @@ class TimeSeriesAggregation(object):
             pd.DataFrame([periodIndex, stepIndex],
                          index=['PeriodNum', 'TimeStep'],
                          columns=self.timeIndex).T
+
+        # if segmentation is chosen, append another column stating which
+        if self.segmentation:
+            segmentIndex=[]
+            for label in self._clusterOrder:
+                segmentIndex.extend(np.repeat(self.segmentedNormalizedTypicalPeriods.loc[label, :].index.get_level_values(0), self.segmentedNormalizedTypicalPeriods.loc[label, :].index.get_level_values(1)).values)
+            timeStepMatching = \
+                pd.DataFrame([periodIndex, stepIndex, segmentIndex],
+                             index=['PeriodNum', 'TimeStep', 'SegmentIndex'],
+                             columns=self.timeIndex).T
 
         return timeStepMatching
 
