@@ -1021,7 +1021,10 @@ class TimeSeriesAggregation(object):
         '''
         Index inside a single cluster
         '''
-        return [ix for ix in range(0, self.timeStepsPerPeriod)]
+        if self.segmentation:
+            return [ix for ix in range(0, self.noSegments)]
+        else:
+            return [ix for ix in range(0, self.timeStepsPerPeriod)]
 
     @property
     def clusterPeriodIdx(self):
@@ -1063,6 +1066,25 @@ class TimeSeriesAggregation(object):
                 self._clusterPeriodDict[column] = self.typicalPeriods[column].to_dict()
         return self._clusterPeriodDict
 
+    @property
+    def segmentDurationDict(self):
+        '''
+        Segment duration in time steps for each period index as dictionary
+        '''
+        if not hasattr(self, '_clusterOrder'):
+            self.createTypicalPeriods()
+        if not hasattr(self, '_segmentDurationDict'):
+            if self.segmentation:
+                self._segmentDurationDict = self.segmentedNormalizedTypicalPeriods \
+                    .drop(self.segmentedNormalizedTypicalPeriods.columns, axis=1) \
+                    .reset_index(level=3, drop=True).reset_index(2).to_dict()
+            else:
+                self._segmentDurationDict = self.typicalPeriods.drop(self.typicalPeriods.columns, axis=1)
+                self._segmentDurationDict['Segment Duration'] = 1
+                self._segmentDurationDict = self._segmentDurationDict.to_dict()
+                warnings.warn('Segmentation is turned off. All segments are consistent the time steps.')
+        return self._segmentDurationDict
+
     def predictOriginalData(self):
         '''
         Predicts the overall time series if every period would be placed in the
@@ -1078,8 +1100,11 @@ class TimeSeriesAggregation(object):
 
         new_data = []
         for label in self._clusterOrder:
-            #new_data.append(self.clusterPeriods[label])
-            new_data.append(self.normalizedTypicalPeriods.loc[label,:].unstack().values)
+            if self.segmentation:
+                new_data.append(self.predictedSegmentedNormalizedTypicalPeriods.loc[label, :].unstack().values)
+            else:
+                #new_data.append(self.clusterPeriods[label])
+                new_data.append(self.normalizedTypicalPeriods.loc[label,:].unstack().values)
 
         # back in matrix
         clustered_data_df = \
