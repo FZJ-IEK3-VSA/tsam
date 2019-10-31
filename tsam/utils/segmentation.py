@@ -65,7 +65,7 @@ def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod):
         # 1. The segment number
         # 2. The segment duration
         # 3. The index of the original time step, at which the segment starts
-        result=segmentedNormalizedTypicalPeriods.set_index([pd.Index(segNo, name='Time Step'), segmentDuration['Segment Duration'], pd.Index(np.sort(indices), name='Original Start Step')])
+        result=segmentedNormalizedTypicalPeriods.set_index([pd.Index(segNo, name='Segment Step'), segmentDuration['Segment Duration'], pd.Index(np.sort(indices), name='Original Start Step')])
         # append predicted and segmented DataFrame to list to create a big DataFrame for all periods
         predictedSegmentedNormalizedTypicalPeriodsList.append(predictedSegmentedNormalizedTypicalPeriods)
         segmentedNormalizedTypicalPeriodsList.append(result)

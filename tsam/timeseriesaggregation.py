@@ -53,7 +53,7 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
     # init new grouped timeindex
     unstackedTimeSeries = timeSeries.copy()
 
-    # initalize new indices
+    # initialize new indices
     periodIndex = []
     stepIndex = []
 
@@ -995,7 +995,7 @@ class TimeSeriesAggregation(object):
         if self.segmentation:
             from tsam.utils.segmentation import segmentation
             self.segmentedNormalizedTypicalPeriods, self.predictedSegmentedNormalizedTypicalPeriods = segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod)
-            self.normalizedTypicalPeriods = self.predictedSegmentedNormalizedTypicalPeriods
+            self.normalizedTypicalPeriods = self.segmentedNormalizedTypicalPeriods.reset_index(level=3, drop=True)
 
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
 
@@ -1098,8 +1098,11 @@ class TimeSeriesAggregation(object):
         if not hasattr(self, '_clusterOrder'):
             self.createTypicalPeriods()
 
+        # list up typical periods according to their order of occurrence using the _clusterOrder.
         new_data = []
         for label in self._clusterOrder:
+            # if segmentation is used, use the segmented typical periods with predicted time steps with the same number
+            # of time steps as unsegmented typical periods
             if self.segmentation:
                 new_data.append(self.predictedSegmentedNormalizedTypicalPeriods.loc[label, :].unstack().values)
             else:
