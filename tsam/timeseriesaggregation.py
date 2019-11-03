@@ -1121,6 +1121,10 @@ class TimeSeriesAggregation(object):
             pd.DataFrame(clustered_data_df.values[:len(self.timeSeries)],
                          index=self.timeSeries.index,
                          columns=self.timeSeries.columns)
+        # normalize again if sameMean = True to avoid doubled unnormalization when using _postProcessTimeSeries after
+        # createTypicalPeriods has been called
+        if self.sameMean:
+            self.normalizedPredictedData /= self._normalizedMean
         self.predictedData = self._postProcessTimeSeries(
             self.normalizedPredictedData)
 
