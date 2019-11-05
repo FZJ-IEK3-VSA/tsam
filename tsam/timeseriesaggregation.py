@@ -53,7 +53,7 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
     # init new grouped timeindex
     unstackedTimeSeries = timeSeries.copy()
 
-    # initalize new indices
+    # initialize new indices
     periodIndex = []
     stepIndex = []
 
@@ -221,10 +221,10 @@ class TimeSeriesAggregation(object):
         'replace_cluster_center']
 
     def __init__(self, timeSeries, resolution=None, noTypicalPeriods=10,
-                 hoursPerPeriod=24, clusterMethod='hierarchical',
+                 noSegments=10, hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
                  rescaleClusterPeriods=True, weightDict=None,
-                 durationRepresentation = False,
+                 durationRepresentation = False, segmentation = False,
                  extremePeriodMethod='None', predefClusterOrder=None,
                  predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
@@ -248,6 +248,9 @@ class TimeSeriesAggregation(object):
             Value which defines the length of a cluster period.
         noTypicalPeriods: int, optional, default: 10
             Number of typical Periods - equivalent to the number of clusters.
+        noSegments: int, optional, default: 10
+            Number of segments in which the typical periods shoul be subdivided - equivalent to the number of
+            inner-period clusters.
         clusterMethod: {'averaging','k_means','k_medoids','hierarchical'},
                         optional, default: 'hierarchical'
             Chosen clustering method.
@@ -327,6 +330,8 @@ class TimeSeriesAggregation(object):
 
         self.noTypicalPeriods = noTypicalPeriods
 
+        self.noSegments = noSegments
+
         self.clusterMethod = clusterMethod
 
         self.extremePeriodMethod = extremePeriodMethod
@@ -348,6 +353,8 @@ class TimeSeriesAggregation(object):
         self.solver = solver
 
         self.durationRepresentation = durationRepresentation
+
+        self.segmentation = segmentation
 
         self.roundOutput = roundOutput
 
@@ -429,6 +436,10 @@ class TimeSeriesAggregation(object):
             raise ValueError('The combination of hoursPerPeriod and the '
                              + 'resulution does not result in an integer '
                              + 'number of time steps per period')
+        if self.noSegments > self.timeStepsPerPeriod:
+            warnings.warn("The number of segments must be less than or equal to the number of time steps per period. "
+                          "Segment number is decreased to number of time steps per period.")
+            self.noSegments = self.timeStepsPerPeriod
 
         # check clusterMethod
         if self.clusterMethod not in self.CLUSTER_METHODS:
@@ -463,10 +474,9 @@ class TimeSeriesAggregation(object):
             if self.rescaleClusterPeriods:
                 warnings.warn('If "durationRepresentation" is activated it is recommended to turn ' + 
                 '"rescaleClusterPeriods" off.')
-            if (self.addPeakMin or self.addPeakMax or self.addMeanMin or self.addMeanMax) and extremePeriodMethod is not 'None':
+            if (self.addPeakMin or self.addPeakMax or self.addMeanMin or self.addMeanMax) and self.extremePeriodMethod is not 'None':
                 warnings.warn('If "durationRepresentation" is activated it is recommended to deactivate ' + 
                 'the inclusion of extreme periods since they are allready respected.')
-        return
 
         # check predefClusterOrder
         if self.predefClusterOrder is not None:
@@ -479,7 +489,7 @@ class TimeSeriesAggregation(object):
         elif self.predefClusterCenterIndices is not None:
             raise ValueError('If "predefClusterCenterIndices" is defined, "predefClusterOrder" needs to be defined as well')
 
-
+        return
 
     def _normalizeTimeSeries(self, sameMean=False):
         '''
@@ -867,7 +877,7 @@ class TimeSeriesAggregation(object):
                     # append to cluster center
                     clusterCenters_C.append(medoid_C)
 
-                    # calculate metrix for evaluation
+                    # calculate matrix for evaluation
                     distanceMedoid_C.append(
                         abs(candidates[indice] - medoid_C).sum())
 
@@ -912,7 +922,7 @@ class TimeSeriesAggregation(object):
             candidates = self.normalizedPeriodlyProfiles.values
 
 
-        # skip aggregation procedure for the case of a predifined cluster sequence and get only the correct representation
+        # skip aggregation procedure for the case of a predefined cluster sequence and get only the correct representation
         if not self.predefClusterOrder is None:
             self._clusterOrder = self.predefClusterOrder
             # check if representatives are defined
@@ -970,7 +980,7 @@ class TimeSeriesAggregation(object):
             self.clusterPeriods = self._rescaleClusterPeriods(
                 self._clusterOrder, self.clusterPeriods, self.extremeClusterIdx)
 
-        # if additional time steps have been added, reduce the number of occurance of the typical period
+        # if additional time steps have been added, reduce the number of occurrence of the typical period
         # which is related to these time steps
         if not len(self.timeSeries) % self.timeStepsPerPeriod == 0:
             self._clusterPeriodNoOccur[self._clusterOrder[-1]] -= (
@@ -981,7 +991,12 @@ class TimeSeriesAggregation(object):
             self.clusterPeriods,
             columns=self.normalizedPeriodlyProfiles.columns).stack(
             level='TimeStep')
-        
+
+        if self.segmentation:
+            from tsam.utils.segmentation import segmentation
+            self.segmentedNormalizedTypicalPeriods, self.predictedSegmentedNormalizedTypicalPeriods = segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod)
+            self.normalizedTypicalPeriods = self.segmentedNormalizedTypicalPeriods.reset_index(level=3, drop=True)
+
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
 
         # check if original time series boundaries are not exceeded
@@ -993,7 +1008,7 @@ class TimeSeriesAggregation(object):
 
     def prepareEnersysInput(self):
         '''
-        Creates all dictionaries and lists which are required for the energysystem
+        Creates all dictionaries and lists which are required for the energy system
         optimization input.
         '''
         warnings.warn(
@@ -1006,7 +1021,10 @@ class TimeSeriesAggregation(object):
         '''
         Index inside a single cluster
         '''
-        return [ix for ix in range(0, self.timeStepsPerPeriod)]
+        if self.segmentation:
+            return [ix for ix in range(0, self.noSegments)]
+        else:
+            return [ix for ix in range(0, self.timeStepsPerPeriod)]
 
     @property
     def clusterPeriodIdx(self):
@@ -1020,7 +1038,7 @@ class TimeSeriesAggregation(object):
     @property
     def clusterOrder(self):
         '''
-        How often does an typical period occure in the original time series
+        How often does a typical period occur in the original time series
         '''
         if not hasattr(self, '_clusterOrder'):
             self.createTypicalPeriods()
@@ -1029,7 +1047,7 @@ class TimeSeriesAggregation(object):
     @property
     def clusterPeriodNoOccur(self):
         '''
-        How often does an typical period occure in the original time series
+        How often does a typical period occur in the original time series
         '''
         if not hasattr(self, 'clusterOrder'):
             self.createTypicalPeriods()
@@ -1048,6 +1066,25 @@ class TimeSeriesAggregation(object):
                 self._clusterPeriodDict[column] = self.typicalPeriods[column].to_dict()
         return self._clusterPeriodDict
 
+    @property
+    def segmentDurationDict(self):
+        '''
+        Segment duration in time steps for each period index as dictionary
+        '''
+        if not hasattr(self, '_clusterOrder'):
+            self.createTypicalPeriods()
+        if not hasattr(self, '_segmentDurationDict'):
+            if self.segmentation:
+                self._segmentDurationDict = self.segmentedNormalizedTypicalPeriods \
+                    .drop(self.segmentedNormalizedTypicalPeriods.columns, axis=1) \
+                    .reset_index(level=3, drop=True).reset_index(2).to_dict()
+            else:
+                self._segmentDurationDict = self.typicalPeriods.drop(self.typicalPeriods.columns, axis=1)
+                self._segmentDurationDict['Segment Duration'] = 1
+                self._segmentDurationDict = self._segmentDurationDict.to_dict()
+                warnings.warn('Segmentation is turned off. All segments are consistent the time steps.')
+        return self._segmentDurationDict
+
     def predictOriginalData(self):
         '''
         Predicts the overall time series if every period would be placed in the
@@ -1061,9 +1098,16 @@ class TimeSeriesAggregation(object):
         if not hasattr(self, '_clusterOrder'):
             self.createTypicalPeriods()
 
+        # list up typical periods according to their order of occurrence using the _clusterOrder.
         new_data = []
         for label in self._clusterOrder:
-            new_data.append(self.clusterPeriods[label])
+            # if segmentation is used, use the segmented typical periods with predicted time steps with the same number
+            # of time steps as unsegmented typical periods
+            if self.segmentation:
+                new_data.append(self.predictedSegmentedNormalizedTypicalPeriods.loc[label, :].unstack().values)
+            else:
+                #new_data.append(self.clusterPeriods[label])
+                new_data.append(self.normalizedTypicalPeriods.loc[label,:].unstack().values)
 
         # back in matrix
         clustered_data_df = \
@@ -1077,6 +1121,10 @@ class TimeSeriesAggregation(object):
             pd.DataFrame(clustered_data_df.values[:len(self.timeSeries)],
                          index=self.timeSeries.index,
                          columns=self.timeSeries.columns)
+        # normalize again if sameMean = True to avoid doubled unnormalization when using _postProcessTimeSeries after
+        # createTypicalPeriods has been called
+        if self.sameMean:
+            self.normalizedPredictedData /= self._normalizedMean
         self.predictedData = self._postProcessTimeSeries(
             self.normalizedPredictedData)
 
@@ -1095,7 +1143,7 @@ class TimeSeriesAggregation(object):
         if not hasattr(self, '_clusterOrder'):
             self.createTypicalPeriods()
 
-        # create aggregated period and timestep index lists
+        # create aggregated period and time step index lists
         periodIndex = []
         stepIndex = []
         for label in self._clusterOrder:
@@ -1109,11 +1157,21 @@ class TimeSeriesAggregation(object):
                          index=['PeriodNum', 'TimeStep'],
                          columns=self.timeIndex).T
 
+        # if segmentation is chosen, append another column stating which
+        if self.segmentation:
+            segmentIndex=[]
+            for label in self._clusterOrder:
+                segmentIndex.extend(np.repeat(self.segmentedNormalizedTypicalPeriods.loc[label, :].index.get_level_values(0), self.segmentedNormalizedTypicalPeriods.loc[label, :].index.get_level_values(1)).values)
+            timeStepMatching = \
+                pd.DataFrame([periodIndex, stepIndex, segmentIndex],
+                             index=['PeriodNum', 'TimeStep', 'SegmentIndex'],
+                             columns=self.timeIndex).T
+
         return timeStepMatching
 
     def accuracyIndicators(self):
         '''
-        Compares the predicted data with the orginal time series.
+        Compares the predicted data with the original time series.
 
         Returns
         -------
