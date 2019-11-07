@@ -223,8 +223,7 @@ class TimeSeriesAggregation(object):
     def __init__(self, timeSeries, resolution=None, noTypicalPeriods=10,
                  noSegments=10, hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
-                 rescaleClusterPeriods=True, weightDict=None,
-                 durationRepresentation = False, segmentation = False,
+                 rescaleClusterPeriods=True, weightDict=None,segmentation = False,
                  extremePeriodMethod='None', predefClusterOrder=None,
                  predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
@@ -294,9 +293,6 @@ class TimeSeriesAggregation(object):
             cluster candidates. Otherwise the medoid is taken.
         solver: string, optional (default: 'glpk' )
             Solver that is used for k_medoids clustering.
-        durationRepresentation: bool, optional (default: False)
-            Alternative representation of the aggregated clusters such that
-            the duration curves of the candidates are fitted.
         roundOutput: int, optional (default: None )
             Decimals to what the output time series get round.
         addPeakMin: list, optional, default: []
@@ -351,8 +347,6 @@ class TimeSeriesAggregation(object):
         self.predefClusterCenterIndices = predefClusterCenterIndices
 
         self.solver = solver
-
-        self.durationRepresentation = durationRepresentation
 
         self.segmentation = segmentation
 
@@ -465,18 +459,6 @@ class TimeSeriesAggregation(object):
         # check rescaleClusterPeriods
         if not isinstance(self.rescaleClusterPeriods, bool):
             raise ValueError("rescaleClusterPeriods has to be boolean")
-        
-        if not isinstance(self.durationRepresentation, bool):
-            raise ValueError("durationRepresentation has to be boolean")
-        if self.durationRepresentation:
-            warnings.warn('durationRepresentation" is in development phase ' + 
-                'and can significantly slow down the aggregation for large scale time series')
-            if self.rescaleClusterPeriods:
-                warnings.warn('If "durationRepresentation" is activated it is recommended to turn ' + 
-                '"rescaleClusterPeriods" off.')
-            if (self.addPeakMin or self.addPeakMax or self.addMeanMin or self.addMeanMax) and self.extremePeriodMethod is not 'None':
-                warnings.warn('If "durationRepresentation" is activated it is recommended to deactivate ' + 
-                'the inclusion of extreme periods since they are allready respected.')
 
         # check predefClusterOrder
         if self.predefClusterOrder is not None:
@@ -949,14 +931,6 @@ class TimeSeriesAggregation(object):
         self.clusterPeriods = []
         for i, cluster_center in enumerate(self.clusterCenters):
             self.clusterPeriods.append(cluster_center[:delClusterParams])
-
-
-        # get alternative cluster center representation
-        if self.durationRepresentation:
-            from tsam.utils.duration_representation import duration_representation
-            self.clusterPeriods = duration_representation(self.normalizedPeriodlyProfiles, 
-                                                            self._clusterOrder,
-                                                            solver = self.solver)
             
         if not self.extremePeriodMethod == 'None':
             # overwrite clusterPeriods and clusterOrder
