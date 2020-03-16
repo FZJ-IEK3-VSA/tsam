@@ -24,12 +24,3 @@ The publications about time series aggregation for energy system optimization mo
   | `Reducing Computational Load for Mixed Integer Linear Programming: An Example for a District and an Island Energy System <https://www.mdpi.com/1996-1073/12/14/2825>`_
 * | Hoffmann et al. (2020):
   | `A Review on Time Series Aggregation Methods for Energy System Models <https://www.mdpi.com/1996-1073/13/3/641>`_
-
-**Installation of additional packages**
-
-tsam is intrinsically implemented in the energy system modelling framework FINE. If you would like to use time series
-aggregation for effectively reducing the computational load of energy system optimization problems,
-the Python packages `tsam <https://github.com/FZJ-IEK3-VSA/tsam>`_ and `PYOMO <http://www.pyomo.org/>`_ should be
-installed by pip alongside tsam. Some plots in FINE require the GeoPandas package to be installed (nice-to-have).
-Installation instructions are given `here <http://geopandas.org/install.html>`_. In some cases, the dependencies of
-the GeoPandas package have to be installed manually before the package itself can be installed.

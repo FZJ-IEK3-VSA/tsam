@@ -1,3 +1,5 @@
+.. _structure_of_tsam:
+
 #################
 Structure of tsam
 #################

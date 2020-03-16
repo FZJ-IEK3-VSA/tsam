@@ -11,7 +11,8 @@ for all type of time series, either weather data, load data or both simultaneous
 time series for energy system models, and therefore the model's complexity and computational time.
 
 The concept of tsam is that scientists, programmers and anyone who is interested all around the world can use tsam to aggregate their
-time series whatever they might be used for. Therefore, tsam is open source available and completely for free.
+time series whatever they might be used for. Therefore, tsam is open-source available on `GitHub <https://github.com/FZJ-IEK3-VSA/tsam>`_
+and **open for collaboration**.
 The authors of both, the program and the publications, **kindly request you to cite their work** listed in the
 :ref:`Further Reading Section <further_reading>` if tsam is used in a scientific context.
 
@@ -75,8 +76,8 @@ by conducting cost analysis studies for integrating new technologies into future
 Within the BMWi funded project `METIS <http://www.metis-platform.net/>`_ we develop together with the RWTH-Aachen
 `(Prof. Aaron Praktiknjo) <http://www.wiwi.rwth-aachen.de/cms/Wirtschaftswissenschaften/Die-Fakultaet/Institute-und-Lehrstuehle/Professoren/~jgfr/Praktiknjo-Aaron/?allou=1&lidx=1>`_,
 the EDOM Team at FAU `(PD Lars Schewe) <http://www.mso.math.fau.de/de/edom/team/schewe-lars/dr-lars-schewe>`_ and the
-`Jülich Supercomputing Centre (JSC) <http://www.fz-juelich.de/ias/jsc/DE/Home/home_node.html>`_ new methods and models
-within FINE.
+`Jülich Supercomputing Centre (JSC) <http://www.fz-juelich.de/ias/jsc/DE/Home/home_node.html>`_ energy system models
+on both, global and national scales, and new methods for effectively solving them.
 
 .. image:: http://www.metis-platform.net/metis-platform/DE/_Documents/Pictures/projectTeamAtKickOffMeeting_640x338.jpg?__blob=normal
     :target: http://www.metis-platform.net
