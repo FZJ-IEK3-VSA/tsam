@@ -13,25 +13,23 @@ def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod):
     Agglomerative clustering of adjacent time steps within a set of typical periods in order to further reduce the
     temporal resolution within typical periods and to further reduce complexity of input data.
 
-    Parameters
-    ----------
-    normalizedTypicalPeriods: pd.DataFrame, required
-        MultiIndex DataFrame containing the typical periods as first index, the time steps within the periods as second
-        index and the attributes as columns.
-    noSegments: int, required
-        Number of segments in which the typical periods shoul be subdivided - equivalent to the number of
-        inner-period clusters.
-    timeStepsPerPeriod: int, required
-        Number of time steps per period
+    :param normalizedTypicalPeriods: MultiIndex DataFrame containing the typical periods as first index, the time steps
+        within the periods as second index and the attributes as columns.
+    :type normalizedTypicalPeriods: pandas DataFrame
 
-    Returns
-    -------
-    segmentedNormalizedTypicalPeriods: pd.DataFrame
-        MultiIndex DataFrame similar to normalizedTypicalPeriods but with segments instead of time steps. Moreover, two
-        additional index levels define the length of each segment and the time step index at which each segment starts.
-    predictedSegmentedNormalizedTypicalPeriods: pd.DataFrame
-        MultiIndex DataFrame with the same shape of normalizedTypicalPeriods, but with overwritten values derived from
-        segmentation used for prediction of the original periods and accuracy indicators.
+    :param noSegments: Number of segments in which the typical periods shoul be subdivided - equivalent to the number of
+        inner-period clusters.
+    :type noSegments: integer
+
+    :param timeStepsPerPeriod: Number of time steps per period
+    :type timeStepsPerPeriod: integer
+
+    :returns:     - **segmentedNormalizedTypicalPeriods** (pandas DataFrame) --  MultiIndex DataFrame similar to
+                    normalizedTypicalPeriods but with segments instead of time steps. Moreover, two additional index
+                    levels define the length of each segment and the time step index at which each segment starts.
+                  - **predictedSegmentedNormalizedTypicalPeriods** (pandas DataFrame) -- MultiIndex DataFrame with the same
+                    shape of normalizedTypicalPeriods, but with overwritten values derived from segmentation used for
+                    prediction of the original periods and accuracy indicators.
     '''
     # Initialize lists for predicted and segmented DataFrame
     segmentedNormalizedTypicalPeriodsList = []
