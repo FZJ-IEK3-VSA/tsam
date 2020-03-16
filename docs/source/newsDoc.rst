@@ -1,6 +1,6 @@
-﻿################
-tsam's News Feed
-################
+﻿#################
+tsam's Change Log
+#################
 
 In tsam's latest release (1.1.0) the following functionalities were included:
 

@@ -8,7 +8,7 @@ License
 
 `MIT License <https://opensource.org/licenses/MIT>`_
 
-Copyright (C) 2016-2020 Leander Kotzur, Maximilian Hoffmann, Lara Welder, Timo Kannengießer, Peter Markewitz, Martin Robinius, Detlef Stolten
+Copyright (C) 2016-2020 Leander Kotzur, Maximilian Hoffmann, Peter Markewitz, Martin Robinius, Detlef Stolten
 
 ***************
 Acknowledgement

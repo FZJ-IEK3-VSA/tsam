@@ -15,6 +15,43 @@ time series whatever they might be used for. Therefore, tsam is open source avai
 The authors of both, the program and the publications, **kindly request you to cite their work** listed in the
 :ref:`Further Reading Section <further_reading>` if tsam is used in a scientific context.
 
+************
+Installation
+************
+
+In the following, instructions for installing and using the tsam package on Windows are given. The installation
+instructions for installing and using tsam on Linux/macOS systems are however quite similar and can be, hopefully
+easily, derived from the instructions below.
+
+**tsam installation**
+
+Install via pip by typing
+
+    $ pip install tsam
+
+into the command prompt. Alternatively, download or clone a local copy of the repository to your computer
+
+    $ git clone https://github.com/FZJ-IEK3-VSA/tsam.git
+
+and install tsam in the folder where the setup.py is located with
+
+    $ pip install -e .
+
+or install directly via python as
+
+    $ python setup.py install
+
+**Installation of an optimization solver**
+
+Some clustering algorithms implemented in tsam are based on Mixed-Integer Linear Programming. Accordingy,
+an appropriate solver for using these functionalities is  required.
+In theory many solvers can be used (e.g. `GUROBI <http://www.gurobi.com/>`_  or
+`GLPK <https://sourceforge.net/projects/winglpk/files/latest/download>`_). For the installation of GUROBI, follow
+the instructions on the solver's website. GUROBI has, if applicable, an academic license option. For installation
+of GLPK, move the downloaded folder to a desired location. Then, manually append the Environment Variable *Path*
+with the absolute path leading to the folder in which the glpsol.exe is located (c.f. w32/w64 folder, depending on
+operating system type).
+
 ********
 About Us
 ********
@@ -48,62 +85,3 @@ within FINE.
 
 Dr. Martin Robinius is teaching a `course <https://www.campus-elgouna.tu-berlin.de/energy/v_menu/msc_business_engineering_energy/modules_and_curricula/project_market_coupling/>`_
 at TU Berlin in which he is introducing tsam to students.
-
-************
-Installation
-************
-
-In the following, instructions for installing and using the tsam package on Windows are given. The installation
-instructions for installing and using tsam on Linux/macOS systems are however quite similar and can be, hopefully
-easily, derived from the instructions below.
-
-**Python installation**
-
-FINE runs on Python 3 platforms (i.e. Anaconda). Currently, it is advised not to use a Python version exceeding
-Python 3.6. Note: When installing the Python platform Anaconda the options
-
-    $ Add Anaconda to the system PATH environment variable
-
-is available in the advanced installation option. When selecting this options, the environment variables for Python,
-pip, jupyter etc. are remotely set and do not have to be manually set.
-
-A development platform which can be used to work with/on the code and which comes with Anaconda is Spyder.
-Other development platforms are PyCharm or Visual Studio Code.
-
-**FINE installation**
-
-Install via pip by typing
-
-    $ pip install tsam
-
-into the command prompt. Alternatively, download or clone a local copy of the repository to your computer
-
-    $ git clone https://github.com/FZJ-IEK3-VSA/tsam.git
-
-and install tsam in the folder where the setup.py is located with
-
-    $ pip install -e .
-
-or install directly via python as
-
-    $ python setup.py install
-
-**Installation of additional packages**
-
-Tsam is intrinsically implemented in the energy system modelling framework FINE. If you would like to use time series
-aggregation for effectively reducing the computational load of energy system optimization problems,
-the Python packages `tsam <https://github.com/FZJ-IEK3-VSA/tsam>`_ and `PYOMO <http://www.pyomo.org/>`_ should be
-installed by pip alongside tsam. Some plots in FINE require the GeoPandas package to be installed (nice-to-have).
-Installation instructions are given `here <http://geopandas.org/install.html>`_. In some cases, the dependencies of
-the GeoPandas package have to be installed manually before the package itself can be installed.
-
-**Installation of an optimization solver**
-
-Some clustering algorithms implemented in tsam are based on Mixed-Integer Linear Programming. Accordingy,
-an appropriate solver for using these functionalities is  required.
-In theory many solvers can be used (e.g. `GUROBI <http://www.gurobi.com/>`_  or
-`GLPK <https://sourceforge.net/projects/winglpk/files/latest/download>`_). For the installation of GUROBI, follow
-the instructions on the solver's website. GUROBI has, if applicable, an academic license option. For installation
-of GLPK, move the downloaded folder to a desired location. Then, manually append the Environment Variable *Path*
-with the absolute path leading to the folder in which the glpsol.exe is located (c.f. w32/w64 folder, depending on
-operating system type).

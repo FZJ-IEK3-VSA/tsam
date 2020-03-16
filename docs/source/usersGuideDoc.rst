@@ -12,6 +12,5 @@ hyperlink to our tutorial on Github is provided.
     :maxdepth: 1
     :caption: Contents:
 
-    mathematicalBackgroundDoc
-    structureOfTsamDoc
     tutorialDoc
+    structureOfTsamDoc
