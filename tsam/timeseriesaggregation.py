@@ -228,8 +228,6 @@ class TimeSeriesAggregation(object):
         '''
         Initialize the periodly clusters.
 
-        Parameters
-        -----------
         :param timeSeries: DataFrame with the datetime as index and the relevant
             time series parameters as columns. required
         :type timeSeries: pandas.DataFrame() or dict
@@ -488,15 +486,11 @@ class TimeSeriesAggregation(object):
         '''
         Normalizes each time series independently.
 
-        Parameters
-        ----------
-        sameMean: boolean, optional (default: False)
-            Decides if the time series should have all the same mean value.
-            Relevant for weighting time series.
+        :param sameMean: Decides if the time series should have all the same mean value.
+            Relevant for weighting time series. optional (default: False)
+        :type sameMean: boolean
 
-        Returns
-        ---------
-        normalized time series
+        :returns: normalized time series
         '''
         min_max_scaler = preprocessing.MinMaxScaler()
         normalizedTimeSeries = pd.DataFrame(min_max_scaler.fit_transform(self.timeSeries),
@@ -514,12 +508,13 @@ class TimeSeriesAggregation(object):
         Equivalent to '_normalizeTimeSeries'. Just does the back
         transformation.
 
-        Parameters
-        ----------
-        normalizedTimeSeries: pandas.DataFrame(), required
-            Time series which should get back transformated.
-        sameMean: boolean, optional (default: False)
-            Has to have the same value as in _normalizeTimeSeries.
+        :param normalizedTimeSeries: Time series which should get back transformated. required
+        :type normalizedTimeSeries: pandas.DataFrame()
+
+        :param sameMean: Has to have the same value as in _normalizeTimeSeries. optional (default: False)
+        :type sameMean: boolean
+
+        :returns: unnormalized time series
         '''
         from sklearn import preprocessing
         min_max_scaler = preprocessing.MinMaxScaler()
@@ -592,27 +587,23 @@ class TimeSeriesAggregation(object):
         Adds different extreme periods based on the to the clustered data,
         decribed by the clusterCenters and clusterOrder.
 
-        Parameters
-        ----------
-        groupedSeries: pandas.DataFrame(), required
-            periodly grouped groupedSeries on which basis it should be decided,
-            which period is an extreme period.
-        clusterCenters: dict, required
-            Output from clustering with sklearn.
-        clusterOrder: dict, required
-            Output from clsutering with sklearn.
-        extremePeriodMethod: str, optional(default: 'new_cluster_center' )
-            Chosen extremePeriodMethod. The method
+        :param groupedSeries: periodly grouped groupedSeries on which basis it should be decided,
+            which period is an extreme period. required
+        :type groupedSeries: pandas.DataFrame()
 
-        Returns
-        -------
-        newClusterCenters
-            The new cluster centers extended with the extreme periods.
-        newClusterOrder
-            The new cluster order including the extreme periods.
-        extremeClusterIdx
-            A list of indices where in the newClusterCenters are the extreme
-            periods located.
+        :param clusterCenters: Output from clustering with sklearn. required
+        :type clusterCenters: dict
+
+        :param clusterOrder: Output from clsutering with sklearn. required
+        :type clusterOrder: dict
+
+        :param extremePeriodMethod: Chosen extremePeriodMethod. The method. optional(default: 'new_cluster_center' )
+        :type extremePeriodMethod: string
+
+        :returns: - **newClusterCenters** -- The new cluster centers extended with the extreme periods.
+                  - **newClusterOrder** -- The new cluster order including the extreme periods.
+                  - **extremeClusterIdx** -- A list of indices where in the newClusterCenters are the extreme
+                    periods located.
         '''
 
         # init required dicts and lists
@@ -892,10 +883,7 @@ class TimeSeriesAggregation(object):
         '''
         Clusters the Periods.
 
-        Returns
-        -------
-        self.clusterPeriods
-            All typical Periods in scaled form.
+        :returns: **self.typicalPeriods** --  All typical Periods in scaled form.
         '''
         self._preProcessTimeSeries()
 
@@ -1075,10 +1063,7 @@ class TimeSeriesAggregation(object):
         Predicts the overall time series if every period would be placed in the
         related cluster center
 
-        Returns
-        -------
-        pandas.DataFrame
-            DataFrame which has the same shape as the original one.
+        :returns: **predictedData** (pandas.DataFrame) -- DataFrame which has the same shape as the original one.
         '''
         if not hasattr(self, '_clusterOrder'):
             self.createTypicalPeriods()
@@ -1120,10 +1105,7 @@ class TimeSeriesAggregation(object):
         Relates the index of the original time series with the indices
         represented by the clusters
 
-        Returns
-        -------
-        pandas.DataFrame
-            DataFrame which has the same shape as the original one.
+        :returns: **timeStepMatching** (pandas.DataFrame) -- DataFrame which has the same shape as the original one.
         '''
         if not hasattr(self, '_clusterOrder'):
             self.createTypicalPeriods()
@@ -1158,11 +1140,9 @@ class TimeSeriesAggregation(object):
         '''
         Compares the predicted data with the original time series.
 
-        Returns
-        -------
-        pandas.DataFrame
-            Dataframe containing indicators evaluating the accuracy of the
-            aggregation
+        :returns: **pd.DataFrame(indicatorRaw)** (pandas.DataFrame) -- Dataframe containing indicators evaluating the
+                    accuracy of the
+                    aggregation
         '''
         if not hasattr(self, 'predictedData'):
             self.predictOriginalData()
