@@ -2,7 +2,7 @@
 """
 Created on Tue Nov 22 23:25:37 2016
 
-@author: Kotzur
+@author: Leander Kotzur, Maximilian Hoffmann
 """
 
 import copy
@@ -34,21 +34,16 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
     Extend the timeseries to an integer multiple of the period length and
     groups the time series to the periods.
 
-    Parameters
-    -----------
-    timeSeries
-        pandas.DataFrame()
-    timeStepsPerPeriod: integer, required
-        The number of discrete timesteps which describe one period.
+    :param timeSeries:
+    :type timeSeries: pandas DataFrame
 
-    Returns
-    -------
-    unstackedTimeSeries
-        pandas.DataFrame() which is stacked such that each row represents a
-        candidate period
-    timeIndex
-        pandas.Series.index which is the modification of the original
-        timeseriesindex in case an integer multiple was created
+    :param timeStepsPerPeriod: The number of discrete timesteps which describe one period. required
+    :type timeStepsPerPeriod: integer
+
+    :returns: - **unstackedTimeSeries** (pandas DataFrame) -- is stacked such that each row represents a
+                candidate period
+              - **timeIndex** (pandas Series index) -- is the modification of the original
+                timeseriesindex in case an integer multiple was created
     """
     # init new grouped timeindex
     unstackedTimeSeries = timeSeries.copy()
@@ -97,17 +92,18 @@ def aggregatePeriods(candidates, n_clusters=8,
     Clusters the data based on one of the cluster methods:
         'averaging','k_means','exact k_medoid' or 'hierarchical'
 
-    Parameters
-    ----------
-    candidates: np.ndarray, required
-        Dissimilarity matrix where each row represents a candidate
-    n_clusters: int, optional (default: 8)
-        Number of aggregated cluster.
-    n_iter: int, optional (default: 10)
-        Only required for the number of starts of the k-mean algorithm.
-    clusterMethod: str, optional (default: 'k_means')
-        Chosen clustering algorithm. Possible values are
-        'averaging','k_means','exact k_medoid' or 'hierarchical'
+    :param candidates: Dissimilarity matrix where each row represents a candidate. required
+    :type candidates: np.ndarray
+
+    :param n_clusters: Number of aggregated cluster. optional (default: 8)
+    :type n_clusters: integer
+
+    :param n_iter: Only required for the number of starts of the k-mean algorithm. optional (default: 10)
+    :type n_iter: integer
+
+    :param clusterMethod: Chosen clustering algorithm. Possible values are
+        'averaging','k_means','exact k_medoid' or 'hierarchical'. optional (default: 'k_means')
+    :type clusterMethod: string
     '''
 
     clusterCenterIndices = None
@@ -165,13 +161,12 @@ def medoidRepresentation(candidates, clusterOrder):
     Represents the candidates of a given cluster group (clusterOrder)
     by its medoid, measured with the euclidean distance.
 
-    Parameters
-    ----------
-    candidates: np.ndarray, required
-        Dissimilarity matrix where each row represents a candidate
-    clusterOrder: np.array, required
-        Integer array where the index refers to the candidate and the
-        Integer entry to the group.
+    :param candidates: Dissimilarity matrix where each row represents a candidate. required
+    :type candidates: np.ndarray
+
+    :param clusterOrder: Integer array where the index refers to the candidate and the
+        Integer entry to the group. required
+    :type clusterOrder: np.array
     '''
     # set cluster center as medoid
     clusterCenters = []
@@ -191,13 +186,12 @@ def meanRepresentation(candidates, clusterOrder):
     Represents the candidates of a given cluster group (clusterOrder)
     by its mean.
 
-    Parameters
-    ----------
-    candidates: np.ndarray, required
-        Dissimilarity matrix where each row represents a candidate
-    clusterOrder: np.array, required
-        Integer array where the index refers to the candidate and the
-        Integer entry to the group.
+    :param candidates: Dissimilarity matrix where each row represents a candidate. required
+    :type candidates: np.ndarray
+
+    :param clusterOrder: Integer array where the index refers to the candidate and the
+        Integer entry to the group. required
+    :type clusterOrder: np.array
     '''
     # set cluster centers as means of the group candidates
     clusterCenters = []
@@ -236,43 +230,52 @@ class TimeSeriesAggregation(object):
 
         Parameters
         -----------
-        timeSeries: pandas.DataFrame() or dict, required
-            DataFrame with the datetime as index and the relevant
-            time series parameters as columns.
-        resolution: float, optional, default: delta_T in timeSeries
-            Resolution of the time series in hours [h]. If timeSeries is a
+        :param timeSeries: DataFrame with the datetime as index and the relevant
+            time series parameters as columns. required
+        :type timeSeries: pandas.DataFrame() or dict
+
+        :param resolution: Resolution of the time series in hours [h]. If timeSeries is a
             pandas.DataFrame() the resolution is derived from the datetime
-            index.
-        hoursPerPeriod: int, optional, default: 24
-            Value which defines the length of a cluster period.
-        noTypicalPeriods: int, optional, default: 10
-            Number of typical Periods - equivalent to the number of clusters.
-        noSegments: int, optional, default: 10
-            Number of segments in which the typical periods shoul be subdivided - equivalent to the number of
-            inner-period clusters.
-        clusterMethod: {'averaging','k_means','k_medoids','hierarchical'},
-                        optional, default: 'hierarchical'
+            index. optional, default: delta_T in timeSeries
+        :type resolution: float
+
+        :param hoursPerPeriod: Value which defines the length of a cluster period. optional, default: 24
+        :type hoursPerPeriod: integer
+
+        :param noTypicalPeriods: Number of typical Periods - equivalent to the number of clusters. optional, default: 10
+        :type noTypicalPeriods: integer
+
+        :param noSegments: Number of segments in which the typical periods shoul be subdivided - equivalent to the
+            number of inner-period clusters. optional, default: 10
+        :type noSegments: integer
+
+        :param clusterMethod: {'averaging','k_means','k_medoids','hierarchical'}, optional, default: 'hierarchical'
             Chosen clustering method.
-        evalSumPeriods: boolean, optional, default: False
-            Boolean if in the clustering process also the averaged periodly values
-            shall be integrated additional to the periodly profiles as parameters.
-        sameMean: boolean, optional, default: False
-            Boolean which is used in the normalization procedure. If true,
-            all time series get normalized such that they have the same mean value.
-        sortValues: boolean, optional (default: False)
-            Boolean if the clustering should be done by the periodly duration
-            curves (true) or the original shape of the data.
-        rescaleClusterPeriods: boolean, optional (default: True)
-            Decides if the cluster Periods shall get rescaled such that their
-            weighted mean value fits the mean value of the original time
-            series.
-        weightDict: dict, optional (default: None )
-            Dictionary which weights the profiles. It is done by scaling
+
+        :param evalSumPeriods: Boolean if in the clustering process also the averaged periodly values
+            shall be integrated additional to the periodly profiles as parameters. optional, default: False
+        :type evalSumPeriods: boolean
+
+        :param sameMean: Boolean which is used in the normalization procedure. If true, all time series get normalized
+            such that they have the same mean value. optional, default: False
+        :type sameMean: boolean
+
+        :param sortValues: Boolean if the clustering should be done by the periodly duration
+            curves (true) or the original shape of the data. optional (default: False)
+        :type sortValues: boolean
+
+        :param rescaleClusterPeriods: Decides if the cluster Periods shall get rescaled such that their
+            weighted mean value fits the mean value of the original time series. optional (default: True)
+        :type rescaleClusterPeriods: boolean
+
+        :param weightDict: Dictionary which weights the profiles. It is done by scaling
             the time series while the normalization process. Normally all time
             series have a scale from 0 to 1. By scaling them, the values get
             different distances to each other and with this, they are
-            differently evaluated while the clustering process.
-        extremePeriodMethod: {'None','append','new_cluster_center',
+            differently evaluated while the clustering process. optional (default: None )
+        :type weightDict: dict
+
+        :param extremePeriodMethod: {'None','append','new_cluster_center',
                            'replace_cluster_center'}, optional, default: 'None'
             Method how to integrate extreme Periods (peak demand,
                                                   lowest temperature etc.)
@@ -285,28 +288,36 @@ class TimeSeriesAggregation(object):
                 'replace_cluster_center': replaces the cluster center of the
                     cluster where the extreme period belongs to with the periodly
                     profile of the extreme period. (Worst case system design)
-        predefClusterOrder: list or array, optional (default: None)
-            Instead of aggregating a time series, a predefined grouping is taken
-            which is given by this list.
-        predefClusterCenterIndices: list or array, optional (default: None)
-            If predefClusterOrder is give, this list can define the representative
-            cluster candidates. Otherwise the medoid is taken.
-        solver: string, optional (default: 'glpk' )
-            Solver that is used for k_medoids clustering.
-        roundOutput: int, optional (default: None )
-            Decimals to what the output time series get round.
-        addPeakMin: list, optional, default: []
-            List of column names which's minimal value shall be added to the
-            typical periods. E.g.: ['Temperature']
-        addPeakMax: list, optional, default: []
-            List of column names which's maximal value shall be added to the
-            typical periods. E.g. ['EDemand', 'HDemand']
-        addMeanMin: list, optional, default: []
-            List of column names where the period with the cumulative minimal value
-            shall be added to the typical periods. E.g. ['Photovoltaic']
-        addMeanMax: list, optional, default: []
-            List of column names where the period with the cumulative maximal value
-            shall be added to the typical periods.
+
+        :param predefClusterOrder: Instead of aggregating a time series, a predefined grouping is taken
+            which is given by this list. optional (default: None)
+        :type predefClusterOrder: list or array
+
+        :param predefClusterCenterIndices: If predefClusterOrder is give, this list can define the representative
+            cluster candidates. Otherwise the medoid is taken. optional (default: None)
+        :type predefClusterCenterIndices: list or array
+
+        :param solver: Solver that is used for k_medoids clustering. optional (default: 'glpk' )
+        :type solver: string
+
+        :param roundOutput: Decimals to what the output time series get round. optional (default: None )
+        :type roundOutput: integer
+
+        :param addPeakMin: List of column names which's minimal value shall be added to the
+            typical periods. E.g.: ['Temperature']. optional, default: []
+        :type addPeakMin: list
+
+        :param addPeakMax: List of column names which's maximal value shall be added to the
+            typical periods. E.g. ['EDemand', 'HDemand']. optional, default: []
+        :type addPeakMax: list
+
+        :param addMeanMin: List of column names where the period with the cumulative minimal value
+            shall be added to the typical periods. E.g. ['Photovoltaic']. optional, default: []
+        :type addMeanMin: list
+
+        :param addMeanMax: List of column names where the period with the cumulative maximal value
+            shall be added to the typical periods. optional, default: []
+        :type addMeanMax: list
         '''
         if addMeanMin is None:
             addMeanMin = []
