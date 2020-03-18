@@ -11,5 +11,8 @@ Descriptions of the basic functions are given below.
 **Function descriptions:**
 
 .. automodule:: timeseriesaggregation
+.. autoclass:: TimeSeriesAggregation
    :members:
    :member-order: bysource
+
+   .. automethod:: __init__
