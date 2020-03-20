@@ -247,8 +247,14 @@ class TimeSeriesAggregation(object):
             number of inner-period clusters. optional, default: 10
         :type noSegments: integer
 
-        :param clusterMethod: {'averaging','k_means','k_medoids','hierarchical'}, optional, default: 'hierarchical'
-            Chosen clustering method.
+        :param clusterMethod: Chosen clustering method. optional, default: 'hierarchical'
+            |br| Options are:
+
+            * 'averaging'
+            * 'k_means'
+            * 'k_medoids'
+            * 'hierarchical'
+        :type clusterMethod: string
 
         :param evalSumPeriods: Boolean if in the clustering process also the averaged periodly values
             shall be integrated additional to the periodly profiles as parameters. optional, default: False
@@ -273,19 +279,18 @@ class TimeSeriesAggregation(object):
             differently evaluated while the clustering process. optional (default: None )
         :type weightDict: dict
 
-        :param extremePeriodMethod: {'None','append','new_cluster_center',
-                           'replace_cluster_center'}, optional, default: 'None'
-            Method how to integrate extreme Periods (peak demand,
-                                                  lowest temperature etc.)
-            into to the typical period profiles.
-                None: No integration at all.
-                'append': append typical Periods to cluster centers
-                'new_cluster_center': add the extreme period as additional cluster
-                    center. It is checked then for all Periods if they fit better
-                    to the this new center or their original cluster center.
-                'replace_cluster_center': replaces the cluster center of the
-                    cluster where the extreme period belongs to with the periodly
-                    profile of the extreme period. (Worst case system design)
+        :param extremePeriodMethod: Method how to integrate extreme Periods (peak demand, lowest temperature etc.)
+            into to the typical period profiles. optional, default: 'None'
+            |br| Options are:
+
+            * None: No integration at all.
+            * 'append': append typical Periods to cluster centers
+            * 'new_cluster_center': add the extreme period as additional cluster center. It is checked then for all
+              Periods if they fit better to the this new center or their original cluster center.
+            * 'replace_cluster_center': replaces the cluster center of the
+              cluster where the extreme period belongs to with the periodly profile of the extreme period. (Worst
+              case system design)
+        :type extremePeriodMethod: string
 
         :param predefClusterOrder: Instead of aggregating a time series, a predefined grouping is taken
             which is given by this list. optional (default: None)
