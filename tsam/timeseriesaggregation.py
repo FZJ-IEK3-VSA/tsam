@@ -147,7 +147,7 @@ def aggregatePeriods(candidates, n_clusters=8,
 
     elif clusterMethod == 'hierarchical':
         if n_clusters==1:
-            clusterOrder=[0]
+            clusterOrder=np.asarray([0]*len(candidates))
         else:
             from sklearn.cluster import AgglomerativeClustering
             clustering = AgglomerativeClustering(
