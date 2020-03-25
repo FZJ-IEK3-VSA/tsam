@@ -31,12 +31,8 @@ with larger scales during the clustering process:
    x_{a,s}=\frac{x'_{a,s}-\min{x'_a}}{\max{x'_a}-\min{x'_a}}
 
 Then, all time steps within the chosen periods (e.g. hourly time steps within daily periods) are realigned in such a way that each
-period becomes an own row-vector or hyperdimensional point which is shown below.
-
-.. image:: mathematicalDescription1.png
-    :target: mathematicalDescription1.png
-    :alt: Review Figure 3
-    :align: center
+period becomes an own row-vector or hyperdimensional point whose dimensions are formed by the number of time steps within the periods
+for each attribute.
 
 Then, clustering is applied to these hyperdimensional points. Clustering generally strives to group data points in such a way that
 points within a cluster are more similar to each other than data points from different clusters. An example for this is the k-means

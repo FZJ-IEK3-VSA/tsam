@@ -2,7 +2,7 @@
 """
 Created on Tue Nov 22 23:25:37 2016
 
-@author: Kotzur
+@author: Leander Kotzur, Maximilian Hoffmann
 """
 
 import copy
@@ -34,21 +34,16 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
     Extend the timeseries to an integer multiple of the period length and
     groups the time series to the periods.
 
-    Parameters
-    -----------
-    timeSeries
-        pandas.DataFrame()
-    timeStepsPerPeriod: integer, required
-        The number of discrete timesteps which describe one period.
+    :param timeSeries:
+    :type timeSeries: pandas DataFrame
 
-    Returns
-    -------
-    unstackedTimeSeries
-        pandas.DataFrame() which is stacked such that each row represents a
-        candidate period
-    timeIndex
-        pandas.Series.index which is the modification of the original
-        timeseriesindex in case an integer multiple was created
+    :param timeStepsPerPeriod: The number of discrete timesteps which describe one period. required
+    :type timeStepsPerPeriod: integer
+
+    :returns: - **unstackedTimeSeries** (pandas DataFrame) -- is stacked such that each row represents a
+                candidate period
+              - **timeIndex** (pandas Series index) -- is the modification of the original
+                timeseriesindex in case an integer multiple was created
     """
     # init new grouped timeindex
     unstackedTimeSeries = timeSeries.copy()
@@ -97,17 +92,18 @@ def aggregatePeriods(candidates, n_clusters=8,
     Clusters the data based on one of the cluster methods:
         'averaging','k_means','exact k_medoid' or 'hierarchical'
 
-    Parameters
-    ----------
-    candidates: np.ndarray, required
-        Dissimilarity matrix where each row represents a candidate
-    n_clusters: int, optional (default: 8)
-        Number of aggregated cluster.
-    n_iter: int, optional (default: 10)
-        Only required for the number of starts of the k-mean algorithm.
-    clusterMethod: str, optional (default: 'k_means')
-        Chosen clustering algorithm. Possible values are
-        'averaging','k_means','exact k_medoid' or 'hierarchical'
+    :param candidates: Dissimilarity matrix where each row represents a candidate. required
+    :type candidates: np.ndarray
+
+    :param n_clusters: Number of aggregated cluster. optional (default: 8)
+    :type n_clusters: integer
+
+    :param n_iter: Only required for the number of starts of the k-mean algorithm. optional (default: 10)
+    :type n_iter: integer
+
+    :param clusterMethod: Chosen clustering algorithm. Possible values are
+        'averaging','k_means','exact k_medoid' or 'hierarchical'. optional (default: 'k_means')
+    :type clusterMethod: string
     '''
 
     clusterCenterIndices = None
@@ -150,10 +146,13 @@ def aggregatePeriods(candidates, n_clusters=8,
         clusterCenters = k_medoid.cluster_centers_
 
     elif clusterMethod == 'hierarchical':
-        from sklearn.cluster import AgglomerativeClustering
-        clustering = AgglomerativeClustering(
-            n_clusters=n_clusters, linkage='ward')
-        clusterOrder = clustering.fit_predict(candidates)
+        if n_clusters==1:
+            clusterOrder=[0]
+        else:
+            from sklearn.cluster import AgglomerativeClustering
+            clustering = AgglomerativeClustering(
+                n_clusters=n_clusters, linkage='ward')
+            clusterOrder = clustering.fit_predict(candidates)
         # represent hierarchical aggregation with medoid
         clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
 
@@ -165,13 +164,12 @@ def medoidRepresentation(candidates, clusterOrder):
     Represents the candidates of a given cluster group (clusterOrder)
     by its medoid, measured with the euclidean distance.
 
-    Parameters
-    ----------
-    candidates: np.ndarray, required
-        Dissimilarity matrix where each row represents a candidate
-    clusterOrder: np.array, required
-        Integer array where the index refers to the candidate and the
-        Integer entry to the group.
+    :param candidates: Dissimilarity matrix where each row represents a candidate. required
+    :type candidates: np.ndarray
+
+    :param clusterOrder: Integer array where the index refers to the candidate and the
+        Integer entry to the group. required
+    :type clusterOrder: np.array
     '''
     # set cluster center as medoid
     clusterCenters = []
@@ -191,13 +189,12 @@ def meanRepresentation(candidates, clusterOrder):
     Represents the candidates of a given cluster group (clusterOrder)
     by its mean.
 
-    Parameters
-    ----------
-    candidates: np.ndarray, required
-        Dissimilarity matrix where each row represents a candidate
-    clusterOrder: np.array, required
-        Integer array where the index refers to the candidate and the
-        Integer entry to the group.
+    :param candidates: Dissimilarity matrix where each row represents a candidate. required
+    :type candidates: np.ndarray
+
+    :param clusterOrder: Integer array where the index refers to the candidate and the
+        Integer entry to the group. required
+    :type clusterOrder: np.array
     '''
     # set cluster centers as means of the group candidates
     clusterCenters = []
@@ -223,7 +220,7 @@ class TimeSeriesAggregation(object):
     def __init__(self, timeSeries, resolution=None, noTypicalPeriods=10,
                  noSegments=10, hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
-                 rescaleClusterPeriods=True, weightDict=None,segmentation = False,
+                 rescaleClusterPeriods=True, weightDict=None, segmentation = False,
                  extremePeriodMethod='None', predefClusterOrder=None,
                  predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
@@ -234,79 +231,99 @@ class TimeSeriesAggregation(object):
         '''
         Initialize the periodly clusters.
 
-        Parameters
-        -----------
-        timeSeries: pandas.DataFrame() or dict, required
-            DataFrame with the datetime as index and the relevant
-            time series parameters as columns.
-        resolution: float, optional, default: delta_T in timeSeries
-            Resolution of the time series in hours [h]. If timeSeries is a
+        :param timeSeries: DataFrame with the datetime as index and the relevant
+            time series parameters as columns. required
+        :type timeSeries: pandas.DataFrame() or dict
+
+        :param resolution: Resolution of the time series in hours [h]. If timeSeries is a
             pandas.DataFrame() the resolution is derived from the datetime
-            index.
-        hoursPerPeriod: int, optional, default: 24
-            Value which defines the length of a cluster period.
-        noTypicalPeriods: int, optional, default: 10
-            Number of typical Periods - equivalent to the number of clusters.
-        noSegments: int, optional, default: 10
-            Number of segments in which the typical periods shoul be subdivided - equivalent to the number of
-            inner-period clusters.
-        clusterMethod: {'averaging','k_means','k_medoids','hierarchical'},
-                        optional, default: 'hierarchical'
-            Chosen clustering method.
-        evalSumPeriods: boolean, optional, default: False
-            Boolean if in the clustering process also the averaged periodly values
-            shall be integrated additional to the periodly profiles as parameters.
-        sameMean: boolean, optional, default: False
-            Boolean which is used in the normalization procedure. If true,
-            all time series get normalized such that they have the same mean value.
-        sortValues: boolean, optional (default: False)
-            Boolean if the clustering should be done by the periodly duration
-            curves (true) or the original shape of the data.
-        rescaleClusterPeriods: boolean, optional (default: True)
-            Decides if the cluster Periods shall get rescaled such that their
-            weighted mean value fits the mean value of the original time
-            series.
-        weightDict: dict, optional (default: None )
-            Dictionary which weights the profiles. It is done by scaling
+            index. optional, default: delta_T in timeSeries
+        :type resolution: float
+
+        :param hoursPerPeriod: Value which defines the length of a cluster period. optional, default: 24
+        :type hoursPerPeriod: integer
+
+        :param noTypicalPeriods: Number of typical Periods - equivalent to the number of clusters. optional, default: 10
+        :type noTypicalPeriods: integer
+
+        :param noSegments: Number of segments in which the typical periods shoul be subdivided - equivalent to the
+            number of inner-period clusters. optional, default: 10
+        :type noSegments: integer
+
+        :param clusterMethod: Chosen clustering method. optional, default: 'hierarchical'
+            |br| Options are:
+
+            * 'averaging'
+            * 'k_means'
+            * 'k_medoids'
+            * 'hierarchical'
+        :type clusterMethod: string
+
+        :param evalSumPeriods: Boolean if in the clustering process also the averaged periodly values
+            shall be integrated additional to the periodly profiles as parameters. optional, default: False
+        :type evalSumPeriods: boolean
+
+        :param sameMean: Boolean which is used in the normalization procedure. If true, all time series get normalized
+            such that they have the same mean value. optional, default: False
+        :type sameMean: boolean
+
+        :param sortValues: Boolean if the clustering should be done by the periodly duration
+            curves (true) or the original shape of the data. optional (default: False)
+        :type sortValues: boolean
+
+        :param rescaleClusterPeriods: Decides if the cluster Periods shall get rescaled such that their
+            weighted mean value fits the mean value of the original time series. optional (default: True)
+        :type rescaleClusterPeriods: boolean
+
+        :param weightDict: Dictionary which weights the profiles. It is done by scaling
             the time series while the normalization process. Normally all time
             series have a scale from 0 to 1. By scaling them, the values get
             different distances to each other and with this, they are
-            differently evaluated while the clustering process.
-        extremePeriodMethod: {'None','append','new_cluster_center',
-                           'replace_cluster_center'}, optional, default: 'None'
-            Method how to integrate extreme Periods (peak demand,
-                                                  lowest temperature etc.)
-            into to the typical period profiles.
-                None: No integration at all.
-                'append': append typical Periods to cluster centers
-                'new_cluster_center': add the extreme period as additional cluster
-                    center. It is checked then for all Periods if they fit better
-                    to the this new center or their original cluster center.
-                'replace_cluster_center': replaces the cluster center of the
-                    cluster where the extreme period belongs to with the periodly
-                    profile of the extreme period. (Worst case system design)
-        predefClusterOrder: list or array, optional (default: None)
-            Instead of aggregating a time series, a predefined grouping is taken
-            which is given by this list.
-        predefClusterCenterIndices: list or array, optional (default: None)
-            If predefClusterOrder is give, this list can define the representative
-            cluster candidates. Otherwise the medoid is taken.
-        solver: string, optional (default: 'glpk' )
-            Solver that is used for k_medoids clustering.
-        roundOutput: int, optional (default: None )
-            Decimals to what the output time series get round.
-        addPeakMin: list, optional, default: []
-            List of column names which's minimal value shall be added to the
-            typical periods. E.g.: ['Temperature']
-        addPeakMax: list, optional, default: []
-            List of column names which's maximal value shall be added to the
-            typical periods. E.g. ['EDemand', 'HDemand']
-        addMeanMin: list, optional, default: []
-            List of column names where the period with the cumulative minimal value
-            shall be added to the typical periods. E.g. ['Photovoltaic']
-        addMeanMax: list, optional, default: []
-            List of column names where the period with the cumulative maximal value
-            shall be added to the typical periods.
+            differently evaluated while the clustering process. optional (default: None )
+        :type weightDict: dict
+
+        :param extremePeriodMethod: Method how to integrate extreme Periods (peak demand, lowest temperature etc.)
+            into to the typical period profiles. optional, default: 'None'
+            |br| Options are:
+
+            * None: No integration at all.
+            * 'append': append typical Periods to cluster centers
+            * 'new_cluster_center': add the extreme period as additional cluster center. It is checked then for all
+              Periods if they fit better to the this new center or their original cluster center.
+            * 'replace_cluster_center': replaces the cluster center of the
+              cluster where the extreme period belongs to with the periodly profile of the extreme period. (Worst
+              case system design)
+        :type extremePeriodMethod: string
+
+        :param predefClusterOrder: Instead of aggregating a time series, a predefined grouping is taken
+            which is given by this list. optional (default: None)
+        :type predefClusterOrder: list or array
+
+        :param predefClusterCenterIndices: If predefClusterOrder is give, this list can define the representative
+            cluster candidates. Otherwise the medoid is taken. optional (default: None)
+        :type predefClusterCenterIndices: list or array
+
+        :param solver: Solver that is used for k_medoids clustering. optional (default: 'glpk' )
+        :type solver: string
+
+        :param roundOutput: Decimals to what the output time series get round. optional (default: None )
+        :type roundOutput: integer
+
+        :param addPeakMin: List of column names which's minimal value shall be added to the
+            typical periods. E.g.: ['Temperature']. optional, default: []
+        :type addPeakMin: list
+
+        :param addPeakMax: List of column names which's maximal value shall be added to the
+            typical periods. E.g. ['EDemand', 'HDemand']. optional, default: []
+        :type addPeakMax: list
+
+        :param addMeanMin: List of column names where the period with the cumulative minimal value
+            shall be added to the typical periods. E.g. ['Photovoltaic']. optional, default: []
+        :type addMeanMin: list
+
+        :param addMeanMax: List of column names where the period with the cumulative maximal value
+            shall be added to the typical periods. optional, default: []
+        :type addMeanMax: list
         '''
         if addMeanMin is None:
             addMeanMin = []
@@ -430,10 +447,11 @@ class TimeSeriesAggregation(object):
             raise ValueError('The combination of hoursPerPeriod and the '
                              + 'resulution does not result in an integer '
                              + 'number of time steps per period')
-        if self.noSegments > self.timeStepsPerPeriod:
-            warnings.warn("The number of segments must be less than or equal to the number of time steps per period. "
-                          "Segment number is decreased to number of time steps per period.")
-            self.noSegments = self.timeStepsPerPeriod
+        if self.segmentation:
+            if self.noSegments > self.timeStepsPerPeriod:
+                warnings.warn("The number of segments must be less than or equal to the number of time steps per period. "
+                              "Segment number is decreased to number of time steps per period.")
+                self.noSegments = self.timeStepsPerPeriod
 
         # check clusterMethod
         if self.clusterMethod not in self.CLUSTER_METHODS:
@@ -477,15 +495,11 @@ class TimeSeriesAggregation(object):
         '''
         Normalizes each time series independently.
 
-        Parameters
-        ----------
-        sameMean: boolean, optional (default: False)
-            Decides if the time series should have all the same mean value.
-            Relevant for weighting time series.
+        :param sameMean: Decides if the time series should have all the same mean value.
+            Relevant for weighting time series. optional (default: False)
+        :type sameMean: boolean
 
-        Returns
-        ---------
-        normalized time series
+        :returns: normalized time series
         '''
         min_max_scaler = preprocessing.MinMaxScaler()
         normalizedTimeSeries = pd.DataFrame(min_max_scaler.fit_transform(self.timeSeries),
@@ -503,12 +517,13 @@ class TimeSeriesAggregation(object):
         Equivalent to '_normalizeTimeSeries'. Just does the back
         transformation.
 
-        Parameters
-        ----------
-        normalizedTimeSeries: pandas.DataFrame(), required
-            Time series which should get back transformated.
-        sameMean: boolean, optional (default: False)
-            Has to have the same value as in _normalizeTimeSeries.
+        :param normalizedTimeSeries: Time series which should get back transformated. required
+        :type normalizedTimeSeries: pandas.DataFrame()
+
+        :param sameMean: Has to have the same value as in _normalizeTimeSeries. optional (default: False)
+        :type sameMean: boolean
+
+        :returns: unnormalized time series
         '''
         from sklearn import preprocessing
         min_max_scaler = preprocessing.MinMaxScaler()
@@ -581,27 +596,23 @@ class TimeSeriesAggregation(object):
         Adds different extreme periods based on the to the clustered data,
         decribed by the clusterCenters and clusterOrder.
 
-        Parameters
-        ----------
-        groupedSeries: pandas.DataFrame(), required
-            periodly grouped groupedSeries on which basis it should be decided,
-            which period is an extreme period.
-        clusterCenters: dict, required
-            Output from clustering with sklearn.
-        clusterOrder: dict, required
-            Output from clsutering with sklearn.
-        extremePeriodMethod: str, optional(default: 'new_cluster_center' )
-            Chosen extremePeriodMethod. The method
+        :param groupedSeries: periodly grouped groupedSeries on which basis it should be decided,
+            which period is an extreme period. required
+        :type groupedSeries: pandas.DataFrame()
 
-        Returns
-        -------
-        newClusterCenters
-            The new cluster centers extended with the extreme periods.
-        newClusterOrder
-            The new cluster order including the extreme periods.
-        extremeClusterIdx
-            A list of indices where in the newClusterCenters are the extreme
-            periods located.
+        :param clusterCenters: Output from clustering with sklearn. required
+        :type clusterCenters: dict
+
+        :param clusterOrder: Output from clsutering with sklearn. required
+        :type clusterOrder: dict
+
+        :param extremePeriodMethod: Chosen extremePeriodMethod. The method. optional(default: 'new_cluster_center' )
+        :type extremePeriodMethod: string
+
+        :returns: - **newClusterCenters** -- The new cluster centers extended with the extreme periods.
+                  - **newClusterOrder** -- The new cluster order including the extreme periods.
+                  - **extremeClusterIdx** -- A list of indices where in the newClusterCenters are the extreme
+                    periods located.
         '''
 
         # init required dicts and lists
@@ -824,67 +835,46 @@ class TimeSeriesAggregation(object):
                 values, df.index, df.columns)
         sortedClusterValues = normalizedSortedPeriodlyProfiles.values
 
-        clusterOrders_iter = []
-        clusterCenters_iter = []
-        distanceMedoid_iter = []
+        altClusterCenters, self.clusterCenterIndices, clusterOrders_C = (
+            aggregatePeriods(
+                sortedClusterValues, n_clusters=self.noTypicalPeriods,
+                n_iter=30, solver=self.solver,
+                clusterMethod=self.clusterMethod))
 
-        for i in range(n_init):
-            altClusterCenters, self.clusterCenterIndices, clusterOrders_C = (
-                aggregatePeriods(
-                    sortedClusterValues, n_clusters=self.noTypicalPeriods,
-                    n_iter=30, solver=self.solver,
-                    clusterMethod=self.clusterMethod))
+        clusterCenters_C = []
 
-            clusterCenters_C = []
-            distanceMedoid_C = []
+        # take the clusters and determine the most representative sorted
+        # period as cluster center
+        for clusterNum in np.unique(clusterOrders_C):
+            indice = np.where(clusterOrders_C == clusterNum)[0]
+            if len(indice) > 1:
+                # mean value for each time step for each time series over
+                # all Periods in the cluster
+                currentMean_C = sortedClusterValues[indice].mean(axis=0)
+                # index of the period with the lowest distance to the cluster
+                # center
+                mindistIdx_C = np.argmin(
+                    np.square(
+                        sortedClusterValues[indice] -
+                        currentMean_C).sum(
+                        axis=1))
+                # append original time series of this period
+                medoid_C = candidates[indice][mindistIdx_C]
 
-            # take the clusters and determine the most representative sorted
-            # period as cluster center
-            for clusterNum in np.unique(clusterOrders_C):
-                indice = np.where(clusterOrders_C == clusterNum)[0]
-                if len(indice) > 1:
-                    # mean value for each time step for each time series over
-                    # all Periods in the cluster
-                    currentMean_C = sortedClusterValues[indice].mean(axis=0)
-                    # index of the period with the lowest distance to the cluster
-                    # center
-                    mindistIdx_C = np.argmin(
-                        np.square(
-                            sortedClusterValues[indice] -
-                            currentMean_C).sum(
-                            axis=1))
-                    # append original time series of this period
-                    medoid_C = candidates[indice][mindistIdx_C]
+                # append to cluster center
+                clusterCenters_C.append(medoid_C)
 
-                    # append to cluster center
-                    clusterCenters_C.append(medoid_C)
+            else:
+                # if only on period is part of the cluster, add this index
+                clusterCenters_C.append(candidates[indice][0])
 
-                    # calculate matrix for evaluation
-                    distanceMedoid_C.append(
-                        abs(candidates[indice] - medoid_C).sum())
-
-                else:
-                    # if only on period is part of the cluster, add this index
-                    clusterCenters_C.append(candidates[indice][0])
-                    distanceMedoid_C.append(0)
-
-            # collect matrix
-            distanceMedoid_iter.append(abs(sum(distanceMedoid_C)))
-            clusterCenters_iter.append(clusterCenters_C)
-            clusterOrders_iter.append(clusterOrders_C)
-
-        bestFit = np.argmin(distanceMedoid_iter)
-
-        return clusterCenters_iter[bestFit], clusterOrders_iter[bestFit]
+        return clusterCenters_C, clusterOrders_C
 
     def createTypicalPeriods(self):
         '''
         Clusters the Periods.
 
-        Returns
-        -------
-        self.clusterPeriods
-            All typical Periods in scaled form.
+        :returns: **self.typicalPeriods** --  All typical Periods in scaled form.
         '''
         self._preProcessTimeSeries()
 
@@ -1064,10 +1054,7 @@ class TimeSeriesAggregation(object):
         Predicts the overall time series if every period would be placed in the
         related cluster center
 
-        Returns
-        -------
-        pandas.DataFrame
-            DataFrame which has the same shape as the original one.
+        :returns: **predictedData** (pandas.DataFrame) -- DataFrame which has the same shape as the original one.
         '''
         if not hasattr(self, '_clusterOrder'):
             self.createTypicalPeriods()
@@ -1109,10 +1096,7 @@ class TimeSeriesAggregation(object):
         Relates the index of the original time series with the indices
         represented by the clusters
 
-        Returns
-        -------
-        pandas.DataFrame
-            DataFrame which has the same shape as the original one.
+        :returns: **timeStepMatching** (pandas.DataFrame) -- DataFrame which has the same shape as the original one.
         '''
         if not hasattr(self, '_clusterOrder'):
             self.createTypicalPeriods()
@@ -1147,11 +1131,9 @@ class TimeSeriesAggregation(object):
         '''
         Compares the predicted data with the original time series.
 
-        Returns
-        -------
-        pandas.DataFrame
-            Dataframe containing indicators evaluating the accuracy of the
-            aggregation
+        :returns: **pd.DataFrame(indicatorRaw)** (pandas.DataFrame) -- Dataframe containing indicators evaluating the
+                    accuracy of the
+                    aggregation
         '''
         if not hasattr(self, 'predictedData'):
             self.predictOriginalData()

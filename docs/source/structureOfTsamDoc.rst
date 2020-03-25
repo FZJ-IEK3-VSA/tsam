@@ -1,3 +1,5 @@
+.. _structure_of_tsam:
+
 #################
 Structure of tsam
 #################
@@ -10,14 +12,14 @@ clustering of adjacent time steps called segmentation.
 **Submodule with the basic functionalities**
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    timeseriesaggregationDoc
 
 **Submodules including exact k-medoids and segmentation**
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    exactKmedoidsDoc
    segmentationDoc
