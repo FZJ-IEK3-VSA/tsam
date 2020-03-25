@@ -835,58 +835,40 @@ class TimeSeriesAggregation(object):
                 values, df.index, df.columns)
         sortedClusterValues = normalizedSortedPeriodlyProfiles.values
 
-        clusterOrders_iter = []
-        clusterCenters_iter = []
-        distanceMedoid_iter = []
+        altClusterCenters, self.clusterCenterIndices, clusterOrders_C = (
+            aggregatePeriods(
+                sortedClusterValues, n_clusters=self.noTypicalPeriods,
+                n_iter=30, solver=self.solver,
+                clusterMethod=self.clusterMethod))
 
-        for i in range(n_init):
-            altClusterCenters, self.clusterCenterIndices, clusterOrders_C = (
-                aggregatePeriods(
-                    sortedClusterValues, n_clusters=self.noTypicalPeriods,
-                    n_iter=30, solver=self.solver,
-                    clusterMethod=self.clusterMethod))
+        clusterCenters_C = []
 
-            clusterCenters_C = []
-            distanceMedoid_C = []
+        # take the clusters and determine the most representative sorted
+        # period as cluster center
+        for clusterNum in np.unique(clusterOrders_C):
+            indice = np.where(clusterOrders_C == clusterNum)[0]
+            if len(indice) > 1:
+                # mean value for each time step for each time series over
+                # all Periods in the cluster
+                currentMean_C = sortedClusterValues[indice].mean(axis=0)
+                # index of the period with the lowest distance to the cluster
+                # center
+                mindistIdx_C = np.argmin(
+                    np.square(
+                        sortedClusterValues[indice] -
+                        currentMean_C).sum(
+                        axis=1))
+                # append original time series of this period
+                medoid_C = candidates[indice][mindistIdx_C]
 
-            # take the clusters and determine the most representative sorted
-            # period as cluster center
-            for clusterNum in np.unique(clusterOrders_C):
-                indice = np.where(clusterOrders_C == clusterNum)[0]
-                if len(indice) > 1:
-                    # mean value for each time step for each time series over
-                    # all Periods in the cluster
-                    currentMean_C = sortedClusterValues[indice].mean(axis=0)
-                    # index of the period with the lowest distance to the cluster
-                    # center
-                    mindistIdx_C = np.argmin(
-                        np.square(
-                            sortedClusterValues[indice] -
-                            currentMean_C).sum(
-                            axis=1))
-                    # append original time series of this period
-                    medoid_C = candidates[indice][mindistIdx_C]
+                # append to cluster center
+                clusterCenters_C.append(medoid_C)
 
-                    # append to cluster center
-                    clusterCenters_C.append(medoid_C)
+            else:
+                # if only on period is part of the cluster, add this index
+                clusterCenters_C.append(candidates[indice][0])
 
-                    # calculate matrix for evaluation
-                    distanceMedoid_C.append(
-                        abs(candidates[indice] - medoid_C).sum())
-
-                else:
-                    # if only on period is part of the cluster, add this index
-                    clusterCenters_C.append(candidates[indice][0])
-                    distanceMedoid_C.append(0)
-
-            # collect matrix
-            distanceMedoid_iter.append(abs(sum(distanceMedoid_C)))
-            clusterCenters_iter.append(clusterCenters_C)
-            clusterOrders_iter.append(clusterOrders_C)
-
-        bestFit = np.argmin(distanceMedoid_iter)
-
-        return clusterCenters_iter[bestFit], clusterOrders_iter[bestFit]
+        return clusterCenters_C, clusterOrders_C
 
     def createTypicalPeriods(self):
         '''
