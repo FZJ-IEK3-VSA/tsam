@@ -42,8 +42,11 @@ def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod):
         # produce adjacency matrix: Each time step is only connected to its preceding and succeeding one
         adjacencyMatrix = np.eye(timeStepsPerPeriod, k=1) + np.eye(timeStepsPerPeriod, k=-1)
         # execute clustering of adjacent time steps
-        clustering = AgglomerativeClustering(n_clusters=noSegments, linkage='ward', connectivity=adjacencyMatrix)
-        clusterOrder = clustering.fit_predict(segmentationCandidates)
+        if noSegments==1:
+            clusterOrder=[0]
+        else:
+            clustering = AgglomerativeClustering(n_clusters=noSegments, linkage='ward', connectivity=adjacencyMatrix)
+            clusterOrder = clustering.fit_predict(segmentationCandidates)
         # determine the indices where the segments change and the number of time steps in each segment
         segNo, indices, segmentNoOccur = np.unique(clusterOrder, return_index=True, return_counts=True)
         clusterOrderUnique = [clusterOrder[index] for index in sorted(indices)]

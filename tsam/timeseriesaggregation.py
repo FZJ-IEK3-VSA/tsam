@@ -146,10 +146,13 @@ def aggregatePeriods(candidates, n_clusters=8,
         clusterCenters = k_medoid.cluster_centers_
 
     elif clusterMethod == 'hierarchical':
-        from sklearn.cluster import AgglomerativeClustering
-        clustering = AgglomerativeClustering(
-            n_clusters=n_clusters, linkage='ward')
-        clusterOrder = clustering.fit_predict(candidates)
+        if n_clusters==1:
+            clusterOrder=[0]
+        else:
+            from sklearn.cluster import AgglomerativeClustering
+            clustering = AgglomerativeClustering(
+                n_clusters=n_clusters, linkage='ward')
+            clusterOrder = clustering.fit_predict(candidates)
         # represent hierarchical aggregation with medoid
         clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
 
@@ -217,7 +220,7 @@ class TimeSeriesAggregation(object):
     def __init__(self, timeSeries, resolution=None, noTypicalPeriods=10,
                  noSegments=10, hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
-                 rescaleClusterPeriods=True, weightDict=None,segmentation = False,
+                 rescaleClusterPeriods=True, weightDict=None, segmentation = False,
                  extremePeriodMethod='None', predefClusterOrder=None,
                  predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
@@ -444,10 +447,11 @@ class TimeSeriesAggregation(object):
             raise ValueError('The combination of hoursPerPeriod and the '
                              + 'resulution does not result in an integer '
                              + 'number of time steps per period')
-        if self.noSegments > self.timeStepsPerPeriod:
-            warnings.warn("The number of segments must be less than or equal to the number of time steps per period. "
-                          "Segment number is decreased to number of time steps per period.")
-            self.noSegments = self.timeStepsPerPeriod
+        if self.segmentation:
+            if self.noSegments > self.timeStepsPerPeriod:
+                warnings.warn("The number of segments must be less than or equal to the number of time steps per period. "
+                              "Segment number is decreased to number of time steps per period.")
+                self.noSegments = self.timeStepsPerPeriod
 
         # check clusterMethod
         if self.clusterMethod not in self.CLUSTER_METHODS:
