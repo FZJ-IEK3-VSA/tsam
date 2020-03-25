@@ -43,7 +43,7 @@ def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod):
         adjacencyMatrix = np.eye(timeStepsPerPeriod, k=1) + np.eye(timeStepsPerPeriod, k=-1)
         # execute clustering of adjacent time steps
         if noSegments==1:
-            clusterOrder=[0]
+            clusterOrder = np.asarray([0] * len(segmentationCandidates))
         else:
             clustering = AgglomerativeClustering(n_clusters=noSegments, linkage='ward', connectivity=adjacencyMatrix)
             clusterOrder = clustering.fit_predict(segmentationCandidates)
