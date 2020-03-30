@@ -17,17 +17,20 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
     """
     k-medoids class.
 
-    Parameters
-    ----------
-    n_clusters: int, optional, default: 8
-        How many medoids. Must be positive.
-    distance_metric : string, optional, default: 'euclidean'
-        What distance metric to use.
-    timelimit: int, optional, default:  100
-        Specify the time limit of the solver.
-    threads: int, optional, default: 7
-        Threads to use by the optimization solver.
-    solver: str, optional, default: 'glpk'
+    :param n_clusters:  How many medoids. Must be positive. optional, default: 8
+    :type n_clusters: integer
+
+    :param distance_metric: What distance metric to use. optional, default: 'euclidean'
+    :type distance_metric: string
+
+    :param timelimit: Specify the time limit of the solver. optional, default:  100
+    :type timelimit: integer
+
+    :param threads: Threads to use by the optimization solver. optional, default: 7
+    :type threads: integer
+
+    :param solver: optional, default: 'glpk'
+    :type solver: string
     """
 
     def __init__(self, n_clusters=8, distance_metric='euclidean',
@@ -66,12 +69,11 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
     def fit(self, X, y=None):
         """Fit K-Medoids to the provided data.
-        Parameters
-        ----------
-        X : array-like or sparse matrix, shape=(n_samples, n_features)
-        Returns
-        -------
-        self
+
+        :param X: shape=(n_samples, n_features)
+        :type X: array-like or sparse matrix
+
+        :returns: self
         """
 
         self._check_init_args()
@@ -122,14 +124,13 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
     def transform(self, X):
         """Transforms X to cluster-distance space.
-        Parameters
-        ----------
-        X : array-like or sparse matrix, shape=(n_samples, n_features)
-            Data to transform.
+
+        :param X: Data to transform. shape=(n_samples, n_features)
+        :type X: array-like or sparse matrix,
+
         Returns
         -------
-        X_new : array, shape=(n_samples, n_clusters)
-            X transformed in the new space.
+        :returns: **X_new** (array) -- X transformed in the new space. shape=(n_samples, n_clusters)
         """
 
         check_is_fitted(self, "cluster_centers_")
