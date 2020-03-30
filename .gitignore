@@ -5,6 +5,7 @@ trash/
 *.pytest_cache/
 *ipynb_checkpoints/
 *.eggs/
+docs/build
 
 # file types to ignore
 *.pyc
