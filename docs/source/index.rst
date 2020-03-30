@@ -1,4 +1,4 @@
-.. FINE documentation master file, created by
+.. tsam documentation master file, created by
    sphinx-quickstart on Sat Nov 10 21:04:19 2018.
 
 
@@ -8,36 +8,30 @@
     :alt: Forschungszentrum Juelich Logo
     :align: right
 
-Welcome to FINE's documentation!
+Welcome to tsam's documentation!
 ================================
 
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-FINE - A Framework for Integrated Energy System Assessment
+tsam - time series aggregation module
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-The FINE python package provides a framework for modeling, optimizing and assessing energy systems. With the provided
-framework, systems with multiple regions, commodities and time steps can be modeled. Target of the optimization is the
-minimization of the total annual cost while considering technical and environmental constraints. Besides using the full
-temporal resolution, an interconnected typical period storage formulation can be applied, that reduces the complexity
-and computational time of the model.
+tsam is a python package which uses different machine learning algorithms for the aggregation of typical periods. It is applicable
+for all type of time series, either weather data, load data or both simultaneously. The module is able to significantly reduce input
+time series for energy system models, and therefore the model's complexity and computational time.
 
-**Features**
+To use tsam, jump to the :ref:`Section Getting Started<getting_started>`.
 
-* representation of an energy system by multiple locations, commodities and time steps
-* complexity reducing storage formulation based on typical periods
-
-
-**Citing FINE**
-
-If you want to use FINE in a published work, please kindly cite following publication:
-https://www.sciencedirect.com/science/article/pii/S036054421830879X which gives
-a description of the first stages of the framework. The python package which provides the time series aggregation module
-and its corresponding literatur can be found `here <https://github.com/FZJ-IEK3-VSA/tsam>`_.
+The concept of tsam is that scientists, programmers and anyone who is interested all around the world can use tsam to aggregate their
+time series whatever they might be used for. Therefore, tsam is open-source available on `GitHub <https://github.com/FZJ-IEK3-VSA/tsam>`_
+and **open for collaboration**.
+The authors of both, the program and the publications, **kindly request you to cite their work** listed in the
+:ref:`Further Reading Section <further_reading>` if tsam is used in a scientific context.
 
 .. toctree::
     :maxdepth: 1
     :caption: Contents:
 
+    self
     gettingStartedDoc
     usersGuideDoc
     mathematicalBackgroundDoc
