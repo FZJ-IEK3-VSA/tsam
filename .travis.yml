@@ -19,7 +19,8 @@ install:
   - pip install --no-cache-dir .
 
 script:
-  - pytest --cov=./
+  - source activate tsam
+  - pytest --cov=./tsam
 
 after_success:
   - codecov
