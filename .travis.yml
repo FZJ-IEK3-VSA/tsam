@@ -13,11 +13,15 @@ before_install:
   - conda info -a
 
 install:
-  - conda create -q -n tsam python=3.6
-  - conda env update -q -n tsam --file=requirements.yml
-  - conda env update -q -n tsam --file=requirements_dev.yml
+  - conda env update -q --file=requirements.yml
+  - conda env update -q --file=requirements_dev.yml
   - source activate tsam
-  - pip install --no-cache-dir .
+  - pip install codecov
+  - pip install --no-cache-dir -e .
 
 script:
-  - pytest --cov tsam --cov-report term-missing
+  - source activate tsam
+  - pytest --cov=./tsam
+
+after_success:
+  - codecov

@@ -1,20 +1,8 @@
-﻿###############
+﻿.. _getting_started:
+
+###############
 Getting started
 ###############
-
-**************************
-Purpose and Vision of tsam
-**************************
-
-tsam is a python package which uses different machine learning algorithms for the aggregation of typical periods. It is applicable
-for all type of time series, either weather data, load data or both simultaneously. The module is able to significantly reduce input
-time series for energy system models, and therefore the model's complexity and computational time.
-
-The concept of tsam is that scientists, programmers and anyone who is interested all around the world can use tsam to aggregate their
-time series whatever they might be used for. Therefore, tsam is open-source available on `GitHub <https://github.com/FZJ-IEK3-VSA/tsam>`_
-and **open for collaboration**.
-The authors of both, the program and the publications, **kindly request you to cite their work** listed in the
-:ref:`Further Reading Section <further_reading>` if tsam is used in a scientific context.
 
 ************
 Installation
@@ -28,30 +16,31 @@ easily, derived from the instructions below.
 
 Install via pip by typing
 
-    $ pip install tsam
+.. code-block:: bash
+
+    pip install tsam
 
 into the command prompt. Alternatively, download or clone a local copy of the repository to your computer
 
-    $ git clone https://github.com/FZJ-IEK3-VSA/tsam.git
+.. code-block:: bash
+
+    git clone https://github.com/FZJ-IEK3-VSA/tsam.git
 
 and install tsam in the folder where the setup.py is located with
 
-    $ pip install -e .
+.. code-block:: bash
+
+    pip install -e .
 
 or install directly via python as
 
-    $ python setup.py install
+.. code-block:: bash
+
+    python setup.py install
 
 **Installation of an optimization solver**
 
-Some clustering algorithms implemented in tsam are based on Mixed-Integer Linear Programming. Accordingy,
-an appropriate solver for using these functionalities is  required.
-In theory many solvers can be used (e.g. `GUROBI <http://www.gurobi.com/>`_  or
-`GLPK <https://sourceforge.net/projects/winglpk/files/latest/download>`_). For the installation of GUROBI, follow
-the instructions on the solver's website. GUROBI has, if applicable, an academic license option. For installation
-of GLPK, move the downloaded folder to a desired location. Then, manually append the Environment Variable *Path*
-with the absolute path leading to the folder in which the glpsol.exe is located (c.f. w32/w64 folder, depending on
-operating system type).
+Some clustering algorithms implemented in tsam are based on Mixed-Integer Linear Programming. Accordingy, an appropriate solver for using these functionalities is required that can be accessed by `Pyomo <https://github.com/Pyomo/pyomo/>`_. In theory many solvers can be used (e.g. `GUROBI <http://www.gurobi.com/>`_  or `GLPK <https://sourceforge.net/projects/winglpk/files/latest/download>`_). For the installation of GUROBI, follow the instructions on the solver's website. For installation of GLPK, move the downloaded folder to a desired location. Then, manually append the Environment Variable *Path* with the absolute path leading to the folder in which the glpsol.exe is located (c.f. w32/w64 folder, depending on operating system type).
 
 ********
 About Us
