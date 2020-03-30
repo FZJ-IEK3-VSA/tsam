@@ -16,6 +16,7 @@ install:
   - conda env update -q --file=requirements.yml
   - conda env update -q --file=requirements_dev.yml
   - source activate tsam
+  - pip install codecov
   - pip install --no-cache-dir -e .
 
 script:
