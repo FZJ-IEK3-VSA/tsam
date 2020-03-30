@@ -21,3 +21,6 @@ install:
 
 script:
   - pytest --cov tsam --cov-report term-missing
+
+after_success:
+  - codecov
