@@ -3,12 +3,26 @@
 <a href="https://www.fz-juelich.de/iek/iek-3/EN/Forschung/_Process-and-System-Analysis/_node.html"><img src="https://www.fz-juelich.de/SharedDocs/Bilder/IBG/IBG-3/DE/Plant-soil-atmosphere%20exchange%20processes/INPLAMINT%20(BONARES)/Bild3.jpg?__blob=poster" alt="Forschungszentrum Juelich Logo" width="230px"></a> 
 
 # tsam - Time Series Aggregation Module
-tsam is a python package which uses different machine learning algorithms for the aggregation of typical periods. It is applicable for all type of time series, eather weather data, load data or both simultaneously. The module is able to significantly reduce input time series for energy system models, and therefore the model's complexity and computational time. 
+tsam is a python package which uses different machine learning algorithms for the aggregation of time series. The data aggregation can be performed in two freely combinable dimensions: By representing the time series by a user-defined number of typical periods or by decreasing the temporal resolution.
+tsam was originally designed for reducing the computational load for large-scale energy system optimization models by aggregating their input data, but is applicable for all types of time series, e.g., weather data, load data, both simultaneously or other arbitrary groups of time series.
 
+If you want to use tsam in a published work, **please kindly cite** the journal article "[**A Review on Time Series Aggregation Methods for Energy System Models**](https://www.mdpi.com/1996-1073/13/3/641)".
 
-If you want to use tsam in a published work, please [**kindly cite following publication**](https://www.sciencedirect.com/science/article/pii/S0960148117309783) which validates the methods and describes their cababilites. The manuscript is found [**here**](https://arxiv.org/abs/1708.00420). 
+If you are further interested in the impact of time series aggregation on the cost-optimal results on different energy system use cases, you can find a publication which validates the methods and describes their cababilites via the following [**link**](https://www.sciencedirect.com/science/article/pii/S0960148117309783). A second publication introduces a method how to model state variables (e.g. the state of charge of energy storage components) between the aggregated typical periods which can be found [**here**](https://www.sciencedirect.com/science/article/pii/S0306261918300242). Finally yet importantly the potential of time series aggregation to simplify mixed integer linear problems is investigated [**here**](https://www.mdpi.com/1996-1073/12/14/2825).
 
-A [**second publication**](https://www.sciencedirect.com/science/article/pii/S0306261918300242) introduces a method how to model states (e.g. state of charge of storage) between the aggregated typical periods. The manuscript is found [**here**](https://arxiv.org/abs/1710.07593).
+The publications about time series aggregation for energy system optimization models published alongside the development of tsam are listed below:
+* Kotzur et al. (2018):\
+[**Impact of different time series aggregation methods on optimal energy system design**](https://www.sciencedirect.com/science/article/abs/pii/S0960148117309783)\
+(open access manuscript to be found [**here**](https://arxiv.org/abs/1708.00420))
+* Kotzur et al. (2018):\
+[**Time series aggregation for energy system design: Modeling seasonal storage**](https://www.sciencedirect.com/science/article/pii/S0306261918300242)\
+(open access manuscript to be found [**here**](https://arxiv.org/abs/1710.07593))
+* Kannengießer et al. (2019):\
+[**Reducing Computational Load for Mixed Integer Linear Programming: An Example for a District and an Island Energy System**](https://www.mdpi.com/1996-1073/12/14/2825)
+* Hoffmann et al. (2020):\
+[**A Review on Time Series Aggregation Methods for Energy System Models**](https://www.mdpi.com/1996-1073/13/3/641)
+
+The documentation of the tsam code can be found [**here**](https://tsam.readthedocs.io/en/latest/index.html).
 
 ## Features
 * flexible read-in and handling of multidimensional time-series via the pandas module
