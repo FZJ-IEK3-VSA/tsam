@@ -17,7 +17,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from sklearn import preprocessing
 
 from tsam.periodAggregation import aggregatePeriods
-    
+from tsam.representations import medoidRepresentation
 
 pd.set_option('mode.chained_assignment', None)
 
