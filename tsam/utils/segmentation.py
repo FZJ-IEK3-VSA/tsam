@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
-from tsam.timeseriesaggregation import meanRepresentation
+from tsam.representations import meanRepresentation
 
 
 def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod):

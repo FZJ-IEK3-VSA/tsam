@@ -15,6 +15,8 @@ import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn import preprocessing
+
+from tsam.periodAggregation import aggregatePeriods
     
 
 pd.set_option('mode.chained_assignment', None)
@@ -84,126 +86,6 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
     unstackedTimeSeries = unstackedTimeSeries.unstack(level='TimeStep')
 
     return unstackedTimeSeries, timeIndex
-
-
-def aggregatePeriods(candidates, n_clusters=8,
-                     n_iter=100, clusterMethod='k_means', solver='glpk', ):
-    '''
-    Clusters the data based on one of the cluster methods:
-        'averaging','k_means','exact k_medoid' or 'hierarchical'
-
-    :param candidates: Dissimilarity matrix where each row represents a candidate. required
-    :type candidates: np.ndarray
-
-    :param n_clusters: Number of aggregated cluster. optional (default: 8)
-    :type n_clusters: integer
-
-    :param n_iter: Only required for the number of starts of the k-mean algorithm. optional (default: 10)
-    :type n_iter: integer
-
-    :param clusterMethod: Chosen clustering algorithm. Possible values are
-        'averaging','k_means','exact k_medoid' or 'hierarchical'. optional (default: 'k_means')
-    :type clusterMethod: string
-    '''
-
-    clusterCenterIndices = None
-
-    # cluster the data
-    if clusterMethod == 'averaging':
-        n_sets = len(candidates)
-        if n_sets % n_clusters == 0:
-            cluster_size = int(n_sets / n_clusters)
-            clusterOrder = [
-                [n_cluster] *
-                cluster_size for n_cluster in range(n_clusters)]
-        else:
-            cluster_size = int(n_sets / n_clusters)
-            clusterOrder = [
-                [n_cluster] *
-                cluster_size for n_cluster in range(n_clusters)]
-            clusterOrder.append([n_clusters - 1] *
-                                int(n_sets - cluster_size * n_clusters))
-        clusterOrder = np.hstack(np.array(clusterOrder))
-        clusterCenters = meanRepresentation(candidates, clusterOrder)
-
-    if clusterMethod == 'k_means':
-        from sklearn.cluster import KMeans
-        k_means = KMeans(
-            n_clusters=n_clusters,
-            max_iter=1000,
-            n_init=n_iter,
-            tol=1e-4)
-
-        clusterOrder = k_means.fit_predict(candidates)
-        # get with own mean representation to avoid numerical trouble caused by sklearn
-        clusterCenters = meanRepresentation(candidates, clusterOrder)
-
-    elif clusterMethod == 'k_medoids':
-        from tsam.utils.k_medoids_exact import KMedoids
-        k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
-
-        clusterOrder = k_medoid.fit_predict(candidates)
-        clusterCenters = k_medoid.cluster_centers_
-
-    elif clusterMethod == 'hierarchical':
-        if n_clusters==1:
-            clusterOrder=np.asarray([0]*len(candidates))
-        else:
-            from sklearn.cluster import AgglomerativeClustering
-            clustering = AgglomerativeClustering(
-                n_clusters=n_clusters, linkage='ward')
-            clusterOrder = clustering.fit_predict(candidates)
-        # represent hierarchical aggregation with medoid
-        clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
-
-    return clusterCenters, clusterCenterIndices, clusterOrder
-
-
-def medoidRepresentation(candidates, clusterOrder):
-    '''
-    Represents the candidates of a given cluster group (clusterOrder)
-    by its medoid, measured with the euclidean distance.
-
-    :param candidates: Dissimilarity matrix where each row represents a candidate. required
-    :type candidates: np.ndarray
-
-    :param clusterOrder: Integer array where the index refers to the candidate and the
-        Integer entry to the group. required
-    :type clusterOrder: np.array
-    '''
-    # set cluster center as medoid
-    clusterCenters = []
-    clusterCenterIndices = []
-    for clusterNum in np.unique(clusterOrder):
-        indice = np.where(clusterOrder == clusterNum)
-        innerDistMatrix = euclidean_distances(candidates[indice])
-        mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
-        clusterCenters.append(candidates[indice][mindistIdx])
-        clusterCenterIndices.append(indice[0][mindistIdx])
-
-    return clusterCenters, clusterCenterIndices
-
-
-def meanRepresentation(candidates, clusterOrder):
-    '''
-    Represents the candidates of a given cluster group (clusterOrder)
-    by its mean.
-
-    :param candidates: Dissimilarity matrix where each row represents a candidate. required
-    :type candidates: np.ndarray
-
-    :param clusterOrder: Integer array where the index refers to the candidate and the
-        Integer entry to the group. required
-    :type clusterOrder: np.array
-    '''
-    # set cluster centers as means of the group candidates
-    clusterCenters = []
-    for clusterNum in np.unique(clusterOrder):
-        indice = np.where(clusterOrder == clusterNum)
-        currentMean = candidates[indice].mean(axis=0)
-        clusterCenters.append(currentMean)
-    return clusterCenters
-
 
 class TimeSeriesAggregation(object):
     '''
