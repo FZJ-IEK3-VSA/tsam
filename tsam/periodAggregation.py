@@ -13,7 +13,7 @@ def aggregatePeriods(candidates, n_clusters=8,
                      n_iter=100, clusterMethod='k_means', solver='glpk', ):
     '''
     Clusters the data based on one of the cluster methods:
-        'averaging','k_means','exact k_medoid' or 'hierarchical'
+    'averaging', 'k_means', 'exact k_medoid' or 'hierarchical'
 
     :param candidates: Dissimilarity matrix where each row represents a candidate. required
     :type candidates: np.ndarray

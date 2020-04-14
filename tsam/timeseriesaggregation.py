@@ -103,8 +103,8 @@ class TimeSeriesAggregation(object):
                  noSegments=10, hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
                  rescaleClusterPeriods=True, weightDict=None, segmentation = False,
-                 extremePeriodMethod='None', predefClusterOrder=None,
-                 predefClusterCenterIndices=None, solver='glpk',
+                 extremePeriodMethod='None', representationDict=None,
+                 predefClusterOrder=None, predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
                  addPeakMin=None,
                  addPeakMax=None,
@@ -177,6 +177,11 @@ class TimeSeriesAggregation(object):
               case system design)
         :type extremePeriodMethod: string
 
+        :param representationDict: Dictionary which states for each attribute whether the profiles in each cluster
+            should be represented by the minimum value or maximum value of each time step. This enables estimations
+            to the safe side (default: )
+        :type representationDict: dict
+
         :param predefClusterOrder: Instead of aggregating a time series, a predefined grouping is taken
             which is given by this list. optional (default: None)
         :type predefClusterOrder: list or array
@@ -240,6 +245,8 @@ class TimeSeriesAggregation(object):
         self.rescaleClusterPeriods = rescaleClusterPeriods
 
         self.weightDict = weightDict
+
+        self.representationDict = representationDict
 
         self.predefClusterOrder = predefClusterOrder
 
@@ -787,6 +794,8 @@ class TimeSeriesAggregation(object):
                 axis=1)
         else:
             delClusterParams = None
+            print(self.normalizedPeriodlyProfiles)
+            print(self.normalizedPeriodlyProfiles.values)
             candidates = self.normalizedPeriodlyProfiles.values
 
 
