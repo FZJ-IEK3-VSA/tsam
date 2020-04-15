@@ -66,7 +66,7 @@ def aggregatePeriods(candidates, n_clusters=8,
         k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
 
         clusterOrder = k_medoid.fit_predict(candidates)
-        clusterCenters = k_medoid.cluster_centers_
+        clusterCenters = meanRepresentation(candidates, clusterOrder)
 
     elif clusterMethod == 'hierarchical' or 'adjacent_periods':
         if n_clusters==1:
