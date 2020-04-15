@@ -91,7 +91,7 @@ class TimeSeriesAggregation(object):
     '''
     Clusters time series data to typical periods.
     '''
-    CLUSTER_METHODS = ['averaging', 'k_medoids', 'k_means', 'hierarchical']
+    CLUSTER_METHODS = ['averaging', 'k_medoids', 'k_means', 'hierarchical', 'adjacent_periods']
 
     EXTREME_PERIOD_METHODS = [
         'None',
@@ -139,6 +139,7 @@ class TimeSeriesAggregation(object):
             * 'k_means'
             * 'k_medoids'
             * 'hierarchical'
+            * 'adjacent_periods'
         :type clusterMethod: string
 
         :param evalSumPeriods: Boolean if in the clustering process also the averaged periodly values
@@ -794,8 +795,6 @@ class TimeSeriesAggregation(object):
                 axis=1)
         else:
             delClusterParams = None
-            print(self.normalizedPeriodlyProfiles)
-            print(self.normalizedPeriodlyProfiles.values)
             candidates = self.normalizedPeriodlyProfiles.values
 
 

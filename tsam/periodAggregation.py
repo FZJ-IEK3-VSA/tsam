@@ -68,13 +68,18 @@ def aggregatePeriods(candidates, n_clusters=8,
         clusterOrder = k_medoid.fit_predict(candidates)
         clusterCenters = k_medoid.cluster_centers_
 
-    elif clusterMethod == 'hierarchical':
+    elif clusterMethod == 'hierarchical' or 'adjacent_periods':
         if n_clusters==1:
             clusterOrder=np.asarray([0]*len(candidates))
         else:
             from sklearn.cluster import AgglomerativeClustering
-            clustering = AgglomerativeClustering(
-                n_clusters=n_clusters, linkage='ward')
+            if clusterMethod == 'hierarchical':
+                clustering = AgglomerativeClustering(
+                    n_clusters=n_clusters, linkage='ward')
+            elif clusterMethod == 'adjacent_periods':
+                adjacencyMatrix = np.eye(len(candidates), k=1) + np.eye(len(candidates), k=-1)
+                clustering = AgglomerativeClustering(
+                    n_clusters=n_clusters, linkage='ward', connectivity=adjacencyMatrix)
             clusterOrder = clustering.fit_predict(candidates)
         # represent hierarchical aggregation with medoid
         clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
