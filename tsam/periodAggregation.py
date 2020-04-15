@@ -8,6 +8,7 @@ Created on Mon Apr 06 22:17:37 2020
 import numpy as np
 from tsam.representations import meanRepresentation
 from tsam.representations import medoidRepresentation
+from tsam.representations import minmaxRepresentation
 
 def aggregatePeriods(candidates, n_clusters=8,
                      n_iter=100, clusterMethod='k_means', solver='glpk', ):
@@ -29,8 +30,6 @@ def aggregatePeriods(candidates, n_clusters=8,
     :type clusterMethod: string
     '''
 
-    clusterCenterIndices = None
-
     # cluster the data
     if clusterMethod == 'averaging':
         n_sets = len(candidates)
@@ -47,7 +46,7 @@ def aggregatePeriods(candidates, n_clusters=8,
             clusterOrder.append([n_clusters - 1] *
                                 int(n_sets - cluster_size * n_clusters))
         clusterOrder = np.hstack(np.array(clusterOrder))
-        clusterCenters = meanRepresentation(candidates, clusterOrder)
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='meanRepresentation')
 
     if clusterMethod == 'k_means':
         from sklearn.cluster import KMeans
@@ -59,14 +58,14 @@ def aggregatePeriods(candidates, n_clusters=8,
 
         clusterOrder = k_means.fit_predict(candidates)
         # get with own mean representation to avoid numerical trouble caused by sklearn
-        clusterCenters = meanRepresentation(candidates, clusterOrder)
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='meanRepresentation')
 
     elif clusterMethod == 'k_medoids':
         from tsam.utils.k_medoids_exact import KMedoids
         k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
 
         clusterOrder = k_medoid.fit_predict(candidates)
-        clusterCenters = meanRepresentation(candidates, clusterOrder)
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='medoidRepresentation')
 
     elif clusterMethod == 'hierarchical' or 'adjacent_periods':
         if n_clusters==1:
@@ -82,6 +81,19 @@ def aggregatePeriods(candidates, n_clusters=8,
                     n_clusters=n_clusters, linkage='ward', connectivity=adjacencyMatrix)
             clusterOrder = clustering.fit_predict(candidates)
         # represent hierarchical aggregation with medoid
-        clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='medoidRepresentation')
 
     return clusterCenters, clusterCenterIndices, clusterOrder
+
+
+def representations(candidates, clusterOrder, default, representation=None):
+    clusterCenterIndices = None
+    if representation is None:
+        representation = default
+    if representation == 'meanRepresentation':
+        clusterCenters = meanRepresentation(candidates, clusterOrder)
+    elif representation == 'medoidRepresentation':
+        clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
+    elif representation == 'minmaxRepresentation':
+        clusterCenters = minmaxRepresentation(candidates, clusterOrder, None, None)
+    return clusterCenters, clusterCenterIndices
