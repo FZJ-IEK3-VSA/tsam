@@ -70,6 +70,9 @@ def minmaxRepresentation(candidates, clusterOrder, representationDict, timeSteps
         period should be represented by the minimum or maximum values within each cluster.
         optional (default: None)
     :type representationDict: dictionary
+
+    :param timeStepsPerPeriod: The number of discrete timesteps which describe one period. required
+    :type timeStepsPerPeriod: integer
     '''
     # set cluster center depending of the representationDict
     clusterCenters = []

@@ -93,6 +93,8 @@ class TimeSeriesAggregation(object):
     '''
     CLUSTER_METHODS = ['averaging', 'k_medoids', 'k_means', 'hierarchical', 'adjacent_periods']
 
+    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentaion', 'minmaxRepresentation']
+
     EXTREME_PERIOD_METHODS = [
         'None',
         'append',
@@ -103,7 +105,7 @@ class TimeSeriesAggregation(object):
                  noSegments=10, hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
                  rescaleClusterPeriods=True, weightDict=None, segmentation = False,
-                 extremePeriodMethod='None', representationDict=None,
+                 extremePeriodMethod='None', representationMethod=None, representationDict=None,
                  predefClusterOrder=None, predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
                  addPeakMin=None,
@@ -178,9 +180,19 @@ class TimeSeriesAggregation(object):
               case system design)
         :type extremePeriodMethod: string
 
+        :param representationMethod: Chosen representation. If specified, the clusters are represented in the chosen
+            way. Otherwise, each clusterMethod has its own commonly used default representation method.
+            |br| Options are:
+
+            * 'meanRepresentation' (default of 'averaging' and 'k_means')
+            * 'medoidRepresentation' (default of 'k_medoids', 'hierarchical' and 'adjacent_periods')
+            * 'minmaxRepresentation'
+        :type representationMethod: string
+
         :param representationDict: Dictionary which states for each attribute whether the profiles in each cluster
             should be represented by the minimum value or maximum value of each time step. This enables estimations
-            to the safe side (default: )
+            to the safe side. This dictionary is needed when 'minmaxRepresentation' is chosen. If not specified, the
+            dictionary is set to containing 'max' values only.
         :type representationDict: dict
 
         :param predefClusterOrder: Instead of aggregating a time series, a predefined grouping is taken
@@ -246,6 +258,8 @@ class TimeSeriesAggregation(object):
         self.rescaleClusterPeriods = rescaleClusterPeriods
 
         self.weightDict = weightDict
+
+        self.representationMethod = representationMethod
 
         self.representationDict = representationDict
 
@@ -348,6 +362,15 @@ class TimeSeriesAggregation(object):
             raise ValueError("clusterMethod needs to be one of " +
                              "the following: " +
                              "{}".format(self.CLUSTER_METHODS))
+
+        # check representationMethod
+        if self.representationMethod is not None and self.representationMethod not in self.REPRESENTATION_METHODS:
+            raise ValueError("If specified, representationMethod needs to be one of " +
+                             "the following: " +
+                             "{}".format(self.REPRESENTATION_METHODS))
+
+        if self.representationDict is None:
+            self.representationDict = {i: 'max' for i in list(self.timeSeries.columns)}
 
         # check extremePeriods
         if self.extremePeriodMethod not in self.EXTREME_PERIOD_METHODS:
@@ -743,7 +766,10 @@ class TimeSeriesAggregation(object):
             aggregatePeriods(
                 sortedClusterValues, n_clusters=self.noTypicalPeriods,
                 n_iter=30, solver=self.solver,
-                clusterMethod=self.clusterMethod))
+                clusterMethod=self.clusterMethod,
+                representationMethod=self.representationMethod,
+                representationDict=self.representationDict,
+                timeStepsPerPeriod=self.timeStepsPerPeriod))
 
         clusterCenters_C = []
 
@@ -815,7 +841,10 @@ class TimeSeriesAggregation(object):
                 self.clusterCenters, self.clusterCenterIndices, \
                     self._clusterOrder = aggregatePeriods(
                     candidates, n_clusters=self.noTypicalPeriods, n_iter=100,
-                    solver=self.solver, clusterMethod=self.clusterMethod)
+                    solver=self.solver, clusterMethod=self.clusterMethod,
+                    representationMethod=self.representationMethod,
+                    representationDict=self.representationDict,
+                    timeStepsPerPeriod=self.timeStepsPerPeriod)
             else:
                 self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
                     candidates)

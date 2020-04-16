@@ -10,8 +10,8 @@ from tsam.representations import meanRepresentation
 from tsam.representations import medoidRepresentation
 from tsam.representations import minmaxRepresentation
 
-def aggregatePeriods(candidates, n_clusters=8,
-                     n_iter=100, clusterMethod='k_means', solver='glpk', ):
+def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_means', solver='glpk',
+                     representationMethod=None, representationDict=None, timeStepsPerPeriod=None):
     '''
     Clusters the data based on one of the cluster methods:
     'averaging', 'k_means', 'exact k_medoid' or 'hierarchical'
@@ -58,14 +58,16 @@ def aggregatePeriods(candidates, n_clusters=8,
 
         clusterOrder = k_means.fit_predict(candidates)
         # get with own mean representation to avoid numerical trouble caused by sklearn
-        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='meanRepresentation')
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='meanRepresentation',
+                                                               representationMethod=representationMethod)
 
     elif clusterMethod == 'k_medoids':
         from tsam.utils.k_medoids_exact import KMedoids
         k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
 
         clusterOrder = k_medoid.fit_predict(candidates)
-        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='medoidRepresentation')
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='medoidRepresentation',
+                                                               representationMethod=representationMethod)
 
     elif clusterMethod == 'hierarchical' or 'adjacent_periods':
         if n_clusters==1:
@@ -81,19 +83,23 @@ def aggregatePeriods(candidates, n_clusters=8,
                     n_clusters=n_clusters, linkage='ward', connectivity=adjacencyMatrix)
             clusterOrder = clustering.fit_predict(candidates)
         # represent hierarchical aggregation with medoid
-        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='medoidRepresentation')
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='medoidRepresentation',
+                                                               representationMethod=representationMethod,
+                                                               representationDict=representationDict,
+                                                               timeStepsPerPeriod=timeStepsPerPeriod)
 
     return clusterCenters, clusterCenterIndices, clusterOrder
 
 
-def representations(candidates, clusterOrder, default, representation=None):
+def representations(candidates, clusterOrder, default, representationMethod=None, representationDict=None,
+                    timeStepsPerPeriod=None):
     clusterCenterIndices = None
-    if representation is None:
-        representation = default
-    if representation == 'meanRepresentation':
+    if representationMethod is None:
+        representationMethod = default
+    if representationMethod == 'meanRepresentation':
         clusterCenters = meanRepresentation(candidates, clusterOrder)
-    elif representation == 'medoidRepresentation':
+    elif representationMethod == 'medoidRepresentation':
         clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
-    elif representation == 'minmaxRepresentation':
-        clusterCenters = minmaxRepresentation(candidates, clusterOrder, None, None)
+    elif representationMethod == 'minmaxRepresentation':
+        clusterCenters = minmaxRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod)
     return clusterCenters, clusterCenterIndices
