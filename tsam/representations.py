@@ -8,6 +8,19 @@ Created on Mon Apr 06 22:17:37 2020
 import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
 
+def representations(candidates, clusterOrder, default, representationMethod=None, representationDict=None,
+                    timeStepsPerPeriod=None):
+    clusterCenterIndices = None
+    if representationMethod is None:
+        representationMethod = default
+    if representationMethod == 'meanRepresentation':
+        clusterCenters = meanRepresentation(candidates, clusterOrder)
+    elif representationMethod == 'medoidRepresentation':
+        clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
+    elif representationMethod == 'minmaxRepresentation':
+        clusterCenters = minmaxRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod)
+    return clusterCenters, clusterCenterIndices
+
 def medoidRepresentation(candidates, clusterOrder):
     '''
     Represents the candidates of a given cluster group (clusterOrder)

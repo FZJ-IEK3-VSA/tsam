@@ -6,9 +6,7 @@ Created on Mon Apr 06 22:17:37 2020
 """
 
 import numpy as np
-from tsam.representations import meanRepresentation
-from tsam.representations import medoidRepresentation
-from tsam.representations import minmaxRepresentation
+from tsam.representations import representations
 
 def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_means', solver='glpk',
                      representationMethod=None, representationDict=None, timeStepsPerPeriod=None):
@@ -91,15 +89,4 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
     return clusterCenters, clusterCenterIndices, clusterOrder
 
 
-def representations(candidates, clusterOrder, default, representationMethod=None, representationDict=None,
-                    timeStepsPerPeriod=None):
-    clusterCenterIndices = None
-    if representationMethod is None:
-        representationMethod = default
-    if representationMethod == 'meanRepresentation':
-        clusterCenters = meanRepresentation(candidates, clusterOrder)
-    elif representationMethod == 'medoidRepresentation':
-        clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
-    elif representationMethod == 'minmaxRepresentation':
-        clusterCenters = minmaxRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod)
-    return clusterCenters, clusterCenterIndices
+
