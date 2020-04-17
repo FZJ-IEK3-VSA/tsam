@@ -44,7 +44,10 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
             clusterOrder.append([n_clusters - 1] *
                                 int(n_sets - cluster_size * n_clusters))
         clusterOrder = np.hstack(np.array(clusterOrder))
-        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='meanRepresentation')
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='meanRepresentation',
+                                                               representationMethod=representationMethod,
+                                                               representationDict=representationDict,
+                                                               timeStepsPerPeriod=timeStepsPerPeriod)
 
     if clusterMethod == 'k_means':
         from sklearn.cluster import KMeans
@@ -57,7 +60,9 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
         clusterOrder = k_means.fit_predict(candidates)
         # get with own mean representation to avoid numerical trouble caused by sklearn
         clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='meanRepresentation',
-                                                               representationMethod=representationMethod)
+                                                               representationMethod=representationMethod,
+                                                               representationDict=representationDict,
+                                                               timeStepsPerPeriod=timeStepsPerPeriod)
 
     elif clusterMethod == 'k_medoids':
         from tsam.utils.k_medoids_exact import KMedoids
@@ -65,7 +70,9 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
 
         clusterOrder = k_medoid.fit_predict(candidates)
         clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='medoidRepresentation',
-                                                               representationMethod=representationMethod)
+                                                               representationMethod=representationMethod,
+                                                               representationDict=representationDict,
+                                                               timeStepsPerPeriod=timeStepsPerPeriod)
 
     elif clusterMethod == 'hierarchical' or 'adjacent_periods':
         if n_clusters==1:

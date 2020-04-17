@@ -17,7 +17,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from sklearn import preprocessing
 
 from tsam.periodAggregation import aggregatePeriods
-from tsam.representations import medoidRepresentation
+from tsam.representations import representations
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -833,7 +833,11 @@ class TimeSeriesAggregation(object):
                 self.clusterCenters = candidates[self.predefClusterCenterIndices]
             else:
                 # otherwise take the medoids
-                self.clusterCenters, self.clusterCenterIndices = medoidRepresentation(candidates, self._clusterOrder)
+                self.clusterCenters, self.clusterCenterIndices =\
+                    representations(candidates, self._clusterOrder, default='medoidRepresentation',
+                                    representationMethod=self.representationMethod,
+                                    representationDict=self.representationDict,
+                                    timeStepsPerPeriod=self.timeStepsPerPeriod)
         else:
             cluster_duration = time.time()
             if not self.sortValues:
@@ -891,7 +895,10 @@ class TimeSeriesAggregation(object):
 
         if self.segmentation:
             from tsam.utils.segmentation import segmentation
-            self.segmentedNormalizedTypicalPeriods, self.predictedSegmentedNormalizedTypicalPeriods = segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod)
+            self.segmentedNormalizedTypicalPeriods, self.predictedSegmentedNormalizedTypicalPeriods =\
+                segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod,
+                             representationMethod=self.representationMethod,
+                             representationDict=self.representationDict)
             self.normalizedTypicalPeriods = self.segmentedNormalizedTypicalPeriods.reset_index(level=3, drop=True)
 
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
