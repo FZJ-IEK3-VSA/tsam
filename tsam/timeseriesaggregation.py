@@ -369,8 +369,12 @@ class TimeSeriesAggregation(object):
                              "the following: " +
                              "{}".format(self.REPRESENTATION_METHODS))
 
+        # if representationDict None, represent by maximum time steps in each cluster
         if self.representationDict is None:
             self.representationDict = {i: 'max' for i in list(self.timeSeries.columns)}
+        # sort representationDict alphabetically to make sure that the min or max function is applied to the right
+        # column
+        self.representationDict = pd.Series(self.representationDict).sort_index(axis=0).to_dict()
 
         # check extremePeriods
         if self.extremePeriodMethod not in self.EXTREME_PERIOD_METHODS:

@@ -15,7 +15,7 @@ def test_adjacent_periods():
     starttime = time.time()
 
     aggregation = tsam.TimeSeriesAggregation(raw, noTypicalPeriods = noTypicalPeriods, hoursPerPeriod = 24,
-                                             clusterMethod = 'adjacent_periods', rescaleClusterPeriods=False,
+                                             clusterMethod = 'adjacent_periods',
                                              representationMethod='meanRepresentation')
 
     typPeriods = aggregation.createTypicalPeriods()
