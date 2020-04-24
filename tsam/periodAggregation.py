@@ -64,7 +64,7 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
                                                                representationDict=representationDict,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
 
-    elif clusterMethod == 'k_medoids':
+    if clusterMethod == 'k_medoids':
         from tsam.utils.k_medoids_exact import KMedoids
         k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
 
@@ -74,7 +74,7 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
                                                                representationDict=representationDict,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
 
-    elif clusterMethod == 'hierarchical' or 'adjacent_periods':
+    if clusterMethod == 'hierarchical' or clusterMethod == 'adjacent_periods':
         if n_clusters==1:
             clusterOrder=np.asarray([0]*len(candidates))
         else:
