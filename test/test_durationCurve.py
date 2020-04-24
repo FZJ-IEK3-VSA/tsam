@@ -46,7 +46,7 @@ def test_durationCurve():
 
         # make sure that the found typical period is always the one that is closest to the clusters centroid
         currentMeant = calculatedSorted.mean(axis=0)
-        minIdx = np.argmin(np.square(calculatedSorted - currentMeant).sum(axis=1))
+        minIdx = np.square(calculatedSorted - currentMeant).sum(axis=1).idxmin()
         np.testing.assert_array_almost_equal(calculatedSorted.loc[minIdx], algorithmResult.iloc[0], decimal=4)
 
 if __name__ == "__main__":
