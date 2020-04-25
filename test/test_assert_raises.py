@@ -8,13 +8,12 @@ import tsam.timeseriesaggregation as tsam
 
 def test_assert_raises():
 
-    raw = pd.read_csv(os.path.join(os.path.dirname(__file__), '..', 'examples', 'testdata.csv'), index_col=0)
-
-    def div(x, y=1):
-        if x==1:
-            raise ValueError('bla')
-
-    np.testing.assert_raises_regex(ValueError, 'bla', div, 1)
+    # Check error message for wrong time series (important: special signs such as brackets must be marked with '\' when
+    # matching error message
+    np.testing.assert_raises_regex(ValueError,
+                                   'timeSeries has to be of type pandas.DataFrame\(\) or of type np.array\(\) in '
+                                   'initialization of object of class TimeSeriesAggregation',
+                                   tsam.TimeSeriesAggregation, timeSeries='erroneousTimeSeries')
 
 if __name__ == "__main__":
     test_assert_raises()
