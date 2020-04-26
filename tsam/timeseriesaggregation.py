@@ -306,19 +306,19 @@ class TimeSeriesAggregation(object):
         for peak in self.addPeakMin:
             if peak not in self.timeSeries.columns:
                 raise ValueError(peak + ' listed in "addPeakMin"' +
-                                 ' does not occure as timeSeries column')
+                                 ' does not occur as timeSeries column')
         for peak in self.addPeakMax:
             if peak not in self.timeSeries.columns:
                 raise ValueError(peak + ' listed in "addPeakMax"' +
-                                 ' does not occure as timeSeries column')
+                                 ' does not occur as timeSeries column')
         for peak in self.addMeanMin:
             if peak not in self.timeSeries.columns:
                 raise ValueError(peak + ' listed in "addMeanMin"' +
-                                 ' does not occure as timeSeries column')
+                                 ' does not occur as timeSeries column')
         for peak in self.addMeanMax:
             if peak not in self.timeSeries.columns:
                 raise ValueError(peak + ' listed in "addMeanMax"' +
-                                 ' does not occure as timeSeries column')
+                                 ' does not occur as timeSeries column')
 
         # derive resolution from date time index if not provided
         if self.resolution is None:
