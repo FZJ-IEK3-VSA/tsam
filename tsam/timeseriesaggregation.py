@@ -325,13 +325,16 @@ class TimeSeriesAggregation(object):
             try:
                 timedelta = self.timeSeries.index[1] - self.timeSeries.index[0]
                 self.resolution = float(timedelta.total_seconds()) / 3600
+            except AttributeError:
+                raise ValueError("'resolution' argument has to be nonnegative float or int" +
+                                 " or the given timeseries needs a datetime index")
             except TypeError:
                 try:
                     self.timeSeries.index = pd.to_datetime(self.timeSeries.index)
                     timedelta = self.timeSeries.index[1] - self.timeSeries.index[0]
                     self.resolution = float(timedelta.total_seconds()) / 3600
                 except:
-                    ValueError("'resolution' argument has to be nonnegative float or int" +
+                    raise ValueError("'resolution' argument has to be nonnegative float or int" +
                                " or the given timeseries needs a datetime index")
 
         if not (isinstance(self.resolution, int) or isinstance(self.resolution, float)):
