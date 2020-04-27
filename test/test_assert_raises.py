@@ -107,5 +107,27 @@ def test_assert_raises():
                                    tsam.TimeSeriesAggregation, timeSeries=raw,
                                    rescaleClusterPeriods='erroneousrescaleClusterPeriods')
 
+    # check erroneous predefClusterOrder argument
+    np.testing.assert_raises_regex(ValueError,
+                                   'predefClusterOrder has to be an array or list',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw,
+                                   predefClusterOrder='erroneousPredefClusterOrder')
+
+    # get a cluster order from a preceding clustering run
+    aggregation = tsam.TimeSeriesAggregation(timeSeries=raw)
+    periodOrder = aggregation.clusterOrder
+    # check erroneous predefClusterCenterIndices argument
+    np.testing.assert_raises_regex(ValueError,
+                                   'predefClusterCenterIndices has to be an array or list',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw, predefClusterOrder=periodOrder,
+                                   predefClusterCenterIndices='erroneousPredefClusterCenterIndices')
+
+    # check error, when predefClusterCenterIndices are defined but not predefClusterOrder
+    np.testing.assert_raises_regex(ValueError,
+                                   'If "predefClusterCenterIndices" is defined, "predefClusterOrder" needs to be '
+                                   'defined as well',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw,
+                                   predefClusterCenterIndices='erroneousPredefClusterCenterIndices')
+
 if __name__ == "__main__":
     test_assert_raises()
