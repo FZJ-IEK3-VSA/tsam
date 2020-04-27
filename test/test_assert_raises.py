@@ -47,10 +47,44 @@ def test_assert_raises():
                                    '\'resolution\' argument has to be nonnegative float or int or the given ' \
                                    'timeseries needs a datetime index',
                                    tsam.TimeSeriesAggregation, timeSeries=rawErrInd)
-    # check erroneous resolution
+    # check erroneous resolution argument
     np.testing.assert_raises_regex(ValueError,
                                    'resolution has to be nonnegative float or int',
                                    tsam.TimeSeriesAggregation, timeSeries=raw, resolution='erroneousResolution')
+
+    # check erroneous hoursPerPeriod argument
+    np.testing.assert_raises_regex(ValueError,
+                                   'hoursPerPeriod has to be nonnegative integer',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw, hoursPerPeriod=None)
+
+    # check non-integer time step number per typical period
+    np.testing.assert_raises_regex(ValueError,
+                                   'The combination of hoursPerPeriod and the resulution does not result in an integer '
+                                   'number of time steps per period',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw, hoursPerPeriod=23, resolution=2)
+
+    # check warning when number of segments per period is higher than the number of time steps per period
+    np.testing.assert_warns(Warning, tsam.TimeSeriesAggregation, timeSeries=raw, segmentation=True, noSegments=25)
+
+    # check erroneous clusterMethod argument
+    np.testing.assert_raises_regex(ValueError,
+                                   'clusterMethod needs to be one of the following: \[\'averaging\', \'k_medoids\', '
+                                   '\'k_means\', \'hierarchical\', \'adjacent_periods\'\]',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw, clusterMethod='erroneousClusterMethod')
+
+    # check erroneous representationMethod argument
+    np.testing.assert_raises_regex(ValueError,
+                                   'If specified, representationMethod needs to be one of the following: '
+                                   '\[\'meanRepresentation\', \'medoidRepresentaion\', \'minmaxRepresentation\'\]',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw,
+                                   representationMethod='erroneousRepresentationMethod')
+
+    # check erroneous extremePeriodMethod argument
+    np.testing.assert_raises_regex(ValueError,
+                                   'extremePeriodMethod needs to be one of the following: \[\'None\', \'append\', '
+                                   '\'new_cluster_center\', \'replace_cluster_center\'\]',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw,
+                                   extremePeriodMethod='erroneousExtremePeriodMethod')
 
 if __name__ == "__main__":
     test_assert_raises()
