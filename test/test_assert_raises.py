@@ -86,5 +86,26 @@ def test_assert_raises():
                                    tsam.TimeSeriesAggregation, timeSeries=raw,
                                    extremePeriodMethod='erroneousExtremePeriodMethod')
 
+    # check erroneous evalSumPeriods argument
+    np.testing.assert_raises_regex(ValueError,
+                                   'evalSumPeriods has to be boolean',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw, evalSumPeriods='erroneousEvalSumPeriods')
+
+    # check erroneous sortValues argument
+    np.testing.assert_raises_regex(ValueError,
+                                   'sortValues has to be boolean',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw, sortValues='erroneousSortValues')
+
+    # check erroneous sameMean argument
+    np.testing.assert_raises_regex(ValueError,
+                                   'sameMean has to be boolean',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw, sameMean='erroneousSameMean')
+
+    # check erroneous rescaleClusterPeriods argument
+    np.testing.assert_raises_regex(ValueError,
+                                   'rescaleClusterPeriods has to be boolean',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw,
+                                   rescaleClusterPeriods='erroneousrescaleClusterPeriods')
+
 if __name__ == "__main__":
     test_assert_raises()
