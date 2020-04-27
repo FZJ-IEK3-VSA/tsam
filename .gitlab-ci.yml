@@ -9,4 +9,3 @@ conda:
     - source activate tsam
     - pip install --no-cache-dir .
     - pytest --cov=tsam test/
-    - pytest --cov tsam --cov-report term-missing
