@@ -8,4 +8,4 @@ conda:
     - conda env update -q --file=requirements_dev.yml
     - source activate tsam
     - pip install --no-cache-dir .
-    - pytest --cov tsam --cov-report term-missing
+    - pytest --cov=tsam -test/
