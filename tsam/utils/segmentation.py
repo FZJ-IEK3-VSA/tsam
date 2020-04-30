@@ -5,10 +5,11 @@
 import numpy as np
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
-from tsam.timeseriesaggregation import meanRepresentation
+from tsam.representations import representations
 
 
-def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod):
+def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod, representationMethod=None,
+                 representationDict=None):
     '''
     Agglomerative clustering of adjacent time steps within a set of typical periods in order to further reduce the
     temporal resolution within typical periods and to further reduce complexity of input data.
@@ -51,7 +52,12 @@ def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod):
         segNo, indices, segmentNoOccur = np.unique(clusterOrder, return_index=True, return_counts=True)
         clusterOrderUnique = [clusterOrder[index] for index in sorted(indices)]
         # determine the segments' values
-        clusterCenters = meanRepresentation(segmentationCandidates, clusterOrder)
+        clusterCenters, clusterCenterIndices = representations(segmentationCandidates, clusterOrder,
+                                                               default='meanRepresentation',
+                                                               representationMethod=representationMethod,
+                                                               representationDict=representationDict,
+                                                               timeStepsPerPeriod=1)
+        #clusterCenters = meanRepresentation(segmentationCandidates, clusterOrder)
         # predict each time step of the period by representing it with the corresponding segment's values
         predictedSegmentedNormalizedTypicalPeriods = pd.DataFrame(
             clusterCenters,

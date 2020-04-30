@@ -7,5 +7,5 @@ conda:
     - conda env update -q --file=requirements.yml
     - conda env update -q --file=requirements_dev.yml
     - source activate tsam
-    - pip install --no-cache-dir .
-    - pytest --cov tsam --cov-report term-missing
+    - pip install -e .
+    - pytest --cov=tsam test/

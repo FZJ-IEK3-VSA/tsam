@@ -15,6 +15,8 @@ clustering of adjacent time steps called segmentation.
    :maxdepth: 2
 
    timeseriesaggregationDoc
+   periodAggregationDoc
+   representationsDoc
 
 **Submodules including exact k-medoids and segmentation**
 
