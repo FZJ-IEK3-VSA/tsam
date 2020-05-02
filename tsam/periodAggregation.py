@@ -74,6 +74,14 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
                                                                representationDict=representationDict,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
 
+    if clusterMethod == 'k_maxoids':
+        from tsam.utils.k_maxoids import KMaxoids
+        k_maxoid = KMaxoids(n_clusters=n_clusters, solver=solver)
+
+        clusterOrder = k_maxoid.fit_predict(candidates)
+        clusterCenters = k_maxoid.cluster_centers_
+        clusterCenterIndices = None
+
     if clusterMethod == 'hierarchical' or clusterMethod == 'adjacent_periods':
         if n_clusters==1:
             clusterOrder=np.asarray([0]*len(candidates))
