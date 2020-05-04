@@ -14,21 +14,73 @@ def test_indexMatching():
 
     noSegments = 8
 
+    noTypicalPeriods = 8
+
     raw = pd.read_csv(os.path.join(os.path.dirname(__file__),'..','examples','testdata.csv'), index_col = 0)
+
+
 
     starttime = time.time()
 
-    aggregation = tsam.TimeSeriesAggregation(raw, noTypicalPeriods=8, hoursPerPeriod=hoursPerPeriod,
-                                             clusterMethod='k_means', segmentation=True, noSegments=noSegments)
-
-    typPeriods = aggregation.createTypicalPeriods()
+    aggregation1 = tsam.TimeSeriesAggregation(raw, noTypicalPeriods=noTypicalPeriods, hoursPerPeriod=hoursPerPeriod,
+                                              clusterMethod='k_means', segmentation=True, noSegments=noSegments)
 
     print('Clustering took ' + str(time.time() - starttime))
 
-    indexTable = aggregation.indexMatching()
+    np.testing.assert_array_almost_equal(aggregation1.stepIdx, np.arange(noSegments), decimal=4)
+
+
+
+    starttime = time.time()
+
+    aggregation2 = tsam.TimeSeriesAggregation(raw, noTypicalPeriods=noTypicalPeriods, hoursPerPeriod=hoursPerPeriod,
+                                              clusterMethod='k_means')
+
+    print('Clustering took ' + str(time.time() - starttime))
+
+    np.testing.assert_array_almost_equal(aggregation2.stepIdx, np.arange(hoursPerPeriod), decimal=4)
+
+
+
+    starttime = time.time()
+
+    aggregation3 = tsam.TimeSeriesAggregation(raw, noTypicalPeriods=noTypicalPeriods, hoursPerPeriod=hoursPerPeriod,
+                                              clusterMethod='k_means')
+
+    print('Clustering took ' + str(time.time() - starttime))
+
+    np.testing.assert_array_almost_equal(aggregation3.clusterPeriodIdx, np.arange(noTypicalPeriods), decimal=4)
+
+
+
+    starttime = time.time()
+
+    aggregation4 = tsam.TimeSeriesAggregation(raw, noTypicalPeriods=noTypicalPeriods, hoursPerPeriod=hoursPerPeriod,
+                                              clusterMethod='k_means', segmentation=True, noSegments=noSegments)
+
+    print('Clustering took ' + str(time.time() - starttime))
+
+    appearances = np.unique(aggregation4.clusterOrder, return_counts=True)[1].tolist()
+
+    occurrenceDict = {i: j for i, j in enumerate(appearances)}
+
+    # make sure that the clusterPeriodNoOccur equals the number of appearances in the clusterOrder
+    np.testing.assert_array_almost_equal(list(aggregation4.clusterPeriodNoOccur.values()),
+                                         list(occurrenceDict.values()), decimal=4)
+
+
+
+    starttime = time.time()
+
+    aggregation5 = tsam.TimeSeriesAggregation(raw, noTypicalPeriods=noTypicalPeriods, hoursPerPeriod=hoursPerPeriod,
+                                              clusterMethod='k_means', segmentation=True, noSegments=noSegments)
+
+    print('Clustering took ' + str(time.time() - starttime))
+
+    indexTable = aggregation5.indexMatching()
 
     # make sure that the PeriodNum column equals the clusterOrder
-    np.testing.assert_array_almost_equal(indexTable.loc[::24,'PeriodNum'].values, aggregation.clusterOrder, decimal=4)
+    np.testing.assert_array_almost_equal(indexTable.loc[::24,'PeriodNum'].values, aggregation5.clusterOrder, decimal=4)
 
     # make sure that the TimeStep indices equal the number of hoursPerPeriod arranged as array
     np.testing.assert_array_almost_equal(pd.unique(indexTable.loc[:, 'TimeStep']),
