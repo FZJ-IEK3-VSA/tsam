@@ -16,19 +16,11 @@ def test_accuracyIndicators():
 
     raw = pd.read_csv(os.path.join(os.path.dirname(__file__),'..','examples','testdata.csv'), index_col = 0)
 
-    starttime = time.time()
-
     aggregation1 = tsam.TimeSeriesAggregation(raw, noTypicalPeriods=noTypicalPeriods, hoursPerPeriod=hoursPerPeriod,
                                               clusterMethod='hierarchical')
 
-    print('Clustering took ' + str(time.time() - starttime))
-
-    starttime = time.time()
-
     aggregation2 = tsam.TimeSeriesAggregation(raw, noTypicalPeriods=noTypicalPeriods, hoursPerPeriod=hoursPerPeriod,
                                               clusterMethod='hierarchical', sortValues=True)
-
-    print('Clustering took ' + str(time.time() - starttime))
 
     # make sure, that the sum of the attribute specific RMSEs is smaller for the normal time series clustering than for
     # the duration curve clustering
