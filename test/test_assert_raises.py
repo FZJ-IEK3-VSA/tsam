@@ -57,6 +57,11 @@ def test_assert_raises():
                                    'hoursPerPeriod has to be nonnegative integer',
                                    tsam.TimeSeriesAggregation, timeSeries=raw, hoursPerPeriod=None)
 
+    # check erroneous noTypicalPeriods argument
+    np.testing.assert_raises_regex(ValueError,
+                                   'noTypicalPeriods has to be nonnegative integer',
+                                   tsam.TimeSeriesAggregation, timeSeries=raw, noTypicalPeriods=None)
+
     # check non-integer time step number per typical period
     np.testing.assert_raises_regex(ValueError,
                                    'The combination of hoursPerPeriod and the resulution does not result in an integer '
@@ -128,6 +133,14 @@ def test_assert_raises():
                                    'defined as well',
                                    tsam.TimeSeriesAggregation, timeSeries=raw,
                                    predefClusterCenterIndices='erroneousPredefClusterCenterIndices')
+
+    # check erroneous dataframe containing NaN values
+    rawNan = copy.deepcopy((raw))
+    rawNan.iloc[10, :] = np.NaN
+    aggregation = tsam.TimeSeriesAggregation(timeSeries=rawNan)
+    np.testing.assert_raises_regex(ValueError,
+                                   'Pre processed data includes NaN. Please check the timeSeries input data.',
+                                   aggregation.createTypicalPeriods)
 
 if __name__ == "__main__":
     test_assert_raises()
