@@ -91,7 +91,7 @@ class TimeSeriesAggregation(object):
     '''
     Clusters time series data to typical periods.
     '''
-    CLUSTER_METHODS = ['averaging', 'k_medoids', 'k_means', 'hierarchical', 'adjacent_periods']
+    CLUSTER_METHODS = ['averaging', 'k_means', 'k_medoids', 'k_maxoids', 'hierarchical', 'adjacent_periods']
 
     REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentaion', 'minmaxRepresentation']
 
@@ -140,6 +140,7 @@ class TimeSeriesAggregation(object):
             * 'averaging'
             * 'k_means'
             * 'k_medoids'
+            * 'k_maxoids'
             * 'hierarchical'
             * 'adjacent_periods'
         :type clusterMethod: string
