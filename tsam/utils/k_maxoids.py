@@ -149,37 +149,51 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         return inertia
 
-    def k_maxoids(self, X, k, doLogarithmic=True):
+    def k_maxoids(self, X, k, numpasses=5, doLogarithmic=False, n_init=100):
 
         X_old=X
         n, m = X.shape
-        inds = rnd.permutation(np.arange(n))
+        inertiaTempPrime = None
 
-        X = X[inds]
-        M = np.copy(X[:k])
+        for i in range(n_init):
+            inds = rnd.permutation(np.arange(n))
 
-        for j in range(n):
-            x = X[j]
-            D = np.sum((M - x) ** 2, axis=1)
-            i = np.argmin(D)
-            d = np.sum((M - M[i]) ** 2, axis=1)
+            X = X[inds]
+            M = np.copy(X[:k])
+            for t in range(numpasses):
+                for j in range(n):
+                    x = X[j]
+                    D = np.sum((M - x) ** 2, axis=1)
+                    i = np.argmin(D)
+                    d = np.sum((M - M[i]) ** 2, axis=1)
 
-            if doLogarithmic:
-                D[i] = 1.
-                d[i] = 1.
-                valx = np.prod(D)
-                valm = np.prod(d)
+                    if doLogarithmic:
+                        D[i] = 1.
+                        d[i] = 1.
+                        valx = np.prod(D)
+                        valm = np.prod(d)
+                    else:
+                        D[i] = 0.
+                        d[i] = 0.
+                        valx = np.sum(D)
+                        valm = np.sum(d)
+
+                    if valx > valm:
+                        M[i] = x
+
+            dTemp = self.distance_func(X_old, Y=list(M))
+            inertiaTemp = np.sum(np.min(dTemp, axis=1))
+
+            if inertiaTempPrime is None:
+                mFinal = M
+                inertiaTempPrime = inertiaTemp
             else:
-                D[i] = 0.
-                d[i] = 0.
-                valx = np.sum(D)
-                valm = np.sum(d)
+                if inertiaTemp < inertiaTempPrime:
+                    mFinal = M
+                    inertiaTempPrime = inertiaTemp
 
-            if valx > valm:
-                M[i] = x
-
-        D = self.distance_func(X_old, Y=list(M))
+        D = self.distance_func(X_old, Y=list(mFinal))
 
         I = np.argmin(D, axis=1)
 
-        return list(M), I
+        return list(mFinal), I
