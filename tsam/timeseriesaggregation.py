@@ -489,13 +489,14 @@ class TimeSeriesAggregation(object):
             raise ValueError(
                 'Pre processed data includes NaN. Please check the timeSeries input data.')
 
-    def _postProcessTimeSeries(self, normalizedTimeSeries):
+    def _postProcessTimeSeries(self, normalizedTimeSeries, applyWeighting=True):
         '''
         Neutralizes the weighting the time series back and unnormalizes them.
         '''
-        for column in self.weightDict:
-            normalizedTimeSeries[column] = normalizedTimeSeries[
-                                                column] / self.weightDict[column]
+        if applyWeighting:
+            for column in self.weightDict:
+                normalizedTimeSeries[column] = normalizedTimeSeries[
+                                                    column] / self.weightDict[column]
 
         unnormalizedTimeSeries = self._unnormalizeTimeSeries(
             normalizedTimeSeries, sameMean=self.sameMean)
@@ -1034,7 +1035,7 @@ class TimeSeriesAggregation(object):
         if self.sameMean:
             self.normalizedPredictedData /= self._normalizedMean
         self.predictedData = self._postProcessTimeSeries(
-            self.normalizedPredictedData)
+            self.normalizedPredictedData, applyWeighting=False)
 
         return self.predictedData
 
@@ -1091,7 +1092,10 @@ class TimeSeriesAggregation(object):
             'MAE': {}}  # 'Silhouette score':{},
 
         for column in self.normalizedTimeSeries.columns:
-            origTS = self.normalizedTimeSeries[column]
+            if self.weightDict:
+                origTS = self.normalizedTimeSeries[column] / self.weightDict[column]
+            else:
+                origTS = self.normalizedTimeSeries[column]
             predTS = self.normalizedPredictedData[column]
             indicatorRaw['RMSE'][column] = np.sqrt(
                 mean_squared_error(origTS, predTS))

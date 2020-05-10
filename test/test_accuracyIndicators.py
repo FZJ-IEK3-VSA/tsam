@@ -22,12 +22,12 @@ def test_accuracyIndicators():
     aggregation2 = tsam.TimeSeriesAggregation(raw, noTypicalPeriods=noTypicalPeriods, hoursPerPeriod=hoursPerPeriod,
                                               clusterMethod='hierarchical', sortValues=True)
 
-    # make sure, that the sum of the attribute specific RMSEs is smaller for the normal time series clustering than for
+    # make sure that the sum of the attribute specific RMSEs is smaller for the normal time series clustering than for
     # the duration curve clustering
     np.testing.assert_array_less(aggregation1.accuracyIndicators().loc[:, 'RMSE'].sum(),
                                  aggregation2.accuracyIndicators().loc[:, 'RMSE'].sum())
 
-    # make sure, that the sum of the attribute specific duration curve RMSEs is smaller for the duration curve
+    # make sure that the sum of the attribute specific duration curve RMSEs is smaller for the duration curve
     # clustering than for the normal time series clustering
     np.testing.assert_array_less(aggregation2.accuracyIndicators().loc[:, 'RMSE_duration'].sum(),
                                  aggregation1.accuracyIndicators().loc[:, 'RMSE_duration'].sum())
