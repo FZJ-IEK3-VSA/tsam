@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-"""Exact K-medoids clustering"""
-
 
 import numpy as np
 
