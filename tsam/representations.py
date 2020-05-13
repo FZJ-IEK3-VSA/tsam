@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 06 22:17:37 2020
-
-@author: Leander Kotzur, Maximilian Hoffmann
-"""
 
 import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances

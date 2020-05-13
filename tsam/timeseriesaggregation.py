@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Nov 22 23:25:37 2016
-
-@author: Leander Kotzur, Maximilian Hoffmann
-"""
 
 import copy
 import time
@@ -538,14 +533,6 @@ class TimeSeriesAggregation(object):
         '''
 
         # init required dicts and lists
-        if addPeakMin is None:
-            addPeakMin = []
-        if addPeakMax is None:
-            addPeakMax = []
-        if addMeanMin is None:
-            addMeanMin = []
-        if addMeanMax is None:
-            addMeanMax = []
         self.extremePeriods = {}
         extremePeriodNo = []
 
@@ -668,11 +655,6 @@ class TimeSeriesAggregation(object):
                 if not self.extremePeriods[periodType]['clusterNo'] in extremeClusterIdx:
                     extremeClusterIdx.append(
                         self.extremePeriods[periodType]['clusterNo'])
-
-        else:
-            raise NotImplementedError('Chosen "extremePeriodMethod": ' +
-                                      str(extremePeriodMethod) + ' is ' +
-                                      'not implemented.')
 
         return newClusterCenters, newClusterOrder, extremeClusterIdx
 
