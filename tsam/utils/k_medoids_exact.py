@@ -120,52 +120,6 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         return X
 
-    def transform(self, X):
-        """Transforms X to cluster-distance space.
-
-        :param X: Data to transform. shape=(n_samples, n_features)
-        :type X: array-like or sparse matrix,
-
-        Returns
-        -------
-        :returns: **X_new** (array) -- X transformed in the new space. shape=(n_samples, n_clusters)
-        """
-
-        check_is_fitted(self, "cluster_centers_")
-
-        # Apply distance metric wrt. cluster centers (medoids),
-        # and return these distances
-        return self.distance_func(X, Y=self.cluster_centers_)
-
-    def predict(self, X):
-
-        check_is_fitted(self, "cluster_centers_")
-
-        # Check that the array is good and attempt to convert it to
-        # Numpy array if possible
-        X = check_array(X)
-
-        # Apply distance metric wrt. cluster centers (medoids)
-        D = self.distance_func(X, Y=self.cluster_centers_)
-
-        # Assign data points to clusters based on
-        # which cluster assignment yields
-        # the smallest distance
-        labels = np.argmin(D, axis=1)
-
-        return labels
-
-    def inertia(self, X):
-
-        # Map the original X to the distance-space
-        Xt = self.transform(X)
-
-        # Define inertia as the sum of the sample-distances
-        # to closest cluster centers
-        inertia = np.sum(np.min(Xt, axis=1))
-
-        return inertia
-
     def _k_medoids_exact(self, distances, n_clusters):
         """
         Parameters
