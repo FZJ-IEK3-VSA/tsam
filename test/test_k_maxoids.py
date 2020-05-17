@@ -24,7 +24,7 @@ def test_k_maxoids():
     starttime = time.time()
 
     aggregation2 = tsam.TimeSeriesAggregation(raw, noTypicalPeriods=8, hoursPerPeriod=24,
-                                              clusterMethod ='k_maxoids', rescaleClusterPeriods=False)
+                                              clusterMethod='k_maxoids', rescaleClusterPeriods=False)
 
     predictedPeriods2 = aggregation2.predictOriginalData()
 
