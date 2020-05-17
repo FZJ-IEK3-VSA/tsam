@@ -88,7 +88,8 @@ class TimeSeriesAggregation(object):
     '''
     CLUSTER_METHODS = ['averaging', 'k_means', 'k_medoids', 'k_maxoids', 'hierarchical', 'adjacent_periods']
 
-    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentaion', 'minmaxRepresentation']
+    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentaion', 'minmaxRepresentation',
+                              'durationRepresentation']
 
     EXTREME_PERIOD_METHODS = [
         'None',
@@ -183,6 +184,7 @@ class TimeSeriesAggregation(object):
             * 'meanRepresentation' (default of 'averaging' and 'k_means')
             * 'medoidRepresentation' (default of 'k_medoids', 'hierarchical' and 'adjacent_periods')
             * 'minmaxRepresentation'
+            * 'durationRepresentation'
         :type representationMethod: string
 
         :param representationDict: Dictionary which states for each attribute whether the profiles in each cluster
@@ -825,7 +827,7 @@ class TimeSeriesAggregation(object):
             else:
                 # otherwise take the medoids
                 self.clusterCenters, self.clusterCenterIndices =\
-                    representations(candidates, self._clusterOrder, default='medoidRepresentation',
+                    representations(candidates, self._clusterOrder, self.solver, default='medoidRepresentation',
                                     representationMethod=self.representationMethod,
                                     representationDict=self.representationDict,
                                     timeStepsPerPeriod=self.timeStepsPerPeriod)
@@ -887,7 +889,7 @@ class TimeSeriesAggregation(object):
         if self.segmentation:
             from tsam.utils.segmentation import segmentation
             self.segmentedNormalizedTypicalPeriods, self.predictedSegmentedNormalizedTypicalPeriods =\
-                segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod,
+                segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod, self.solver,
                              representationMethod=self.representationMethod,
                              representationDict=self.representationDict)
             self.normalizedTypicalPeriods = self.segmentedNormalizedTypicalPeriods.reset_index(level=3, drop=True)
