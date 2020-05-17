@@ -7,27 +7,35 @@ import numpy as np
 import pandas as pd
 
 
-def durationRepresentation(candidates, clusterOrder, representMinMax=False, solver='cbc'):
+def durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod, representMinMax=False, solver='glpk'):
     '''
     Represents the candidates of a given cluster group (clusterOrder)
     such that for every attribute the number of time steps is best fit.
 
-    Parameters
-    ----------
-    candidates: pd.DataFrame, required
-        Dissimilarity matrix where each row represents a candidate, and
-        the columns are defined by two levels: the attributes and the time steps
-        inside the candidates.
-    clusterOrder: np.array, required
-        Integer array where the index refers to the candidate and the
-        Integer entry to the group.
-    representMinMax: bool, optional
-        If in every cluster the minimum and the maximum of the attribute should be represented.
-    solver: int, optional, default:  'cbc'
-        Specifies the solver.
+    :param candidates: Dissimilarity matrix where each row represents a candidate
+    :type candidates: np.ndarray
+
+    :param clusterOrder: Integer array where the index refers to the candidate and the Integer entry to the group
+    :type clusterOrder: np.array
+
+    :param representMinMax: If in every cluster the minimum and the maximum of the attribute should be represented
+    :type representMinMax: bool
+
+    :param solver: Specifies the solver
+    :type solver: string
     '''
+
+    # make pd.DataFrame each row represents a candidate, and the columns are defined by two levels: the attributes and
+    # the time steps inside the candidates.
+    columnTuples = []
+    for i in range(int(candidates.shape[1] / 24)):
+        for j in range(timeStepsPerPeriod):
+            columnTuples.append((i, j))
+    candidates = pd.DataFrame(candidates, columns=pd.MultiIndex.from_tuples(columnTuples))
+
     clusterCenters = []
     for clusterNum in np.unique(clusterOrder):
+        print('Representing cluster ' + str(clusterNum) + ' .')
         indice = np.where(clusterOrder == clusterNum)
         noCandidates = len(indice[0])
         clean_index = []
