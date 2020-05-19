@@ -7,8 +7,7 @@ import numpy.random as rnd
 
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
-from sklearn.utils import check_array, check_random_state
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils import check_array
 
 
 
@@ -21,15 +20,6 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
     :param distance_metric: What distance metric to use. optional, default: 'euclidean'
     :type distance_metric: string
-
-    :param timelimit: Specify the time limit of the solver. optional, default:  100
-    :type timelimit: integer
-
-    :param threads: Threads to use by the optimization solver. optional, default: 7
-    :type threads: integer
-
-    :param solver: optional, default: 'glpk'
-    :type solver: string
     """
 
     def __init__(self, n_clusters=8, distance_metric='euclidean',
@@ -38,12 +28,6 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         self.n_clusters = n_clusters
 
         self.distance_metric = distance_metric
-
-        self.solver = solver
-
-        self.timelimit = timelimit
-
-        self.threads = threads
 
     def _check_init_args(self):
 
@@ -67,7 +51,7 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
                              "was given.")
 
     def fit(self, X, y=None):
-        """Fit K-Medoids to the provided data.
+        """Fit K-Maxoids to the provided data.
 
         :param X: shape=(n_samples, n_features)
         :type X: array-like or sparse matrix

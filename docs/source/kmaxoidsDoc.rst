@@ -1,6 +1,6 @@
-################################
-The Representation Functionality
-################################
+###########################
+The k-Maxoids Functionality
+###########################
 
 .. |br| raw:: html
 
@@ -10,6 +10,6 @@ Descriptions of the basic functions are given below.
 
 **Function descriptions:**
 
-.. automodule:: representations
+.. automodule:: k_maxoids
    :members:
    :member-order: bysource
