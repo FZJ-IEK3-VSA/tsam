@@ -70,18 +70,21 @@ def durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod, represe
     return clusterCenters
 
 
-def get_min_euclid_order(candidate_values, representation_values, solver='cbc'):
+def get_min_euclid_order(candidate_values, representation_values, solver='glpk'):
     '''
     Aranges the a set of representation values to fit the candidate values with the help of a MIP.
 
     Parameters
     ----------
-    candidate_values : pd.DataFrame, required
-        A set of candidate values. Every row is a candidate and every column a time step.
-    representation_values : pd.Series, required
-        A set of values representing the candidates. Length should meet the number of columns of the candidates.
-    solver: int, optional, default:  'cbc'
-        Specifies the solver.
+    :param candidate_values: A set of candidate values. Every row is a candidate and every column a time step.
+    :type candidate_values: pd.DataFrame
+
+    :param representation_values: A set of values representing the candidates. Length should meet the number of columns
+        of the candidates.
+    :param representation_values: pd.Series
+
+    :param solver: Specifies the solver. optional, default: 'glpk'
+    :type solver: string
     '''
     distances = pd.DataFrame(0, columns=representation_values.index, index=representation_values.index)
     for j in representation_values.index:
