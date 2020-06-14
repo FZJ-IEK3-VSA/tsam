@@ -88,8 +88,8 @@ class TimeSeriesAggregation(object):
     '''
     CLUSTER_METHODS = ['averaging', 'k_means', 'k_medoids', 'k_maxoids', 'hierarchical', 'adjacent_periods']
 
-    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentaion', 'minmaxRepresentation',
-                              'durationRepresentation']
+    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentation', 'maxoidRepresentation',
+                              'minmaxRepresentation', 'durationRepresentation']
 
     EXTREME_PERIOD_METHODS = [
         'None',
