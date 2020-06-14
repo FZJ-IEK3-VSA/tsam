@@ -77,8 +77,12 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
         k_maxoid = KMaxoids(n_clusters=n_clusters, solver=solver)
 
         clusterOrder = k_maxoid.fit_predict(candidates)
-        clusterCenters = k_maxoid.cluster_centers_
-        clusterCenterIndices = None
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, solver,
+                                                               default='maxoidRepresentation',
+                                                               representationMethod=representationMethod,
+                                                               representationDict=representationDict,
+                                                               timeStepsPerPeriod=timeStepsPerPeriod)
+
 
     if clusterMethod == 'hierarchical' or clusterMethod == 'adjacent_periods':
         if n_clusters==1:
