@@ -54,7 +54,7 @@ def test_assert_raises():
 
     # check erroneous hoursPerPeriod argument
     np.testing.assert_raises_regex(ValueError,
-                                   'hoursPerPeriod has to be nonnegative integer',
+                                   'hoursPerPeriod has to be nonnegative float or int',
                                    tsam.TimeSeriesAggregation, timeSeries=raw, hoursPerPeriod=None)
 
     # check erroneous noTypicalPeriods argument

@@ -339,9 +339,8 @@ class TimeSeriesAggregation(object):
             raise ValueError("resolution has to be nonnegative float or int")
 
         # check hoursPerPeriod
-        if self.hoursPerPeriod is None or self.hoursPerPeriod <= 0 or \
-                not isinstance(self.hoursPerPeriod, int):
-            raise ValueError("hoursPerPeriod has to be nonnegative integer")
+        if self.hoursPerPeriod is None or self.hoursPerPeriod <= 0:
+            raise ValueError("hoursPerPeriod has to be nonnegative float or int")
 
         # check typical Periods
         if self.noTypicalPeriods is None or self.noTypicalPeriods <= 0 or \
