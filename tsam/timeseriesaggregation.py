@@ -337,7 +337,7 @@ class TimeSeriesAggregation(object):
 
         # check hoursPerPeriod
         if self.hoursPerPeriod is None or self.hoursPerPeriod <= 0:
-            raise ValueError("hoursPerPeriod has to be nonnegative integer")
+            raise ValueError("hoursPerPeriod has to be nonnegative float or int")
 
         # check typical Periods
         if self.noTypicalPeriods is None or self.noTypicalPeriods <= 0 or \
