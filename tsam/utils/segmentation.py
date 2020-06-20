@@ -6,7 +6,7 @@ from sklearn.cluster import AgglomerativeClustering
 from tsam.representations import representations
 
 
-def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod, representationMethod=None,
+def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod, solver, representationMethod=None,
                  representationDict=None):
     '''
     Agglomerative clustering of adjacent time steps within a set of typical periods in order to further reduce the
@@ -50,7 +50,7 @@ def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod, repre
         segNo, indices, segmentNoOccur = np.unique(clusterOrder, return_index=True, return_counts=True)
         clusterOrderUnique = [clusterOrder[index] for index in sorted(indices)]
         # determine the segments' values
-        clusterCenters, clusterCenterIndices = representations(segmentationCandidates, clusterOrder,
+        clusterCenters, clusterCenterIndices = representations(segmentationCandidates, clusterOrder, solver,
                                                                default='meanRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,

@@ -24,4 +24,6 @@ clustering of adjacent time steps called segmentation.
    :maxdepth: 2
 
    exactKmedoidsDoc
+   kmaxoidsDoc
+   durationRepresentationDoc
    segmentationDoc
