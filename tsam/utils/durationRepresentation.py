@@ -28,7 +28,7 @@ def durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod, represe
     # make pd.DataFrame each row represents a candidate, and the columns are defined by two levels: the attributes and
     # the time steps inside the candidates.
     columnTuples = []
-    for i in range(int(candidates.shape[1] / 24)):
+    for i in range(int(candidates.shape[1] / timeStepsPerPeriod)):
         for j in range(timeStepsPerPeriod):
             columnTuples.append((i, j))
     candidates = pd.DataFrame(candidates, columns=pd.MultiIndex.from_tuples(columnTuples))
