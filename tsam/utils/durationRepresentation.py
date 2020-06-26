@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Orders a set of representation values to fit several candidate value sets"""
 
-import pyomo.environ as pyomo
-import pyomo.opt as opt
 import numpy as np
 import pandas as pd
 
@@ -35,12 +33,11 @@ def durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod, represe
 
     clusterCenters = []
     for clusterNum in np.unique(clusterOrder):
-        print('Representing cluster ' + str(clusterNum) + ' .')
         indice = np.where(clusterOrder == clusterNum)
         noCandidates = len(indice[0])
         clean_index = []
 
-        clustercenter = []
+        clusterCenter = []
         # get a clean index depending on the size
         for y in candidates.columns.levels[1]:
             for x in range(noCandidates):
@@ -57,81 +54,14 @@ def durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod, represe
             if representMinMax:
                 representationValues.loc[0] = sortedAttr.values[0]
                 representationValues.loc[representationValues.index[-1]] = sortedAttr.values[-1]
-            # get the order of the representation values such that euclidian distance to the candidates is minimized
-            order = get_min_euclid_order(candidateValues, representationValues, solver=solver)
-            # arange
+            # get the order of the representation values such that euclidean distance to the candidates is minimized
+            order = candidateValues.mean().sort_values().index
+            # arrange
             representationValues.index = order
             representationValues.sort_index(inplace=True)
 
             # add to cluster center
-            clustercenter = np.append(clustercenter, representationValues.values)
+            clusterCenter = np.append(clusterCenter, representationValues.values)
 
-        clusterCenters.append(clustercenter)
+        clusterCenters.append(clusterCenter)
     return clusterCenters
-
-
-def get_min_euclid_order(candidate_values, representation_values, solver='glpk'):
-    '''
-    Aranges the a set of representation values to fit the candidate values with the help of a MIP.
-
-    Parameters
-    ----------
-    :param candidate_values: A set of candidate values. Every row is a candidate and every column a time step.
-    :type candidate_values: pd.DataFrame
-
-    :param representation_values: A set of values representing the candidates. Length should meet the number of columns
-        of the candidates.
-    :param representation_values: pd.Series
-
-    :param solver: Specifies the solver. optional, default: 'glpk'
-    :type solver: string
-    '''
-    distances = pd.DataFrame(0, columns=representation_values.index, index=representation_values.index)
-    for j in representation_values.index:
-        distances.loc[j, :] = candidate_values.sub(representation_values.loc[j]).apply(np.square).sum(axis=0)
-
-    # Create model
-    M = pyomo.ConcreteModel()
-
-    # get distance matrix
-    M.d = distances.values
-
-    # Distances is a symmetrical matrix, extract its length
-    length = distances.shape[0]
-
-    # get indices
-    M.i = [j for j in range(length)]
-    M.j = [j for j in range(length)]
-
-    # initialize vars
-    M.z = pyomo.Var(M.i, M.j, within=pyomo.Binary)
-
-    # get objective
-    def objRule(M):
-        return sum(sum(M.d[i, j] * M.z[i, j] for j in M.j) for i in M.i)
-
-    M.obj = pyomo.Objective(rule=objRule)
-
-    # s.t.
-    # Assign every representation to a single place
-    def singlePlaceRule(M, j):
-        return sum(M.z[i, j] for i in M.i) == 1
-
-    M.singlePlaceCon = pyomo.Constraint(M.j, rule=singlePlaceRule)
-
-    # s.t.
-    # Every time step can only have a single representation
-    def singleRepresentationRule(M, i):
-        return sum(M.z[i, j] for j in M.j) == 1
-
-    M.singleRepresentationCon = pyomo.Constraint(M.j, rule=singleRepresentationRule)
-
-    optprob = opt.SolverFactory(solver)
-
-    results = optprob.solve(M, tee=False)
-
-    r_x = np.array([[round(M.z[i, j].value) for i in range(length)]
-                    for j in range(length)])
-    order = r_x.argmax(axis=0)
-
-    return order
