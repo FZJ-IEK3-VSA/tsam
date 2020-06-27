@@ -50,7 +50,7 @@ def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod, solve
         segNo, indices, segmentNoOccur = np.unique(clusterOrder, return_index=True, return_counts=True)
         clusterOrderUnique = [clusterOrder[index] for index in sorted(indices)]
         # determine the segments' values
-        clusterCenters, clusterCenterIndices = representations(segmentationCandidates, clusterOrder, solver,
+        clusterCenters, clusterCenterIndices = representations(segmentationCandidates, clusterOrder,
                                                                default='meanRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,
