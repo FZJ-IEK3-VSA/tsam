@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 
-def durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod, representMinMax=False, solver='glpk'):
+def durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod, representMinMax=False):
     '''
     Represents the candidates of a given cluster group (clusterOrder)
     such that for every attribute the number of time steps is best fit.
@@ -18,9 +18,6 @@ def durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod, represe
 
     :param representMinMax: If in every cluster the minimum and the maximum of the attribute should be represented
     :type representMinMax: bool
-
-    :param solver: Specifies the solver
-    :type solver: string
     '''
 
     # make pd.DataFrame each row represents a candidate, and the columns are defined by two levels: the attributes and

@@ -826,7 +826,7 @@ class TimeSeriesAggregation(object):
             else:
                 # otherwise take the medoids
                 self.clusterCenters, self.clusterCenterIndices =\
-                    representations(candidates, self._clusterOrder, self.solver, default='medoidRepresentation',
+                    representations(candidates, self._clusterOrder, default='medoidRepresentation',
                                     representationMethod=self.representationMethod,
                                     representationDict=self.representationDict,
                                     timeStepsPerPeriod=self.timeStepsPerPeriod)
