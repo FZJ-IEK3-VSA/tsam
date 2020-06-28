@@ -39,8 +39,7 @@ def maxoidRepresentation(candidates, clusterOrder):
     clusterCenterIndices = []
     for clusterNum in np.unique(clusterOrder):
         indice = np.where(clusterOrder == clusterNum)
-        notIndice = np.where(clusterOrder != clusterNum)
-        innerDistMatrix = euclidean_distances(candidates[notIndice], candidates[indice])
+        innerDistMatrix = euclidean_distances(candidates, candidates[indice])
         mindistIdx = np.argmax(innerDistMatrix.sum(axis=0))
         clusterCenters.append(candidates[indice][mindistIdx])
         clusterCenterIndices.append(indice[0][mindistIdx])
