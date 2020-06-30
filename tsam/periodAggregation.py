@@ -105,3 +105,4 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
 
     return clusterCenters, clusterCenterIndices, clusterOrder
+
