@@ -15,8 +15,8 @@ def representations(candidates, clusterOrder, default, representationMethod=None
         clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
     elif representationMethod == 'maxoidRepresentation':
         clusterCenters, clusterCenterIndices = maxoidRepresentation(candidates, clusterOrder)
-    elif representationMethod == 'minmaxRepresentation':
-        clusterCenters = minmaxRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod)
+    elif representationMethod == 'minmaxmeanRepresentation':
+        clusterCenters = minmaxmeanRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod)
     elif representationMethod == 'durationRepresentation':
         clusterCenters = durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod)
     return clusterCenters, clusterCenterIndices
@@ -92,10 +92,10 @@ def meanRepresentation(candidates, clusterOrder):
         clusterCenters.append(currentMean)
     return clusterCenters
 
-def minmaxRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod):
+def minmaxmeanRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod):
     '''
     Represents the candidates of a given cluster group (clusterOrder)
-    by either the minimum or the maximum values of each time step for
+    by either the minimum, the maximum or the mean values of each time step for
     all periods in that cluster depending on the command for each attribute.
 
     :param candidates: Dissimilarity matrix where each row represents a candidate. required
@@ -121,11 +121,13 @@ def minmaxRepresentation(candidates, clusterOrder, representationDict, timeSteps
         for attributeNum in range(len(representationDict)):
             startIdx = attributeNum * timeStepsPerPeriod
             endIdx = (attributeNum + 1) * timeStepsPerPeriod
-            if list(representationDict.values())[attributeNum] == 'max':
-                currentClusterCenter[startIdx:endIdx] = candidates[indice, startIdx:endIdx].max(axis=1)
-            elif list(representationDict.values())[attributeNum] == 'min':
+            if list(representationDict.values())[attributeNum] == 'min':
                 currentClusterCenter[startIdx:endIdx] = candidates[indice, startIdx:endIdx].min(axis=1)
+            elif list(representationDict.values())[attributeNum] == 'max':
+                currentClusterCenter[startIdx:endIdx] = candidates[indice, startIdx:endIdx].max(axis=1)
+            elif list(representationDict.values())[attributeNum] == 'mean':
+                currentClusterCenter[startIdx:endIdx] = candidates[indice, startIdx:endIdx].mean(axis=1)
             else:
-                raise ValueError('At least one value in the representationDict is neither "min" nor "max".')
+                raise ValueError('At least one value in the representationDict is neither "min", "max" nor "mean".')
         clusterCenters.append(currentClusterCenter)
     return clusterCenters
