@@ -14,7 +14,7 @@ def test_minmaxRepresentation():
 
     hoursPerPeriod = 24
 
-    representationDict = {'GHI': 'max', 'T': 'min', 'Wind': 'max', 'Load': 'min'}
+    representationDict = {'GHI': 'max', 'T': 'min', 'Wind': 'mean', 'Load': 'min'}
 
     starttime = time.time()
 
@@ -22,7 +22,7 @@ def test_minmaxRepresentation():
 
     aggregation = tsam.TimeSeriesAggregation(raw, noTypicalPeriods = noTypicalPeriods, hoursPerPeriod = hoursPerPeriod,
                                              clusterMethod = 'hierarchical', rescaleClusterPeriods=False,
-                                             representationMethod='minmaxRepresentation',
+                                             representationMethod='minmaxmeanRepresentation',
                                              representationDict=representationDict)
 
     typPeriods = aggregation.createTypicalPeriods()
@@ -31,12 +31,15 @@ def test_minmaxRepresentation():
 
     for i in range(noTypicalPeriods):
         for j in representationDict:
-            if representationDict[j] == 'max':
-                calculated = tsam.unstackToPeriods(raw, hoursPerPeriod)[0].loc[
-                    np.where(aggregation.clusterOrder == i)[0], j].max().values
-            elif representationDict[j] == 'min':
+            if representationDict[j] == 'min':
                 calculated = tsam.unstackToPeriods(raw, hoursPerPeriod)[0].loc[
                     np.where(aggregation.clusterOrder == i)[0], j].min().values
+            elif representationDict[j] == 'max':
+                calculated = tsam.unstackToPeriods(raw, hoursPerPeriod)[0].loc[
+                    np.where(aggregation.clusterOrder == i)[0], j].max().values
+            elif representationDict[j] == 'mean':
+                calculated = tsam.unstackToPeriods(raw, hoursPerPeriod)[0].loc[
+                    np.where(aggregation.clusterOrder == i)[0], j].mean().values
             algorithmResult = typPeriods.loc[i, :].loc[:, j].values
             # print(calculated,algorithmResult)
             np.testing.assert_array_almost_equal(calculated, algorithmResult, decimal=4)

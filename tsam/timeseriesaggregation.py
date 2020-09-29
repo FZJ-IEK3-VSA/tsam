@@ -88,7 +88,7 @@ class TimeSeriesAggregation(object):
     '''
     CLUSTER_METHODS = ['averaging', 'k_medoids', 'k_means', 'hierarchical', 'adjacent_periods']
 
-    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentation', 'minmaxRepresentation']
+    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentation', 'minmaxmeanRepresentation']
 
     EXTREME_PERIOD_METHODS = [
         'None',
@@ -181,13 +181,13 @@ class TimeSeriesAggregation(object):
 
             * 'meanRepresentation' (default of 'averaging' and 'k_means')
             * 'medoidRepresentation' (default of 'k_medoids', 'hierarchical' and 'adjacent_periods')
-            * 'minmaxRepresentation'
+            * 'minmaxmeanRepresentation'
         :type representationMethod: string
 
         :param representationDict: Dictionary which states for each attribute whether the profiles in each cluster
             should be represented by the minimum value or maximum value of each time step. This enables estimations
-            to the safe side. This dictionary is needed when 'minmaxRepresentation' is chosen. If not specified, the
-            dictionary is set to containing 'max' values only.
+            to the safe side. This dictionary is needed when 'minmaxmeanRepresentation' is chosen. If not specified, the
+            dictionary is set to containing 'mean' values only.
         :type representationDict: dict
 
         :param predefClusterOrder: Instead of aggregating a time series, a predefined grouping is taken
@@ -368,8 +368,8 @@ class TimeSeriesAggregation(object):
 
         # if representationDict None, represent by maximum time steps in each cluster
         if self.representationDict is None:
-            self.representationDict = {i: 'max' for i in list(self.timeSeries.columns)}
-        # sort representationDict alphabetically to make sure that the min or max function is applied to the right
+            self.representationDict = {i: 'mean' for i in list(self.timeSeries.columns)}
+        # sort representationDict alphabetically to make sure that the min, max or mean function is applied to the right
         # column
         self.representationDict = pd.Series(self.representationDict).sort_index(axis=0).to_dict()
 
