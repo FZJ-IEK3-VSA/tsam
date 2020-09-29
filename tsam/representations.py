@@ -15,7 +15,7 @@ def representations(candidates, clusterOrder, default, representationMethod=None
         clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
     elif representationMethod == 'maxoidRepresentation':
         clusterCenters, clusterCenterIndices = maxoidRepresentation(candidates, clusterOrder)
-    elif representationMethod == 'minmaxRepresentation':
+    elif representationMethod == 'minmaxmeanRepresentation':
         clusterCenters = minmaxmeanRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod)
     elif representationMethod == 'durationRepresentation':
         clusterCenters = durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod)
