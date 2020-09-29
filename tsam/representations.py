@@ -2,6 +2,7 @@
 
 import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
+from tsam.utils.durationRepresentation import durationRepresentation
 
 def representations(candidates, clusterOrder, default, representationMethod=None, representationDict=None,
                     timeStepsPerPeriod=None):
@@ -12,9 +13,39 @@ def representations(candidates, clusterOrder, default, representationMethod=None
         clusterCenters = meanRepresentation(candidates, clusterOrder)
     elif representationMethod == 'medoidRepresentation':
         clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
-    elif representationMethod == 'minmaxmeanRepresentation':
+    elif representationMethod == 'maxoidRepresentation':
+        clusterCenters, clusterCenterIndices = maxoidRepresentation(candidates, clusterOrder)
+    elif representationMethod == 'minmaxRepresentation':
         clusterCenters = minmaxmeanRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod)
+    elif representationMethod == 'durationRepresentation':
+        clusterCenters = durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod)
     return clusterCenters, clusterCenterIndices
+
+
+def maxoidRepresentation(candidates, clusterOrder):
+    '''
+    Represents the candidates of a given cluster group (clusterOrder)
+    by its medoid, measured with the euclidean distance.
+
+    :param candidates: Dissimilarity matrix where each row represents a candidate. required
+    :type candidates: np.ndarray
+
+    :param clusterOrder: Integer array where the index refers to the candidate and the
+        Integer entry to the group. required
+    :type clusterOrder: np.array
+    '''
+    # set cluster member that is farthest away from the points of the other clusters as maxoid
+    clusterCenters = []
+    clusterCenterIndices = []
+    for clusterNum in np.unique(clusterOrder):
+        indice = np.where(clusterOrder == clusterNum)
+        innerDistMatrix = euclidean_distances(candidates, candidates[indice])
+        mindistIdx = np.argmax(innerDistMatrix.sum(axis=0))
+        clusterCenters.append(candidates[indice][mindistIdx])
+        clusterCenterIndices.append(indice[0][mindistIdx])
+
+    return clusterCenters, clusterCenterIndices
+
 
 def medoidRepresentation(candidates, clusterOrder):
     '''

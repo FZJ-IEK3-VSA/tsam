@@ -73,14 +73,15 @@ def test_assert_raises():
 
     # check erroneous clusterMethod argument
     np.testing.assert_raises_regex(ValueError,
-                                   'clusterMethod needs to be one of the following: \[\'averaging\', \'k_medoids\', '
-                                   '\'k_means\', \'hierarchical\', \'adjacent_periods\'\]',
+                                   'clusterMethod needs to be one of the following: \[\'averaging\', \'k_means\', '
+                                   '\'k_medoids\', \'k_maxoids\', \'hierarchical\', \'adjacent_periods\'\]',
                                    tsam.TimeSeriesAggregation, timeSeries=raw, clusterMethod='erroneousClusterMethod')
 
     # check erroneous representationMethod argument
     np.testing.assert_raises_regex(ValueError,
                                    'If specified, representationMethod needs to be one of the following: '
-                                   '\[\'meanRepresentation\', \'medoidRepresentation\', \'minmaxmeanRepresentation\'\]',
+                                   '\[\'meanRepresentation\', \'medoidRepresentation\', \'maxoidRepresentation\', '
+                                   '\'minmaxmeanRepresentation\', \'durationRepresentation\'\]',
                                    tsam.TimeSeriesAggregation, timeSeries=raw,
                                    representationMethod='erroneousRepresentationMethod')
 

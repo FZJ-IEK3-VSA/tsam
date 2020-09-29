@@ -39,7 +39,8 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
             clusterOrder.append([n_clusters - 1] *
                                 int(n_sets - cluster_size * n_clusters))
         clusterOrder = np.hstack(np.array(clusterOrder))
-        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='meanRepresentation',
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder,
+                                                               default='meanRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
@@ -54,7 +55,8 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
 
         clusterOrder = k_means.fit_predict(candidates)
         # get with own mean representation to avoid numerical trouble caused by sklearn
-        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='meanRepresentation',
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder,
+                                                               default='meanRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
@@ -64,10 +66,23 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
         k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
 
         clusterOrder = k_medoid.fit_predict(candidates)
-        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='medoidRepresentation',
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder,
+                                                               default='medoidRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
+
+    if clusterMethod == 'k_maxoids':
+        from tsam.utils.k_maxoids import KMaxoids
+        k_maxoid = KMaxoids(n_clusters=n_clusters, solver=solver)
+
+        clusterOrder = k_maxoid.fit_predict(candidates)
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder,
+                                                               default='maxoidRepresentation',
+                                                               representationMethod=representationMethod,
+                                                               representationDict=representationDict,
+                                                               timeStepsPerPeriod=timeStepsPerPeriod)
+
 
     if clusterMethod == 'hierarchical' or clusterMethod == 'adjacent_periods':
         if n_clusters==1:
@@ -83,12 +98,10 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
                     n_clusters=n_clusters, linkage='ward', connectivity=adjacencyMatrix)
             clusterOrder = clustering.fit_predict(candidates)
         # represent hierarchical aggregation with medoid
-        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder, default='medoidRepresentation',
+        clusterCenters, clusterCenterIndices = representations(candidates, clusterOrder,
+                                                               default='medoidRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
 
     return clusterCenters, clusterCenterIndices, clusterOrder
-
-
-

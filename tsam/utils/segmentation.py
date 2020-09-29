@@ -6,7 +6,7 @@ from sklearn.cluster import AgglomerativeClustering
 from tsam.representations import representations
 
 
-def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod, representationMethod=None,
+def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod, solver, representationMethod=None,
                  representationDict=None):
     '''
     Agglomerative clustering of adjacent time steps within a set of typical periods in order to further reduce the

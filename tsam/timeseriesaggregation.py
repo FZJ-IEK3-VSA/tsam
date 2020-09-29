@@ -86,9 +86,10 @@ class TimeSeriesAggregation(object):
     '''
     Clusters time series data to typical periods.
     '''
-    CLUSTER_METHODS = ['averaging', 'k_medoids', 'k_means', 'hierarchical', 'adjacent_periods']
+    CLUSTER_METHODS = ['averaging', 'k_means', 'k_medoids', 'k_maxoids', 'hierarchical', 'adjacent_periods']
 
-    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentation', 'minmaxmeanRepresentation']
+    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentation', 'maxoidRepresentation',
+                              'minmaxmeanRepresentation', 'durationRepresentation']
 
     EXTREME_PERIOD_METHODS = [
         'None',
@@ -135,6 +136,7 @@ class TimeSeriesAggregation(object):
             * 'averaging'
             * 'k_means'
             * 'k_medoids'
+            * 'k_maxoids'
             * 'hierarchical'
             * 'adjacent_periods'
         :type clusterMethod: string
@@ -182,6 +184,7 @@ class TimeSeriesAggregation(object):
             * 'meanRepresentation' (default of 'averaging' and 'k_means')
             * 'medoidRepresentation' (default of 'k_medoids', 'hierarchical' and 'adjacent_periods')
             * 'minmaxmeanRepresentation'
+            * 'durationRepresentation'
         :type representationMethod: string
 
         :param representationDict: Dictionary which states for each attribute whether the profiles in each cluster
@@ -885,7 +888,7 @@ class TimeSeriesAggregation(object):
         if self.segmentation:
             from tsam.utils.segmentation import segmentation
             self.segmentedNormalizedTypicalPeriods, self.predictedSegmentedNormalizedTypicalPeriods =\
-                segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod,
+                segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod, self.solver,
                              representationMethod=self.representationMethod,
                              representationDict=self.representationDict)
             self.normalizedTypicalPeriods = self.segmentedNormalizedTypicalPeriods.reset_index(level=3, drop=True)
