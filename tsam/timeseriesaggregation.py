@@ -100,8 +100,8 @@ class TimeSeriesAggregation(object):
     def __init__(self, timeSeries, resolution=None, noTypicalPeriods=10,
                  noSegments=10, hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
-                 rescaleClusterPeriods=True, weightDict=None, segmentation = False,
-                 extremePeriodMethod='None', representationMethod=None, representationDict=None,
+                 rescaleClusterPeriods=True, weightDict=None, segmentation = False, extremePeriodMethod='None',
+                 representationMethod=None, representationDict=None, distributionPeriodWise=True,
                  predefClusterOrder=None, predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
                  addPeakMin=None,
@@ -193,6 +193,10 @@ class TimeSeriesAggregation(object):
             dictionary is set to containing 'mean' values only.
         :type representationDict: dict
 
+        :param distributionPeriodWise: If durationRepresentation is chosen, you can choose whether the distribution of
+            each cluster should be separately preserved or that of the original time series only (default: True)
+        :type distributionPeriodWise:
+
         :param predefClusterOrder: Instead of aggregating a time series, a predefined grouping is taken
             which is given by this list. optional (default: None)
         :type predefClusterOrder: list or array
@@ -260,6 +264,8 @@ class TimeSeriesAggregation(object):
         self.representationMethod = representationMethod
 
         self.representationDict = representationDict
+
+        self.distributionPeriodWise = distributionPeriodWise
 
         self.predefClusterOrder = predefClusterOrder
 
@@ -761,6 +767,7 @@ class TimeSeriesAggregation(object):
                 clusterMethod=self.clusterMethod,
                 representationMethod=self.representationMethod,
                 representationDict=self.representationDict,
+                distributionPeriodWise=self.distributionPeriodWise,
                 timeStepsPerPeriod=self.timeStepsPerPeriod))
 
         clusterCenters_C = []
@@ -840,6 +847,7 @@ class TimeSeriesAggregation(object):
                     solver=self.solver, clusterMethod=self.clusterMethod,
                     representationMethod=self.representationMethod,
                     representationDict=self.representationDict,
+                    distributionPeriodWise=self.distributionPeriodWise,
                     timeStepsPerPeriod=self.timeStepsPerPeriod)
             else:
                 self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
@@ -890,7 +898,8 @@ class TimeSeriesAggregation(object):
             self.segmentedNormalizedTypicalPeriods, self.predictedSegmentedNormalizedTypicalPeriods =\
                 segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod, self.solver,
                              representationMethod=self.representationMethod,
-                             representationDict=self.representationDict)
+                             representationDict=self.representationDict,
+                             distributionPeriodWise=self.distributionPeriodWise)
             self.normalizedTypicalPeriods = self.segmentedNormalizedTypicalPeriods.reset_index(level=3, drop=True)
 
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)

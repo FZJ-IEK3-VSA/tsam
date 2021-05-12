@@ -7,7 +7,7 @@ from tsam.representations import representations
 
 
 def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod, solver, representationMethod=None,
-                 representationDict=None):
+                 representationDict=None, distributionPeriodWise=True):
     '''
     Agglomerative clustering of adjacent time steps within a set of typical periods in order to further reduce the
     temporal resolution within typical periods and to further reduce complexity of input data.
@@ -50,10 +50,13 @@ def segmentation(normalizedTypicalPeriods, noSegments, timeStepsPerPeriod, solve
         segNo, indices, segmentNoOccur = np.unique(clusterOrder, return_index=True, return_counts=True)
         clusterOrderUnique = [clusterOrder[index] for index in sorted(indices)]
         # determine the segments' values
+        # if representationMethod == 'durationRepresentation':
+        #    representationMethod = 'meanRepresentation'
         clusterCenters, clusterCenterIndices = representations(segmentationCandidates, clusterOrder,
                                                                default='meanRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,
+                                                               distributionPeriodWise=distributionPeriodWise,
                                                                timeStepsPerPeriod=1)
         #clusterCenters = meanRepresentation(segmentationCandidates, clusterOrder)
         # predict each time step of the period by representing it with the corresponding segment's values

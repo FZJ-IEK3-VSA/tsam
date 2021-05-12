@@ -4,7 +4,8 @@ import numpy as np
 from tsam.representations import representations
 
 def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_means', solver='glpk',
-                     representationMethod=None, representationDict=None, timeStepsPerPeriod=None):
+                     representationMethod=None, representationDict=None, distributionPeriodWise=True,
+                     timeStepsPerPeriod=None):
     '''
     Clusters the data based on one of the cluster methods:
     'averaging', 'k_means', 'exact k_medoid' or 'hierarchical'
@@ -43,6 +44,7 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
                                                                default='meanRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,
+                                                               distributionPeriodWise=distributionPeriodWise,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
 
     if clusterMethod == 'k_means':
@@ -59,6 +61,7 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
                                                                default='meanRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,
+                                                               distributionPeriodWise=distributionPeriodWise,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
 
     if clusterMethod == 'k_medoids':
@@ -70,6 +73,7 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
                                                                default='medoidRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,
+                                                               distributionPeriodWise=distributionPeriodWise,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
 
     if clusterMethod == 'k_maxoids':
@@ -81,6 +85,7 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
                                                                default='maxoidRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,
+                                                               distributionPeriodWise=distributionPeriodWise,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
 
 
@@ -102,6 +107,7 @@ def aggregatePeriods(candidates, n_clusters=8, n_iter=100, clusterMethod='k_mean
                                                                default='medoidRepresentation',
                                                                representationMethod=representationMethod,
                                                                representationDict=representationDict,
+                                                               distributionPeriodWise=distributionPeriodWise,
                                                                timeStepsPerPeriod=timeStepsPerPeriod)
 
     return clusterCenters, clusterCenterIndices, clusterOrder

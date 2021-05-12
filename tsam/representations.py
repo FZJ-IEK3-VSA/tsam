@@ -5,7 +5,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from tsam.utils.durationRepresentation import durationRepresentation
 
 def representations(candidates, clusterOrder, default, representationMethod=None, representationDict=None,
-                    timeStepsPerPeriod=None):
+                    distributionPeriodWise=True, timeStepsPerPeriod=None):
     clusterCenterIndices = None
     if representationMethod is None:
         representationMethod = default
@@ -18,7 +18,7 @@ def representations(candidates, clusterOrder, default, representationMethod=None
     elif representationMethod == 'minmaxmeanRepresentation':
         clusterCenters = minmaxmeanRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod)
     elif representationMethod == 'durationRepresentation':
-        clusterCenters = durationRepresentation(candidates, clusterOrder, timeStepsPerPeriod)
+        clusterCenters = durationRepresentation(candidates, clusterOrder, distributionPeriodWise, timeStepsPerPeriod)
     return clusterCenters, clusterCenterIndices
 
 
