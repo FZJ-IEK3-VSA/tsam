@@ -11,7 +11,7 @@ Descriptions of the basic functions are given below.
 **Function descriptions:**
 
 .. automodule:: timeseriesaggregation
-   :members: unstackToPeriods, aggregatePeriods, medoidRepresentation, meanRepresentation
+   :members: unstackToPeriods
    :member-order: bysource
 
    .. autoclass:: TimeSeriesAggregation
