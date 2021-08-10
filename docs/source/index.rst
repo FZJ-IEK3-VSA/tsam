@@ -38,6 +38,7 @@ The authors of both, the program and the publications, **kindly request you to c
     newsDoc
     integratedSoftwareDoc
     legalNoticeDoc
+    aboutUsDoc
     furtherReadingDoc
 
 * :ref:`genindex`

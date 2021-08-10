@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Nov 22 23:25:37 2016
-
-@author: Leander Kotzur, Maximilian Hoffmann
-"""
 
 import copy
 import time
@@ -15,7 +10,9 @@ import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn import preprocessing
-    
+
+from tsam.periodAggregation import aggregatePeriods
+from tsam.representations import representations
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -85,131 +82,13 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
 
     return unstackedTimeSeries, timeIndex
 
-
-def aggregatePeriods(candidates, n_clusters=8,
-                     n_iter=100, clusterMethod='k_means', solver='glpk', ):
-    '''
-    Clusters the data based on one of the cluster methods:
-        'averaging','k_means','exact k_medoid' or 'hierarchical'
-
-    :param candidates: Dissimilarity matrix where each row represents a candidate. required
-    :type candidates: np.ndarray
-
-    :param n_clusters: Number of aggregated cluster. optional (default: 8)
-    :type n_clusters: integer
-
-    :param n_iter: Only required for the number of starts of the k-mean algorithm. optional (default: 10)
-    :type n_iter: integer
-
-    :param clusterMethod: Chosen clustering algorithm. Possible values are
-        'averaging','k_means','exact k_medoid' or 'hierarchical'. optional (default: 'k_means')
-    :type clusterMethod: string
-    '''
-
-    clusterCenterIndices = None
-
-    # cluster the data
-    if clusterMethod == 'averaging':
-        n_sets = len(candidates)
-        if n_sets % n_clusters == 0:
-            cluster_size = int(n_sets / n_clusters)
-            clusterOrder = [
-                [n_cluster] *
-                cluster_size for n_cluster in range(n_clusters)]
-        else:
-            cluster_size = int(n_sets / n_clusters)
-            clusterOrder = [
-                [n_cluster] *
-                cluster_size for n_cluster in range(n_clusters)]
-            clusterOrder.append([n_clusters - 1] *
-                                int(n_sets - cluster_size * n_clusters))
-        clusterOrder = np.hstack(np.array(clusterOrder))
-        clusterCenters = meanRepresentation(candidates, clusterOrder)
-
-    if clusterMethod == 'k_means':
-        from sklearn.cluster import KMeans
-        k_means = KMeans(
-            n_clusters=n_clusters,
-            max_iter=1000,
-            n_init=n_iter,
-            tol=1e-4)
-
-        clusterOrder = k_means.fit_predict(candidates)
-        # get with own mean representation to avoid numerical trouble caused by sklearn
-        clusterCenters = meanRepresentation(candidates, clusterOrder)
-
-    elif clusterMethod == 'k_medoids':
-        from tsam.utils.k_medoids_exact import KMedoids
-        k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
-
-        clusterOrder = k_medoid.fit_predict(candidates)
-        clusterCenters = k_medoid.cluster_centers_
-
-    elif clusterMethod == 'hierarchical':
-        if n_clusters==1:
-            clusterOrder=np.asarray([0]*len(candidates))
-        else:
-            from sklearn.cluster import AgglomerativeClustering
-            clustering = AgglomerativeClustering(
-                n_clusters=n_clusters, linkage='ward')
-            clusterOrder = clustering.fit_predict(candidates)
-        # represent hierarchical aggregation with medoid
-        clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
-
-    return clusterCenters, clusterCenterIndices, clusterOrder
-
-
-def medoidRepresentation(candidates, clusterOrder):
-    '''
-    Represents the candidates of a given cluster group (clusterOrder)
-    by its medoid, measured with the euclidean distance.
-
-    :param candidates: Dissimilarity matrix where each row represents a candidate. required
-    :type candidates: np.ndarray
-
-    :param clusterOrder: Integer array where the index refers to the candidate and the
-        Integer entry to the group. required
-    :type clusterOrder: np.array
-    '''
-    # set cluster center as medoid
-    clusterCenters = []
-    clusterCenterIndices = []
-    for clusterNum in np.unique(clusterOrder):
-        indice = np.where(clusterOrder == clusterNum)
-        innerDistMatrix = euclidean_distances(candidates[indice])
-        mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
-        clusterCenters.append(candidates[indice][mindistIdx])
-        clusterCenterIndices.append(indice[0][mindistIdx])
-
-    return clusterCenters, clusterCenterIndices
-
-
-def meanRepresentation(candidates, clusterOrder):
-    '''
-    Represents the candidates of a given cluster group (clusterOrder)
-    by its mean.
-
-    :param candidates: Dissimilarity matrix where each row represents a candidate. required
-    :type candidates: np.ndarray
-
-    :param clusterOrder: Integer array where the index refers to the candidate and the
-        Integer entry to the group. required
-    :type clusterOrder: np.array
-    '''
-    # set cluster centers as means of the group candidates
-    clusterCenters = []
-    for clusterNum in np.unique(clusterOrder):
-        indice = np.where(clusterOrder == clusterNum)
-        currentMean = candidates[indice].mean(axis=0)
-        clusterCenters.append(currentMean)
-    return clusterCenters
-
-
 class TimeSeriesAggregation(object):
     '''
     Clusters time series data to typical periods.
     '''
-    CLUSTER_METHODS = ['averaging', 'k_medoids', 'k_means', 'hierarchical']
+    CLUSTER_METHODS = ['averaging', 'k_medoids', 'k_means', 'hierarchical', 'adjacent_periods']
+
+    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentation', 'minmaxmeanRepresentation']
 
     EXTREME_PERIOD_METHODS = [
         'None',
@@ -221,8 +100,8 @@ class TimeSeriesAggregation(object):
                  noSegments=10, hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
                  rescaleClusterPeriods=True, weightDict=None, segmentation = False,
-                 extremePeriodMethod='None', predefClusterOrder=None,
-                 predefClusterCenterIndices=None, solver='glpk',
+                 extremePeriodMethod='None', representationMethod=None, representationDict=None,
+                 predefClusterOrder=None, predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
                  addPeakMin=None,
                  addPeakMax=None,
@@ -257,6 +136,7 @@ class TimeSeriesAggregation(object):
             * 'k_means'
             * 'k_medoids'
             * 'hierarchical'
+            * 'adjacent_periods'
         :type clusterMethod: string
 
         :param evalSumPeriods: Boolean if in the clustering process also the averaged periodly values
@@ -294,6 +174,21 @@ class TimeSeriesAggregation(object):
               cluster where the extreme period belongs to with the periodly profile of the extreme period. (Worst
               case system design)
         :type extremePeriodMethod: string
+
+        :param representationMethod: Chosen representation. If specified, the clusters are represented in the chosen
+            way. Otherwise, each clusterMethod has its own commonly used default representation method.
+            |br| Options are:
+
+            * 'meanRepresentation' (default of 'averaging' and 'k_means')
+            * 'medoidRepresentation' (default of 'k_medoids', 'hierarchical' and 'adjacent_periods')
+            * 'minmaxmeanRepresentation'
+        :type representationMethod: string
+
+        :param representationDict: Dictionary which states for each attribute whether the profiles in each cluster
+            should be represented by the minimum value or maximum value of each time step. This enables estimations
+            to the safe side. This dictionary is needed when 'minmaxmeanRepresentation' is chosen. If not specified, the
+            dictionary is set to containing 'mean' values only.
+        :type representationDict: dict
 
         :param predefClusterOrder: Instead of aggregating a time series, a predefined grouping is taken
             which is given by this list. optional (default: None)
@@ -359,6 +254,10 @@ class TimeSeriesAggregation(object):
 
         self.weightDict = weightDict
 
+        self.representationMethod = representationMethod
+
+        self.representationDict = representationDict
+
         self.predefClusterOrder = predefClusterOrder
 
         self.predefClusterCenterIndices = predefClusterCenterIndices
@@ -402,41 +301,43 @@ class TimeSeriesAggregation(object):
         for peak in self.addPeakMin:
             if peak not in self.timeSeries.columns:
                 raise ValueError(peak + ' listed in "addPeakMin"' +
-                                 ' does not occure as timeSeries column')
+                                 ' does not occur as timeSeries column')
         for peak in self.addPeakMax:
             if peak not in self.timeSeries.columns:
                 raise ValueError(peak + ' listed in "addPeakMax"' +
-                                 ' does not occure as timeSeries column')
+                                 ' does not occur as timeSeries column')
         for peak in self.addMeanMin:
             if peak not in self.timeSeries.columns:
                 raise ValueError(peak + ' listed in "addMeanMin"' +
-                                 ' does not occure as timeSeries column')
+                                 ' does not occur as timeSeries column')
         for peak in self.addMeanMax:
             if peak not in self.timeSeries.columns:
                 raise ValueError(peak + ' listed in "addMeanMax"' +
-                                 ' does not occure as timeSeries column')
+                                 ' does not occur as timeSeries column')
 
         # derive resolution from date time index if not provided
         if self.resolution is None:
             try:
                 timedelta = self.timeSeries.index[1] - self.timeSeries.index[0]
                 self.resolution = float(timedelta.total_seconds()) / 3600
+            except AttributeError:
+                raise ValueError("'resolution' argument has to be nonnegative float or int" +
+                                 " or the given timeseries needs a datetime index")
             except TypeError:
                 try:
                     self.timeSeries.index = pd.to_datetime(self.timeSeries.index)
                     timedelta = self.timeSeries.index[1] - self.timeSeries.index[0]
                     self.resolution = float(timedelta.total_seconds()) / 3600
                 except:
-                    ValueError("'resolution' argument has to be nonnegative float or int" +
+                    raise ValueError("'resolution' argument has to be nonnegative float or int" +
                                " or the given timeseries needs a datetime index")
 
         if not (isinstance(self.resolution, int) or isinstance(self.resolution, float)):
             raise ValueError("resolution has to be nonnegative float or int")
 
         # check hoursPerPeriod
-        if self.hoursPerPeriod is None or self.hoursPerPeriod <= 0 or \
-                not isinstance(self.hoursPerPeriod, int):
-            raise ValueError("hoursPerPeriod has to be nonnegative integer")
+        if self.hoursPerPeriod is None or self.hoursPerPeriod <= 0:
+            raise ValueError("hoursPerPeriod has to be nonnegative float or int")
 
         # check typical Periods
         if self.noTypicalPeriods is None or self.noTypicalPeriods <= 0 or \
@@ -458,6 +359,19 @@ class TimeSeriesAggregation(object):
             raise ValueError("clusterMethod needs to be one of " +
                              "the following: " +
                              "{}".format(self.CLUSTER_METHODS))
+
+        # check representationMethod
+        if self.representationMethod is not None and self.representationMethod not in self.REPRESENTATION_METHODS:
+            raise ValueError("If specified, representationMethod needs to be one of " +
+                             "the following: " +
+                             "{}".format(self.REPRESENTATION_METHODS))
+
+        # if representationDict None, represent by maximum time steps in each cluster
+        if self.representationDict is None:
+            self.representationDict = {i: 'mean' for i in list(self.timeSeries.columns)}
+        # sort representationDict alphabetically to make sure that the min, max or mean function is applied to the right
+        # column
+        self.representationDict = pd.Series(self.representationDict).sort_index(axis=0).to_dict()
 
         # check extremePeriods
         if self.extremePeriodMethod not in self.EXTREME_PERIOD_METHODS:
@@ -569,13 +483,14 @@ class TimeSeriesAggregation(object):
             raise ValueError(
                 'Pre processed data includes NaN. Please check the timeSeries input data.')
 
-    def _postProcessTimeSeries(self, normalizedTimeSeries):
+    def _postProcessTimeSeries(self, normalizedTimeSeries, applyWeighting=True):
         '''
         Neutralizes the weighting the time series back and unnormalizes them.
         '''
-        for column in self.weightDict:
-            normalizedTimeSeries[column] = normalizedTimeSeries[
-                                                column] / self.weightDict[column]
+        if applyWeighting:
+            for column in self.weightDict:
+                normalizedTimeSeries[column] = normalizedTimeSeries[
+                                                    column] / self.weightDict[column]
 
         unnormalizedTimeSeries = self._unnormalizeTimeSeries(
             normalizedTimeSeries, sameMean=self.sameMean)
@@ -616,14 +531,6 @@ class TimeSeriesAggregation(object):
         '''
 
         # init required dicts and lists
-        if addPeakMin is None:
-            addPeakMin = []
-        if addPeakMax is None:
-            addPeakMax = []
-        if addMeanMin is None:
-            addMeanMin = []
-        if addMeanMax is None:
-            addMeanMax = []
         self.extremePeriods = {}
         extremePeriodNo = []
 
@@ -747,11 +654,6 @@ class TimeSeriesAggregation(object):
                     extremeClusterIdx.append(
                         self.extremePeriods[periodType]['clusterNo'])
 
-        else:
-            raise NotImplementedError('Chosen "extremePeriodMethod": ' +
-                                      str(extremePeriodMethod) + ' is ' +
-                                      'not implemented.')
-
         return newClusterCenters, newClusterOrder, extremeClusterIdx
 
     def _append_col_with(self, column, append_with=' max.'):
@@ -853,7 +755,10 @@ class TimeSeriesAggregation(object):
             aggregatePeriods(
                 sortedClusterValues, n_clusters=self.noTypicalPeriods,
                 n_iter=30, solver=self.solver,
-                clusterMethod=self.clusterMethod))
+                clusterMethod=self.clusterMethod,
+                representationMethod=self.representationMethod,
+                representationDict=self.representationDict,
+                timeStepsPerPeriod=self.timeStepsPerPeriod))
 
         clusterCenters_C = []
 
@@ -917,7 +822,11 @@ class TimeSeriesAggregation(object):
                 self.clusterCenters = candidates[self.predefClusterCenterIndices]
             else:
                 # otherwise take the medoids
-                self.clusterCenters, self.clusterCenterIndices = medoidRepresentation(candidates, self._clusterOrder)
+                self.clusterCenters, self.clusterCenterIndices =\
+                    representations(candidates, self._clusterOrder, default='medoidRepresentation',
+                                    representationMethod=self.representationMethod,
+                                    representationDict=self.representationDict,
+                                    timeStepsPerPeriod=self.timeStepsPerPeriod)
         else:
             cluster_duration = time.time()
             if not self.sortValues:
@@ -925,7 +834,10 @@ class TimeSeriesAggregation(object):
                 self.clusterCenters, self.clusterCenterIndices, \
                     self._clusterOrder = aggregatePeriods(
                     candidates, n_clusters=self.noTypicalPeriods, n_iter=100,
-                    solver=self.solver, clusterMethod=self.clusterMethod)
+                    solver=self.solver, clusterMethod=self.clusterMethod,
+                    representationMethod=self.representationMethod,
+                    representationDict=self.representationDict,
+                    timeStepsPerPeriod=self.timeStepsPerPeriod)
             else:
                 self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
                     candidates)
@@ -972,7 +884,10 @@ class TimeSeriesAggregation(object):
 
         if self.segmentation:
             from tsam.utils.segmentation import segmentation
-            self.segmentedNormalizedTypicalPeriods, self.predictedSegmentedNormalizedTypicalPeriods = segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod)
+            self.segmentedNormalizedTypicalPeriods, self.predictedSegmentedNormalizedTypicalPeriods =\
+                segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod,
+                             representationMethod=self.representationMethod,
+                             representationDict=self.representationDict)
             self.normalizedTypicalPeriods = self.segmentedNormalizedTypicalPeriods.reset_index(level=3, drop=True)
 
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
@@ -1101,7 +1016,7 @@ class TimeSeriesAggregation(object):
         if self.sameMean:
             self.normalizedPredictedData /= self._normalizedMean
         self.predictedData = self._postProcessTimeSeries(
-            self.normalizedPredictedData)
+            self.normalizedPredictedData, applyWeighting=False)
 
         return self.predictedData
 
@@ -1158,7 +1073,10 @@ class TimeSeriesAggregation(object):
             'MAE': {}}  # 'Silhouette score':{},
 
         for column in self.normalizedTimeSeries.columns:
-            origTS = self.normalizedTimeSeries[column]
+            if self.weightDict:
+                origTS = self.normalizedTimeSeries[column] / self.weightDict[column]
+            else:
+                origTS = self.normalizedTimeSeries[column]
             predTS = self.normalizedPredictedData[column]
             indicatorRaw['RMSE'][column] = np.sqrt(
                 mean_squared_error(origTS, predTS))
