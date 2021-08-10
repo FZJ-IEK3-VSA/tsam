@@ -21,12 +21,13 @@ def test_cluster_order():
     starttime = time.time()
 
     aggregation_wind = tsam.TimeSeriesAggregation(raw_wind, noTypicalPeriods = 8, hoursPerPeriod = 24,
-                                            clusterMethod = 'hierarchical')
+                                            clusterMethod = 'hierarchical', representationMethod='meanRepresentation')
 
     typPeriods_wind = aggregation_wind.createTypicalPeriods()
 
     aggregation_predefClusterOrder = tsam.TimeSeriesAggregation(raw, noTypicalPeriods=8, hoursPerPeriod=24,
                                                                 clusterMethod='hierarchical',
+                                                                representationMethod='meanRepresentation',
                                                                 predefClusterOrder=aggregation_wind.clusterOrder)
 
     typPeriods_predefClusterOrder = aggregation_predefClusterOrder.createTypicalPeriods()
@@ -34,6 +35,7 @@ def test_cluster_order():
     aggregation_predefClusterOrderAndClusterCenters = tsam.TimeSeriesAggregation(raw,
                                                                                  noTypicalPeriods=8, hoursPerPeriod=24,
                                                                                  clusterMethod='hierarchical',
+                                                                                 representationMethod='meanRepresentation',
                                                                                  predefClusterOrder=aggregation_wind.clusterOrder,
                                                                                  predefClusterCenterIndices=aggregation_wind.clusterCenterIndices)
 
