@@ -8,7 +8,7 @@ import tsam.timeseriesaggregation as tsam
 
 
 
-def test_hierarchical():
+def test_k_medoids():
 
     raw = pd.read_csv(os.path.join(os.path.dirname(__file__),'..','examples','testdata.csv'), index_col = 0)
 
@@ -35,4 +35,4 @@ def test_hierarchical():
 
 
 if __name__ == "__main__":
-    test_hierarchical()
+    test_k_medoids()
