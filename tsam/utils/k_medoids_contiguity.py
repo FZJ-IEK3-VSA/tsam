@@ -43,7 +43,7 @@ def k_medoids_contiguity(distances, n_clusters, adjacency, max_iter=500, solver=
         # first solve instance
         t_presolve = time.time()
         print(str(_iter) + " iteration: Solving instance")
-        r_x, r_y, obj = _solve_given_pyomo_model(M, solver="gurobi") 
+        r_x, r_y, obj = _solve_given_pyomo_model(M, solver=solver) 
         t_aftersolve = time.time()   
         print("Total distance: " + str(obj) + " with solving time: " + str(t_aftersolve - t_presolve))
 
