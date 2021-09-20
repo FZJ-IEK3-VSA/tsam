@@ -1,5 +1,6 @@
 # directories
 .idea/
+.vscode/
 __pycache__/
 trash/
 *.pytest_cache/

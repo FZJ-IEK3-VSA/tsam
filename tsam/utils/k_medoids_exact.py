@@ -129,69 +129,90 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         n_clusters : int, required
             Number of clusters.
         """
-        # Create model
-        M=pyomo.ConcreteModel()
+        
+        # Create pyomo model
+        M = _setup_k_medoids(distances, n_clusters)
 
-        # get distance matrix
-        M.d = distances
-
-        # set number of clusters
-        M.no_k = n_clusters
-
-        # Distances is a symmetrical matrix, extract its length
-        length = distances.shape[0]
-
-        # get indices
-        M.i = [j for j in range(length)]
-        M.j = [j for j in range(length)]
-
-        # initialize vars
-        M.z = pyomo.Var(M.i, M.j, within=pyomo.Binary)
-        M.y = pyomo.Var(M.i, within=pyomo.Binary)
-
-
-        # get objective
-        def objRule(M):
-            return sum(sum(M.d[i,j] * M.z[i,j] for j in M.j) for i in M.i)
-        M.obj=pyomo.Objective(rule=objRule)
-
-        # s.t.
-        # Assign all candidates to clusters
-        def candToClusterRule(M,j):
-            return sum(M.z[i,j] for i in M.i) == 1
-        M.candToClusterCon = pyomo.Constraint(M.j, rule=candToClusterRule)
-
-        # no of clusters
-        def noClustersRule(M):
-            return sum(M.y[i] for i in M.i) == M.no_k
-        M.noClustersCon = pyomo.Constraint(rule=noClustersRule)
-
-        # cluster relation
-        def clusterRelationRule(M,i,j):
-            return M.z[i,j] <= M.y[i]
-        M.clusterRelationCon = pyomo.Constraint(M.i,M.j, rule=clusterRelationRule)
-
-
-        # create optimization problem
-        optprob = opt.SolverFactory(self.solver)
-        if self.solver =='gurobi':
-            optprob.set_options("Threads=" + str(self.threads) +
-                    " TimeLimit=" + str(self.timelimit))
-
-        results = optprob.solve(M,tee=False)
-        # check that it does not fail
-        if self.solver=='gurobi' and results['Solver'][0]['Termination condition'].index == 11:
-            print(results['Solver'][0]['Termination message'])
-            return False
-        elif self.solver=='gurobi' and not results['Solver'][0]['Termination condition'].index in [2,7,8,9,10]: # optimal
-            raise ValueError(results['Solver'][0]['Termination message'])
-
-        # Get results
-        r_x = np.array([[round(M.z[i,j].value) for i in range(length)]
-                                  for j in range(length)])
-
-        r_y = np.array([round(M.y[j].value) for j in range(length)])
-
-        r_obj = pyomo.value(M.obj)
+        # And solve
+        r_x, r_y, r_obj = _solve_given_pyomo_model(M, solver=self.solver)
 
         return (r_y, r_x.T, r_obj)
+
+def _setup_k_medoids(distances, n_clusters):
+    '''Define the k-medoids model with pyomo. 
+    In the spatial aggregation community, it is referred to as Hess Model for political districting
+    with an additional constraint of cluster-sizes/populations.
+    (W Hess, JB Weaver, HJ Siegfeldt, JN Whelan, and PA Zitlau. Nonpartisan political redistricting by computer. Operations Research, 13(6):998–1006, 1965.)
+    '''
+    # Create model
+    M=pyomo.ConcreteModel()
+
+    # get distance matrix
+    M.d = distances
+
+    # set number of clusters
+    M.no_k = n_clusters
+
+    # Distances is a symmetrical matrix, extract its length
+    length = distances.shape[0]
+
+    # get indices
+    M.i = [j for j in range(length)]
+    M.j = [j for j in range(length)]
+
+    # initialize vars
+    # Decision every candidate to every possible other candidate as cluster center
+    M.z = pyomo.Var(M.i, M.j, within=pyomo.Binary)
+
+
+    # get objective
+    # Minimize the distance of every candidate to the cluster center
+    def objRule(M):
+        return sum(sum(M.d[i,j] * M.z[i,j] for j in M.j) for i in M.i)
+    M.obj=pyomo.Objective(rule=objRule)
+
+    # s.t.
+    # Assign all candidates to one clusters
+    def candToClusterRule(M,j):
+        return sum(M.z[i,j] for i in M.i) == 1
+    M.candToClusterCon = pyomo.Constraint(M.j, rule=candToClusterRule)
+
+    # Predefine the number of clusters
+    def noClustersRule(M):
+        return sum(M.z[i,i] for i in M.i) == M.no_k
+    M.noClustersCon = pyomo.Constraint(rule=noClustersRule)
+
+    # Describe the choice of a candidate to a cluster
+    def clusterRelationRule(M,i,j):
+        return M.z[i,j] <= M.z[i,i]
+    M.clusterRelationCon = pyomo.Constraint(M.i,M.j, rule=clusterRelationRule)
+    return M
+
+def _solve_given_pyomo_model(M, solver="glpk"):
+    """Solves a given pyomo model clustering model an returns the clusters
+
+    Args:
+        M (pyomo.ConcreteModel): Concrete model instance that gets solved.
+        solver (str, optional): solver, defines the solver for the pyomo model. Defaults to "glpk".
+
+    Raises:
+        ValueError: [description]
+
+    Returns:
+        [type]: [description]
+    """
+    # create optimization problem
+    optprob = opt.SolverFactory(solver)
+    results = optprob.solve(M,tee=False)
+    # check that it does not fail
+
+    # Get results
+    r_x = np.array([[round(M.z[i,j].value) for i in M.i]
+                                for j in M.j])
+
+    r_y = np.array([round(M.z[j,j].value) for j in M.j])
+
+    r_obj = pyomo.value(M.obj)
+
+    return (r_x, r_y, r_obj)
+
