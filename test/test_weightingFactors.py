@@ -41,5 +41,23 @@ def test_weightingFactors():
     np.testing.assert_array_less(aggregation1.accuracyIndicators().loc[['Load', 'T', 'Wind'], 'RMSE'],
                                  aggregation3.accuracyIndicators().loc[['Load', 'T', 'Wind'], 'RMSE'])
 
+
+def test_predictOriginalData():
+    data = pd.DataFrame()
+    idx = pd.date_range('2020-01-01 00:00:00', periods=3, freq='1H')
+    data['test'] = pd.Series(index=idx, data=[1, 2, 3])
+
+    tsa = tsam.TimeSeriesAggregation(data, noTypicalPeriods=3, hoursPerPeriod=1,
+                                weightDict={'test': 0.1})
+
+    # check if input and predicted are the same
+    np.testing.assert_array_almost_equal(data,tsa.predictOriginalData())
+    
+    # check that error metrics are 0
+    tsa.accuracyIndicators()["RMSE"] == 0
+
+
+
+
 if __name__ == "__main__":
     test_weightingFactors()
