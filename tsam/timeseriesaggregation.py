@@ -86,9 +86,10 @@ class TimeSeriesAggregation(object):
     '''
     Clusters time series data to typical periods.
     '''
-    CLUSTER_METHODS = ['averaging', 'k_medoids', 'k_means', 'hierarchical', 'adjacent_periods']
+    CLUSTER_METHODS = ['averaging', 'k_means', 'k_medoids', 'k_maxoids', 'hierarchical', 'adjacent_periods']
 
-    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentation', 'minmaxmeanRepresentation']
+    REPRESENTATION_METHODS = ['meanRepresentation', 'medoidRepresentation', 'maxoidRepresentation',
+                              'minmaxmeanRepresentation', 'durationRepresentation']
 
     EXTREME_PERIOD_METHODS = [
         'None',
@@ -99,8 +100,8 @@ class TimeSeriesAggregation(object):
     def __init__(self, timeSeries, resolution=None, noTypicalPeriods=10,
                  noSegments=10, hoursPerPeriod=24, clusterMethod='hierarchical',
                  evalSumPeriods=False, sortValues=False, sameMean=False,
-                 rescaleClusterPeriods=True, weightDict=None, segmentation = False,
-                 extremePeriodMethod='None', representationMethod=None, representationDict=None,
+                 rescaleClusterPeriods=True, weightDict=None, segmentation = False, extremePeriodMethod='None',
+                 representationMethod=None, representationDict=None, distributionPeriodWise=True,
                  predefClusterOrder=None, predefClusterCenterIndices=None, solver='glpk',
                  roundOutput = None,
                  addPeakMin=None,
@@ -135,6 +136,7 @@ class TimeSeriesAggregation(object):
             * 'averaging'
             * 'k_means'
             * 'k_medoids'
+            * 'k_maxoids'
             * 'hierarchical'
             * 'adjacent_periods'
         :type clusterMethod: string
@@ -182,6 +184,7 @@ class TimeSeriesAggregation(object):
             * 'meanRepresentation' (default of 'averaging' and 'k_means')
             * 'medoidRepresentation' (default of 'k_medoids', 'hierarchical' and 'adjacent_periods')
             * 'minmaxmeanRepresentation'
+            * 'durationRepresentation'
         :type representationMethod: string
 
         :param representationDict: Dictionary which states for each attribute whether the profiles in each cluster
@@ -189,6 +192,10 @@ class TimeSeriesAggregation(object):
             to the safe side. This dictionary is needed when 'minmaxmeanRepresentation' is chosen. If not specified, the
             dictionary is set to containing 'mean' values only.
         :type representationDict: dict
+
+        :param distributionPeriodWise: If durationRepresentation is chosen, you can choose whether the distribution of
+            each cluster should be separately preserved or that of the original time series only (default: True)
+        :type distributionPeriodWise:
 
         :param predefClusterOrder: Instead of aggregating a time series, a predefined grouping is taken
             which is given by this list. optional (default: None)
@@ -257,6 +264,8 @@ class TimeSeriesAggregation(object):
         self.representationMethod = representationMethod
 
         self.representationDict = representationDict
+
+        self.distributionPeriodWise = distributionPeriodWise
 
         self.predefClusterOrder = predefClusterOrder
 
@@ -758,6 +767,7 @@ class TimeSeriesAggregation(object):
                 clusterMethod=self.clusterMethod,
                 representationMethod=self.representationMethod,
                 representationDict=self.representationDict,
+                distributionPeriodWise=self.distributionPeriodWise,
                 timeStepsPerPeriod=self.timeStepsPerPeriod))
 
         clusterCenters_C = []
@@ -837,6 +847,7 @@ class TimeSeriesAggregation(object):
                     solver=self.solver, clusterMethod=self.clusterMethod,
                     representationMethod=self.representationMethod,
                     representationDict=self.representationDict,
+                    distributionPeriodWise=self.distributionPeriodWise,
                     timeStepsPerPeriod=self.timeStepsPerPeriod)
             else:
                 self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
@@ -885,9 +896,10 @@ class TimeSeriesAggregation(object):
         if self.segmentation:
             from tsam.utils.segmentation import segmentation
             self.segmentedNormalizedTypicalPeriods, self.predictedSegmentedNormalizedTypicalPeriods =\
-                segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod,
+                segmentation(self.normalizedTypicalPeriods, self.noSegments, self.timeStepsPerPeriod, self.solver,
                              representationMethod=self.representationMethod,
-                             representationDict=self.representationDict)
+                             representationDict=self.representationDict,
+                             distributionPeriodWise=self.distributionPeriodWise)
             self.normalizedTypicalPeriods = self.segmentedNormalizedTypicalPeriods.reset_index(level=3, drop=True)
 
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)

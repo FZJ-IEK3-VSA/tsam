@@ -4,8 +4,7 @@ import numpy as np
 
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
-from sklearn.utils import check_array, check_random_state
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils import check_array
 import pyomo.environ as pyomo
 import pyomo.opt as opt
 
@@ -27,7 +26,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
     :param threads: Threads to use by the optimization solver. optional, default: 7
     :type threads: integer
 
-    :param solver: optional, default: 'glpk'
+    :param solver: Specifies the solver. optional, default: 'glpk'
     :type solver: string
     """
 
