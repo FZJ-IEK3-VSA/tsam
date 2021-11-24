@@ -9,7 +9,7 @@ def aggregatePeriods(
     n_clusters=8,
     n_iter=100,
     clusterMethod="k_means",
-    solver="glpk",
+    solver="cbc",
     representationMethod=None,
     representationDict=None,
     distributionPeriodWise=True,

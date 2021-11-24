@@ -27,7 +27,7 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         distance_metric="euclidean",
         timelimit=100,
         threads=7,
-        solver="glpk",
+        solver="cbc",
     ):
 
         self.n_clusters = n_clusters

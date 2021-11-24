@@ -25,7 +25,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
     :param threads: Threads to use by the optimization solver. optional, default: 7
     :type threads: integer
 
-    :param solver: Specifies the solver. optional, default: 'glpk'
+    :param solver: Specifies the solver. optional, default: 'cbc'
     :type solver: string
     """
 
@@ -35,7 +35,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         distance_metric="euclidean",
         timelimit=100,
         threads=7,
-        solver="glpk",
+        solver="cbc",
     ):
 
         self.n_clusters = n_clusters
@@ -202,12 +202,12 @@ def _setup_k_medoids(distances, n_clusters):
     return M
 
 
-def _solve_given_pyomo_model(M, solver="glpk"):
+def _solve_given_pyomo_model(M, solver="cbc"):
     """Solves a given pyomo model clustering model an returns the clusters
 
     Args:
         M (pyomo.ConcreteModel): Concrete model instance that gets solved.
-        solver (str, optional): solver, defines the solver for the pyomo model. Defaults to "glpk".
+        solver (str, optional): solver, defines the solver for the pyomo model. Defaults to "cbc".
 
     Raises:
         ValueError: [description]

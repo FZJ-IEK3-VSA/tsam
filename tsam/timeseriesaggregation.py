@@ -129,7 +129,7 @@ class TimeSeriesAggregation(object):
         distributionPeriodWise=True,
         predefClusterOrder=None,
         predefClusterCenterIndices=None,
-        solver="glpk",
+        solver="cbc",
         roundOutput=None,
         addPeakMin=None,
         addPeakMax=None,
@@ -233,7 +233,7 @@ class TimeSeriesAggregation(object):
             cluster candidates. Otherwise the medoid is taken. optional (default: None)
         :type predefClusterCenterIndices: list or array
 
-        :param solver: Solver that is used for k_medoids clustering. optional (default: 'glpk' )
+        :param solver: Solver that is used for k_medoids clustering. optional (default: 'cbc' )
         :type solver: string
 
         :param roundOutput: Decimals to what the output time series get round. optional (default: None )
