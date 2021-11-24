@@ -4,26 +4,42 @@ import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
 from tsam.utils.durationRepresentation import durationRepresentation
 
-def representations(candidates, clusterOrder, default, representationMethod=None, representationDict=None,
-                    distributionPeriodWise=True, timeStepsPerPeriod=None):
+
+def representations(
+    candidates,
+    clusterOrder,
+    default,
+    representationMethod=None,
+    representationDict=None,
+    distributionPeriodWise=True,
+    timeStepsPerPeriod=None,
+):
     clusterCenterIndices = None
     if representationMethod is None:
         representationMethod = default
-    if representationMethod == 'meanRepresentation':
+    if representationMethod == "meanRepresentation":
         clusterCenters = meanRepresentation(candidates, clusterOrder)
-    elif representationMethod == 'medoidRepresentation':
-        clusterCenters, clusterCenterIndices = medoidRepresentation(candidates, clusterOrder)
-    elif representationMethod == 'maxoidRepresentation':
-        clusterCenters, clusterCenterIndices = maxoidRepresentation(candidates, clusterOrder)
-    elif representationMethod == 'minmaxmeanRepresentation':
-        clusterCenters = minmaxmeanRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod)
-    elif representationMethod == 'durationRepresentation':
-        clusterCenters = durationRepresentation(candidates, clusterOrder, distributionPeriodWise, timeStepsPerPeriod)
+    elif representationMethod == "medoidRepresentation":
+        clusterCenters, clusterCenterIndices = medoidRepresentation(
+            candidates, clusterOrder
+        )
+    elif representationMethod == "maxoidRepresentation":
+        clusterCenters, clusterCenterIndices = maxoidRepresentation(
+            candidates, clusterOrder
+        )
+    elif representationMethod == "minmaxmeanRepresentation":
+        clusterCenters = minmaxmeanRepresentation(
+            candidates, clusterOrder, representationDict, timeStepsPerPeriod
+        )
+    elif representationMethod == "durationRepresentation":
+        clusterCenters = durationRepresentation(
+            candidates, clusterOrder, distributionPeriodWise, timeStepsPerPeriod
+        )
     return clusterCenters, clusterCenterIndices
 
 
 def maxoidRepresentation(candidates, clusterOrder):
-    '''
+    """
     Represents the candidates of a given cluster group (clusterOrder)
     by its medoid, measured with the euclidean distance.
 
@@ -33,7 +49,7 @@ def maxoidRepresentation(candidates, clusterOrder):
     :param clusterOrder: Integer array where the index refers to the candidate and the
         Integer entry to the group. required
     :type clusterOrder: np.array
-    '''
+    """
     # set cluster member that is farthest away from the points of the other clusters as maxoid
     clusterCenters = []
     clusterCenterIndices = []
@@ -48,7 +64,7 @@ def maxoidRepresentation(candidates, clusterOrder):
 
 
 def medoidRepresentation(candidates, clusterOrder):
-    '''
+    """
     Represents the candidates of a given cluster group (clusterOrder)
     by its medoid, measured with the euclidean distance.
 
@@ -58,7 +74,7 @@ def medoidRepresentation(candidates, clusterOrder):
     :param clusterOrder: Integer array where the index refers to the candidate and the
         Integer entry to the group. required
     :type clusterOrder: np.array
-    '''
+    """
     # set cluster center as medoid
     clusterCenters = []
     clusterCenterIndices = []
@@ -73,7 +89,7 @@ def medoidRepresentation(candidates, clusterOrder):
 
 
 def meanRepresentation(candidates, clusterOrder):
-    '''
+    """
     Represents the candidates of a given cluster group (clusterOrder)
     by its mean.
 
@@ -83,7 +99,7 @@ def meanRepresentation(candidates, clusterOrder):
     :param clusterOrder: Integer array where the index refers to the candidate and the
         Integer entry to the group. required
     :type clusterOrder: np.array
-    '''
+    """
     # set cluster centers as means of the group candidates
     clusterCenters = []
     for clusterNum in np.unique(clusterOrder):
@@ -92,8 +108,11 @@ def meanRepresentation(candidates, clusterOrder):
         clusterCenters.append(currentMean)
     return clusterCenters
 
-def minmaxmeanRepresentation(candidates, clusterOrder, representationDict, timeStepsPerPeriod):
-    '''
+
+def minmaxmeanRepresentation(
+    candidates, clusterOrder, representationDict, timeStepsPerPeriod
+):
+    """
     Represents the candidates of a given cluster group (clusterOrder)
     by either the minimum, the maximum or the mean values of each time step for
     all periods in that cluster depending on the command for each attribute.
@@ -112,7 +131,7 @@ def minmaxmeanRepresentation(candidates, clusterOrder, representationDict, timeS
 
     :param timeStepsPerPeriod: The number of discrete timesteps which describe one period. required
     :type timeStepsPerPeriod: integer
-    '''
+    """
     # set cluster center depending of the representationDict
     clusterCenters = []
     for clusterNum in np.unique(clusterOrder):
@@ -121,13 +140,21 @@ def minmaxmeanRepresentation(candidates, clusterOrder, representationDict, timeS
         for attributeNum in range(len(representationDict)):
             startIdx = attributeNum * timeStepsPerPeriod
             endIdx = (attributeNum + 1) * timeStepsPerPeriod
-            if list(representationDict.values())[attributeNum] == 'min':
-                currentClusterCenter[startIdx:endIdx] = candidates[indice, startIdx:endIdx].min(axis=1)
-            elif list(representationDict.values())[attributeNum] == 'max':
-                currentClusterCenter[startIdx:endIdx] = candidates[indice, startIdx:endIdx].max(axis=1)
-            elif list(representationDict.values())[attributeNum] == 'mean':
-                currentClusterCenter[startIdx:endIdx] = candidates[indice, startIdx:endIdx].mean(axis=1)
+            if list(representationDict.values())[attributeNum] == "min":
+                currentClusterCenter[startIdx:endIdx] = candidates[
+                    indice, startIdx:endIdx
+                ].min(axis=1)
+            elif list(representationDict.values())[attributeNum] == "max":
+                currentClusterCenter[startIdx:endIdx] = candidates[
+                    indice, startIdx:endIdx
+                ].max(axis=1)
+            elif list(representationDict.values())[attributeNum] == "mean":
+                currentClusterCenter[startIdx:endIdx] = candidates[
+                    indice, startIdx:endIdx
+                ].mean(axis=1)
             else:
-                raise ValueError('At least one value in the representationDict is neither "min", "max" nor "mean".')
+                raise ValueError(
+                    'At least one value in the representationDict is neither "min", "max" nor "mean".'
+                )
         clusterCenters.append(currentClusterCenter)
     return clusterCenters

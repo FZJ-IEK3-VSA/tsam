@@ -5,8 +5,14 @@ import numpy as np
 import pandas as pd
 
 
-def durationRepresentation(candidates, clusterOrder, distributionPeriodWise, timeStepsPerPeriod, representMinMax=False):
-    '''
+def durationRepresentation(
+    candidates,
+    clusterOrder,
+    distributionPeriodWise,
+    timeStepsPerPeriod,
+    representMinMax=False,
+):
+    """
     Represents the candidates of a given cluster group (clusterOrder)
     such that for every attribute the number of time steps is best fit.
 
@@ -18,7 +24,7 @@ def durationRepresentation(candidates, clusterOrder, distributionPeriodWise, tim
 
     :param representMinMax: If in every cluster the minimum and the maximum of the attribute should be represented
     :type representMinMax: bool
-    '''
+    """
 
     # make pd.DataFrame each row represents a candidate, and the columns are defined by two levels: the attributes and
     # the time steps inside the candidates.
@@ -26,7 +32,9 @@ def durationRepresentation(candidates, clusterOrder, distributionPeriodWise, tim
     for i in range(int(candidates.shape[1] / timeStepsPerPeriod)):
         for j in range(timeStepsPerPeriod):
             columnTuples.append((i, j))
-    candidates = pd.DataFrame(candidates, columns=pd.MultiIndex.from_tuples(columnTuples))
+    candidates = pd.DataFrame(
+        candidates, columns=pd.MultiIndex.from_tuples(columnTuples)
+    )
 
     # There are two options for the duration representation. Either, the distribution of each cluster is preserved
     # (periodWise = True) or the distribution of the total time series is preserved only. In the latter case, the
@@ -54,7 +62,9 @@ def durationRepresentation(candidates, clusterOrder, distributionPeriodWise, tim
                 # respect max and min of the attributes
                 if representMinMax:
                     representationValues.loc[0] = sortedAttr.values[0]
-                    representationValues.loc[representationValues.index[-1]] = sortedAttr.values[-1]
+                    representationValues.loc[
+                        representationValues.index[-1]
+                    ] = sortedAttr.values[-1]
                 # get the order of the representation values such that euclidean distance to the candidates is minimized
                 order = candidateValues.mean().sort_values().index
                 # arrange
@@ -81,8 +91,13 @@ def durationRepresentation(candidates, clusterOrder, distributionPeriodWise, tim
                 # make a list of weights of each cluster for each time step within the period
                 clusterLengths.append(np.repeat(noCandidates, timeStepsPerPeriod))
             # concat centroid values and cluster weights for all clusters
-            meansAndWeights = pd.concat([pd.DataFrame(np.array(meanVals)).stack(),
-                                         pd.DataFrame(np.array(clusterLengths)).stack()], axis=1)
+            meansAndWeights = pd.concat(
+                [
+                    pd.DataFrame(np.array(meanVals)).stack(),
+                    pd.DataFrame(np.array(clusterLengths)).stack(),
+                ],
+                axis=1,
+            )
             # sort all values of all clusters according to the centroid values
             meansAndWeightsSorted = meansAndWeights.sort_values(0)
             # save order of the sorted centroid values across all clusters
@@ -94,7 +109,7 @@ def durationRepresentation(candidates, clusterOrder, distributionPeriodWise, tim
             representationValues = []
             counter = 0
             for i, j in enumerate(meansAndWeightsSorted[1]):
-                representationValues.append(sortedAttr[counter:counter+j].mean())
+                representationValues.append(sortedAttr[counter : counter + j].mean())
                 counter += j
             # respect max and min of the attributes
             if representMinMax:

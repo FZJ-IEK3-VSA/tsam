@@ -10,7 +10,6 @@ from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array
 
 
-
 class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
     """
     k-maxoids class.
@@ -22,8 +21,14 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
     :type distance_metric: string
     """
 
-    def __init__(self, n_clusters=8, distance_metric='euclidean',
-                 timelimit=100, threads=7, solver='glpk'):
+    def __init__(
+        self,
+        n_clusters=8,
+        distance_metric="euclidean",
+        timelimit=100,
+        threads=7,
+        solver="glpk",
+    ):
 
         self.n_clusters = n_clusters
 
@@ -32,23 +37,27 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
     def _check_init_args(self):
 
         # Check n_clusters
-        if self.n_clusters is None or self.n_clusters <= 0 or \
-                not isinstance(self.n_clusters, int):
+        if (
+            self.n_clusters is None
+            or self.n_clusters <= 0
+            or not isinstance(self.n_clusters, int)
+        ):
             raise ValueError("n_clusters has to be nonnegative integer")
 
         # Check distance_metric
         if callable(self.distance_metric):
             self.distance_func = self.distance_metric
         elif self.distance_metric in PAIRWISE_DISTANCE_FUNCTIONS:
-            self.distance_func = \
-                PAIRWISE_DISTANCE_FUNCTIONS[self.distance_metric]
+            self.distance_func = PAIRWISE_DISTANCE_FUNCTIONS[self.distance_metric]
         else:
-            raise ValueError("distance_metric needs to be " +
-                             "callable or one of the " +
-                             "following strings: " +
-                             "{}".format(PAIRWISE_DISTANCE_FUNCTIONS.keys()) +
-                             ". Instead, '{}' ".format(self.distance_metric) +
-                             "was given.")
+            raise ValueError(
+                "distance_metric needs to be "
+                + "callable or one of the "
+                + "following strings: "
+                + "{}".format(PAIRWISE_DISTANCE_FUNCTIONS.keys())
+                + ". Instead, '{}' ".format(self.distance_metric)
+                + "was given."
+            )
 
     def fit(self, X, y=None):
         """Fit K-Maxoids to the provided data.
@@ -80,16 +89,18 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         # Check that the number of clusters is less than or equal to
         # the number of samples
         if self.n_clusters > X.shape[0]:
-            raise ValueError("The number of medoids " +
-                             "({}) ".format(self.n_clusters) +
-                             "must be larger than the number " +
-                             "of samples ({})".format(X.shape[0]))
+            raise ValueError(
+                "The number of medoids "
+                + "({}) ".format(self.n_clusters)
+                + "must be larger than the number "
+                + "of samples ({})".format(X.shape[0])
+            )
 
         return X
 
     def k_maxoids(self, X, k, numpasses=5, doLogarithmic=False, n_init=100):
 
-        X_old=X
+        X_old = X
         n, m = X.shape
         inertiaTempPrime = None
 
@@ -106,13 +117,13 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
                     d = np.sum((M - M[i]) ** 2, axis=1)
 
                     if doLogarithmic:
-                        D[i] = 1.
-                        d[i] = 1.
+                        D[i] = 1.0
+                        d[i] = 1.0
                         valx = np.prod(D)
                         valm = np.prod(d)
                     else:
-                        D[i] = 0.
-                        d[i] = 0.
+                        D[i] = 0.0
+                        d[i] = 0.0
                         valx = np.sum(D)
                         valm = np.sum(d)
 
