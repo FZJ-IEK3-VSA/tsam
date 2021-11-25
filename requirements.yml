@@ -6,4 +6,4 @@ dependencies:
   - scikit-learn
   - pandas>=0.18.1
   - numpy>=1.11.0
-  - glpk
+  - coincbc
