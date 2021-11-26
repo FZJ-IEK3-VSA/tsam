@@ -6,7 +6,11 @@
 tsam is a python package which uses different machine learning algorithms for the aggregation of time series. The data aggregation can be performed in two freely combinable dimensions: By representing the time series by a user-defined number of typical periods or by decreasing the temporal resolution.
 tsam was originally designed for reducing the computational load for large-scale energy system optimization models by aggregating their input data, but is applicable for all types of time series, e.g., weather data, load data, both simultaneously or other arbitrary groups of time series.
 
-If you want to use tsam in a published work, **please kindly cite** our latest journal article "[**A Review on Time Series Aggregation Methods for Energy System Models**](https://www.mdpi.com/1996-1073/13/3/641)".
+If you want to use tsam in a published work, **please kindly cite** one of our latest journal articles:
+* Hoffmann et al. (2021):\
+[**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://arxiv.org/abs/2111.12072)
+* Hoffmann et al. (2021):\
+[**Typical periods or typical time steps? A multi-model analysis to determine the optimal temporal aggregation for energy system models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261921011545)
 
 The documentation of the tsam code can be found [**here**](https://tsam.readthedocs.io/en/latest/index.html).
 
@@ -106,16 +110,21 @@ Within the BMWi funded project [**METIS**](http://www.metis-platform.net/) we ex
 If you are further interested in the impact of time series aggregation on the cost-optimal results on different energy system use cases, you can find a publication which validates the methods and describes their cababilites via the following [**link**](https://www.sciencedirect.com/science/article/pii/S0960148117309783). A second publication introduces a method how to model state variables (e.g. the state of charge of energy storage components) between the aggregated typical periods which can be found [**here**](https://www.sciencedirect.com/science/article/pii/S0306261918300242). Finally yet importantly the potential of time series aggregation to simplify mixed integer linear problems is investigated [**here**](https://www.mdpi.com/1996-1073/12/14/2825).
 
 The publications about time series aggregation for energy system optimization models published alongside the development of tsam are listed below:
-* Kotzur et al. (2018):\
-[**Impact of different time series aggregation methods on optimal energy system design**](https://www.sciencedirect.com/science/article/abs/pii/S0960148117309783)\
-(open access manuscript to be found [**here**](https://arxiv.org/abs/1708.00420))
+* Hoffmann et al. (2021):\
+[**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://arxiv.org/abs/2111.12072)
+* Hoffmann et al. (2021):\
+[**Typical periods or typical time steps? A multi-model analysis to determine the optimal temporal aggregation for energy system models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261921011545)
+* Hoffmann et al. (2020):\
+[**A Review on Time Series Aggregation Methods for Energy System Models**](https://www.mdpi.com/1996-1073/13/3/641)
+* Kannengießer et al. (2019):\
+[**Reducing Computational Load for Mixed Integer Linear Programming: An Example for a District and an Island Energy System**](https://www.mdpi.com/1996-1073/12/14/2825)
 * Kotzur et al. (2018):\
 [**Time series aggregation for energy system design: Modeling seasonal storage**](https://www.sciencedirect.com/science/article/pii/S0306261918300242)\
 (open access manuscript to be found [**here**](https://arxiv.org/abs/1710.07593))
-* Kannengießer et al. (2019):\
-[**Reducing Computational Load for Mixed Integer Linear Programming: An Example for a District and an Island Energy System**](https://www.mdpi.com/1996-1073/12/14/2825)
-* Hoffmann et al. (2020):\
-[**A Review on Time Series Aggregation Methods for Energy System Models**](https://www.mdpi.com/1996-1073/13/3/641)
+* Kotzur et al. (2018):\
+[**Impact of different time series aggregation methods on optimal energy system design**](https://www.sciencedirect.com/science/article/abs/pii/S0960148117309783)\
+(open access manuscript to be found [**here**](https://arxiv.org/abs/1708.00420))
+
 
 
 ## Acknowledgement
