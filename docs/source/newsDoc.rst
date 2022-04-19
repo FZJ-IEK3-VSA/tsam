@@ -6,7 +6,8 @@ tsam's Change Log
 Release version 2.0.1
 *********************
 
-tsam release (1.1.2) includes the following new functionalities:
+tsam release (2.0.1) includes the following new functionalities:
+
 * Changed dependency of scikit-learn to make tsam conda-forge runnable.
 
 
