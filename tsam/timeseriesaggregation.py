@@ -80,6 +80,41 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
     return unstackedTimeSeries, timeIndex
 
 
+def getNoPeriodsForDataReduction(noRawTimeSteps, segmentsPerPeriod, dataReduction):
+    """        
+    Identifies the maximum number of periods which can be set to achieve the required data reduction.
+
+    :param noRawTimeSteps: Number of original time steps. required
+    :type noRawTimeSteps: int
+
+    :param segmentsPerPeriod: Segments per period. required
+    :type segmentsPerPeriod: int
+
+    :param dataReduction: Factor by which the resulting dataset should be reduced. required
+    :type dataReduction: float
+
+    :returns: **noTypicalPeriods** --  Number of typical periods that can be set.
+    """
+    return int(np.floor(dataReduction * float(noRawTimeSteps)/segmentsPerPeriod))
+
+def getNoSegmentsForDataReduction(noRawTimeSteps, typicalPeriods, dataReduction):
+    """        
+    Identifies the maximum number of segments which can be set to achieve the required data reduction.
+
+    :param noRawTimeSteps: Number of original time steps. required
+    :type noRawTimeSteps: int
+
+    :param typicalPeriods: Number of typical periods. required
+    :type typicalPeriods: int
+
+    :param dataReduction: Factor by which the resulting dataset should be reduced. required
+    :type dataReduction: float
+
+    :returns: **segmentsPerPeriod** --  Number of segments per period that can be set.
+    """
+    return int(np.floor(dataReduction * float(noRawTimeSteps)/typicalPeriods))
+
+
 class TimeSeriesAggregation(object):
     """
     Clusters time series data to typical periods.
@@ -1297,3 +1332,65 @@ class TimeSeriesAggregation(object):
             indicatorRaw["MAE"][column] = mean_absolute_error(origTS, predTS)
 
         return pd.DataFrame(indicatorRaw)
+
+    def totalAccuracyIndicators(self):
+        """
+        Derives the accuracy indicators over all time series
+        """
+        return np.sqrt(self.accuracyIndicators().pow(2).sum())
+
+    def identifyOptimalSegmentPeriodCombination(self, dataReduction):
+        """        
+        Identifies the optimal combination of number of typical periods and number of segments for a given data reduction set.
+
+        :param dataReduction: Factor by which the resulting dataset should be reduced. required
+        :type dataReduction: float
+
+        :returns: **self.typicalPeriods** --  All typical Periods in scaled form.
+        """
+        if not self.segmentation:
+            raise ValueError("This function does only make sense in combination with 'segmentation' activated.")
+
+        noRawTimeSteps=len(self.timeSeries.index)
+        # derive the minimum of periods allowed for this data reduction as starting point
+        # TODO discuss if better starting points can be guessed
+        _minPeriods = getNoPeriodsForDataReduction(noRawTimeSteps, self.timeStepsPerPeriod, dataReduction)
+        
+        # get the maximum number of periods - TODO optimize also the number of steps per period
+        _maxPeriods = min(getNoPeriodsForDataReduction(noRawTimeSteps, 1, dataReduction), int(float(noRawTimeSteps)/self.hoursPerPeriod))
+
+        # starting point
+        self.noTypicalPeriods=_minPeriods
+        self.noSegments=self.timeStepsPerPeriod
+        self.createTypicalPeriods()
+        _RMSE_old=self.totalAccuracyIndicators()["RMSE"]
+
+        convergence=False
+        while not convergence and self.noTypicalPeriods<=_maxPeriods and self.noSegments>0:
+            oldNoSegments=self.noSegments
+            oldNoTypicalPeriods=self.noTypicalPeriods
+
+            # increase the number of days until we get a reduced set if segments
+            while oldNoSegments==self.noSegments and self.noTypicalPeriods<_maxPeriods:
+                self.noTypicalPeriods+=1
+                self.noSegments=getNoSegmentsForDataReduction(noRawTimeSteps, self.noTypicalPeriods, dataReduction)            
+            
+            # derive new typical periods
+            self.createTypicalPeriods()
+            self.predictOriginalData()
+            _RMSE_n=self.totalAccuracyIndicators()["RMSE"]
+
+            # check if the RMSE could be reduced
+            if _RMSE_n < _RMSE_old:
+                _RMSE_old=_RMSE_n
+                convergence=False
+            # in case it cannot be reduced anymore stop
+            else:
+                convergence=True
+        
+        # take the previous set, since the latest did not have a reduced error
+        self.noTypicalPeriods=oldNoTypicalPeriods
+        self.noSegments=oldNoSegments
+
+        # and return the typical periods
+        return self.createTypicalPeriods()

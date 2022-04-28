@@ -47,6 +47,17 @@ def test_accuracyIndicators():
         aggregation1.accuracyIndicators().loc[:, "RMSE_duration"].sum(),
     )
 
+    # make sure that the same accounts for the total accuracy indicator
+    np.testing.assert_array_less(
+        aggregation1.totalAccuracyIndicators()["RMSE"],
+        aggregation2.totalAccuracyIndicators()["RMSE"],
+    )
+    # make sure that the same accounts for the total accuracy indicator
+    np.testing.assert_array_less(
+        aggregation2.totalAccuracyIndicators()["RMSE_duration"],
+        aggregation1.totalAccuracyIndicators()["RMSE_duration"],
+    )
+
 
 if __name__ == "__main__":
     test_accuracyIndicators()
