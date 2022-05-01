@@ -167,9 +167,13 @@ class HyperTunedAggregations(object):
         return noSegments, noTypicalPeriods
 
 
-    def identifyParetoOptimalAggregation(self):
+    def identifyParetoOptimalAggregation(self, untilTotalTimeSteps=None):
         """        
         Identifies the pareto-optimal combination of number of typical periods and number of segments along with a steepest decent approach, starting from the aggregation to a single period and a single segment up to the representation of the full time series.
+
+        :param untilTotalTimeSteps: Number of timesteps until which the pareto-front should be determined. If None, the maximum number of timesteps is chosen.
+        :type untilTotalTimeSteps: int
+
 
         :returns: **** -- Nothing. Check aggregation history for results. All typical Periods in scaled form.
         """
@@ -181,7 +185,11 @@ class HyperTunedAggregations(object):
         _maxPeriods = int(float(noRawTimeSteps)/self.base_aggregation.timeStepsPerPeriod)
         _maxSegments = self.base_aggregation.timeStepsPerPeriod
         
-        progressBar = tqdm.tqdm(total=noRawTimeSteps)
+        if untilTotalTimeSteps is None:
+            untilTotalTimeSteps=noRawTimeSteps
+
+
+        progressBar = tqdm.tqdm(total=untilTotalTimeSteps)
 
         # starting point
         noTypicalPeriods=1
@@ -189,7 +197,7 @@ class HyperTunedAggregations(object):
         _RMSE_0=self._testAggregation(noTypicalPeriods, noSegments)
 
         # loop until either segments or periods have reached their maximum
-        while noTypicalPeriods<_maxPeriods and noSegments<_maxSegments:
+        while noTypicalPeriods<_maxPeriods and noSegments<_maxSegments and noSegments*noTypicalPeriods<=untilTotalTimeSteps:
             # test for more segments
             RMSE_segments = self._testAggregation(noTypicalPeriods, noSegments+1)
             # test for more periods
@@ -205,12 +213,12 @@ class HyperTunedAggregations(object):
             progressBar.update(noSegments*noTypicalPeriods-progressBar.n)
             
         # afterwards loop over periods and segments exclusively until maximum is reached
-        while noTypicalPeriods<_maxPeriods:
+        while noTypicalPeriods<_maxPeriods and noSegments*noTypicalPeriods<=untilTotalTimeSteps:
             noTypicalPeriods+=1
             RMSE = self._testAggregation(noTypicalPeriods, noSegments)
             progressBar.update(noSegments*noTypicalPeriods-progressBar.n)
 
-        while noSegments<_maxSegments:
+        while noSegments<_maxSegments and noSegments*noTypicalPeriods<=untilTotalTimeSteps:
             noSegments+=1
             RMSE = self._testAggregation(noTypicalPeriods, noSegments)
             progressBar.update(noSegments*noTypicalPeriods-progressBar.n)
