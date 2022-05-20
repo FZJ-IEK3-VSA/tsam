@@ -3,6 +3,25 @@ tsam's Change Log
 #################
 
 *********************
+Release version 2.0.1
+*********************
+
+tsam release (1.1.2) includes the following new functionalities:
+* Changed dependency of scikit-learn to make tsam conda-forge runnable.
+
+
+*********************
+Release version 2.0.0
+*********************
+
+In tsam release 2.0.0 the following functionalities were included:
+* A new comprehensive structure that allows for free cross-combination of clustering algorithms and cluster representations, e.g. centroids or medoids.
+* A novel cluster representation method that precisely replicates the original time series value distribution in the aggregated time series based on “Hoffmann, Kotzur and Stolten (2021): The Pareto-Optimal Temporal Aggregation of Energy System Models (https://arxiv.org/abs/2111.12072)”
+* Maxoids as representation algorithm which represents time series by outliers only based on “Sifa and Bauckhage (2017): Online k-Maxoids clustering”
+* K-medoids contiguity: An algorithm based on “Oehrlein and Hauner (2017): A cutting-plane method for adjacency-constrained spatial aggregation” that accounts for contiguity constraints to e.g. cluster only time series in neighboring regions
+
+
+*********************
 Release version 1.1.2
 *********************
 
