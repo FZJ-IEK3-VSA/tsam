@@ -80,6 +80,7 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
     return unstackedTimeSeries, timeIndex
 
 
+
 class TimeSeriesAggregation(object):
     """
     Clusters time series data to typical periods.
@@ -1297,3 +1298,9 @@ class TimeSeriesAggregation(object):
             indicatorRaw["MAE"][column] = mean_absolute_error(origTS, predTS)
 
         return pd.DataFrame(indicatorRaw)
+
+    def totalAccuracyIndicators(self):
+        """
+        Derives the accuracy indicators over all time series
+        """
+        return np.sqrt(self.accuracyIndicators().pow(2).sum())

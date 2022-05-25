@@ -7,3 +7,4 @@ dependencies:
   - pandas>=0.18.1
   - numpy>=1.11.0
   - coincbc
+  - tqdm
