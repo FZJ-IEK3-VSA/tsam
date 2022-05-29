@@ -66,9 +66,9 @@ Initialize an aggregation object and define the length of a single period, the n
 						noTypicalPeriods = 8, 
 						hoursPerPeriod = 24, 
 						rescaleClusterPeriods = False,
-        				segmentation = True,
-        				representationMethod = "durationRepresentation",
-        				distributionPeriodWise = False
+						segmentation = True,
+						representationMethod = "distributionRepresentation",
+						distributionPeriodWise = False
 						clusterMethod = 'hierarchical')
 ```
 
