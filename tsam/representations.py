@@ -31,10 +31,17 @@ def representations(
         clusterCenters = minmaxmeanRepresentation(
             candidates, clusterOrder, representationDict, timeStepsPerPeriod
         )
-    elif representationMethod == "durationRepresentation":
+    elif representationMethod == "durationRepresentation" or representationMethod == "distributionRepresentation":
         clusterCenters = durationRepresentation(
-            candidates, clusterOrder, distributionPeriodWise, timeStepsPerPeriod
+            candidates, clusterOrder, distributionPeriodWise, timeStepsPerPeriod, representMinMax=False,
         )
+    elif representationMethod == "distributionAndMinMaxRepresentation":
+        clusterCenters = durationRepresentation(
+            candidates, clusterOrder, distributionPeriodWise, timeStepsPerPeriod, representMinMax=True,
+        )
+    else:
+        raise ValueError("Chosen 'representationMethod' does not exist.")
+         
     return clusterCenters, clusterCenterIndices
 
 

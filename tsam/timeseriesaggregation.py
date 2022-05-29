@@ -101,6 +101,8 @@ class TimeSeriesAggregation(object):
         "maxoidRepresentation",
         "minmaxmeanRepresentation",
         "durationRepresentation",
+        "distributionRepresentation",
+        "distributionAndMinMaxRepresentation",
     ]
 
     EXTREME_PERIOD_METHODS = [
@@ -213,7 +215,8 @@ class TimeSeriesAggregation(object):
             * 'meanRepresentation' (default of 'averaging' and 'k_means')
             * 'medoidRepresentation' (default of 'k_medoids', 'hierarchical' and 'adjacent_periods')
             * 'minmaxmeanRepresentation'
-            * 'durationRepresentation'
+            * 'durationRepresentation'/ 'distributionRepresentation'
+            * 'distribtionAndMinMaxRepresentation'
         :type representationMethod: string
 
         :param representationDict: Dictionary which states for each attribute whether the profiles in each cluster
