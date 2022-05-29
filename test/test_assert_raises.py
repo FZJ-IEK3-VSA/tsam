@@ -134,11 +134,8 @@ def test_assert_raises():
     )
 
     # check erroneous representationMethod argument
-    np.testing.assert_raises_regex(
+    np.testing.assert_raises(
         ValueError,
-        "If specified, representationMethod needs to be one of the following: "
-        "\['meanRepresentation', 'medoidRepresentation', 'maxoidRepresentation', "
-        "'minmaxmeanRepresentation', 'durationRepresentation'\]",
         tsam.TimeSeriesAggregation,
         timeSeries=raw,
         representationMethod="erroneousRepresentationMethod",
