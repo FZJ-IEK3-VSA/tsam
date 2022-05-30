@@ -23,7 +23,7 @@ def segmentation(
         within the periods as second index and the attributes as columns.
     :type normalizedTypicalPeriods: pandas DataFrame
 
-    :param noSegments: Number of segments in which the typical periods shoul be subdivided - equivalent to the number of
+    :param noSegments: Number of segments in which the typical periods should be subdivided - equivalent to the number of
         inner-period clusters.
     :type noSegments: integer
 
