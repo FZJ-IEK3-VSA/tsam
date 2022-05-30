@@ -79,5 +79,39 @@ def test_durationRepresentation():
     )
 
 
+def test_distributionMinMaxRepresentation():
+
+    raw = pd.read_csv(
+        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
+        index_col=0,
+    )
+
+    aggregation = tsam.TimeSeriesAggregation(
+        raw,
+        noTypicalPeriods=8,
+        hoursPerPeriod=24,
+        sortValues=False,
+        clusterMethod="hierarchical",
+        representationMethod="distributionAndMinMaxRepresentation",
+        distributionPeriodWise=False,
+        rescaleClusterPeriods=False,
+    )
+
+    predictedPeriods = aggregation.predictOriginalData()
+
+    # make sure that max and min of the newly predicted time series are the same as from the original
+    np.testing.assert_array_equal(
+        raw.max(),
+        predictedPeriods.max(),
+    )
+    np.testing.assert_array_equal(
+        raw.min(),
+        predictedPeriods.min(),
+    )
+
+
+
+
 if __name__ == "__main__":
     test_durationRepresentation()
+    test_distributionMinMaxRepresentation()

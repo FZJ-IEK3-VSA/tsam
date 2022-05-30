@@ -113,8 +113,8 @@ def durationRepresentation(
                 counter += j
             # respect max and min of the attributes
             if representMinMax:
-                representationValues[0] = sortedAttr.max()
-                representationValues[-1] = sortedAttr.min()
+                representationValues[-1] = sortedAttr.max()
+                representationValues[0] = sortedAttr.min()
             # transform all representation values to a data frame and arrange it according to the order of the sorted
             # centroid values
             representationValues = pd.DataFrame(np.array(representationValues))
