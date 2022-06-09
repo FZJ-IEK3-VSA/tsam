@@ -8,8 +8,8 @@ tsam is a python package which uses different machine learning algorithms for th
 tsam was originally designed for reducing the computational load for large-scale energy system optimization models by aggregating their input data, but is applicable for all types of time series, e.g., weather data, load data, both simultaneously or other arbitrary groups of time series.
 
 If you want to use tsam in a published work, **please kindly cite** one of our latest journal articles:
-* Hoffmann et al. (2021):\
-[**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://arxiv.org/abs/2111.12072)
+* Hoffmann et al. (2022):\
+[**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342)
 * Hoffmann et al. (2021):\
 [**Typical periods or typical time steps? A multi-model analysis to determine the optimal temporal aggregation for energy system models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261921011545)
 
