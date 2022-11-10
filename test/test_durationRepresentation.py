@@ -110,6 +110,70 @@ def test_distributionMinMaxRepresentation():
     )
 
 
+def test_distributionRepresentation_keeps_mean():
+
+    raw = pd.read_csv(
+        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
+        index_col=0,
+    )
+
+    aggregation = tsam.TimeSeriesAggregation(
+        raw,
+        noTypicalPeriods=8,
+        hoursPerPeriod=24,
+        sortValues=False,
+        clusterMethod="hierarchical",
+        representationMethod="distributionRepresentation",
+        distributionPeriodWise=False,
+        rescaleClusterPeriods=False, # even without rescaling
+    )
+
+    predictedPeriods = aggregation.predictOriginalData()
+
+    assert np.isclose(
+        raw.mean(),
+        predictedPeriods.mean(),
+        atol=1e-4
+    ).all()
+
+
+
+def test_distributionMinMaxRepresentation_keeps_mean():
+
+    raw = pd.read_csv(
+        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
+        index_col=0,
+    )
+
+    aggregation = tsam.TimeSeriesAggregation(
+        raw,
+        noTypicalPeriods=8,
+        hoursPerPeriod=24,
+        sortValues=False,
+        clusterMethod="hierarchical",
+        representationMethod="distributionAndMinMaxRepresentation",
+        distributionPeriodWise=False,
+        rescaleClusterPeriods=False,
+    )
+
+    predictedPeriods = aggregation.predictOriginalData()
+
+    # make sure that max and min of the newly predicted time series are the same as from the original
+    np.testing.assert_array_equal(
+        raw.max(),
+        predictedPeriods.max(),
+    )
+    np.testing.assert_array_equal(
+        raw.min(),
+        predictedPeriods.min(),
+    )
+
+    assert np.isclose(
+        raw.mean(),
+        predictedPeriods.mean()
+    ).all()
+
+
 
 
 if __name__ == "__main__":
