@@ -77,8 +77,8 @@ def test_optimalPair():
 
 def test_steepest_gradient_leads_to_optima():
     """
-    Based on the hint of Eva, check if the RMSE is for a sole segmentation approach 
-    smaller than 
+    Based on the hint of Eva Simarik, check if the RMSE is for the optimized combination
+    of segments and periods smaller than sole segmentation approach 
     """
 
     raw = pd.read_csv(
@@ -86,7 +86,7 @@ def test_steepest_gradient_leads_to_optima():
         index_col=0,
     )
 
-    SEGMENTS_TESTED = 1.
+    SEGMENTS_TESTED = 5
 
     datareduction = (SEGMENTS_TESTED*365)/8760
 
@@ -122,9 +122,9 @@ def test_steepest_gradient_leads_to_optima():
     
     RMSESegments = aggregation.totalAccuracyIndicators()["RMSE"]
 
-    assert RMSEOpt < RMSESegments
+    assert RMSEsteepest < RMSESegments
 
-    assert RMSEsteepest == RMSEOpt
+    assert np.isclose(RMSEsteepest, RMSEOpt)
 
     
 
