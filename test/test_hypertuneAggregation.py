@@ -124,7 +124,7 @@ def test_steepest_gradient_leads_to_optima():
 
     assert RMSEsteepest < RMSESegments
 
-    assert np.isclose(RMSEsteepest, RMSEOpt)
+    assert np.isclose(RMSEsteepest, RMSEOpt, atol=1e-3)
 
     
 
