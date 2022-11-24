@@ -31,7 +31,7 @@ def test_optimalPair():
         index_col=0,
     )
 
-    datareduction=0.1
+    datareduction=0.01
 
     # just take wind
     aggregation_wind = tune.HyperTunedAggregations(
@@ -47,7 +47,7 @@ def test_optimalPair():
     )
 
     # and identify the best combination for a data reduction of to ~10%. 
-    windSegments, windPeriods= aggregation_wind.identifyOptimalSegmentPeriodCombination(dataReduction=datareduction)
+    windSegments, windPeriods, windRMSE= aggregation_wind.identifyOptimalSegmentPeriodCombination(dataReduction=datareduction)
 
     # just take solar irradiation
     aggregation_solar = tune.HyperTunedAggregations(
@@ -63,7 +63,7 @@ def test_optimalPair():
     )
 
     # and identify the best combination for a data reduction of to ~10%. 
-    solarSegments, solarPeriods = aggregation_solar.identifyOptimalSegmentPeriodCombination(dataReduction=datareduction)
+    solarSegments, solarPeriods, solarRMSE = aggregation_solar.identifyOptimalSegmentPeriodCombination(dataReduction=datareduction)
 
 
     # according to Hoffmann et al. 2022 is for solar more segments and less days better than for wind
@@ -73,6 +73,63 @@ def test_optimalPair():
     # check if the number time steps is in the targeted range
     assert windPeriods * windSegments <= len(raw["Wind"])*datareduction
     assert windPeriods * windSegments >= len(raw["Wind"])*datareduction * 0.8
+
+
+def test_steepest_gradient_leads_to_optima():
+    """
+    Based on the hint of Eva, check if the RMSE is for a sole segmentation approach 
+    smaller than 
+    """
+
+    raw = pd.read_csv(
+        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
+        index_col=0,
+    )
+
+    SEGMENTS_TESTED = 1.
+
+    datareduction = (SEGMENTS_TESTED*365)/8760
+
+    # just take wind
+    tunedAggregations = tune.HyperTunedAggregations(
+        tsam.TimeSeriesAggregation(
+            raw,
+            hoursPerPeriod=24,
+            clusterMethod="hierarchical",
+            representationMethod="meanRepresentation",
+            rescaleClusterPeriods=False,
+            segmentation=True,
+        )
+    )
+
+    # and identify the best combination for a data reduction. 
+    segmentsOpt, periodsOpt, RMSEOpt = tunedAggregations.identifyOptimalSegmentPeriodCombination(dataReduction=datareduction)
+
+    # test steepest
+    tunedAggregations.identifyParetoOptimalAggregation(untilTotalTimeSteps=365*SEGMENTS_TESTED)
+    steepestAggregation = tunedAggregations.aggregationHistory[-1]
+    RMSEsteepest = steepestAggregation.totalAccuracyIndicators()["RMSE"]
+
+    # only segments
+    aggregation = tsam.TimeSeriesAggregation(raw,
+        noTypicalPeriods= 365,
+        hoursPerPeriod = 24,
+        segmentation = True,
+        noSegments = SEGMENTS_TESTED,
+        clusterMethod="hierarchical",
+        representationMethod="meanRepresentation",
+    )
+    
+    RMSESegments = aggregation.totalAccuracyIndicators()["RMSE"]
+
+    assert RMSEOpt < RMSESegments
+
+    assert RMSEsteepest == RMSEOpt
+
+    
+
+
+
 
 def test_paretoOptimalAggregation():
 

@@ -1306,4 +1306,4 @@ class TimeSeriesAggregation(object):
         """
         Derives the accuracy indicators over all time series
         """
-        return np.sqrt(self.accuracyIndicators().pow(2).sum())
+        return np.sqrt(self.accuracyIndicators().pow(2).sum()/len(self.normalizedTimeSeries.columns))

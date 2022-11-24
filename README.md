@@ -7,17 +7,12 @@
 tsam is a python package which uses different machine learning algorithms for the aggregation of time series. The data aggregation can be performed in two freely combinable dimensions: By representing the time series by a user-defined number of typical periods or by decreasing the temporal resolution.
 tsam was originally designed for reducing the computational load for large-scale energy system optimization models by aggregating their input data, but is applicable for all types of time series, e.g., weather data, load data, both simultaneously or other arbitrary groups of time series.
 
-If you want to use tsam in a published work, **please kindly cite** one of our latest journal articles:
-* Hoffmann et al. (2022):\
-[**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342)
-* Hoffmann et al. (2021):\
-[**Typical periods or typical time steps? A multi-model analysis to determine the optimal temporal aggregation for energy system models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261921011545)
-
 The documentation of the tsam code can be found [**here**](https://tsam.readthedocs.io/en/latest/index.html).
 
 ## Features
 * flexible handling of multidimensional time-series via the pandas module
 * different aggregation methods implemented (averaging, k-means, exact k-medoids, hierarchical, k-maxoids, k-medoids with contiguity), which are based on scikit-learn, or self-programmed with pyomo
+* hypertuning of aggregation parameters to find the optimal combination of the number of segments inside a period and the number of typical periods
 * novel representation methods, keeping statistical attributes, such as the distribution 
 * flexible integration of extreme periods as own cluster centers
 * weighting for the case of multidimensional time-series to represent their relevance
@@ -95,20 +90,26 @@ The example time series are based on a department [publication](https://www.mdpi
 
 MIT License
 
-Copyright (C) 2016-2019 Leander Kotzur (FZJ IEK-3), Maximilian Hoffmann (FZJ IEK-3), Peter Markewitz (FZJ IEK-3), Martin Robinius (FZJ IEK-3), Detlef Stolten (FZJ IEK-3)
+Copyright (C) 2016-2022 Leander Kotzur (FZJ IEK-3), Maximilian Hoffmann (FZJ IEK-3), Peter Markewitz (FZJ IEK-3), Martin Robinius (FZJ IEK-3), Detlef Stolten (FZJ IEK-3)
 
 You should have received a copy of the MIT License along with this program.
 If not, see https://opensource.org/licenses/MIT
 
 The core developer team sits in the [Institute of Energy and Climate Research - Techno-Economic Energy Systems Analysis (IEK-3)](https://www.fz-juelich.de/iek/iek-3/EN/Home/home_node.html) belonging to the [Forschungszentrum Jülich](https://www.fz-juelich.de/).
 
-## Further Reading
+## Citing and further reading
+
+If you want to use tsam in a published work, **please kindly cite** our latest journal articles:
+* Hoffmann et al. (2022):\
+[**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342)
+
 
 If you are further interested in the impact of time series aggregation on the cost-optimal results on different energy system use cases, you can find a publication which validates the methods and describes their cababilites via the following [**link**](https://www.sciencedirect.com/science/article/pii/S0960148117309783). A second publication introduces a method how to model state variables (e.g. the state of charge of energy storage components) between the aggregated typical periods which can be found [**here**](https://www.sciencedirect.com/science/article/pii/S0306261918300242). Finally yet importantly the potential of time series aggregation to simplify mixed integer linear problems is investigated [**here**](https://www.mdpi.com/1996-1073/12/14/2825).
 
 The publications about time series aggregation for energy system optimization models published alongside the development of tsam are listed below:
 * Hoffmann et al. (2021):\
-[**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://arxiv.org/abs/2111.12072)
+[**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342)\
+(open access manuscript to be found [**here**](https://arxiv.org/abs/1710.07593))
 * Hoffmann et al. (2021):\
 [**Typical periods or typical time steps? A multi-model analysis to determine the optimal temporal aggregation for energy system models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261921011545)
 * Hoffmann et al. (2020):\
