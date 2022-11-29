@@ -15,7 +15,7 @@ from tsam.utils.k_medoids_exact import (
 # class KMedoids_contiguity(KMedoids):
 
 
-def k_medoids_contiguity(distances, n_clusters, adjacency, max_iter=500, solver="cbc"):
+def k_medoids_contiguity(distances, n_clusters, adjacency, max_iter=500, solver="highs"):
     """Declares a k-medoids model and iteratively adds cutting planes to hold on adjacency/contiguity
 
     The algorithm is based on: Oehrlein and Hauner (2017): A cutting-plane method for adjacency-constrained spatial aggregation

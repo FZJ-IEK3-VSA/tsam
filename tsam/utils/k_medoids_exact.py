@@ -26,7 +26,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
     :param threads: Threads to use by the optimization solver. optional, default: 7
     :type threads: integer
 
-    :param solver: Specifies the solver. optional, default: 'cbc'
+    :param solver: Specifies the solver. optional, default: 'highs'
     :type solver: string
     """
 
