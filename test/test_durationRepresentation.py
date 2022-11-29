@@ -89,6 +89,8 @@ def test_distributionMinMaxRepresentation():
     aggregation = tsam.TimeSeriesAggregation(
         raw,
         noTypicalPeriods=8,
+        segmentation=True,
+        noSegments=8,
         hoursPerPeriod=24,
         sortValues=False,
         clusterMethod="hierarchical",
@@ -108,6 +110,35 @@ def test_distributionMinMaxRepresentation():
         raw.min(),
         predictedPeriods.min(),
     )
+
+
+def test_distributionRepresentation_keeps_mean():
+
+    raw = pd.read_csv(
+        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
+        index_col=0,
+    )
+
+    aggregation = tsam.TimeSeriesAggregation(
+        raw,
+        noTypicalPeriods=8,
+        hoursPerPeriod=24,
+        segmentation=True,
+        noSegments=8,
+        sortValues=False,
+        clusterMethod="hierarchical",
+        representationMethod="distributionRepresentation",
+        distributionPeriodWise=False,
+        rescaleClusterPeriods=False, # even without rescaling
+    )
+
+    predictedPeriods = aggregation.predictOriginalData()
+
+    assert np.isclose(
+        raw.mean(),
+        predictedPeriods.mean(),
+        atol=1e-4
+    ).all()
 
 
 

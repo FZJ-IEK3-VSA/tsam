@@ -9,7 +9,7 @@ def aggregatePeriods(
     n_clusters=8,
     n_iter=100,
     clusterMethod="k_means",
-    solver="cbc",
+    solver="highs",
     representationMethod=None,
     representationDict=None,
     distributionPeriodWise=True,
@@ -96,7 +96,7 @@ def aggregatePeriods(
     if clusterMethod == "k_maxoids":
         from tsam.utils.k_maxoids import KMaxoids
 
-        k_maxoid = KMaxoids(n_clusters=n_clusters, solver=solver)
+        k_maxoid = KMaxoids(n_clusters=n_clusters)
 
         clusterOrder = k_maxoid.fit_predict(candidates)
         clusterCenters, clusterCenterIndices = representations(
