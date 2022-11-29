@@ -132,7 +132,7 @@ class TimeSeriesAggregation(object):
         distributionPeriodWise=True,
         predefClusterOrder=None,
         predefClusterCenterIndices=None,
-        solver="cbc",
+        solver="highs",
         roundOutput=None,
         addPeakMin=None,
         addPeakMax=None,

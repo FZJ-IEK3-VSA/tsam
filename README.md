@@ -36,7 +36,7 @@ Or install directly via python as
 
 	python setup.py install
 	
-In order to use the k-medoids clustering, make sure that you have installed a MILP solver. As default coin-cbc is used. Nevertheless, in case you have access to a license we recommend commercial solvers (e.g. Gurobi or CPLEX) since they have a better performance.
+In order to use the k-medoids clustering, make sure that you have installed a MILP solver. As default [HiGHS](https://github.com/ERGO-Code/HiGHS) is used. Nevertheless, in case you have access to a license we recommend commercial solvers (e.g. Gurobi or CPLEX) since they have a better performance.
 	
 	
 ## Examples

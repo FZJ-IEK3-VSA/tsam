@@ -7,6 +7,7 @@ from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array
 import pyomo.environ as pyomo
 import pyomo.opt as opt
+from pyomo.contrib import appsi
 
 
 class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
@@ -35,7 +36,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         distance_metric="euclidean",
         timelimit=100,
         threads=7,
-        solver="cbc",
+        solver="highs",
     ):
 
         self.n_clusters = n_clusters
@@ -202,12 +203,12 @@ def _setup_k_medoids(distances, n_clusters):
     return M
 
 
-def _solve_given_pyomo_model(M, solver="cbc"):
+def _solve_given_pyomo_model(M, solver="highs"):
     """Solves a given pyomo model clustering model an returns the clusters
 
     Args:
         M (pyomo.ConcreteModel): Concrete model instance that gets solved.
-        solver (str, optional): solver, defines the solver for the pyomo model. Defaults to "cbc".
+        solver (str, optional): solver, defines the solver for the pyomo model. Defaults to "highs".
 
     Raises:
         ValueError: [description]
@@ -216,8 +217,11 @@ def _solve_given_pyomo_model(M, solver="cbc"):
         [type]: [description]
     """
     # create optimization problem
-    optprob = opt.SolverFactory(solver)
-    results = optprob.solve(M, tee=False)
+    if solver == "highs":
+        solver_instance = appsi.solvers.Highs()
+    else:
+        solver_instance = opt.SolverFactory(solver)
+    results = solver_instance.solve(M)
     # check that it does not fail
 
     # Get results
