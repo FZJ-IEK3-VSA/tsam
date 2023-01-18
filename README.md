@@ -63,7 +63,7 @@ Initialize an aggregation object and define the length of a single period, the n
 						rescaleClusterPeriods = False,
 						segmentation = True,
 						representationMethod = "distributionRepresentation",
-						distributionPeriodWise = False
+						distributionPeriodWise = False,
 						clusterMethod = 'hierarchical')
 ```
 
