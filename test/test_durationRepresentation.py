@@ -88,7 +88,7 @@ def test_distributionMinMaxRepresentation():
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
+        noTypicalPeriods=24,
         segmentation=True,
         noSegments=8,
         hoursPerPeriod=24,
@@ -101,7 +101,8 @@ def test_distributionMinMaxRepresentation():
 
     predictedPeriods = aggregation.predictOriginalData()
 
-    # make sure that max and min of the newly predicted time series are the same as from the original
+    # make sure that max and min of the newly predicted time series are the same as
+    #  from the original
     np.testing.assert_array_equal(
         raw.max(),
         predictedPeriods.max(),
@@ -110,6 +111,14 @@ def test_distributionMinMaxRepresentation():
         raw.min(),
         predictedPeriods.min(),
     )
+
+    assert np.isclose(
+        raw.mean(),
+        predictedPeriods.mean(),
+        atol=1e-4
+    ).all()
+
+
 
 
 def test_distributionRepresentation_keeps_mean():
