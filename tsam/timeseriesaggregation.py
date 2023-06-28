@@ -130,6 +130,7 @@ class TimeSeriesAggregation(object):
         representationMethod=None,
         representationDict=None,
         distributionPeriodWise=True,
+        segmentRepresentationMethod=None,
         predefClusterOrder=None,
         predefClusterCenterIndices=None,
         solver="highs",
@@ -229,6 +230,17 @@ class TimeSeriesAggregation(object):
             each cluster should be separately preserved or that of the original time series only (default: True)
         :type distributionPeriodWise:
 
+        :param segmentRepresentationMethod: Chosen representation for the segments. If specified, the segments are
+            represented in the chosen way. Otherwise, it is inherited from the representationMethod.
+            |br| Options are:
+
+            * 'meanRepresentation' (default of 'averaging' and 'k_means')
+            * 'medoidRepresentation' (default of 'k_medoids', 'hierarchical' and 'adjacent_periods')
+            * 'minmaxmeanRepresentation'
+            * 'durationRepresentation'/ 'distributionRepresentation'
+            * 'distribtionAndMinMaxRepresentation'
+        :type segmentRepresentationMethod: string
+
         :param predefClusterOrder: Instead of aggregating a time series, a predefined grouping is taken
             which is given by this list. optional (default: None)
         :type predefClusterOrder: list or array
@@ -298,6 +310,8 @@ class TimeSeriesAggregation(object):
         self.representationDict = representationDict
 
         self.distributionPeriodWise = distributionPeriodWise
+
+        self.segmentRepresentationMethod = segmentRepresentationMethod
 
         self.predefClusterOrder = predefClusterOrder
 
@@ -437,6 +451,17 @@ class TimeSeriesAggregation(object):
                 + "the following: "
                 + "{}".format(self.REPRESENTATION_METHODS)
             )
+        
+        # check representationMethod
+        if self.segmentRepresentationMethod is None:
+            self.segmentRepresentationMethod = self.representationMethod
+        else:
+            if self.segmentRepresentationMethod not in self.REPRESENTATION_METHODS:
+                raise ValueError(
+                    "If specified, segmentRepresentationMethod needs to be one of "
+                    + "the following: "
+                    + "{}".format(self.REPRESENTATION_METHODS)
+                )
 
         # if representationDict None, represent by maximum time steps in each cluster
         if self.representationDict is None:
@@ -1055,8 +1080,7 @@ class TimeSeriesAggregation(object):
                 self.normalizedTypicalPeriods,
                 self.noSegments,
                 self.timeStepsPerPeriod,
-                self.solver,
-                representationMethod=self.representationMethod,
+                representationMethod=self.segmentRepresentationMethod,
                 representationDict=self.representationDict,
                 distributionPeriodWise=self.distributionPeriodWise,
             )

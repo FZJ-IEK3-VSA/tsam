@@ -10,7 +10,6 @@ def segmentation(
     normalizedTypicalPeriods,
     noSegments,
     timeStepsPerPeriod,
-    solver,
     representationMethod=None,
     representationDict=None,
     distributionPeriodWise=True,
