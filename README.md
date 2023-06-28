@@ -55,14 +55,14 @@ Read in the time series data set with pandas
 	raw = pd.read_csv('testdata.csv', index_col = 0)
 ```
 
-Initialize an aggregation object and define the length of a single period, the number of typical periods, the number of segments in each period, the aggregation method and the representation method - here duration/distribution representation which 
+Initialize an aggregation object and define the length of a single period, the number of typical periods, the number of segments in each period, the aggregation method and the representation method - here duration/distribution representation which contains the minimum and maximum value of the original time series 
 ```python
 	aggregation = tsam.TimeSeriesAggregation(raw, 
 						noTypicalPeriods = 8, 
 						hoursPerPeriod = 24, 
 						rescaleClusterPeriods = False,
 						segmentation = True,
-						representationMethod = "distributionRepresentation",
+						representationMethod = "distributionAndMinMaxRepresentation",
 						distributionPeriodWise = False
 						clusterMethod = 'hierarchical')
 ```
