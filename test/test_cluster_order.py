@@ -81,19 +81,19 @@ def test_cluster_order():
 
     # sort the typical days in order to avoid error assertion due to different order
     sortedDaysOrig1 = (
-        orig_raw_predefClusterOrder.sum(axis=0, level=0).sort_values("GHI").index
+        orig_raw_predefClusterOrder.groupby(level=0).sum().sort_values("GHI").index
     )
     sortedDaysTest1 = (
-        typPeriods_predefClusterOrder.sum(axis=0, level=0).sort_values("GHI").index
+        typPeriods_predefClusterOrder.groupby(level=0).sum().sort_values("GHI").index
     )
 
     sortedDaysOrig2 = (
-        orig_raw_predefClusterOrderAndClusterCenters.sum(axis=0, level=0)
+        orig_raw_predefClusterOrderAndClusterCenters.groupby(level=0).sum()
         .sort_values("GHI")
         .index
     )
     sortedDaysTest2 = (
-        typPeriods_predefClusterOrderAndClusterCenters.sum(axis=0, level=0)
+        typPeriods_predefClusterOrderAndClusterCenters.groupby(level=0).sum()
         .sort_values("GHI")
         .index
     )
