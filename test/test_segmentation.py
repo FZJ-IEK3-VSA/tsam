@@ -32,6 +32,7 @@ def test_segmentation():
         noTypicalPeriods=20,
         hoursPerPeriod=24,
         clusterMethod="hierarchical",
+        representationMethod="meanRepresentation",
         segmentation=True,
         noSegments=12,
     )
