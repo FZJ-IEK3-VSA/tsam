@@ -1146,7 +1146,8 @@ class TimeSeriesAggregation(object):
     @property
     def clusterOrder(self):
         """
-        How often does a typical period occur in the original time series
+        The sequence/order of the typical period to represent 
+        the original time series
         """
         if not hasattr(self, "_clusterOrder"):
             self.createTypicalPeriods()
