@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Orders a set of representation values to fit several candidate value sets"""
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -115,33 +117,12 @@ def durationRepresentation(
                 counter += j
             # respect max and min of the attributes
             if representMinMax:
-                # first retrieve the change of the values to the min and max values 
-                # of the original time series and their duration in the original 
-                # time series
-                delta_max = sortedAttr.max() - representationValues[-1]
-                appearance_max = meansAndWeightsSorted[1].iloc[-1]
-                delta_min = sortedAttr.min() - representationValues[0]
-                appearance_min = meansAndWeightsSorted[1].iloc[0]
-
-                # change the values of the duration curve such that the min and max 
-                # values are preserved
-                representationValues[-1] += delta_max
-                representationValues[0] += delta_min
-
-                # now anticipate the shift of the sum of the time series 
-                # due to the change of the min and max values
-                # of the duration curve
-                delta_sum = delta_max * appearance_max + delta_min * appearance_min
-                # and derive how much the other values have to be changed to preserve 
-                # the mean of the duration curve
-                correction_factor = - delta_sum / (meansAndWeightsSorted[1].iloc[1:-1] 
-                                                 * representationValues[1:-1]).sum()
-
-                # correct the values of the duration curve such 
-                # that the mean of the duration curve is preserved
-                # since the min and max values are changed
-                representationValues[1:-1] = np.multiply(representationValues[1:-1], (
-                    1+ correction_factor))
+                representationValues = _representMinMax(
+                    representationValues,
+                    sortedAttr,
+                    meansAndWeightsSorted,
+                    keepSum=True,
+                )
 
 
             # transform all representation values to a data frame and arrange it 
@@ -156,3 +137,68 @@ def durationRepresentation(
         clusterCenters = np.array(pd.concat(clusterCentersList, axis=1))
 
     return clusterCenters
+
+
+
+def _representMinMax(representationValues, sortedAttr, meansAndWeightsSorted, 
+                     keepSum=True):
+    """
+    Represents the the min and max values of the original time series in the
+    duration curve representation such that the min and max values of the
+    original time series are preserved.
+
+    :param representationValues: The duration curve representation values
+    :type representationValues: np.array
+
+    :param sortedAttr: The sorted original time series
+    :type sortedAttr: np.array
+
+    :param meansAndWeightsSorted: The number of occureance of
+     the original time series.
+    :type meansAndWeightsSorted: pd.DataFrame
+
+    :param keepSum: If the sum of the duration curve should be preserved
+    :type keepSum: bool
+    """
+
+    if np.any(np.array(representationValues) < 0):
+        raise ValueError("Negative values in the duration curve representation")
+
+    # first retrieve the change of the values to the min and max values 
+    # of the original time series and their duration in the original 
+    # time series
+    delta_max = sortedAttr.max() - representationValues[-1]
+    appearance_max = meansAndWeightsSorted[1].iloc[-1]
+    delta_min = sortedAttr.min() - representationValues[0]
+    appearance_min = meansAndWeightsSorted[1].iloc[0]
+
+    if delta_min == 0 and delta_max == 0:
+        return representationValues
+    
+    if keepSum:
+
+        # now anticipate the shift of the sum of the time series 
+        # due to the change of the min and max values
+        # of the duration curve
+        delta_sum = delta_max * appearance_max + delta_min * appearance_min
+        # and derive how much the other values have to be changed to preserve 
+        # the mean of the duration curve
+        correction_factor = - delta_sum / (meansAndWeightsSorted[1].iloc[1:-1] 
+                                            * representationValues[1:-1]).sum()
+        
+        if correction_factor < -1 or correction_factor > 1:
+            warnings.warn("The cluster is to small to preserve the sum of the duration curve and additionally the min and max values of the original cluster members. The min max values of the cluster are not preserved. This does not necessarily mean that the min and max values of the original time series are not preserved.")
+            return representationValues
+
+        # correct the values of the duration curve such 
+        # that the mean of the duration curve is preserved
+        # since the min and max values are changed
+        representationValues[1:-1] = np.multiply(representationValues[1:-1], (
+            1+ correction_factor))
+        
+    # change the values of the duration curve such that the min and max 
+    # values are preserved
+    representationValues[-1] += delta_max
+    representationValues[0] += delta_min
+    
+    return representationValues

@@ -88,7 +88,7 @@ def test_distributionMinMaxRepresentation():
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
+        noTypicalPeriods=24,
         segmentation=True,
         noSegments=8,
         hoursPerPeriod=24,

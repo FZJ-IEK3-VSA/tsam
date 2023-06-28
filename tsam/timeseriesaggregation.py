@@ -1094,14 +1094,22 @@ class TimeSeriesAggregation(object):
         if np.array(
             self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
         ).any():
+            warning_list = self.typicalPeriods.max(axis=0) < self.timeSeries.max(axis=0)
             warnings.warn(
-                "Something went wrong: At least one maximal value of the aggregated time series exceeds the maximal value the input time series"
+                "Something went wrong... At least one maximal value of the " + 
+                "aggregated time series exceeds the maximal value " + 
+                "the input time series for: " + 
+                "{}".format(list(warning_list[warning_list>0].index))
             )
         if np.array(
             self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
         ).any():
+            warning_list = self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
             warnings.warn(
-                "Something went wrong: At least one minimal value of the aggregated time series exceeds the minimal value the input time series"
+                "Something went wrong... At least one minimal value of the " + 
+                "aggregated time series exceeds the minimal value " + 
+                "the input time series for: " + 
+                "{}".format(list(warning_list[warning_list>0].index))
             )
         return self.typicalPeriods
 
