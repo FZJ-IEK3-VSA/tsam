@@ -61,7 +61,7 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
         rep_data = unstackedTimeSeries.head(attached_timesteps)
 
         # append them at the end of the time series
-        unstackedTimeSeries = unstackedTimeSeries.append(rep_data, ignore_index=False)
+        unstackedTimeSeries = pd.concat([unstackedTimeSeries, rep_data])
 
     # create period and step index
     for ii in range(0, len(unstackedTimeSeries)):
