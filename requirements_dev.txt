@@ -1,0 +1,9 @@
+-r requirements.txt
+
+# Testing
+pytest
+sphinx
+
+# Documentation
+sphinx-autobuild
+sphinx_book_theme

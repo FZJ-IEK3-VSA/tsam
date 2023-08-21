@@ -1,5 +1,5 @@
 ######################
-Time Series Aggregation Class
+Hypertuning segment and period selection
 ######################
 
 .. |br| raw:: html
@@ -10,11 +10,10 @@ Descriptions of the basic functions are given below.
 
 **Function descriptions:**
 
-.. automodule:: timeseriesaggregation
-   :members: unstackToPeriods
+.. automodule:: hyperparametertuning
    :member-order: bysource
 
-   .. autoclass:: TimeSeriesAggregation
+   .. autoclass:: HyperTunedAggregations
       :members:
       :member-order: bysource
 

@@ -12,16 +12,17 @@ clustering of adjacent time steps called segmentation.
 **Submodule with the basic functionalities**
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    timeseriesaggregationDoc
+   hypertunedaggregationDoc
    periodAggregationDoc
    representationsDoc
 
-**Submodules including exact k-medoids and segmentation**
+**Sub functions such as k-medoids and segmentation**
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    exactKmedoidsDoc
    kmaxoidsDoc

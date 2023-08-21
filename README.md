@@ -60,11 +60,12 @@ Initialize an aggregation object and define the length of a single period, the n
 	aggregation = tsam.TimeSeriesAggregation(raw, 
 						noTypicalPeriods = 8, 
 						hoursPerPeriod = 24, 
-						rescaleClusterPeriods = False,
 						segmentation = True,
+						noSegments = 8,
 						representationMethod = "distributionAndMinMaxRepresentation",
 						distributionPeriodWise = False
-						clusterMethod = 'hierarchical')
+						clusterMethod = 'hierarchical'
+						)
 ```
 
 Run the aggregation to typical periods

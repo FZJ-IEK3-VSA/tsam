@@ -1,5 +1,5 @@
 #################################
-The Exact k-Medoids Functionality
+Exact k-Medoids Functionality
 #################################
 
 .. |br| raw:: html

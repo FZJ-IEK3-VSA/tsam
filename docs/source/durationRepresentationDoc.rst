@@ -1,5 +1,5 @@
 #########################################
-The Duration Representation Functionality
+Duration Representation Functionality
 #########################################
 
 .. |br| raw:: html

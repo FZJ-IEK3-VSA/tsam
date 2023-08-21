@@ -1,5 +1,5 @@
 ################################
-The Representation Functionality
+Representation function
 ################################
 
 .. |br| raw:: html

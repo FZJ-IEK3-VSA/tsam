@@ -1,5 +1,5 @@
 ##############################
-The Segmentation Functionality
+Segmentation Functionality
 ##############################
 
 .. |br| raw:: html

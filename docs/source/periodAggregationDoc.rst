@@ -1,5 +1,5 @@
 #############################
-The Aggregation Functionality
+Aggregation function
 #############################
 
 .. |br| raw:: html

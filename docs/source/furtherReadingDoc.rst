@@ -24,3 +24,5 @@ The publications about time series aggregation for energy system optimization mo
   | `Reducing Computational Load for Mixed Integer Linear Programming: An Example for a District and an Island Energy System <https://www.mdpi.com/1996-1073/12/14/2825>`_
 * | Hoffmann et al. (2020):
   | `A Review on Time Series Aggregation Methods for Energy System Models <https://www.mdpi.com/1996-1073/13/3/641>`_
+* | Hoffmann et al. (2022):
+  | `The Pareto-Optimal Temporal Aggregation of Energy System Models <https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342>`

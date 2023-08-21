@@ -1,5 +1,5 @@
 ###########################
-The k-Maxoids Functionality
+k-Maxoids Functionality
 ###########################
 
 .. |br| raw:: html
