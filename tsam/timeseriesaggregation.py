@@ -828,18 +828,19 @@ class TimeSeriesAggregation(object):
         series, without changing the values of the extremePeriods.
         """
         weightingVec = pd.Series(self._clusterPeriodNoOccur).values
-        typicalPeriods = pd.DataFrame(
-            clusterPeriods, columns=self.normalizedPeriodlyProfiles.columns
-        )
+        typicalPeriods = pd.concat([
+            pd.Series(s, index=self.normalizedPeriodlyProfiles.columns)
+            for s in self.clusterPeriods
+        ], axis=1).T
         idx_wo_peak = np.delete(typicalPeriods.index, extremeClusterIdx)
         for column in self.timeSeries.columns:
             diff = 1
             sum_raw = self.normalizedPeriodlyProfiles[column].sum().sum()
-            sum_peak = sum(
+            sum_peak = np.sum(
                 weightingVec[extremeClusterIdx]
                 * typicalPeriods[column].loc[extremeClusterIdx, :].sum(axis=1)
             )
-            sum_clu_wo_peak = sum(
+            sum_clu_wo_peak = np.sum(
                 weightingVec[idx_wo_peak]
                 * typicalPeriods[column].loc[idx_wo_peak, :].sum(axis=1)
             )
@@ -869,13 +870,12 @@ class TimeSeriesAggregation(object):
                 )
 
                 # reset values higher than the upper sacle or less than zero
-                typicalPeriods[column][typicalPeriods[column] > scale_ub] = scale_ub
-                typicalPeriods[column][typicalPeriods[column] < 0.0] = 0.0
+                typicalPeriods[column].clip(lower=0, upper=scale_ub, inplace=True)
 
-                typicalPeriods[column] = typicalPeriods[column].fillna(0.0)
+                typicalPeriods[column].fillna(0.0, inplace=True)
 
                 # calc new sum and new diff to orig data
-                sum_clu_wo_peak = sum(
+                sum_clu_wo_peak = np.sum(
                     weightingVec[idx_wo_peak]
                     * typicalPeriods[column].loc[idx_wo_peak, :].sum(axis=1)
                 )
@@ -1066,9 +1066,10 @@ class TimeSeriesAggregation(object):
             )
 
         # put the clustered data in pandas format and scale back
-        self.normalizedTypicalPeriods = pd.DataFrame(
-            self.clusterPeriods, columns=self.normalizedPeriodlyProfiles.columns
-        ).stack(level="TimeStep")
+        self.normalizedTypicalPeriods = pd.concat([
+            pd.Series(s, index=self.normalizedPeriodlyProfiles.columns)
+            for s in self.clusterPeriods
+        ], axis=1).unstack("TimeStep").T
 
         if self.segmentation:
             from tsam.utils.segmentation import segmentation
