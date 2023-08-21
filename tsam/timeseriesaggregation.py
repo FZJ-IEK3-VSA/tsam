@@ -1066,9 +1066,10 @@ class TimeSeriesAggregation(object):
             )
 
         # put the clustered data in pandas format and scale back
-        self.normalizedTypicalPeriods = pd.DataFrame(
-            self.clusterPeriods, columns=self.normalizedPeriodlyProfiles.columns
-        ).stack(level="TimeStep")
+        self.normalizedTypicalPeriods = pd.concat([
+            pd.Series(s, index=self.normalizedPeriodlyProfiles.columns)
+            for s in self.clusterPeriods
+        ], axis=1).unstack("TimeStep").T
 
         if self.segmentation:
             from tsam.utils.segmentation import segmentation
