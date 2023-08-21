@@ -835,11 +835,11 @@ class TimeSeriesAggregation(object):
         for column in self.timeSeries.columns:
             diff = 1
             sum_raw = self.normalizedPeriodlyProfiles[column].sum().sum()
-            sum_peak = sum(
+            sum_peak = np.sum(
                 weightingVec[extremeClusterIdx]
                 * typicalPeriods[column].loc[extremeClusterIdx, :].sum(axis=1)
             )
-            sum_clu_wo_peak = sum(
+            sum_clu_wo_peak = np.sum(
                 weightingVec[idx_wo_peak]
                 * typicalPeriods[column].loc[idx_wo_peak, :].sum(axis=1)
             )
@@ -874,7 +874,7 @@ class TimeSeriesAggregation(object):
                 typicalPeriods[column].fillna(0.0, inplace=True)
 
                 # calc new sum and new diff to orig data
-                sum_clu_wo_peak = sum(
+                sum_clu_wo_peak = np.sum(
                     weightingVec[idx_wo_peak]
                     * typicalPeriods[column].loc[idx_wo_peak, :].sum(axis=1)
                 )
