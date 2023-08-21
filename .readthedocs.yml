@@ -5,7 +5,6 @@ build:
   tools:
     python: "3.11"
   apt_packages:
-  - latex
   - texlive-latex-base
   - texlive-latex-extra
   - dvipng
