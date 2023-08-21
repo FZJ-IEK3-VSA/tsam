@@ -828,9 +828,10 @@ class TimeSeriesAggregation(object):
         series, without changing the values of the extremePeriods.
         """
         weightingVec = pd.Series(self._clusterPeriodNoOccur).values
-        typicalPeriods = pd.DataFrame(
-            clusterPeriods, columns=self.normalizedPeriodlyProfiles.columns
-        )
+        typicalPeriods = pd.concat([
+            pd.Series(s, index=self.normalizedPeriodlyProfiles.columns)
+            for s in self.clusterPeriods
+        ], axis=1).T
         idx_wo_peak = np.delete(typicalPeriods.index, extremeClusterIdx)
         for column in self.timeSeries.columns:
             diff = 1
