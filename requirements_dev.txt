@@ -7,3 +7,6 @@ sphinx
 # Documentation
 sphinx-autobuild
 sphinx_book_theme
+
+# Packaging
+twine
