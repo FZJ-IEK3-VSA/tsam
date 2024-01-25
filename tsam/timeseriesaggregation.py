@@ -870,9 +870,9 @@ class TimeSeriesAggregation(object):
                 )
 
                 # reset values higher than the upper sacle or less than zero
-                typicalPeriods[column].clip(lower=0, upper=scale_ub, inplace=True)
+                typicalPeriods[column] = typicalPeriods[column].clip(lower=0, upper=scale_ub)
 
-                typicalPeriods[column].fillna(0.0, inplace=True)
+                typicalPeriods[column] = typicalPeriods[column].fillna(0.0)
 
                 # calc new sum and new diff to orig data
                 sum_clu_wo_peak = np.sum(
