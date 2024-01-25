@@ -8,7 +8,6 @@ import pandas as pd
 import numpy as np
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from sklearn.metrics.pairwise import euclidean_distances
 from sklearn import preprocessing
 
 from tsam.periodAggregation import aggregatePeriods
