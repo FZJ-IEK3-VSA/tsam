@@ -51,4 +51,4 @@ def test_subhourlyResolution():
 
 
 if __name__ == "__main__":
-    test_hierarchical()
+    test_subhourlyResolution()
