@@ -21,7 +21,7 @@ def test_assert_raises():
         "timeSeries has to be of type pandas.DataFrame\(\) or of type np.array\(\) in "
         "initialization of object of class TimeSeriesAggregation",
         tsam.TimeSeriesAggregation,
-        timeSeries="erroneousTimeSeries",
+        timeSeries=raw,
     )
 
     # check error messages for wrong attribute names added for extreme period methods
