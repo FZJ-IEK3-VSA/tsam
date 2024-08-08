@@ -2,7 +2,7 @@ name: tsam
 channels:
   - conda-forge
 dependencies:
-  - python
+  - python>=3.8,<3.13
   - pip
   - pip:
     - -r requirements.txt

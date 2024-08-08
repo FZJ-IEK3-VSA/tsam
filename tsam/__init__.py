@@ -7,5 +7,5 @@ if not sys.warnoptions:
         action="ignore",
         category=FutureWarning,
         append=True,
-        message="*The previous implementation of stack is deprecated.*",
+        message=r".*The previous implementation of stack is deprecated and will be removed in a future version of pandas.*",
     )
