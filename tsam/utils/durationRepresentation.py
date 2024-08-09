@@ -57,7 +57,7 @@ def durationRepresentation(
                 # get all the values of a certain attribute and cluster
                 candidateValues = candidates.loc[indice[0], a]
                 # sort all values
-                sortedAttr = candidateValues.stack(future_stack=True).sort_values()
+                sortedAttr = candidateValues.stack().sort_values()
                 # reindex and arrange such that every sorted segment gets represented by its mean
                 sortedAttr.index = pd.MultiIndex.from_tuples(clean_index)
                 representationValues = sortedAttr.unstack(level=0).mean(axis=1)
@@ -97,8 +97,8 @@ def durationRepresentation(
             # concat centroid values and cluster weights for all clusters
             meansAndWeights = pd.concat(
                 [
-                    pd.DataFrame(np.array(meanVals)).stack(future_stack=True),
-                    pd.DataFrame(np.array(clusterLengths)).stack(future_stack=True),
+                    pd.DataFrame(np.array(meanVals)).stack(),
+                    pd.DataFrame(np.array(clusterLengths)).stack(),
                 ],
                 axis=1,
             )
@@ -107,7 +107,7 @@ def durationRepresentation(
             # save order of the sorted centroid values across all clusters
             order = meansAndWeightsSorted.index
             # sort all values of the original time series
-            sortedAttr = candidates.loc[:, a].stack(future_stack=True).sort_values().values
+            sortedAttr = candidates.loc[:, a].stack().sort_values().values
             # take mean of sections of the original duration curve according to the cluster and its weight the
             # respective section is assigned to
             representationValues = []
