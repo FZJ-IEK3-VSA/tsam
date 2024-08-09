@@ -221,7 +221,7 @@ def test_assert_raises():
 
     # check erroneous dataframe containing NaN values
     rawNan = copy.deepcopy((raw))
-    rawNan.iloc[10, :] = np.NaN
+    rawNan.iloc[10, :] = np.nan
     aggregation = tsam.TimeSeriesAggregation(timeSeries=rawNan)
     np.testing.assert_raises_regex(
         ValueError,
