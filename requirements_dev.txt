@@ -2,6 +2,7 @@
 
 # Testing
 pytest
+pytest-cov
 sphinx
 
 # Documentation
