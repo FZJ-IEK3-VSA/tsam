@@ -5,6 +5,11 @@ import numpy as np
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array
+
+# switch to numpy 2.0
+np.float_ = np.float64
+np.complex_=np.complex128
+
 import pyomo.environ as pyomo
 import pyomo.opt as opt
 from pyomo.contrib import appsi
