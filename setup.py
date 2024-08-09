@@ -16,6 +16,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/FZJ-IEK3-VSA/tsam",
     include_package_data=True,
+    python_requires='>=3.9',
     packages=setuptools.find_packages(),
     install_requires=required_packages,
     setup_requires=["setuptools-git"],
