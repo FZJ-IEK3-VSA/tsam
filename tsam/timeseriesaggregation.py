@@ -8,7 +8,6 @@ import pandas as pd
 import numpy as np
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from sklearn.metrics.pairwise import euclidean_distances
 from sklearn import preprocessing
 
 from tsam.periodAggregation import aggregatePeriods
@@ -388,21 +387,21 @@ class TimeSeriesAggregation(object):
             try:
                 timedelta = self.timeSeries.index[1] - self.timeSeries.index[0]
                 self.resolution = float(timedelta.total_seconds()) / 3600
-            except AttributeError:
+            except AttributeError as exc:
                 raise ValueError(
                     "'resolution' argument has to be nonnegative float or int"
                     + " or the given timeseries needs a datetime index"
-                )
+                ) from exc
             except TypeError:
                 try:
                     self.timeSeries.index = pd.to_datetime(self.timeSeries.index)
                     timedelta = self.timeSeries.index[1] - self.timeSeries.index[0]
                     self.resolution = float(timedelta.total_seconds()) / 3600
-                except:
+                except Exception as exc:
                     raise ValueError(
                         "'resolution' argument has to be nonnegative float or int"
                         + " or the given timeseries needs a datetime index"
-                    )
+                    ) from exc
 
         if not (isinstance(self.resolution, int) or isinstance(self.resolution, float)):
             raise ValueError("resolution has to be nonnegative float or int")
@@ -870,9 +869,9 @@ class TimeSeriesAggregation(object):
                 )
 
                 # reset values higher than the upper sacle or less than zero
-                typicalPeriods[column].clip(lower=0, upper=scale_ub, inplace=True)
+                typicalPeriods[column] = typicalPeriods[column].clip(lower=0, upper=scale_ub)
 
-                typicalPeriods[column].fillna(0.0, inplace=True)
+                typicalPeriods[column] = typicalPeriods[column].fillna(0.0)
 
                 # calc new sum and new diff to orig data
                 sum_clu_wo_peak = np.sum(
