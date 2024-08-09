@@ -3,9 +3,9 @@
 # Testing
 pytest
 pytest-cov
-sphinx
 
 # Documentation
+sphinx
 sphinx-autobuild
 sphinx_book_theme
 

@@ -19,9 +19,13 @@ The documentation of the tsam code can be found [**here**](https://tsam.readthed
 
 
 ## Installation
-Directly install via pip as follows:
+Directly install via pip from pypi as follows:
 
 	pip install tsam
+
+of install from conda forge with the following command:
+
+	conda install tsam -c conda-forge
 
 Alternatively, clone a local copy of the repository to your computer
 
