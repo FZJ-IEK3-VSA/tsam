@@ -8,7 +8,6 @@ import pandas as pd
 import numpy as np
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from sklearn.metrics.pairwise import euclidean_distances
 from sklearn import preprocessing
 
 from tsam.periodAggregation import aggregatePeriods
@@ -25,6 +24,9 @@ TOLERANCE = 1e-6
 
 # minimal weight that overwrites a weighting of zero in order to carry the profile through the aggregation process
 MIN_WEIGHT = 1e-6
+
+
+
 
 
 def unstackToPeriods(timeSeries, timeStepsPerPeriod):
@@ -388,21 +390,21 @@ class TimeSeriesAggregation(object):
             try:
                 timedelta = self.timeSeries.index[1] - self.timeSeries.index[0]
                 self.resolution = float(timedelta.total_seconds()) / 3600
-            except AttributeError:
+            except AttributeError as exc:
                 raise ValueError(
                     "'resolution' argument has to be nonnegative float or int"
                     + " or the given timeseries needs a datetime index"
-                )
+                ) from exc
             except TypeError:
                 try:
                     self.timeSeries.index = pd.to_datetime(self.timeSeries.index)
                     timedelta = self.timeSeries.index[1] - self.timeSeries.index[0]
                     self.resolution = float(timedelta.total_seconds()) / 3600
-                except:
+                except Exception as exc:
                     raise ValueError(
                         "'resolution' argument has to be nonnegative float or int"
                         + " or the given timeseries needs a datetime index"
-                    )
+                    ) from exc
 
         if not (isinstance(self.resolution, int) or isinstance(self.resolution, float)):
             raise ValueError("resolution has to be nonnegative float or int")
@@ -870,9 +872,9 @@ class TimeSeriesAggregation(object):
                 )
 
                 # reset values higher than the upper sacle or less than zero
-                typicalPeriods[column].clip(lower=0, upper=scale_ub, inplace=True)
+                typicalPeriods[column] = typicalPeriods[column].clip(lower=0, upper=scale_ub)
 
-                typicalPeriods[column].fillna(0.0, inplace=True)
+                typicalPeriods[column] = typicalPeriods[column].fillna(0.0)
 
                 # calc new sum and new diff to orig data
                 sum_clu_wo_peak = np.sum(
@@ -967,7 +969,7 @@ class TimeSeriesAggregation(object):
         # check for additional cluster parameters
         if self.evalSumPeriods:
             evaluationValues = (
-                self.normalizedPeriodlyProfiles.stack(level=0)
+                self.normalizedPeriodlyProfiles.stack(future_stack=True,level=0)
                 .sum(axis=1)
                 .unstack(level=1)
             )
@@ -1237,7 +1239,7 @@ class TimeSeriesAggregation(object):
             columns=self.normalizedPeriodlyProfiles.columns,
             index=self.normalizedPeriodlyProfiles.index,
         )
-        clustered_data_df = clustered_data_df.stack(level="TimeStep")
+        clustered_data_df = clustered_data_df.stack(future_stack=True,level="TimeStep")
 
         # back in form
         self.normalizedPredictedData = pd.DataFrame(

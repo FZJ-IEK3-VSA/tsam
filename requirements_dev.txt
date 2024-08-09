@@ -2,9 +2,10 @@
 
 # Testing
 pytest
-sphinx
+pytest-cov
 
 # Documentation
+sphinx
 sphinx-autobuild
 sphinx_book_theme
 

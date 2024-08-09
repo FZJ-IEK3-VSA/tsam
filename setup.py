@@ -8,7 +8,7 @@ with open(os.path.join(dir_path, "README.md"), "r") as fh:
 
 setuptools.setup(
     name="tsam",
-    version="2.3.2",
+    version="2.3.3",
     author="Leander Kotzur, Maximilian Hoffmann",
     author_email="leander.kotzur@googlemail.com, maximilian.hoffmann@julumni.fz-juelich.de",
     description="Time series aggregation module (tsam) to create typical periods",
@@ -16,6 +16,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/FZJ-IEK3-VSA/tsam",
     include_package_data=True,
+    python_requires='>=3.9',
     packages=setuptools.find_packages(),
     install_requires=required_packages,
     setup_requires=["setuptools-git"],
@@ -28,11 +29,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],

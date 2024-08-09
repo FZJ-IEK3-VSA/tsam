@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+
+
 import time
+
+# switch to numpy 2.0
+np.float_ = np.float64
+np.complex_=np.complex128
+
 import pyomo.environ as pyomo
 import pyomo.opt as opt
 import networkx as nx

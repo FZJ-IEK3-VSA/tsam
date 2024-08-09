@@ -1,0 +1,71 @@
+# This workflow will install Python dependencies and run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+# Based on David Neuroth pylpg
+
+name: Test on Push and Pull
+
+on:
+  push:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  PythonAndOsTest:
+    name: Test for Python ${{matrix.python-version}} on ${{matrix.os}}  
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest","ubuntu-20.04", "macos-latest","macos-13","macos-12", "windows-latest","windows-2019"]
+        python-version: [ "3.9", "3.10", "3.11", "3.12"]
+        
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{matrix.python-version}}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+        pip install pytest-cov
+        pip install codecov
+        pip install -r requirements.txt
+        pip install --no-cache-dir -e .
+        
+    - name: Test with pytest
+      working-directory: ./test/
+      run: |
+        pytest
+        codecov
+
+  NumpyTest:
+    name: Test for numpy ${{matrix.python-numpy-version.numpy}} and python ${{matrix.python-numpy-version.python}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest","ubuntu-20.04", "macos-latest","macos-13","macos-12", "windows-latest","windows-2019"]
+        python-numpy-version: [ {python : 3.9,numpy : 1.25}, {python : 3.9,numpy : 1.26},{python : 3.9,numpy : 2.0}]        
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{matrix.python-numpy-version.python}}
+    - name: Install dependencies
+      run: |
+        python -m pip install numpy==${{matrix.python-numpy-version.numpy}} --upgrade pip
+        pip install pytest
+        pip install pytest-cov
+        pip install codecov
+        pip install -r requirements.txt
+        pip install --no-cache-dir -e .
+        
+    - name: Test with pytest
+      working-directory: ./test/
+      run: |
+        pytest
+        codecov

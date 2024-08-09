@@ -1,25 +1,24 @@
-# This workflow will install Python dependencies and run tests and lint with a single version of Python
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
-# Based on David Neuroth pylpg
-
-name: pytest
-
-on:
-  push:
-  pull_request:
-    branches: [ master ]
-#if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+# This tests are run daily to check incompatibilties introduced by new versions of dependencies
+name: Daily tsam tests
+on: 
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    # Some Examples for cron syntax https://crontab.guru/examples.html
+    # Schedules job at any point after 12 pm
+    - cron:  '0 0 * * *'
+    # Weekly after sunday
+    # - cron: 0 0 * * 0
 
 jobs:
-  build:
+  PythonAndOsTest:
+    name: Test for Python ${{matrix.python-version}} on ${{matrix.os}}  
     runs-on: ${{matrix.os}}
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest","ubuntu-20.04", "macos-latest","macos-13","macos-12", "windows-latest","windows-2019"]
         # os: ["ubuntu-latest"]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: [ "3.9", "3.10", "3.11", "3.12"]
         
     steps:
     - uses: actions/checkout@v2
@@ -41,3 +40,4 @@ jobs:
       run: |
         pytest
         codecov
+
