@@ -966,7 +966,7 @@ class TimeSeriesAggregation(object):
         # check for additional cluster parameters
         if self.evalSumPeriods:
             evaluationValues = (
-                self.normalizedPeriodlyProfiles.stack(level=0)
+                self.normalizedPeriodlyProfiles.stack(future_stack=True,level=0)
                 .sum(axis=1)
                 .unstack(level=1)
             )
@@ -1236,7 +1236,7 @@ class TimeSeriesAggregation(object):
             columns=self.normalizedPeriodlyProfiles.columns,
             index=self.normalizedPeriodlyProfiles.index,
         )
-        clustered_data_df = clustered_data_df.stack(level="TimeStep")
+        clustered_data_df = clustered_data_df.stack(future_stack=True,level="TimeStep")
 
         # back in form
         self.normalizedPredictedData = pd.DataFrame(
