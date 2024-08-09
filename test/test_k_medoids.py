@@ -43,8 +43,8 @@ def test_k_medoids():
     sortedDaysTest = typPeriods.groupby(level=0).sum().sort_values("GHI").index
 
     # rearange their order
-    orig = orig_raw[typPeriods.columns].unstack().loc[sortedDaysOrig, :].stack()
-    test = typPeriods.unstack().loc[sortedDaysTest, :].stack()
+    orig = orig_raw[typPeriods.columns].unstack().loc[sortedDaysOrig, :].stack(future_stack=True)
+    test = typPeriods.unstack().loc[sortedDaysTest, :].stack(future_stack=True)
 
     np.testing.assert_array_almost_equal(orig.values, test.values, decimal=4)
 

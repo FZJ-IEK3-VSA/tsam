@@ -103,21 +103,21 @@ def test_cluster_order():
         orig_raw_predefClusterOrder[typPeriods_predefClusterOrder.columns]
         .unstack()
         .loc[sortedDaysOrig1, :]
-        .stack()
+        .stack(future_stack=True)
     )
-    test1 = typPeriods_predefClusterOrder.unstack().loc[sortedDaysTest1, :].stack()
+    test1 = typPeriods_predefClusterOrder.unstack().loc[sortedDaysTest1, :].stack(future_stack=True)
     orig2 = (
         orig_raw_predefClusterOrderAndClusterCenters[
             typPeriods_predefClusterOrderAndClusterCenters.columns
         ]
         .unstack()
         .loc[sortedDaysOrig2, :]
-        .stack()
+        .stack(future_stack=True)
     )
     test2 = (
         typPeriods_predefClusterOrderAndClusterCenters.unstack()
         .loc[sortedDaysTest2, :]
-        .stack()
+        .stack(future_stack=True)
     )
 
     np.testing.assert_array_almost_equal(

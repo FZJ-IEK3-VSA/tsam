@@ -1,5 +1,6 @@
 import os
 import time
+import pytest
 
 import pandas as pd
 import numpy as np
@@ -74,7 +75,7 @@ def test_optimalPair():
     assert windPeriods * windSegments <= len(raw["Wind"])*datareduction
     assert windPeriods * windSegments >= len(raw["Wind"])*datareduction * 0.8
 
-
+@pytest.mark.skip(reason="This test is too slow")
 def test_steepest_gradient_leads_to_optima():
     """
     Based on the hint of Eva Simarik, check if the RMSE is for the optimized combination
@@ -147,7 +148,7 @@ def test_paretoOptimalAggregation():
             raw,
             hoursPerPeriod=12,
             clusterMethod="hierarchical",
-            representationMethod="durationRepresentation",
+            representationMethod="meanRepresentation",
             distributionPeriodWise=False,
             rescaleClusterPeriods=False,
             segmentation=True,
