@@ -15,8 +15,8 @@ on:
     # - cron: 0 0 * * 0
 
 jobs:
-  PythonAndOsTest:
-    name: Test for Python ${{matrix.python-version}} on ${{matrix.os}}  
+  DailyPythonAndOsTest:
+    name: Daily tests for Python ${{matrix.python-version}} on ${{matrix.os}}  
     runs-on: ${{matrix.os}}
     strategy:
       fail-fast: false
