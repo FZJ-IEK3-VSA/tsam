@@ -1,6 +1,11 @@
 # This tests are run daily to check incompatibilties introduced by new versions of dependencies
 name: Daily tsam tests
-on: 
+on:
+  # Enables manual start
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Manual run' 
   schedule:
     # * is a special character in YAML so you have to quote this string
     # Some Examples for cron syntax https://crontab.guru/examples.html
