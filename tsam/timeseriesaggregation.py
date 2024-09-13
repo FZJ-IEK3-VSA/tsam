@@ -136,7 +136,7 @@ class TimeSeriesAggregation(object):
         predefClusterOrder=None,
         predefClusterCenterIndices=None,
         solver="highs",
-        numericalTolerance=0,
+        numericalTolerance=1e-13,
         roundOutput=None,
         addPeakMin=None,
         addPeakMax=None,
@@ -256,7 +256,7 @@ class TimeSeriesAggregation(object):
         :type solver: string
 
         :param numericalTolerance: Tolerance for numerical issues. Silences the warning for exceeding upper or lower bounds
-            of the time series. optional (default: 0 )
+            of the time series. optional (default: 1e-13 )
         :type numericalTolerance: float
 
         :param roundOutput: Decimals to what the output time series get round. optional (default: None )
