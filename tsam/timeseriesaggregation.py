@@ -136,6 +136,7 @@ class TimeSeriesAggregation(object):
         predefClusterOrder=None,
         predefClusterCenterIndices=None,
         solver="highs",
+        numericalTolerance=1e-13,
         roundOutput=None,
         addPeakMin=None,
         addPeakMax=None,
@@ -254,6 +255,10 @@ class TimeSeriesAggregation(object):
         :param solver: Solver that is used for k_medoids clustering. optional (default: 'cbc' )
         :type solver: string
 
+        :param numericalTolerance: Tolerance for numerical issues. Silences the warning for exceeding upper or lower bounds
+            of the time series. optional (default: 1e-13 )
+        :type numericalTolerance: float
+
         :param roundOutput: Decimals to what the output time series get round. optional (default: None )
         :type roundOutput: integer
 
@@ -320,6 +325,8 @@ class TimeSeriesAggregation(object):
         self.predefClusterCenterIndices = predefClusterCenterIndices
 
         self.solver = solver
+
+        self.numericalTolerance = numericalTolerance
 
         self.segmentation = segmentation
 
@@ -1097,23 +1104,29 @@ class TimeSeriesAggregation(object):
         if np.array(
             self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
         ).any():
-            warning_list = self.typicalPeriods.max(axis=0) < self.timeSeries.max(axis=0)
-            warnings.warn(
-                "Something went wrong... At least one maximal value of the " + 
-                "aggregated time series exceeds the maximal value " + 
-                "the input time series for: " + 
-                "{}".format(list(warning_list[warning_list>0].index))
-            )
+            warning_list = self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
+            diff = self.typicalPeriods.max(axis=0) - self.timeSeries.max(axis=0)
+            if abs(diff).max() > self.numericalTolerance:
+                warnings.warn(
+                    "At least one maximal value of the " + 
+                    "aggregated time series exceeds the maximal value " + 
+                    "the input time series for: " + 
+                    "{}".format(diff[warning_list[warning_list>0].index].to_dict()) +
+                    ". To silence the warning set the 'numericalTolerance' to a higher value."
+                )
         if np.array(
             self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
         ).any():
             warning_list = self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
-            warnings.warn(
-                "Something went wrong... At least one minimal value of the " + 
-                "aggregated time series exceeds the minimal value " + 
-                "the input time series for: " + 
-                "{}".format(list(warning_list[warning_list>0].index))
-            )
+            diff = self.typicalPeriods.min(axis=0) - self.timeSeries.min(axis=0)
+            if abs(diff).max() > self.numericalTolerance:
+                warnings.warn(
+                    "Something went wrong... At least one minimal value of the " + 
+                    "aggregated time series exceeds the minimal value " + 
+                    "the input time series for: " + 
+                        "{}".format(diff[warning_list[warning_list>0].index].to_dict()) +
+                        ". To silence the warning set the 'numericalTolerance' to a higher value."
+                )
         return self.typicalPeriods
 
     def prepareEnersysInput(self):

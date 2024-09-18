@@ -6,16 +6,10 @@ LOCAL_VENV_DIR := ${LOCAL_VENVS_DIR}/${PROJECT_NAME}
 
 
 test:
-	@( \
-		source ${LOCAL_VENV_DIR}/bin/activate; \
-		pytest
-	)
+	. ${LOCAL_VENV_DIR}/bin/activate; pytest
 
 sdist:
-	@( \
-		source ${LOCAL_VENV_DIR}/bin/activate; \
-		${PYTHON} setup.py sdist
-	)
+	. ${LOCAL_VENV_DIR}/bin/activate; ${PYTHON} setup.py sdist
 
 upload:
 	twine upload dist/*
