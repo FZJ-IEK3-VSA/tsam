@@ -1,8 +1,8 @@
 import os
 import time
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
 
@@ -15,6 +15,9 @@ def test_durationRepresentation():
     )
 
     starttime = time.time()
+
+    # Silence warning on machines that cannot detect their physical cpu cores
+    os.environ["OMP_NUM_THREADS"] = "1"
 
     aggregation1 = tsam.TimeSeriesAggregation(
         raw,
@@ -112,13 +115,7 @@ def test_distributionMinMaxRepresentation():
         predictedPeriods.min(),
     )
 
-    assert np.isclose(
-        raw.mean(),
-        predictedPeriods.mean(),
-        atol=1e-4
-    ).all()
-
-
+    assert np.isclose(raw.mean(), predictedPeriods.mean(), atol=1e-4).all()
 
 
 def test_distributionRepresentation_keeps_mean():
@@ -138,18 +135,12 @@ def test_distributionRepresentation_keeps_mean():
         clusterMethod="hierarchical",
         representationMethod="distributionRepresentation",
         distributionPeriodWise=False,
-        rescaleClusterPeriods=False, # even without rescaling
+        rescaleClusterPeriods=False,  # even without rescaling
     )
 
     predictedPeriods = aggregation.predictOriginalData()
 
-    assert np.isclose(
-        raw.mean(),
-        predictedPeriods.mean(),
-        atol=1e-4
-    ).all()
-
-
+    assert np.isclose(raw.mean(), predictedPeriods.mean(), atol=1e-4).all()
 
 
 if __name__ == "__main__":
