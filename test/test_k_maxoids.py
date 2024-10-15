@@ -1,8 +1,8 @@
 import os
 import time
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
 
@@ -16,6 +16,8 @@ def test_k_maxoids():
 
     starttime = time.time()
 
+    # Silence warning on machines that cannot detect their physical cpu cores
+    os.environ["OMP_NUM_THREADS"] = "1"
     aggregation1 = tsam.TimeSeriesAggregation(
         raw,
         noTypicalPeriods=8,

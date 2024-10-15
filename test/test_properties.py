@@ -1,8 +1,8 @@
 import os
 import time
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
 
@@ -124,11 +124,26 @@ def test_properties():
 
     # make sure that the sum of all segment durations in each period equals the hours per period
     for i in range(noTypicalPeriods):
+        print(i)
+        print(pd.DataFrame.from_dict(aggregation6.segmentDurationDict).loc[(i,), :])
+        # print(
+        #     pd.DataFrame.from_dict(aggregation6.segmentDurationDict)
+        #     .iloc[
+        #         pd.DataFrame.from_dict(
+        #             aggregation6.segmentDurationDict
+        #         ).index.get_level_values(0)
+        #     ]
+        # )
+        print("\n")
         np.testing.assert_array_almost_equal(
-            pd.DataFrame.from_dict(aggregation6.segmentDurationDict).loc[i].sum()[0],
+            pd.DataFrame.from_dict(aggregation6.segmentDurationDict)
+            .loc[(i,), :]
+            .sum()
+            .iloc[0],
             hoursPerPeriod,
             decimal=4,
         )
+        print("")
 
     starttime = time.time()
 
@@ -146,7 +161,10 @@ def test_properties():
     # make sure that the sum of all segment durations in each period equals the hours per period
     for i in range(noTypicalPeriods):
         np.testing.assert_array_almost_equal(
-            pd.DataFrame.from_dict(aggregation7.segmentDurationDict).loc[i].sum()[0],
+            pd.DataFrame.from_dict(aggregation7.segmentDurationDict)
+            .loc[i]
+            .sum()
+            .iloc[0],
             hoursPerPeriod,
             decimal=4,
         )

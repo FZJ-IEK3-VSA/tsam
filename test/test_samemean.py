@@ -1,8 +1,8 @@
 import os
 import time
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
 
@@ -19,6 +19,8 @@ def test_samemean():
 
     starttime = time.time()
 
+    # Silence warning on machines that cannot detect their physical cpu cores
+    os.environ["OMP_NUM_THREADS"] = "1"
     aggregation = tsam.TimeSeriesAggregation(
         raw,
         noTypicalPeriods=8,
@@ -41,10 +43,6 @@ def test_samemean():
     np.testing.assert_array_almost_equal(
         raw.mean(), rearangedData[raw.columns].mean(), decimal=4
     )
-
-
-
-
 
 
 if __name__ == "__main__":

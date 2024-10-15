@@ -1,8 +1,7 @@
--r requirements.txt
-
 # Testing
 pytest
 pytest-cov
+codecov
 
 # Documentation
 sphinx
