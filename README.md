@@ -23,9 +23,13 @@ It is recommended to install tsam within its own environment. If you are no fami
 
 ### Direct Installations from Package Manager Repositories
 
-If you wanto to prevent any possibledependency conflicts create a new environment using the following command
+If you want to prevent any possible dependency conflicts create a new environment using the following command:
 
-	conda create -n tsam_env python
+	mamba create -n tsam_env python pip
+
+Activate an existing or the newly create environment afterward
+
+	mamba activate tsam_env
 
 Directly install via pip from pypi as follows:
 
