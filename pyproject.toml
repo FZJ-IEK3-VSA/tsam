@@ -16,7 +16,7 @@ maintainers = [
 ]
 license = { file = "LICENSE.txt" }
 keywords = ["clustering", "optimization"]
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.9,<3.14"
 readme = "README.md"
 classifiers=[
         "Development Status :: 4 - Beta",
