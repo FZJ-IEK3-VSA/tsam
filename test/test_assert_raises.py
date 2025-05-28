@@ -18,7 +18,7 @@ def test_assert_raises():
     # check error message for wrong time series
     np.testing.assert_raises_regex(
         ValueError,
-        "timeSeries has to be of type pandas.DataFrame\(\) or of type np.array\(\) in "
+        r"timeSeries has to be of type pandas.DataFrame\(\) or of type np.array\(\) in "
         "initialization of object of class TimeSeriesAggregation",
         tsam.TimeSeriesAggregation,
         timeSeries="erroneousTimeSeries",
@@ -126,8 +126,8 @@ def test_assert_raises():
     # check erroneous clusterMethod argument
     np.testing.assert_raises_regex(
         ValueError,
-        "clusterMethod needs to be one of the following: \['averaging', 'k_means', "
-        "'k_medoids', 'k_maxoids', 'hierarchical', 'adjacent_periods'\]",
+        r"clusterMethod needs to be one of the following: \['averaging', 'k_means', "
+        r"'k_medoids', 'k_maxoids', 'hierarchical', 'adjacent_periods'\]",
         tsam.TimeSeriesAggregation,
         timeSeries=raw,
         clusterMethod="erroneousClusterMethod",
@@ -144,8 +144,8 @@ def test_assert_raises():
     # check erroneous extremePeriodMethod argument
     np.testing.assert_raises_regex(
         ValueError,
-        "extremePeriodMethod needs to be one of the following: \['None', 'append', "
-        "'new_cluster_center', 'replace_cluster_center'\]",
+        r"extremePeriodMethod needs to be one of the following: \['None', 'append', "
+        r"'new_cluster_center', 'replace_cluster_center'\]",
         tsam.TimeSeriesAggregation,
         timeSeries=raw,
         extremePeriodMethod="erroneousExtremePeriodMethod",
