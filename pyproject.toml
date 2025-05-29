@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tsam"
-version = "2.3.6"
+version = "2.3.7"
 description = "Time series aggregation module (tsam) to create typical periods"
 authors = [
     { name = "Leander Kotzur", email = "leander.kotzur@googlemail.com" },
@@ -16,7 +16,7 @@ maintainers = [
 ]
 license = { file = "LICENSE.txt" }
 keywords = ["clustering", "optimization"]
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.9,<3.14"
 readme = "README.md"
 classifiers=[
         "Development Status :: 4 - Beta",
