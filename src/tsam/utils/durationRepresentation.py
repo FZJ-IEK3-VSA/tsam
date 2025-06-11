@@ -28,69 +28,80 @@ def durationRepresentation(
     :type representMinMax: bool
     """
 
-    # make pd.DataFrame each row represents a candidate, and the columns are defined by two levels: the attributes and
-    # the time steps inside the candidates.
-    columnTuples = []
-    for i in range(int(candidates.shape[1] / timeStepsPerPeriod)):
-        for j in range(timeStepsPerPeriod):
-            columnTuples.append((i, j))
-    candidates = pd.DataFrame(
-        candidates, columns=pd.MultiIndex.from_tuples(columnTuples)
+    # Convert candidates to numpy array at the beginning if it's a DataFrame
+    if isinstance(candidates, pd.DataFrame):
+        candidates_array = candidates.values
+    else:
+        candidates_array = candidates
+    
+    # Create a pandas DataFrame only when necessary
+    columnTuples = [(i, j) for i in range(int(candidates_array.shape[1] / timeStepsPerPeriod)) 
+                   for j in range(timeStepsPerPeriod)]
+    
+    candidates_df = pd.DataFrame(
+        candidates_array, columns=pd.MultiIndex.from_tuples(columnTuples)
     )
-
-    # There are two options for the duration representation. Either, the distribution of each cluster is preserved
-    # (periodWise = True) or the distribution of the total time series is preserved only. In the latter case, the
-    # inner-cluster variance is smaller and the variance across the typical periods' mean values is higher
+    
     if distributionPeriodWise:
         clusterCenters = []
-        for clusterNum in np.unique(clusterOrder):
-            indice = np.where(clusterOrder == clusterNum)
-            noCandidates = len(indice[0])
-            clean_index = []
-
-            clusterCenter = []
-            # get a clean index depending on the size
-            for y in candidates.columns.levels[1]:
-                for x in range(noCandidates):
-                    clean_index.append((x, y))
-            for a in candidates.columns.levels[0]:
-                # get all the values of a certain attribute and cluster
-                candidateValues = candidates.loc[indice[0], a]
-                # sort all values
-                sortedAttr = candidateValues.stack(
-                    future_stack=True,
-                ).sort_values()
-                # reindex and arrange such that every sorted segment gets represented by its mean
-                sortedAttr.index = pd.MultiIndex.from_tuples(clean_index)
-                representationValues = sortedAttr.unstack(level=0).mean(axis=1)
-                # respect max and min of the attributes
+        unique_clusters = np.unique(clusterOrder)
+        
+        for clusterNum in unique_clusters:
+            indice = np.where(clusterOrder == clusterNum)[0]
+            noCandidates = len(indice)
+            
+            # Pre-allocate the full cluster center array
+            cluster_values_count = noCandidates * timeStepsPerPeriod * len(candidates_df.columns.levels[0])
+            clusterCenter = np.zeros(cluster_values_count)
+            current_idx = 0
+            
+            for a in candidates_df.columns.levels[0]:
+                # Get values using numpy indexing when possible
+                candidateValues = candidates_df.loc[indice, a].values
+                
+                # Reshape to more easily work with numpy
+                candidateValues_reshaped = candidateValues.reshape(-1)
+                
+                # Sort values using numpy
+                sorted_values = np.sort(candidateValues_reshaped)
+                
+                # Calculate representative values directly
+                values_per_timestep = noCandidates
+                representation_values = np.zeros(timeStepsPerPeriod)
+                
+                for t in range(timeStepsPerPeriod):
+                    start_idx = t * values_per_timestep
+                    end_idx = start_idx + values_per_timestep
+                    representation_values[t] = np.mean(sorted_values[start_idx:end_idx])
+                
+                # Handle min/max representation if needed
                 if representMinMax:
-                    representationValues.loc[0] = sortedAttr.values[0]
-                    representationValues.loc[representationValues.index[-1]] = (
-                        sortedAttr.values[-1]
-                    )
-
-                # get the order of the representation values such that euclidean distance to the candidates is minimized
-                order = candidateValues.mean().sort_values().index
-                # arrange
-                representationValues.index = order
-                representationValues.sort_index(inplace=True)
-
-                # add to cluster center
-                clusterCenter = np.append(clusterCenter, representationValues.values)
-
-            clusterCenters.append(clusterCenter)
-
+                    representation_values[0] = sorted_values[0]
+                    representation_values[-1] = sorted_values[-1]
+                
+                # Re-order values based on the mean of candidate values
+                mean_values = np.mean(candidateValues, axis=0)
+                order_indices = np.argsort(mean_values)
+                
+                # Reorder representation values
+                representation_values_ordered = representation_values[order_indices]
+                
+                # Add to cluster center
+                clusterCenter[current_idx:current_idx+len(representation_values)] = representation_values_ordered
+                current_idx += len(representation_values)
+                
+            clusterCenters.append(clusterCenter[:current_idx])  # Trim if we didn't use the whole pre-allocation
+    
     else:
         clusterCentersList = []
-        for a in candidates.columns.levels[0]:
+        for a in candidates_df.columns.levels[0]:
             meanVals = []
             clusterLengths = []
             for clusterNum in np.unique(clusterOrder):
                 indice = np.where(clusterOrder == clusterNum)
                 noCandidates = len(indice[0])
                 # get all the values of a certain attribute and cluster
-                candidateValues = candidates.loc[indice[0], a]
+                candidateValues = candidates_df.loc[indice[0], a]
                 # calculate centroid of each cluster and append to list
                 meanVals.append(candidateValues.mean())
                 # make a list of weights of each cluster for each time step within the period
@@ -113,7 +124,7 @@ def durationRepresentation(
             order = meansAndWeightsSorted.index
             # sort all values of the original time series
             sortedAttr = (
-                candidates.loc[:, a]
+                candidates_df.loc[:, a]
                 .stack(
                     future_stack=True,
                 )

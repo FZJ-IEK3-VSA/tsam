@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest","ubuntu-22.04", "macos-latest","macos-13", "windows-latest","windows-2019"]
+        os: ["ubuntu-latest","ubuntu-22.04", "macos-latest","macos-13", "windows-latest","windows-2022"]
         python-version: [ "3.9", "3.10", "3.11", "3.12", "3.13"]
         
     steps:
@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest","ubuntu-22.04", "macos-latest","macos-13", "windows-latest","windows-2019"]
+        os: ["ubuntu-latest","ubuntu-22.04", "macos-latest","macos-13", "windows-latest","windows-2022"]
         python-numpy-version: [ {python : 3.9,numpy : 1.25}, {python : 3.9,numpy : 1.26},{python : 3.9,numpy : 2.0}]        
     steps:
     - uses: actions/checkout@v2
