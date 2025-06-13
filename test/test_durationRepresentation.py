@@ -115,12 +115,14 @@ def test_durationRepresentation_hierarchical():
         os.path.join(test_data_path, "testData_durationRepresentation_hierarchical.csv"),
         index_col=0,
     ) # test data based on results from v2.3.7
-    np.testing.assert_allclose(
-        predictedPeriods1.values,
-        testDataPredictedPeriods1.values,
-        rtol=1e-5,
-        atol=1e-5,
-    )
+    for col in predictedPeriods1.columns:
+        np.testing.assert_allclose(
+            predictedPeriods1[col].values,
+            testDataPredictedPeriods1[col].values,
+            rtol=1e-5,
+            atol=1e-5,
+        )
+
     
 
 def test_distributionMinMaxRepresentation():
