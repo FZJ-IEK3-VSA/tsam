@@ -82,6 +82,45 @@ def test_durationRepresentation():
     )
 
 
+def test_durationRepresentation_hierarchical():
+
+    raw = pd.read_csv(
+        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
+        index_col=0,
+    )
+    test_data_path = os.path.join(
+        os.path.dirname(__file__), "data"
+    )
+    
+    starttime = time.time()
+
+    # Silence warning on machines that cannot detect their physical cpu cores
+    os.environ["OMP_NUM_THREADS"] = "1"
+
+    aggregation1 = tsam.TimeSeriesAggregation(
+        raw,
+        noTypicalPeriods=8,
+        hoursPerPeriod=24,
+        sortValues=False,
+        clusterMethod="hierarchical",
+        representationMethod="durationRepresentation",
+        rescaleClusterPeriods=False,
+    )
+
+    predictedPeriods1 = aggregation1.predictOriginalData()
+    print("Clustering took " + str(time.time() - starttime))
+   
+    # compare against predicted test data
+    testDataPredictedPeriods1 = pd.read_csv(
+        os.path.join(test_data_path, "testData_durationRepresentation_hierarchical.csv"),
+        index_col=0,
+    ) # test data based on results from v2.3.7
+    np.testing.assert_allclose(
+        predictedPeriods1.values,
+        testDataPredictedPeriods1.values,
+    )
+    
+
 def test_distributionMinMaxRepresentation():
 
     raw = pd.read_csv(
