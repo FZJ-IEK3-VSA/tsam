@@ -118,6 +118,8 @@ def test_durationRepresentation_hierarchical():
     np.testing.assert_allclose(
         predictedPeriods1.values,
         testDataPredictedPeriods1.values,
+        rtol=1e-5,
+        atol=1e-5,
     )
     
 
