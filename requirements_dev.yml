@@ -13,6 +13,7 @@ dependencies:
   - highspy
   - pytest
   - pytest-cov
+  - pytest-xdist
   - codecov
   - sphinx
   - sphinx-autobuild
