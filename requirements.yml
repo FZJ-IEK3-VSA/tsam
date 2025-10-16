@@ -11,10 +11,13 @@ dependencies:
   - networkx
   - tqdm
   - highspy
+  - matplotlib-base
   # - pytest
   # - pytest-cov
+  # - pytest-xdist
   # - codecov
   # - sphinx
   # - sphinx-autobuild
-  # - sphinx_book_theme
+  # - sphinx-book-theme
   # - twine
+  # - nbval

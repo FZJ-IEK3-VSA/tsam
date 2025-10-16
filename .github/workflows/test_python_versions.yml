@@ -1,7 +1,7 @@
 on:
     workflow_dispatch:
     pull_request:
-        branches: ["develop"]
+        branches: ["master"]
 
 jobs:
     TestPushCondaForgeDev:
@@ -18,6 +18,7 @@ jobs:
                         "windows-latest",
                         "windows-2022",
                     ]
+                python_version: ["3.10", "3.11", "3.12", "3.13"]
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
         with:
             runner_tag: ${{ matrix.runner_tag }}
