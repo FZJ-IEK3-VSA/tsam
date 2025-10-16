@@ -28,7 +28,6 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Mathematics",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dynamic = ["dependencies", "optional-dependencies"]
 dependencies = [
   "scikit-learn>=0.0",
   "pandas>=2.0.3",

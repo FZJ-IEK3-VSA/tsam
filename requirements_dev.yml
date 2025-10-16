@@ -16,6 +16,6 @@ dependencies:
   - codecov
   - sphinx
   - sphinx-autobuild
-  - sphinx_book_theme
+  - sphinx-book-theme
   - twine
   - nbval
