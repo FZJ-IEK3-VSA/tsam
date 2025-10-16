@@ -19,28 +19,50 @@ The documentation of the tsam code can be found [**here**](https://tsam.readthed
 
 
 ## Installation
+It is recommended to install tsam within its own environment. If you are no familiar with python environments, plaese consider to read some [external documentation](https://realpython.com/python-virtual-environments-a-primer/). In the following we assume you have a [mamba](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html) or [conda](https://www.anaconda.com/) installation.  All conda and mamba command are interchangeable.
+
+### Direct Installations from Package Manager Repositories
+
+If you want to prevent any possible dependency conflicts create a new environment using the following command:
+
+	mamba create -n tsam_env python pip
+
+Activate an existing or the newly create environment afterward
+
+	mamba activate tsam_env
+
 Directly install via pip from pypi as follows:
 
 	pip install tsam
 
-of install from conda forge with the following command:
+or install from conda forge with the following command:
 
 	conda install tsam -c conda-forge
 
+### Local Installation for Development
 Alternatively, clone a local copy of the repository to your computer
 
 	git clone https://github.com/FZJ-IEK3-VSA/tsam.git
-	
-Then install tsam via pip as follow
-	
-	cd tsam
-	pip install . 
-	
-Or install directly via python as 
 
-	python setup.py install
+Change the directory of your shell into the root folder of the repository
+
+	cd tsam
+
+For development, it is recommended to install tsam into its own environment using conda e.g.
+
+	conda env create --file=requirement.yml
+
+Afterward activate the environment
+
+	conda activate tsam_env
+
+Then install tsam via pip as follows
 	
-In order to use the k-medoids clustering, make sure that you have installed a MILP solver. As default [HiGHS](https://github.com/ERGO-Code/HiGHS) is used. Nevertheless, in case you have access to a license we recommend commercial solvers (e.g. Gurobi or CPLEX) since they have a better performance.
+	
+	pip install -e .[dev]
+	
+### Installation of MILP Solver for k-medoids	
+In order to use the k-medoids clustering, make sure that you have installed a MILP solver. As default [HiGHS](https://github.com/ERGO-Code/HiGHS) is installed and used. Nevertheless, in case you have access to a license we recommend commercial solvers (e.g. Gurobi or CPLEX) since they have a better performance.
 
 ### Developer installation
 

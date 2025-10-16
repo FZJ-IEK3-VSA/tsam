@@ -31,10 +31,11 @@ def durationRepresentation(
     # make pd.DataFrame each row represents a candidate, and the columns are defined by two levels: the attributes and
     # the time steps inside the candidates.
     columnTuples = []
-    for i in range(int(candidates.shape[1] / timeStepsPerPeriod)):
+    num_attributes = int(candidates.shape[1] / timeStepsPerPeriod)
+    for i in range(num_attributes):
         for j in range(timeStepsPerPeriod):
             columnTuples.append((i, j))
-    candidates = pd.DataFrame(
+    candidates_df = pd.DataFrame(
         candidates, columns=pd.MultiIndex.from_tuples(columnTuples)
     )
 
@@ -43,53 +44,56 @@ def durationRepresentation(
     # inner-cluster variance is smaller and the variance across the typical periods' mean values is higher
     if distributionPeriodWise:
         clusterCenters = []
-        for clusterNum in np.unique(clusterOrder):
-            indice = np.where(clusterOrder == clusterNum)
-            noCandidates = len(indice[0])
-            clean_index = []
 
-            clusterCenter = []
-            # get a clean index depending on the size
-            for y in candidates.columns.levels[1]:
-                for x in range(noCandidates):
-                    clean_index.append((x, y))
-            for a in candidates.columns.levels[0]:
-                # get all the values of a certain attribute and cluster
-                candidateValues = candidates.loc[indice[0], a]
-                # sort all values
-                sortedAttr = candidateValues.stack(future_stack=True,).sort_values()
-                # reindex and arrange such that every sorted segment gets represented by its mean
-                sortedAttr.index = pd.MultiIndex.from_tuples(clean_index)
-                representationValues = sortedAttr.unstack(level=0).mean(axis=1)
+        for clusterNum in np.unique(clusterOrder):
+            indice = np.where(clusterOrder == clusterNum)[0]
+            noCandidates = len(indice)
+
+            # Skip empty clusters
+            if len(indice) == 0:
+                continue     
+            
+            # This list will hold the representative values for each attribute
+            clusterCenter_parts = [] 
+
+            for a in candidates_df.columns.levels[0]:
+
+                candidateValues_np = candidates_df.loc[indice, a].values
+
+                # flatten the 2D array (candidates, timesteps) into a 1D array and sort it.
+                sorted_flat_values = np.sort(candidateValues_np.flatten())
+
+                # reshape the sorted values and calculate the mean for each representative time step.
+                representationValues_np = sorted_flat_values.reshape(timeStepsPerPeriod, noCandidates).mean(axis=1)
+
                 # respect max and min of the attributes
                 if representMinMax:
-                    representationValues.loc[0] = sortedAttr.values[0]
-                    representationValues.loc[
-                        representationValues.index[-1]
-                    ] = sortedAttr.values[-1]
+                    representationValues_np[0] = sorted_flat_values[0]
+                    representationValues_np[-1] = sorted_flat_values[-1]
 
-
-                # get the order of the representation values such that euclidean distance to the candidates is minimized
-                order = candidateValues.mean().sort_values().index
-                # arrange
-                representationValues.index = order
-                representationValues.sort_index(inplace=True)
-
+                # get the order of the representation values such that euclidean distance
+                # to the candidates' mean profile is minimized.
+                mean_profile_order = np.argsort(candidateValues_np.mean(axis=0))
+                
+                # Create an empty array to place the results in the correct order
+                final_representation_for_attr = np.empty_like(representationValues_np)
+                final_representation_for_attr[mean_profile_order] = representationValues_np
+                
                 # add to cluster center
-                clusterCenter = np.append(clusterCenter, representationValues.values)
+                clusterCenter_parts.append(final_representation_for_attr)
 
-            clusterCenters.append(clusterCenter)
-
+            clusterCenters.append(np.concatenate(clusterCenter_parts))
+    
     else:
         clusterCentersList = []
-        for a in candidates.columns.levels[0]:
+        for a in candidates_df.columns.levels[0]:
             meanVals = []
             clusterLengths = []
             for clusterNum in np.unique(clusterOrder):
                 indice = np.where(clusterOrder == clusterNum)
                 noCandidates = len(indice[0])
                 # get all the values of a certain attribute and cluster
-                candidateValues = candidates.loc[indice[0], a]
+                candidateValues = candidates_df.loc[indice[0], a]
                 # calculate centroid of each cluster and append to list
                 meanVals.append(candidateValues.mean())
                 # make a list of weights of each cluster for each time step within the period
@@ -97,8 +101,12 @@ def durationRepresentation(
             # concat centroid values and cluster weights for all clusters
             meansAndWeights = pd.concat(
                 [
-                    pd.DataFrame(np.array(meanVals)).stack(future_stack=True,),
-                    pd.DataFrame(np.array(clusterLengths)).stack(future_stack=True,),
+                    pd.DataFrame(np.array(meanVals)).stack(
+                        future_stack=True,
+                    ),
+                    pd.DataFrame(np.array(clusterLengths)).stack(
+                        future_stack=True,
+                    ),
                 ],
                 axis=1,
             )
@@ -107,7 +115,14 @@ def durationRepresentation(
             # save order of the sorted centroid values across all clusters
             order = meansAndWeightsSorted.index
             # sort all values of the original time series
-            sortedAttr = candidates.loc[:, a].stack(future_stack=True,).sort_values().values
+            sortedAttr = (
+                candidates_df.loc[:, a]
+                .stack(
+                    future_stack=True,
+                )
+                .sort_values()
+                .values
+            )
             # take mean of sections of the original duration curve according to the cluster and its weight the
             # respective section is assigned to
             representationValues = []
@@ -124,8 +139,7 @@ def durationRepresentation(
                     keepSum=True,
                 )
 
-
-            # transform all representation values to a data frame and arrange it 
+            # transform all representation values to a data frame and arrange it
             # according to the order of the sorted
             # centroid values
             representationValues = pd.DataFrame(np.array(representationValues))
@@ -139,9 +153,9 @@ def durationRepresentation(
     return clusterCenters
 
 
-
-def _representMinMax(representationValues, sortedAttr, meansAndWeightsSorted, 
-                     keepSum=True):
+def _representMinMax(
+    representationValues, sortedAttr, meansAndWeightsSorted, keepSum=True
+):
     """
     Represents the the min and max values of the original time series in the
     duration curve representation such that the min and max values of the
@@ -164,8 +178,8 @@ def _representMinMax(representationValues, sortedAttr, meansAndWeightsSorted,
     if np.any(np.array(representationValues) < 0):
         raise ValueError("Negative values in the duration curve representation")
 
-    # first retrieve the change of the values to the min and max values 
-    # of the original time series and their duration in the original 
+    # first retrieve the change of the values to the min and max values
+    # of the original time series and their duration in the original
     # time series
     delta_max = sortedAttr.max() - representationValues[-1]
     appearance_max = meansAndWeightsSorted[1].iloc[-1]
@@ -174,31 +188,36 @@ def _representMinMax(representationValues, sortedAttr, meansAndWeightsSorted,
 
     if delta_min == 0 and delta_max == 0:
         return representationValues
-    
+
     if keepSum:
 
-        # now anticipate the shift of the sum of the time series 
+        # now anticipate the shift of the sum of the time series
         # due to the change of the min and max values
         # of the duration curve
         delta_sum = delta_max * appearance_max + delta_min * appearance_min
-        # and derive how much the other values have to be changed to preserve 
+        # and derive how much the other values have to be changed to preserve
         # the mean of the duration curve
-        correction_factor = - delta_sum / (meansAndWeightsSorted[1].iloc[1:-1] 
-                                            * representationValues[1:-1]).sum()
-        
+        correction_factor = (
+            -delta_sum
+            / (meansAndWeightsSorted[1].iloc[1:-1] * representationValues[1:-1]).sum()
+        )
+
         if correction_factor < -1 or correction_factor > 1:
-            warnings.warn("The cluster is to small to preserve the sum of the duration curve and additionally the min and max values of the original cluster members. The min max values of the cluster are not preserved. This does not necessarily mean that the min and max values of the original time series are not preserved.")
+            warnings.warn(
+                "The cluster is too small to preserve the sum of the duration curve and additionally the min and max values of the original cluster members. The min max values of the cluster are not preserved. This does not necessarily mean that the min and max values of the original time series are not preserved."
+            )
             return representationValues
 
-        # correct the values of the duration curve such 
+        # correct the values of the duration curve such
         # that the mean of the duration curve is preserved
         # since the min and max values are changed
-        representationValues[1:-1] = np.multiply(representationValues[1:-1], (
-            1+ correction_factor))
-        
-    # change the values of the duration curve such that the min and max 
+        representationValues[1:-1] = np.multiply(
+            representationValues[1:-1], (1 + correction_factor)
+        )
+
+    # change the values of the duration curve such that the min and max
     # values are preserved
     representationValues[-1] += delta_max
     representationValues[0] += delta_min
-    
+
     return representationValues

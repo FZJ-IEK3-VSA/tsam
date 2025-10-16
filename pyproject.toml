@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=64.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "tsam"
+version = "2.3.9"
+description = "Time series aggregation module (tsam) to create typical periods"
+authors = [
+    { name = "Leander Kotzur", email = "leander.kotzur@googlemail.com" },
+    { name = "Maximilian Hoffmann", email = "maximilian.hoffmann@julumni.fz-juelich.de" },
+]
+maintainers = [
+  {name = "Julian Belina", email = "j.belina@fz-juelich.de"}
+]
+license = { file = "LICENSE.txt" }
+keywords = ["clustering", "optimization"]
+requires-python = ">=3.9,<3.14"
+readme = "README.md"
+classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: End Users/Desktop",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: MIT License",
+        "Natural Language :: English",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 3",
+        "Topic :: Scientific/Engineering :: Mathematics",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+    ]
+dynamic = ["dependencies", "optional-dependencies"]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+optional-dependencies = {dev = { file = ["requirements_dev.txt"] }}
+
+
+#Configureation options
+# https://docs.pytest.org/en/7.1.x/reference/reference.html#configuration-options
+
+[tool.pytest.ini_options]
+testpaths = ["test"] # Sets the path where to look for tests
+pythonpath =["test"] # Sets the path which should be prepended to pythonpath relative to the root folder
+console_output_style = "count"
+
+

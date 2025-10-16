@@ -199,6 +199,9 @@ class TimeSeriesAggregation(object):
             differently evaluated while the clustering process. optional (default: None )
         :type weightDict: dict
 
+        :param segmentation: Boolean if time steps in periods should be aggregated to segments. optional (default: False)
+        :type segmentation: boolean
+
         :param extremePeriodMethod: Method how to integrate extreme Periods (peak demand, lowest temperature etc.)
             into to the typical period profiles. optional, default: 'None'
             |br| Options are:

@@ -1,9 +1,9 @@
+import copy
 import os
 import time
 
-import pandas as pd
 import numpy as np
-import copy
+import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
 
@@ -19,7 +19,7 @@ def test_subhourlyResolution():
 
     # reset index of new dataframe to 15 min. intervals
     rawSubhourlyInndex.index = pd.date_range(
-        "2050-01-01 00:30:00", periods=8760, freq=(str(0.25) + "H"), tz="Europe/Berlin"
+        "2050-01-01 00:30:00", periods=8760, freq=(str(0.25) + "h"), tz="Europe/Berlin"
     )
 
     starttime = time.time()
