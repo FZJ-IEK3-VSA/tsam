@@ -11,7 +11,7 @@ dependencies:
   - networkx
   - tqdm
   - highspy
-  - matplotlib-base
+  - matplotlib
   # - pytest
   # - pytest-cov
   # - pytest-xdist
