@@ -7,6 +7,7 @@ trash/
 *ipynb_checkpoints/
 *.eggs/
 docs/build
+build
 
 # file types to ignore
 *.pyc
