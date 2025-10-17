@@ -22,7 +22,8 @@ jobs:
         with:
             runner_tag: ${{ matrix.runner_tag }}
             requirements_file_name: requirements_dev.yml
-            # ipynb_example_folder: "examples"
+            examples_to_execute: "examples\\aggregation_example.ipynb examples\\aggregation_method_showcase.ipynb examples\\aggregation_optiinput.ipynb examples\\aggregation_representation.ipynb examples\\aggregation_segmentation.ipynb examples\\example_k_maxoids.ipynb examples\\predefined_sequence_example.ipynb"
+            multiprocessing_example_string: "-n auto"
 
     TestPushPyPIDev:
         name: Test PyPi development version on ${{ matrix.runner_tag }}
@@ -41,6 +42,7 @@ jobs:
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_pypi_test.yml@main
         with:
             runner_tag: ${{ matrix.runner_tag }}
-            # ipynb_example_folder: "examples"
             python_version: "3.13"
             optional_dependency_PyPI_tag: "[develop]"
+            examples_to_execute: "examples\\aggregation_example.ipynb examples\\aggregation_method_showcase.ipynb examples\\aggregation_optiinput.ipynb examples\\aggregation_representation.ipynb examples\\aggregation_segmentation.ipynb examples\\example_k_maxoids.ipynb examples\\predefined_sequence_example.ipynb"
+            multiprocessing_example_string: "-n auto"
