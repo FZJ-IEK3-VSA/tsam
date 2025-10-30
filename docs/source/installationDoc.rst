@@ -4,7 +4,7 @@
 Installation
 ###############
 
-It is recommended to install tsam within its own environment. If you are no familiar with python environments, plaese consider to read some `external documentation <https://realpython.com/python-virtual-environments-a-primer/>`. In the following we assume you have a `mamba <https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html>`` or `conda <https://www.anaconda.com/>`` installation.  All conda and mamba command are interchangeable.
+It is recommended to install tsam within its own environment. If you are no familiar with python environments, plaese consider to read some `external documentation <https://realpython.com/python-virtual-environments-a-primer/>`_. In the following we assume you have a `mamba <https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html>`_ or `conda <https://www.anaconda.com/>`_ installation.  All conda and mamba command are interchangeable.
 
 **Direct Installations from Package Manager Repositories**
 
@@ -66,7 +66,7 @@ Then install tsam via pip as follows
 
 **Installation of an optimization solver**
 
-Some clustering algorithms implemented in tsam are based on Mixed-Integer Linear Programming. Accordingy, an appropriate solver for using these functionalities is required that can be accessed by `Pyomo <https://github.com/Pyomo/pyomo/>`_. As default `HiGHS <https://github.com/ERGO-Code/HiGHS>`` is installed and used. Nevertheless, in case you have access to a license we recommend commercial solvers (e.g. Gurobi or CPLEX) since they have a better performance.
+Some clustering algorithms implemented in tsam are based on Mixed-Integer Linear Programming. Accordingy, an appropriate solver for using these functionalities is required that can be accessed by `Pyomo <https://github.com/Pyomo/pyomo/>`_. As default `HiGHS <https://github.com/ERGO-Code/HiGHS>`_ is installed and used. Nevertheless, in case you have access to a license we recommend commercial solvers (e.g. Gurobi or CPLEX) since they have a better performance.
 
 **Developer installation**
 
