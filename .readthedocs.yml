@@ -9,6 +9,9 @@ build:
   - texlive-latex-extra
   - dvipng
 
+sphinx:
+  configuration: docs/source/conf.py
+
 python:
   install:
   - requirements: requirements.txt
