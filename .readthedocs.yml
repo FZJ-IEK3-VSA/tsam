@@ -1,16 +1,18 @@
+# Required
 version: 2
 
+# Build environment
 build:
   os: ubuntu-22.04
   tools:
-    python: "3.11"
+    python: "mambaforge-22.9"
+  apt_packages:
+    - graphviz
 
+# Use conda environment
+conda:
+  environment: requirements_dev.yml
+
+# Build documentation with Sphinx
 sphinx:
-  configuration: docs/source/conf.py   # adjust if needed
-
-python:
-  install:
-    - method: pip
-      path: .
-    - requirements: requirements.txt
-    - requirements: requirements_dev.txt
+  configuration: docs/source/conf.py
