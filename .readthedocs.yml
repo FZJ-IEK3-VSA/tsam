@@ -1,19 +1,18 @@
+# Required
 version: 2
 
+# Build environment
 build:
   os: ubuntu-22.04
   tools:
-    python: "3.11"
+    python: "mambaforge-22.9"
   apt_packages:
-  - texlive-latex-base
-  - texlive-latex-extra
-  - dvipng
+    - graphviz
 
+# Use conda environment
+conda:
+  environment: requirements_dev.yml
+
+# Build documentation with Sphinx
 sphinx:
   configuration: docs/source/conf.py
-
-python:
-  install:
-  - requirements: requirements.txt
-  - requirements: requirements_dev.txt
-  system_packages: false
