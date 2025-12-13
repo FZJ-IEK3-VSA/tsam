@@ -3,9 +3,9 @@ from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array
 
-# switch to numpy 2.0
-np.float_ = np.float64
-np.complex_ = np.complex128
+# switch to numpy 2.0 (restore deprecated aliases for backward compatibility)
+np.float_ = np.float64  # type: ignore[attr-defined]
+np.complex_ = np.complex128  # type: ignore[attr-defined]
 
 import pyomo.environ as pyomo
 import pyomo.opt as opt

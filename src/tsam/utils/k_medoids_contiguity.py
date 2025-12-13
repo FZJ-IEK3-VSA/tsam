@@ -2,9 +2,9 @@ import time
 
 import numpy as np
 
-# switch to numpy 2.0
-np.float_ = np.float64
-np.complex_ = np.complex128
+# switch to numpy 2.0 (restore deprecated aliases for backward compatibility)
+np.float_ = np.float64  # type: ignore[attr-defined]
+np.complex_ = np.complex128  # type: ignore[attr-defined]
 
 import networkx as nx
 import pyomo.environ as pyomo
@@ -28,7 +28,9 @@ def k_medoids_contiguity(
     G = _contiguity_to_graph(adjacency, distances=distances)
 
     # check if inputs are correct
-    assert np.size(distances) == np.size(adjacency), "distances and adjacency must have the same size"
+    assert np.size(distances) == np.size(
+        adjacency
+    ), "distances and adjacency must have the same size"
 
     # and test for connectivity
     if not nx.is_connected(G):

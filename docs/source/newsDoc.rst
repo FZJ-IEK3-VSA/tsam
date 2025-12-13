@@ -41,7 +41,7 @@ Release version 1.1.1
 
 tsam release (1.1.1) includes the following new functionalities:
 
-* Significantly increased test coverage 
+* Significantly increased test coverage
 * Separation between clustering and representation, i.e. for clustering algorithms like Ward’s hierarchical clustering algorithm the representation by medoids or centroids can now freely be chosen.
 
 *********************

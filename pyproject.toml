@@ -108,14 +108,14 @@ ignore = [
   "SIM201", # use != instead of not == (sometimes clearer)
   "RUF012", # mutable class attributes - these are constants in this codebase
   "RUF002", # ambiguous unicode characters in docstrings
-  "RUF059", # unpacked variable never used (common in scientific code)
+  "UP038",  # use X | Y in isinstance (performance regression, see ruff issue)
 ]
 
 [tool.ruff.lint.isort]
 known-first-party = ["tsam"]
 
 [tool.ruff.lint.per-file-ignores]
-"test/*" = ["B", "SIM", "F841", "RUF059", "E402", "C416"]  # Relax rules for tests
+"test/*" = ["B", "SIM", "F841", "E402", "C416"]  # Relax rules for tests
 
 [tool.mypy]
 python_version = "3.10"

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # tsam documentation build configuration file, created by
 # sphinx-quickstart on Sat Nov 10 21:04:19 2018.
@@ -47,13 +46,20 @@ extensions = [
     "sphinx.ext.githubpages",
 ]
 
-inheritance_graph_attrs = dict(
-    rankdir="LR", size='"26.0, 8.0"', fontsize=14, ratio="compress"
-)
+inheritance_graph_attrs = {
+    "rankdir": "LR",
+    "size": '"26.0, 8.0"',
+    "fontsize": 14,
+    "ratio": "compress",
+}
 
-inheritance_node_attrs = dict(
-    shape="ellipse", fontsize=14, height=0.75, color="lightgray", style="filled"
-)
+inheritance_node_attrs = {
+    "shape": "ellipse",
+    "fontsize": 14,
+    "height": 0.75,
+    "color": "lightgray",
+    "style": "filled",
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
