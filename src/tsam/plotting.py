@@ -73,6 +73,96 @@ def plot_heatmap(
     return fig
 
 
+def plot_heatmaps(
+    data: pd.DataFrame,
+    columns: list[str] | None = None,
+    period_hours: int = 24,
+    title: str | None = None,
+    color_continuous_scale: str = "Viridis",
+    reference_data: pd.DataFrame | None = None,
+) -> go.Figure:
+    """Create stacked heatmaps for multiple columns.
+
+    Creates a subplot with one heatmap per column, all sharing the same
+    x-axis (days). Useful for visualizing how multiple time series are
+    represented across periods.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Time series data to plot.
+    columns : list[str], optional
+        Columns to plot. If None, plots all columns.
+    period_hours : int, default 24
+        Number of hours per period.
+    title : str, optional
+        Overall figure title.
+    color_continuous_scale : str, default "Viridis"
+        Plotly color scale name.
+    reference_data : pd.DataFrame, optional
+        Reference data for consistent color scaling (e.g., original data
+        when plotting reconstructed data). Uses min/max from reference
+        for color scale bounds.
+
+    Returns
+    -------
+    go.Figure
+        Plotly figure with stacked heatmaps.
+
+    Examples
+    --------
+    >>> import tsam
+    >>> result = tsam.aggregate(df, n_periods=8)
+    >>> # Plot all columns from reconstructed data, scaled to original
+    >>> tsam.plot_heatmaps(result.reconstruct(), reference_data=df)
+    """
+    from plotly.subplots import make_subplots
+
+    from tsam.timeseriesaggregation import unstackToPeriods
+
+    if columns is None:
+        columns = list(data.columns)
+
+    n_cols = len(columns)
+    ref = reference_data if reference_data is not None else data
+
+    fig = make_subplots(
+        rows=n_cols,
+        cols=1,
+        subplot_titles=columns,
+        shared_xaxes=True,
+        vertical_spacing=0.05,
+    )
+
+    for i, col in enumerate(columns, 1):
+        stacked, _ = unstackToPeriods(data[[col]].copy(), period_hours)
+
+        fig.add_trace(
+            go.Heatmap(
+                z=stacked[col].values.T,
+                colorscale=color_continuous_scale,
+                zmin=ref[col].min(),
+                zmax=ref[col].max(),
+                colorbar={
+                    "title": col,
+                    "y": 1 - (i - 0.5) / n_cols,
+                    "len": 0.9 / n_cols,
+                },
+            ),
+            row=i,
+            col=1,
+        )
+        fig.update_yaxes(title_text="Hour", row=i, col=1)
+
+    fig.update_xaxes(title_text="Day", row=n_cols, col=1)
+    fig.update_layout(
+        height=200 * n_cols,
+        title=title or "Time Series Heatmaps",
+    )
+
+    return fig
+
+
 def plot_duration_curve(
     data: pd.DataFrame,
     columns: list[str] | None = None,

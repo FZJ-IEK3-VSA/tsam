@@ -46,6 +46,7 @@ from tsam.plotting import (
     compare_time_slices,
     plot_duration_curve,
     plot_heatmap,
+    plot_heatmaps,
     plot_time_slice,
 )
 from tsam.result import AccuracyMetrics, AggregationResult
@@ -68,6 +69,7 @@ __all__ = [
     "compare_time_slices",
     "plot_duration_curve",
     "plot_heatmap",
+    "plot_heatmaps",
     "plot_time_slice",
     "unstackToPeriods",
 ]
