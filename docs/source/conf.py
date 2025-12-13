@@ -42,7 +42,11 @@ extensions = [
     "sphinx.ext.imgmath",
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
+    "nbsphinx",
 ]
+
+# nbsphinx configuration - execute notebooks during build
+nbsphinx_execute = "always"
 
 inheritance_graph_attrs = {
     "rankdir": "LR",
