@@ -24,28 +24,29 @@ To avoid dependency conflicts, it is recommended that you install Tsam in its ow
 
 **Quick Install with uv**
 
-The fastest way to install tsam is using [uv](https://docs.astral.sh/uv/):
-
 ```bash
 uv venv tsam_env
 uv pip install tsam
 ```
 
-** Install from conda forge into a new environment**
+Or using pip:
+
+```bash
+pip install tsam
+```
+
 Or from conda-forge:
 
 ```bash
 conda create -n tsam_env -c conda-forge tsam
 ```
 
-conda and mamba can be used interchangeably
-
 ### Development Installation
 
 ```bash
 git clone https://github.com/FZJ-IEK3-VSA/tsam.git
 cd tsam
-```
+````
 
 # Using uv (recommended)
 ```bash
@@ -69,7 +70,7 @@ pre-commit install
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 
-###  MILP Solver for k-medoids
+### MILP Solver for k-medoids
 
 [HiGHS](https://github.com/ERGO-Code/HiGHS) is installed by default. For better performance on large problems, commercial solvers (Gurobi, CPLEX) are recommended if you have a license
 
