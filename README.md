@@ -19,56 +19,47 @@ The documentation of the tsam code can be found [**here**](https://tsam.readthed
 
 
 ## Installation
-It is recommended to install tsam within its own environment. If you are no familiar with python environments, plaese consider to read some [external documentation](https://realpython.com/python-virtual-environments-a-primer/). In the following we assume you have a [mamba](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html) or [conda](https://www.anaconda.com/) installation.  All conda and mamba command are interchangeable.
 
-### Direct Installations from Package Manager Repositories
+**Quick Install**
 
-If you want to prevent any possible dependency conflicts create a new environment using the following command:
+The fastest way to install tsam is using [uv](https://docs.astral.sh/uv/):
 
-	mamba create -n tsam_env python pip
+```bash
+uv pip install tsam
+```
 
-Activate an existing or the newly create environment afterward
+Or using pip:
 
-	mamba activate tsam_env
+```bash
+pip install tsam
+```
 
-Directly install via pip from pypi as follows:
+Or from conda-forge:
 
-	pip install tsam
+```bash
+conda install tsam -c conda-forge
+```
 
-or install from conda forge with the following command:
+### Development Installation
 
-	conda install tsam -c conda-forge
+```bash
+git clone https://github.com/FZJ-IEK3-VSA/tsam.git
+cd tsam
 
-### Local Installation for Development
-Alternatively, clone a local copy of the repository to your computer
+# Using uv (recommended)
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -e ".[develop]"
 
-	git clone https://github.com/FZJ-IEK3-VSA/tsam.git
+# Set up pre-commit hooks
+pre-commit install
+```
 
-Change the directory of your shell into the root folder of the repository
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 
-	cd tsam
+### MILP Solver for k-medoids
 
-For development, it is recommended to install tsam into its own environment using conda e.g.
-
-	conda env create --file=requirement.yml
-
-Afterward activate the environment
-
-	conda activate tsam_env
-
-Then install tsam via pip as follows
-
-
-	pip install -e .[dev]
-
-### Installation of MILP Solver for k-medoids
-In order to use the k-medoids clustering, make sure that you have installed a MILP solver. As default [HiGHS](https://github.com/ERGO-Code/HiGHS) is installed and used. Nevertheless, in case you have access to a license we recommend commercial solvers (e.g. Gurobi or CPLEX) since they have a better performance.
-
-### Developer installation
-
-In order to setup a virtual environment in Linux, correct the python name in the Makefile and call
-
-	make setup_venv
+[HiGHS](https://github.com/ERGO-Code/HiGHS) is installed by default. For better performance on large problems, commercial solvers (Gurobi, CPLEX) are recommended if you have a license
 
 
 ## Examples
