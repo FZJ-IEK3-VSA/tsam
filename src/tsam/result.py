@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
 
+    from tsam.plotting import ResultPlotAccessor
     from tsam.timeseriesaggregation import TimeSeriesAggregation
 
 
@@ -195,3 +196,29 @@ class AggregationResult:
             List of indices [0, 1, ..., n_periods-1].
         """
         return list(range(self.n_periods))
+
+    @property
+    def plot(self) -> ResultPlotAccessor:
+        """Access plotting methods.
+
+        Returns a plotting accessor with methods for visualizing the results.
+
+        Returns
+        -------
+        ResultPlotAccessor
+            Accessor with plotting methods.
+
+        Examples
+        --------
+        >>> result = tsam.aggregate(df, n_periods=8)
+        >>> result.plot.heatmap(column="Load")
+        >>> result.plot.duration_curve()
+        >>> result.plot.typical_periods()
+        >>> result.plot.cluster_weights()
+        >>> result.plot.accuracy()
+        """
+        from tsam.plotting import ResultPlotAccessor
+
+        # Get original data from the internal aggregation object
+        original_data = getattr(self._aggregation, "timeSeries", None)
+        return ResultPlotAccessor(self, original_data=original_data)

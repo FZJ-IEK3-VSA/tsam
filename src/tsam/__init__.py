@@ -40,10 +40,17 @@ The original class-based API is still available:
 
 from tsam.api import aggregate
 from tsam.config import ClusterConfig, ExtremeConfig, SegmentConfig
+from tsam.plotting import (
+    compare_duration_curves,
+    compare_time_slices,
+    plot_duration_curve,
+    plot_heatmap,
+    plot_time_slice,
+)
 from tsam.result import AccuracyMetrics, AggregationResult
 
 # Legacy imports for backward compatibility
-from tsam.timeseriesaggregation import TimeSeriesAggregation
+from tsam.timeseriesaggregation import TimeSeriesAggregation, unstackToPeriods
 
 __version__ = "3.0.0"
 
@@ -55,4 +62,10 @@ __all__ = [
     "SegmentConfig",
     "TimeSeriesAggregation",
     "aggregate",
+    "compare_duration_curves",
+    "compare_time_slices",
+    "plot_duration_curve",
+    "plot_heatmap",
+    "plot_time_slice",
+    "unstackToPeriods",
 ]
