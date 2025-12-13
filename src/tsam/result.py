@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
 
-    from tsam.plotting import ResultPlotAccessor
+    from tsam.plot import ResultPlotAccessor
     from tsam.timeseriesaggregation import TimeSeriesAggregation
 
 
@@ -217,7 +217,7 @@ class AggregationResult:
         >>> result.plot.cluster_weights()
         >>> result.plot.accuracy()
         """
-        from tsam.plotting import ResultPlotAccessor
+        from tsam.plot import ResultPlotAccessor
 
         # Get original data from the internal aggregation object
         original_data = getattr(self._aggregation, "timeSeries", None)

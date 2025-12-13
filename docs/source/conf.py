@@ -20,9 +20,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath("."))
-insertPaths = [x[0] for x in os.walk(r"../..") if (x[0][-1] != "_")]
-for path in insertPaths:
-    sys.path.insert(0, os.path.abspath(path))
+sys.path.insert(0, os.path.abspath("../.."))  # Add project root for autodoc
 
 
 # -- General configuration ------------------------------------------------

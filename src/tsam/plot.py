@@ -5,15 +5,16 @@ Uses Plotly Express for clean, declarative plotting with automatic faceting and 
 
 Two usage patterns are supported:
 
-1. Accessor pattern (recommended):
+1. Module-level functions:
+   >>> import tsam
+   >>> tsam.plot.heatmap(df, column="Load")
+   >>> tsam.plot.duration_curve(df)
+   >>> tsam.plot.compare({"Original": df, "Aggregated": result.reconstruct()}, column="Load")
+
+2. Accessor pattern on results:
    >>> result = tsam.aggregate(df, n_periods=8)
    >>> result.plot.heatmap(column="Load")
    >>> result.plot.duration_curve()
-   >>> result.plot.typical_periods()
-
-2. Standalone functions:
-   >>> tsam.plot_heatmap(df, column="Load")
-   >>> tsam.plot_duration_curve(df, columns=["Load", "GHI"])
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
     from tsam.result import AggregationResult
 
 
-def plot_heatmap(
+def heatmap(
     data: pd.DataFrame,
     column: str | None = None,
     period_hours: int = 24,
@@ -54,6 +55,11 @@ def plot_heatmap(
     -------
     go.Figure
         Plotly figure object.
+
+    Examples
+    --------
+    >>> import tsam
+    >>> tsam.plot.heatmap(df, column="Temperature", period_hours=24)
     """
     from tsam.timeseriesaggregation import unstackToPeriods
 
@@ -73,7 +79,7 @@ def plot_heatmap(
     return fig
 
 
-def plot_heatmaps(
+def heatmaps(
     data: pd.DataFrame,
     columns: list[str] | None = None,
     period_hours: int = 24,
@@ -114,7 +120,7 @@ def plot_heatmaps(
     >>> import tsam
     >>> result = tsam.aggregate(df, n_periods=8)
     >>> # Plot all columns from reconstructed data, scaled to original
-    >>> tsam.plot_heatmaps(result.reconstruct(), reference_data=df)
+    >>> tsam.plot.heatmaps(result.reconstruct(), reference_data=df)
     """
     from plotly.subplots import make_subplots
 
@@ -163,7 +169,7 @@ def plot_heatmaps(
     return fig
 
 
-def plot_duration_curve(
+def duration_curve(
     data: pd.DataFrame,
     columns: list[str] | None = None,
     title: str = "Duration Curve",
@@ -183,6 +189,11 @@ def plot_duration_curve(
     -------
     go.Figure
         Plotly figure object.
+
+    Examples
+    --------
+    >>> import tsam
+    >>> tsam.plot.duration_curve(df, columns=["Load", "GHI"])
     """
     if columns is None:
         columns = list(data.columns)
@@ -207,66 +218,7 @@ def plot_duration_curve(
     return fig
 
 
-def compare_duration_curves(
-    original: pd.DataFrame,
-    reconstructed: pd.DataFrame,
-    columns: list[str] | None = None,
-    title: str = "Duration Curve Comparison",
-) -> go.Figure:
-    """Compare duration curves between original and reconstructed data.
-
-    Parameters
-    ----------
-    original : pd.DataFrame
-        Original time series data.
-    reconstructed : pd.DataFrame
-        Reconstructed time series from aggregation.
-    columns : list[str], optional
-        Columns to compare. If None, compares all.
-    title : str, default "Duration Curve Comparison"
-        Plot title.
-
-    Returns
-    -------
-    go.Figure
-        Plotly figure with faceted comparison.
-    """
-    if columns is None:
-        columns = list(original.columns)
-
-    records = []
-    for col in columns:
-        # Original
-        sorted_orig = original[col].sort_values(ascending=False).reset_index(drop=True)
-        for hour, val in enumerate(sorted_orig):
-            records.append(
-                {"Hour": hour, "Value": val, "Column": col, "Series": "Original"}
-            )
-
-        # Reconstructed
-        sorted_recon = (
-            reconstructed[col].sort_values(ascending=False).reset_index(drop=True)
-        )
-        for hour, val in enumerate(sorted_recon):
-            records.append(
-                {"Hour": hour, "Value": val, "Column": col, "Series": "Reconstructed"}
-            )
-
-    long_df = pd.DataFrame(records)
-
-    fig = px.line(
-        long_df,
-        x="Hour",
-        y="Value",
-        color="Series",
-        facet_col="Column",
-        title=title,
-    )
-
-    return fig
-
-
-def plot_time_slice(
+def time_slice(
     data: pd.DataFrame,
     start: str,
     end: str,
@@ -292,6 +244,11 @@ def plot_time_slice(
     -------
     go.Figure
         Plotly figure object.
+
+    Examples
+    --------
+    >>> import tsam
+    >>> tsam.plot.time_slice(df, start="20100210", end="20100218", columns=["Load"])
     """
     sliced = data.loc[start:end]  # type: ignore[misc]
 
@@ -317,7 +274,7 @@ def plot_time_slice(
     return fig
 
 
-def compare_results(
+def compare(
     results: dict[str, pd.DataFrame],
     column: str,
     plot_type: str = "duration_curve",
@@ -331,7 +288,7 @@ def compare_results(
     ----------
     results : dict[str, pd.DataFrame]
         Dictionary mapping names to DataFrames.
-        Example: {"Original": raw, "K-means": result1.reconstruct(), "Hierarchical": result2.reconstruct()}
+        Example: {"Original": raw, "K-means": result1.reconstruct()}
     column : str
         Column to compare.
     plot_type : str, default "duration_curve"
@@ -353,7 +310,7 @@ def compare_results(
     >>> import tsam
     >>> result1 = tsam.aggregate(df, n_periods=8, cluster=ClusterConfig(method="kmeans"))
     >>> result2 = tsam.aggregate(df, n_periods=8, cluster=ClusterConfig(method="hierarchical"))
-    >>> fig = tsam.compare_results(
+    >>> fig = tsam.plot.compare(
     ...     {"Original": df, "K-means": result1.reconstruct(), "Hierarchical": result2.reconstruct()},
     ...     column="Load",
     ...     plot_type="duration_curve"
@@ -404,65 +361,8 @@ def compare_results(
     return fig
 
 
-def compare_time_slices(
-    original: pd.DataFrame,
-    reconstructed: pd.DataFrame,
-    start: str,
-    end: str,
-    columns: list[str] | None = None,
-    title: str | None = None,
-) -> go.Figure:
-    """Compare original and reconstructed data for a time slice.
-
-    Parameters
-    ----------
-    original : pd.DataFrame
-        Original time series data.
-    reconstructed : pd.DataFrame
-        Reconstructed time series from aggregation.
-    start : str
-        Start date/time string.
-    end : str
-        End date/time string.
-    columns : list[str], optional
-        Columns to compare. If None, compares first column.
-    title : str, optional
-        Plot title.
-
-    Returns
-    -------
-    go.Figure
-        Plotly figure with faceted comparison.
-    """
-    orig_slice = original.loc[start:end]  # type: ignore[misc]
-    recon_slice = reconstructed.loc[start:end]  # type: ignore[misc]
-
-    if columns is None:
-        columns = [original.columns[0]]
-
-    records = []
-    for col in columns:
-        for time, val in orig_slice[col].items():
-            records.append(
-                {"Time": time, "Value": val, "Column": col, "Series": "Original"}
-            )
-        for time, val in recon_slice[col].items():
-            records.append(
-                {"Time": time, "Value": val, "Column": col, "Series": "Reconstructed"}
-            )
-
-    long_df = pd.DataFrame(records)
-
-    fig = px.line(
-        long_df,
-        x="Time",
-        y="Value",
-        color="Series",
-        facet_row="Column" if len(columns) > 1 else None,
-        title=title or f"Comparison: {start} to {end}",
-    )
-
-    return fig
+# Aliases for backward compatibility and convenience
+compare_results = compare
 
 
 class ResultPlotAccessor:
@@ -514,12 +414,53 @@ class ResultPlotAccessor:
         else:
             data = self._result.reconstruct()
 
-        return plot_heatmap(
+        return heatmap(
             data,
             column=column,
             period_hours=self._result.n_timesteps_per_period,
             title=title,
             color_continuous_scale=color_continuous_scale,
+        )
+
+    def heatmaps(
+        self,
+        columns: list[str] | None = None,
+        use_original: bool = False,
+        title: str | None = None,
+        color_continuous_scale: str = "Viridis",
+    ) -> go.Figure:
+        """Plot heatmaps for all columns.
+
+        Parameters
+        ----------
+        columns : list[str], optional
+            Columns to plot. If None, plots all.
+        use_original : bool, default False
+            If True and original data available, plot original instead.
+        title : str, optional
+            Plot title.
+        color_continuous_scale : str, default "Viridis"
+            Color scale.
+
+        Returns
+        -------
+        go.Figure
+        """
+        ref: pd.DataFrame | None
+        if use_original and self._original is not None:
+            data = self._original
+            ref = self._original
+        else:
+            data = self._result.reconstruct()
+            ref = self._original
+
+        return heatmaps(
+            data,
+            columns=columns,
+            period_hours=self._result.n_timesteps_per_period,
+            title=title,
+            color_continuous_scale=color_continuous_scale,
+            reference_data=ref,
         )
 
     def duration_curve(
@@ -546,14 +487,16 @@ class ResultPlotAccessor:
         reconstructed = self._result.reconstruct()
 
         if compare_original and self._original is not None:
-            return compare_duration_curves(
-                self._original,
-                reconstructed,
-                columns=columns,
+            # Use compare function for side-by-side comparison
+            col = columns[0] if columns else reconstructed.columns[0]
+            return compare(
+                {"Original": self._original, "Reconstructed": reconstructed},
+                column=col,
+                plot_type="duration_curve",
                 title=title or "Duration Curve Comparison",
             )
         else:
-            return plot_duration_curve(
+            return duration_curve(
                 reconstructed,
                 columns=columns,
                 title=title or "Duration Curve",
@@ -779,16 +722,17 @@ class ResultPlotAccessor:
         reconstructed = self._result.reconstruct()
 
         if compare_original and self._original is not None:
-            return compare_time_slices(
-                self._original,
-                reconstructed,
-                start,
-                end,
-                columns=columns,
+            col = columns[0] if columns else reconstructed.columns[0]
+            return compare(
+                {"Original": self._original, "Reconstructed": reconstructed},
+                column=col,
+                plot_type="time_slice",
+                start=start,
+                end=end,
                 title=title,
             )
         else:
-            return plot_time_slice(
+            return time_slice(
                 reconstructed,
                 start,
                 end,

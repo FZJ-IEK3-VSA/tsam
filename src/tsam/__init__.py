@@ -38,17 +38,9 @@ The original class-based API is still available:
 >>> typical = agg.createTypicalPeriods()
 """
 
+from tsam import plot
 from tsam.api import aggregate
 from tsam.config import ClusterConfig, ExtremeConfig, SegmentConfig
-from tsam.plotting import (
-    compare_duration_curves,
-    compare_results,
-    compare_time_slices,
-    plot_duration_curve,
-    plot_heatmap,
-    plot_heatmaps,
-    plot_time_slice,
-)
 from tsam.result import AccuracyMetrics, AggregationResult
 
 # Legacy imports for backward compatibility
@@ -64,12 +56,6 @@ __all__ = [
     "SegmentConfig",
     "TimeSeriesAggregation",
     "aggregate",
-    "compare_duration_curves",
-    "compare_results",
-    "compare_time_slices",
-    "plot_duration_curve",
-    "plot_heatmap",
-    "plot_heatmaps",
-    "plot_time_slice",
+    "plot",
     "unstackToPeriods",
 ]
