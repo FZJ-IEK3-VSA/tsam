@@ -227,6 +227,93 @@ def plot_time_slice(
     return fig
 
 
+def compare_results(
+    results: dict[str, pd.DataFrame],
+    column: str,
+    plot_type: str = "duration_curve",
+    start: str | None = None,
+    end: str | None = None,
+    title: str | None = None,
+) -> go.Figure:
+    """Compare multiple DataFrames (e.g., from different aggregation methods).
+
+    Parameters
+    ----------
+    results : dict[str, pd.DataFrame]
+        Dictionary mapping names to DataFrames.
+        Example: {"Original": raw, "K-means": result1.reconstruct(), "Hierarchical": result2.reconstruct()}
+    column : str
+        Column to compare.
+    plot_type : str, default "duration_curve"
+        Type of plot: "duration_curve" or "time_slice".
+    start : str, optional
+        Start time (required for time_slice).
+    end : str, optional
+        End time (required for time_slice).
+    title : str, optional
+        Plot title.
+
+    Returns
+    -------
+    go.Figure
+        Plotly figure object.
+
+    Examples
+    --------
+    >>> import tsam
+    >>> result1 = tsam.aggregate(df, n_periods=8, cluster=ClusterConfig(method="kmeans"))
+    >>> result2 = tsam.aggregate(df, n_periods=8, cluster=ClusterConfig(method="hierarchical"))
+    >>> fig = tsam.compare_results(
+    ...     {"Original": df, "K-means": result1.reconstruct(), "Hierarchical": result2.reconstruct()},
+    ...     column="Load",
+    ...     plot_type="duration_curve"
+    ... )
+    """
+    records = []
+
+    if plot_type == "duration_curve":
+        for name, data in results.items():
+            sorted_vals = (
+                data[column].sort_values(ascending=False).reset_index(drop=True)
+            )
+            for hour, val in enumerate(sorted_vals):
+                records.append({"Hour": hour, "Value": val, "Method": name})
+
+        long_df = pd.DataFrame(records)
+        fig = px.line(
+            long_df,
+            x="Hour",
+            y="Value",
+            color="Method",
+            title=title or f"Duration Curve Comparison - {column}",
+        )
+
+    elif plot_type == "time_slice":
+        if start is None or end is None:
+            raise ValueError("start and end are required for time_slice plot")
+
+        for name, data in results.items():
+            sliced = data.loc[start:end]  # type: ignore[misc]
+            for time, val in sliced[column].items():
+                records.append({"Time": time, "Value": val, "Method": name})
+
+        long_df = pd.DataFrame(records)
+        fig = px.line(
+            long_df,
+            x="Time",
+            y="Value",
+            color="Method",
+            title=title or f"Time Slice Comparison - {column}",
+        )
+
+    else:
+        raise ValueError(
+            f"Unknown plot_type: {plot_type}. Use 'duration_curve' or 'time_slice'."
+        )
+
+    return fig
+
+
 def compare_time_slices(
     original: pd.DataFrame,
     reconstructed: pd.DataFrame,

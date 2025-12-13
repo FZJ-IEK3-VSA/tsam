@@ -42,6 +42,7 @@ from tsam.api import aggregate
 from tsam.config import ClusterConfig, ExtremeConfig, SegmentConfig
 from tsam.plotting import (
     compare_duration_curves,
+    compare_results,
     compare_time_slices,
     plot_duration_curve,
     plot_heatmap,
@@ -63,6 +64,7 @@ __all__ = [
     "TimeSeriesAggregation",
     "aggregate",
     "compare_duration_curves",
+    "compare_results",
     "compare_time_slices",
     "plot_duration_curve",
     "plot_heatmap",
