@@ -1,15 +1,14 @@
+import copy
 import os
 import time
-import copy
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
 
 
 def test_durationCurve():
-
     # do everything for one attribute only to make sure that scaling does not play a role
     raw = pd.read_csv(
         os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),

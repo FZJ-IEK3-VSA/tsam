@@ -4,6 +4,22 @@ on:
     branches: ["**"]
 
 jobs:
+  Lint:
+    name: Lint with ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Run ruff linter
+        run: ruff check src/ test/
+      - name: Run ruff formatter check
+        run: ruff format --check src/ test/
+
   TestPushCondaForgeDev:
     name: Test conda-forge development version on ${{ matrix.runner_tag }}
     strategy:

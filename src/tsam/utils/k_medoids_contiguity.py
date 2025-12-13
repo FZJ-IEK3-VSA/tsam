@@ -1,28 +1,25 @@
-# -*- coding: utf-8 -*-
+import time
 
 import numpy as np
 
-
-import time
-
 # switch to numpy 2.0
 np.float_ = np.float64
-np.complex_=np.complex128
+np.complex_ = np.complex128
 
-import pyomo.environ as pyomo
-import pyomo.opt as opt
 import networkx as nx
+import pyomo.environ as pyomo
+
 from tsam.utils.k_medoids_exact import (
     _setup_k_medoids,
-    KMedoids,
     _solve_given_pyomo_model,
 )
-
 
 # class KMedoids_contiguity(KMedoids):
 
 
-def k_medoids_contiguity(distances, n_clusters, adjacency, max_iter=500, solver="highs"):
+def k_medoids_contiguity(
+    distances, n_clusters, adjacency, max_iter=500, solver="highs"
+):
     """Declares a k-medoids model and iteratively adds cutting planes to hold on adjacency/contiguity
 
     The algorithm is based on: Oehrlein and Hauner (2017): A cutting-plane method for adjacency-constrained spatial aggregation
@@ -31,7 +28,7 @@ def k_medoids_contiguity(distances, n_clusters, adjacency, max_iter=500, solver=
     G = _contiguity_to_graph(adjacency, distances=distances)
 
     # check if inputs are correct
-    np.size(distances) == np.size(adjacency)
+    assert np.size(distances) == np.size(adjacency), "distances and adjacency must have the same size"
 
     # and test for connectivity
     if not nx.is_connected(G):

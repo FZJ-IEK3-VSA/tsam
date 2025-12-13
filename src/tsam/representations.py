@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
-
 import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
+
 from tsam.utils.durationRepresentation import durationRepresentation
 
 
@@ -31,17 +30,28 @@ def representations(
         clusterCenters = minmaxmeanRepresentation(
             candidates, clusterOrder, representationDict, timeStepsPerPeriod
         )
-    elif representationMethod == "durationRepresentation" or representationMethod == "distributionRepresentation":
+    elif (
+        representationMethod == "durationRepresentation"
+        or representationMethod == "distributionRepresentation"
+    ):
         clusterCenters = durationRepresentation(
-            candidates, clusterOrder, distributionPeriodWise, timeStepsPerPeriod, representMinMax=False,
+            candidates,
+            clusterOrder,
+            distributionPeriodWise,
+            timeStepsPerPeriod,
+            representMinMax=False,
         )
     elif representationMethod == "distributionAndMinMaxRepresentation":
         clusterCenters = durationRepresentation(
-            candidates, clusterOrder, distributionPeriodWise, timeStepsPerPeriod, representMinMax=True,
+            candidates,
+            clusterOrder,
+            distributionPeriodWise,
+            timeStepsPerPeriod,
+            representMinMax=True,
         )
     else:
         raise ValueError("Chosen 'representationMethod' does not exist.")
-         
+
     return clusterCenters, clusterCenterIndices
 
 

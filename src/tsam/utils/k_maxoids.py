@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """Exact K-maxoids clustering"""
-
 
 import numpy as np
 import numpy.random as rnd
-
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array
@@ -26,13 +23,11 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         n_clusters=8,
         distance_metric="euclidean",
     ):
-
         self.n_clusters = n_clusters
 
         self.distance_metric = distance_metric
 
     def _check_init_args(self):
-
         # Check n_clusters
         if (
             self.n_clusters is None
@@ -51,8 +46,8 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
                 "distance_metric needs to be "
                 + "callable or one of the "
                 + "following strings: "
-                + "{}".format(PAIRWISE_DISTANCE_FUNCTIONS.keys())
-                + ". Instead, '{}' ".format(self.distance_metric)
+                + f"{PAIRWISE_DISTANCE_FUNCTIONS.keys()}"
+                + f". Instead, '{self.distance_metric}' "
                 + "was given."
             )
 
@@ -71,8 +66,8 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         # Numpy array if possible
         X = self._check_array(X)
 
-        # apply distance metric to get the distance matrix
-        D = self.distance_func(X)
+        # apply distance metric to get the distance matrix (kept for potential debugging)
+        _D = self.distance_func(X)
 
         # run mk-maxoids clustering
         self.cluster_centers_, self.labels_ = self.k_maxoids(X, self.n_clusters)
@@ -80,7 +75,6 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         return self
 
     def _check_array(self, X):
-
         X = check_array(X)
 
         # Check that the number of clusters is less than or equal to
@@ -88,15 +82,14 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         if self.n_clusters > X.shape[0]:
             raise ValueError(
                 "The number of medoids "
-                + "({}) ".format(self.n_clusters)
+                + f"({self.n_clusters}) "
                 + "must be larger than the number "
-                + "of samples ({})".format(X.shape[0])
+                + f"of samples ({X.shape[0]})"
             )
 
         return X
 
     def k_maxoids(self, X, k, numpasses=5, doLogarithmic=False, n_init=100):
-
         X_old = X
         n, m = X.shape
         inertiaTempPrime = None

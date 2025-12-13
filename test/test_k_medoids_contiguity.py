@@ -1,11 +1,7 @@
-import os
-import time
-
-import pandas as pd
 import numpy as np
 
+from tsam.utils.k_medoids_contiguity import _contiguity_to_graph, k_medoids_contiguity
 from tsam.utils.k_medoids_exact import KMedoids
-from tsam.utils.k_medoids_contiguity import k_medoids_contiguity, _contiguity_to_graph
 
 # similarity between node 0, 1 and 2
 # 0===1

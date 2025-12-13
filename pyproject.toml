@@ -99,10 +99,13 @@ ignore = [
   "E741",   # ambiguous variable name (common in scientific code, e.g., I, l, O)
   "B007",   # loop control variable not used (common pattern in this codebase)
   "B008",   # do not perform function calls in argument defaults
+  "B028",   # no explicit stacklevel in warnings (minor best practice)
   "B905",   # zip without explicit strict parameter
+  "C416",   # unnecessary list/dict comprehension (sometimes clearer)
   "SIM101", # multiple isinstance calls (sometimes clearer separate)
   "SIM102", # nested if statements (sometimes clearer separate)
   "SIM108", # use ternary operator instead of if-else
+  "SIM201", # use != instead of not == (sometimes clearer)
   "RUF012", # mutable class attributes - these are constants in this codebase
   "RUF002", # ambiguous unicode characters in docstrings
   "RUF059", # unpacked variable never used (common in scientific code)
