@@ -23,8 +23,11 @@ classifiers = [
   "Natural Language :: English",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 2",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Mathematics",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -52,6 +55,10 @@ develop = [
   "sphinx_book_theme",
   "twine",
   "nbval",
+  "ruff",
+  "mypy",
+  "pandas-stubs",
+  "pre-commit",
 ]
 
 [tool.setuptools.packages.find]
@@ -67,3 +74,56 @@ pythonpath = [
   "test",
 ] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+src = ["src", "test"]
+
+[tool.ruff.lint]
+select = [
+  "E",      # pycodestyle errors
+  "W",      # pycodestyle warnings
+  "F",      # Pyflakes
+  "I",      # isort
+  "B",      # flake8-bugbear
+  "C4",     # flake8-comprehensions
+  "UP",     # pyupgrade
+  "SIM",    # flake8-simplify
+  "TCH",    # flake8-type-checking
+  "RUF",    # Ruff-specific rules
+]
+ignore = [
+  "E501",   # line too long (handled by formatter)
+  "E402",   # module level import not at top (needed for numpy deprecation fixes)
+  "E741",   # ambiguous variable name (common in scientific code, e.g., I, l, O)
+  "B007",   # loop control variable not used (common pattern in this codebase)
+  "B008",   # do not perform function calls in argument defaults
+  "B905",   # zip without explicit strict parameter
+  "SIM101", # multiple isinstance calls (sometimes clearer separate)
+  "SIM102", # nested if statements (sometimes clearer separate)
+  "SIM108", # use ternary operator instead of if-else
+  "RUF012", # mutable class attributes - these are constants in this codebase
+  "RUF002", # ambiguous unicode characters in docstrings
+  "RUF059", # unpacked variable never used (common in scientific code)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["tsam"]
+
+[tool.ruff.lint.per-file-ignores]
+"test/*" = ["B", "SIM", "F841", "RUF059", "E402", "C416"]  # Relax rules for tests
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+exclude = [
+  "docs/",
+  "build/",
+]
+
+[[tool.mypy.overrides]]
+module = "tsam.*"
+ignore_missing_imports = true
