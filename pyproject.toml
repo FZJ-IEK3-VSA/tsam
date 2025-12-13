@@ -116,6 +116,7 @@ known-first-party = ["tsam"]
 
 [tool.ruff.lint.per-file-ignores]
 "test/*" = ["B", "SIM", "F841", "E402", "C416"]  # Relax rules for tests
+"src/tsam/result.py" = ["TCH002"]  # pandas/numpy needed at runtime for dataclass fields
 
 [tool.mypy]
 python_version = "3.10"
