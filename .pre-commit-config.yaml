@@ -13,11 +13,8 @@ repos:
     rev: v0.14.0
     hooks:
       - id: ruff
-        pass_filenames: false
-        args: [--fix, .]
+        args: [--fix]
       - id: ruff-format
-        pass_filenames: false
-        args: [.]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.13.0
