@@ -1,6 +1,6 @@
-######################
+###############################
 Time Series Aggregation Class
-######################
+###############################
 
 .. |br| raw:: html
 
@@ -10,7 +10,7 @@ Descriptions of the basic functions are given below.
 
 **Function descriptions:**
 
-.. automodule:: timeseriesaggregation
+.. automodule:: tsam.timeseriesaggregation
    :members: unstackToPeriods
    :member-order: bysource
 
