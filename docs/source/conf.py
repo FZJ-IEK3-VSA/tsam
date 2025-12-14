@@ -50,6 +50,21 @@ extensions = [
 nbsphinx_execute = "auto"
 nbsphinx_timeout = 300  # 5 min timeout per notebook
 
+# Enable Plotly support in nbsphinx
+nbsphinx_requirejs_path = (
+    "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"
+)
+nbsphinx_requirejs_options = {
+    "paths": {"plotly": "https://cdn.plot.ly/plotly-2.35.2.min"}
+}
+
+# Prolog to initialize Plotly in notebooks
+nbsphinx_prolog = """
+.. raw:: html
+
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+"""
+
 inheritance_graph_attrs = {
     "rankdir": "LR",
     "size": '"26.0, 8.0"',
