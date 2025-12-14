@@ -28,9 +28,9 @@ def k_medoids_contiguity(
     G = _contiguity_to_graph(adjacency, distances=distances)
 
     # check if inputs are correct
-    assert np.size(distances) == np.size(
-        adjacency
-    ), "distances and adjacency must have the same size"
+    assert np.size(distances) == np.size(adjacency), (
+        "distances and adjacency must have the same size"
+    )
 
     # and test for connectivity
     if not nx.is_connected(G):
