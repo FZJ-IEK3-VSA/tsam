@@ -45,8 +45,10 @@ extensions = [
     "nbsphinx",
 ]
 
-# nbsphinx configuration - execute notebooks during build
-nbsphinx_execute = "always"
+# nbsphinx configuration
+# Execute notebooks during build, but skip heavy ones (configured in examples.rst)
+nbsphinx_execute = "auto"
+nbsphinx_timeout = 300  # 5 min timeout per notebook
 
 inheritance_graph_attrs = {
     "rankdir": "LR",
