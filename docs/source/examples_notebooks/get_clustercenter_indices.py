@@ -1,21 +1,26 @@
 import pandas as pd
 
-import tsam.timeseriesaggregation as tsam
+import tsam
+from tsam import ClusterConfig
 
 raw = pd.read_csv("testdata.csv", index_col=0, parse_dates=True)
 
-aggregation = tsam.TimeSeriesAggregation(
-    raw, noTypicalPeriods=8, hoursPerPeriod=24, clusterMethod="hierarchical"
+result = tsam.aggregate(
+    raw,
+    n_periods=8,
+    period_hours=24,
+    cluster=ClusterConfig(method="hierarchical"),
 )
-df = aggregation.createTypicalPeriods()
-weights = aggregation.clusterPeriodNoOccur
 
-timesteps = [i for i in range(0, len(df.index.get_level_values("TimeStep")))]
+typical_periods = result.typical_periods
+weights = result.cluster_weights
 
-print(aggregation.clusterCenterIndices)
+timesteps = [i for i in range(0, len(typical_periods.index.get_level_values("TimeStep")))]
+
+print(result.cluster_center_indices)
 
 # get all index for every hour that in day of the clusterCenterIndices
-days = [d for d in raw.index.dayofyear if d in aggregation.clusterCenterIndices]  # type: ignore[attr-defined]
+days = [d for d in raw.index.dayofyear if d in result.cluster_center_indices]  # type: ignore[attr-defined]
 
 # select the dates based on this
 dates = raw.iloc[days].index
