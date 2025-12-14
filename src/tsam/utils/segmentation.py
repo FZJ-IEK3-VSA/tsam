@@ -61,7 +61,7 @@ def segmentation(
         )
         clusterOrderUnique = [clusterOrder[index] for index in sorted(indices)]
         # determine the segments' values
-        clusterCenters, clusterCenterIndices = representations(
+        clusterCenters, _clusterCenterIndices = representations(
             segmentationCandidates,
             clusterOrder,
             default="meanRepresentation",

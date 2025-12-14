@@ -924,7 +924,7 @@ class TimeSeriesAggregation:
         sortedClusterValues = normalizedSortedPeriodlyProfiles.values
 
         (
-            altClusterCenters,
+            _altClusterCenters,
             self.clusterCenterIndices,
             clusterOrders_C,
         ) = aggregatePeriods(

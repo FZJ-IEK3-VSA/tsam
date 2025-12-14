@@ -61,7 +61,7 @@ def k_medoids_contiguity(
             + str(t_aftersolve - t_presolve)
         )
 
-        candidates, labels = np.where(r_x == 1)
+        _candidates, labels = np.where(r_x == 1)
         # claim that the resulting clusters are connected
         _all_cluster_connected = True
         _new_cuts_added = []
