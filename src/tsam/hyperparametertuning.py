@@ -187,7 +187,7 @@ class HyperTunedAggregations:
         :type untilTotalTimeSteps: int
 
 
-        :returns: **** -- Nothing. Check aggregation history for results. All typical Periods in scaled form.
+        :returns: None. Check aggregation history for results. All typical Periods in scaled form.
         """
         if not self.base_aggregation.segmentation:
             raise ValueError(

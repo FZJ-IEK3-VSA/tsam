@@ -10,6 +10,6 @@ Descriptions of the basic functions are given below.
 
 **Function descriptions:**
 
-.. automodule:: tsam.k_medoids_exact
+.. automodule:: tsam.utils.k_medoids_exact
    :members:
    :member-order: bysource

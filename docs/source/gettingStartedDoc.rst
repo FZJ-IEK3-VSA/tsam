@@ -1,8 +1,8 @@
 .. _start:
 
-********
+****************
 Getting started
-********
+****************
 
 **Basic Workflow**
 
