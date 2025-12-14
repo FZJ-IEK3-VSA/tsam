@@ -1,19 +1,17 @@
 """Tests for the new simplified API."""
 
-import os
-
 import pandas as pd
 import pytest
 
 import tsam
+from conftest import TESTDATA_CSV
 from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
 
 
 @pytest.fixture
 def sample_data():
     """Load sample time series data."""
-    path = os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv")
-    return pd.read_csv(path, index_col=0, parse_dates=True)
+    return pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True)
 
 
 class TestAggregate:

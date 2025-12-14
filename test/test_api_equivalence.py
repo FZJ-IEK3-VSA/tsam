@@ -1,7 +1,5 @@
 """Tests to verify new API produces identical results to old API."""
 
-import os
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -9,6 +7,7 @@ import pytest
 # Old API
 import tsam.hyperparametertuning as old_tune
 import tsam.timeseriesaggregation as old_tsam
+from conftest import TESTDATA_CSV
 
 # New API
 from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
@@ -23,8 +22,7 @@ from tsam.tuning import (
 @pytest.fixture
 def sample_data():
     """Load sample time series data."""
-    path = os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv")
-    return pd.read_csv(path, index_col=0, parse_dates=True)
+    return pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True)
 
 
 @pytest.fixture

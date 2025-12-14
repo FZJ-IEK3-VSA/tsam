@@ -1,19 +1,16 @@
 import copy
-import os
 import time
 
 import numpy as np
 import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
+from conftest import TESTDATA_CSV
 
 
 def test_durationCurve():
     # do everything for one attribute only to make sure that scaling does not play a role
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )["GHI"].to_frame()
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)["GHI"].to_frame()
 
     noTypicalPeriods = 8
 
