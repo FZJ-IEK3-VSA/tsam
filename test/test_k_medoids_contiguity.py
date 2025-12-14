@@ -46,7 +46,7 @@ def test_k_medoids_simple():
 
     n_clusters = 2
     cluster_instance = KMedoids(n_clusters=n_clusters)
-    r_y, r_x, r_obj = cluster_instance._k_medoids_exact(DISTANCES, n_clusters)
+    _r_y, r_x, r_obj = cluster_instance._k_medoids_exact(DISTANCES, n_clusters)
 
     labels_raw = r_x.argmax(axis=0)
 
@@ -64,7 +64,7 @@ def test_k_medoids_simple_contiguity():
     """
 
     n_clusters = 2
-    r_y, r_x, r_obj = k_medoids_contiguity(DISTANCES, n_clusters, adjacency)
+    _r_y, r_x, r_obj = k_medoids_contiguity(DISTANCES, n_clusters, adjacency)
     labels_raw = r_x.argmax(axis=0)
     # check that node 0 and node 2 are in the same cluster
     assert labels_raw[0] == labels_raw[2]

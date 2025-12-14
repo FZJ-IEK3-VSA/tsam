@@ -53,7 +53,7 @@ def test_optimalPair():
     )
 
     # and identify the best combination for a data reduction of to ~10%.
-    windSegments, windPeriods, windRMSE = (
+    windSegments, windPeriods, _windRMSE = (
         aggregation_wind.identifyOptimalSegmentPeriodCombination(
             dataReduction=datareduction
         )
@@ -73,7 +73,7 @@ def test_optimalPair():
     )
 
     # and identify the best combination for a data reduction of to ~10%.
-    solarSegments, solarPeriods, solarRMSE = (
+    solarSegments, solarPeriods, _solarRMSE = (
         aggregation_solar.identifyOptimalSegmentPeriodCombination(
             dataReduction=datareduction
         )
@@ -117,7 +117,7 @@ def test_steepest_gradient_leads_to_optima():
     )
 
     # and identify the best combination for a data reduction.
-    segmentsOpt, periodsOpt, RMSEOpt = (
+    _segmentsOpt, _periodsOpt, RMSEOpt = (
         tunedAggregations.identifyOptimalSegmentPeriodCombination(
             dataReduction=datareduction
         )

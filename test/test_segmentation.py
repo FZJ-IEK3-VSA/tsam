@@ -98,7 +98,7 @@ def test_representation_in_segmentation():
         [5, 5, 5, 5, 5, 7, 3, 2, 2, 2, 2, 0, 0, 0, 0, 1, 1, 1, 1, 1, 6, 6, 4, 4]
     )
 
-    clusterCenters_mean, clusterCenterIndices = tsam.representations(
+    clusterCenters_mean, _clusterCenterIndices = tsam.representations(
         segmentationCandidates,
         clusterOrder,
         default="meanRepresentation",
@@ -107,7 +107,7 @@ def test_representation_in_segmentation():
         timeStepsPerPeriod=1,
     )
 
-    clusterCenters_dist, clusterCenterIndices = tsam.representations(
+    clusterCenters_dist, _clusterCenterIndices = tsam.representations(
         segmentationCandidates,
         clusterOrder,
         default="meanRepresentation",

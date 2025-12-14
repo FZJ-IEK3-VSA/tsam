@@ -19,7 +19,7 @@ def test_aggregate_hiearchical():
         header=[0, 1],
     )
 
-    clusterCenters, clusterCenterIndices, clusterOrder = tsam.aggregatePeriods(
+    _clusterCenters, _clusterCenterIndices, clusterOrder = tsam.aggregatePeriods(
         normalizedPeriodlyProfiles.values,
         n_clusters=8,
         clusterMethod="hierarchical",

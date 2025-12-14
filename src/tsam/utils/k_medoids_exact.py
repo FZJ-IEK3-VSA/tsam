@@ -93,7 +93,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         D = self.distance_func(X)
 
         # run exact optimization
-        r_y, r_x, best_inertia = self._k_medoids_exact(D, self.n_clusters)
+        r_y, r_x, _best_inertia = self._k_medoids_exact(D, self.n_clusters)
 
         labels_raw = r_x.argmax(axis=0)
 

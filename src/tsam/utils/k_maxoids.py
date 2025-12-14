@@ -91,7 +91,7 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
     def k_maxoids(self, X, k, numpasses=5, doLogarithmic=False, n_init=100):
         X_old = X
-        n, m = X.shape
+        n, _m = X.shape
         inertiaTempPrime = None
 
         for i in range(n_init):
