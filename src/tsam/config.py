@@ -56,6 +56,7 @@ class ClusterConfig:
         - "mean": Centroid (average of cluster members)
         - "medoid": Actual period closest to centroid
         - "maxoid": Actual period most dissimilar to others
+        - "duration": Preserve value distribution (duration curve)
         - "distribution": Preserve value distribution (duration curve)
         - "distribution_minmax": Distribution + preserve min/max values
         - "minmax_mean": Combine min/max/mean per timestep
@@ -85,6 +86,16 @@ class ClusterConfig:
     solver : str, default "highs"
         MILP solver for kmedoids_exact method.
         Options: "highs" (default, open source), "cbc", "gurobi", "cplex"
+
+    predef_cluster_order : array-like, optional
+        Predefined cluster assignments for each period.
+        Use this to apply cluster assignments from one aggregation to another.
+        Example: Use wind-only clustering order for multi-variable aggregation.
+
+    predef_cluster_centers : array-like, optional
+        Predefined cluster center indices.
+        When combined with predef_cluster_order, uses the exact same
+        representative periods instead of recalculating them.
     """
 
     method: ClusterMethod = "hierarchical"
@@ -94,6 +105,8 @@ class ClusterConfig:
     use_duration_curves: bool = False
     include_period_sums: bool = False
     solver: Solver = "highs"
+    predef_cluster_order: tuple[int, ...] | None = None
+    predef_cluster_centers: tuple[int, ...] | None = None
 
     def get_representation(self) -> RepresentationMethod:
         """Get the representation method, using default if not specified."""

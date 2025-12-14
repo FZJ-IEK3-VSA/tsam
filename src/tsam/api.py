@@ -221,7 +221,7 @@ def aggregate(
         segment_durations=agg.segmentDurationDict if segments else None,
         cluster_center_indices=np.array(agg.clusterCenterIndices),
         accuracy=accuracy,
-        clustering_duration=agg.clusteringDuration,
+        clustering_duration=getattr(agg, "clusteringDuration", 0.0),
         _aggregation=agg,
     )
 
@@ -263,6 +263,12 @@ def _build_old_params(
 
     if cluster.weights is not None:
         params["weightDict"] = cluster.weights
+
+    if cluster.predef_cluster_order is not None:
+        params["predefClusterOrder"] = list(cluster.predef_cluster_order)
+
+    if cluster.predef_cluster_centers is not None:
+        params["predefClusterCenterIndices"] = list(cluster.predef_cluster_centers)
 
     # Segmentation config
     if segments is not None:
