@@ -15,7 +15,9 @@ result = tsam.aggregate(
 typical_periods = result.typical_periods
 weights = result.cluster_weights
 
-timesteps = [i for i in range(0, len(typical_periods.index.get_level_values("TimeStep")))]
+timesteps = [
+    i for i in range(0, len(typical_periods.index.get_level_values("TimeStep")))
+]
 
 print(result.cluster_center_indices)
 
