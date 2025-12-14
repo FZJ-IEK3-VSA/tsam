@@ -50,12 +50,21 @@ extensions = [
 nbsphinx_execute = "auto"
 nbsphinx_timeout = 300  # 5 min timeout per notebook
 
-# Enable Plotly support in nbsphinx - include Plotly.js in all notebook pages
+# Enable Plotly support in nbsphinx
+# Include Plotly.js in all notebook pages
 nbsphinx_prolog = """
 .. raw:: html
 
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 """
+
+# Set Plotly to use notebook_connected renderer during execution
+nbsphinx_execute_arguments = [
+    "--InlineBackend.figure_formats={'svg', 'pdf'}",
+]
+
+# Kernel setup code - runs before each notebook
+nbsphinx_kernel_name = "python3"
 
 inheritance_graph_attrs = {
     "rankdir": "LR",
