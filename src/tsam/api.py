@@ -219,7 +219,9 @@ def aggregate(
         n_timesteps_per_period=agg.timeStepsPerPeriod,
         n_segments=segments.n_segments if segments else None,
         segment_durations=agg.segmentDurationDict if segments else None,
-        cluster_center_indices=np.array(agg.clusterCenterIndices),
+        cluster_center_indices=np.array(agg.clusterCenterIndices)
+        if agg.clusterCenterIndices is not None
+        else None,
         accuracy=accuracy,
         clustering_duration=getattr(agg, "clusteringDuration", 0.0),
         _aggregation=agg,

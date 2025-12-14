@@ -113,7 +113,7 @@ class AggregationResult:
     n_timesteps_per_period: int
     n_segments: int | None
     segment_durations: dict[int, float] | None
-    cluster_center_indices: np.ndarray
+    cluster_center_indices: np.ndarray | None
     accuracy: AccuracyMetrics
     clustering_duration: float
     _aggregation: TimeSeriesAggregation  # Internal reference
@@ -164,7 +164,9 @@ class AggregationResult:
             "n_timesteps_per_period": self.n_timesteps_per_period,
             "n_segments": self.n_segments,
             "segment_durations": self.segment_durations,
-            "cluster_center_indices": self.cluster_center_indices.tolist(),
+            "cluster_center_indices": self.cluster_center_indices.tolist()
+            if self.cluster_center_indices is not None
+            else None,
             "accuracy": {
                 "rmse": self.accuracy.rmse.to_dict(),
                 "mae": self.accuracy.mae.to_dict(),
