@@ -5,19 +5,34 @@ This module provides functions for finding optimal aggregation parameters.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pandas as pd
 import tqdm
 
 from tsam.api import aggregate
 from tsam.config import ClusterConfig, SegmentConfig
 
 if TYPE_CHECKING:
-    import pandas as pd
-
     from tsam.result import AggregationResult
+
+
+def _infer_resolution(data: pd.DataFrame) -> float:
+    """Infer time resolution in hours from DataFrame datetime index."""
+    try:
+        timedelta = data.index[1] - data.index[0]
+        return float(timedelta.total_seconds()) / 3600
+    except (AttributeError, TypeError):
+        # Try converting to datetime
+        try:
+            index = pd.to_datetime(data.index)
+            timedelta = index[1] - index[0]
+            return float(timedelta.total_seconds()) / 3600
+        except Exception:
+            # Default to hourly if can't infer
+            return 1.0
 
 
 @dataclass
@@ -36,6 +51,8 @@ class TuningResult:
         History of all tested configurations with their RMSE values.
     best_result : AggregationResult
         The AggregationResult for the optimal configuration.
+    all_results : list[AggregationResult]
+        All AggregationResults from tuning (only populated if save_all_results=True).
     """
 
     optimal_n_periods: int
@@ -43,6 +60,7 @@ class TuningResult:
     optimal_rmse: float
     history: list[dict]
     best_result: AggregationResult
+    all_results: list[AggregationResult] = field(default_factory=list)
 
 
 def periods_for_reduction(
@@ -108,8 +126,10 @@ def find_optimal_combination(
     data_reduction: float,
     *,
     period_hours: int = 24,
+    resolution: float | None = None,
     cluster: ClusterConfig | None = None,
     show_progress: bool = True,
+    save_all_results: bool = False,
 ) -> TuningResult:
     """Find optimal period/segment combination for a target data reduction.
 
@@ -125,10 +145,17 @@ def find_optimal_combination(
         Target reduction factor (e.g., 0.01 for 1% of original size).
     period_hours : int, default 24
         Hours per period.
+    resolution : float, optional
+        Time resolution of input data in hours.
+        If not provided, inferred from the datetime index.
+        Examples: 1.0 (hourly), 0.25 (15-minute), 0.5 (30-minute)
     cluster : ClusterConfig, optional
         Clustering configuration.
     show_progress : bool, default True
         Show progress bar during search.
+    save_all_results : bool, default False
+        If True, save all AggregationResults in all_results attribute.
+        Useful for detailed analysis but increases memory usage.
 
     Returns
     -------
@@ -144,8 +171,12 @@ def find_optimal_combination(
     if cluster is None:
         cluster = ClusterConfig()
 
+    # Infer resolution if not provided
+    if resolution is None:
+        resolution = _infer_resolution(data)
+
     n_timesteps = len(data)
-    timesteps_per_period = period_hours  # Assuming hourly data
+    timesteps_per_period = int(period_hours / resolution)
 
     max_periods = n_timesteps // timesteps_per_period
     max_segments = timesteps_per_period
@@ -177,7 +208,8 @@ def find_optimal_combination(
     pareto_mask = optimal_periods_idx & optimal_segments_idx
     pareto_points = np.nonzero(pareto_mask)
 
-    history = []
+    history: list[dict] = []
+    all_results: list[AggregationResult] = []
     best_rmse = float("inf")
     best_result = None
     best_periods = 1
@@ -188,14 +220,15 @@ def find_optimal_combination(
         iterator = tqdm.tqdm(list(iterator), desc="Searching configurations")
 
     for seg_idx, per_idx in iterator:
-        n_segments = possible_segments[seg_idx]
-        n_periods = possible_periods[per_idx]
+        n_segments = int(possible_segments[seg_idx])
+        n_periods = int(possible_periods[per_idx])
 
         try:
             result = aggregate(
                 data,
                 n_periods=n_periods,
                 period_hours=period_hours,
+                resolution=resolution,
                 cluster=cluster,
                 segments=SegmentConfig(n_segments=n_segments),
             )
@@ -208,6 +241,9 @@ def find_optimal_combination(
                     "rmse": rmse,
                 }
             )
+
+            if save_all_results:
+                all_results.append(result)
 
             if rmse < best_rmse:
                 best_rmse = rmse
@@ -227,6 +263,7 @@ def find_optimal_combination(
         optimal_rmse=best_rmse,
         history=history,
         best_result=best_result,
+        all_results=all_results,
     )
 
 
@@ -234,6 +271,7 @@ def find_pareto_front(
     data: pd.DataFrame,
     *,
     period_hours: int = 24,
+    resolution: float | None = None,
     max_timesteps: int | None = None,
     cluster: ClusterConfig | None = None,
     show_progress: bool = True,
@@ -250,6 +288,10 @@ def find_pareto_front(
         Input time series data.
     period_hours : int, default 24
         Hours per period.
+    resolution : float, optional
+        Time resolution of input data in hours.
+        If not provided, inferred from the datetime index.
+        Examples: 1.0 (hourly), 0.25 (15-minute), 0.5 (30-minute)
     max_timesteps : int, optional
         Stop when reaching this many timesteps. If None, explores
         up to full resolution.
@@ -274,8 +316,12 @@ def find_pareto_front(
     if cluster is None:
         cluster = ClusterConfig()
 
+    # Infer resolution if not provided
+    if resolution is None:
+        resolution = _infer_resolution(data)
+
     n_timesteps = len(data)
-    timesteps_per_period = period_hours
+    timesteps_per_period = int(period_hours / resolution)
 
     max_periods = n_timesteps // timesteps_per_period
     max_segments = timesteps_per_period
@@ -296,6 +342,7 @@ def find_pareto_front(
                 data,
                 n_periods=n_per,
                 period_hours=period_hours,
+                resolution=resolution,
                 cluster=cluster,
                 segments=SegmentConfig(n_segments=n_seg),
             )
