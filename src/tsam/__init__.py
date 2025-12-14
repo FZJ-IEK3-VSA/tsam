@@ -38,8 +38,18 @@ The original class-based API is still available:
 >>> typical = agg.createTypicalPeriods()
 """
 
-from tsam import plot, tuning
 from tsam.api import aggregate
+
+
+# Lazy imports for modules with optional dependencies
+def __getattr__(name: str):
+    import importlib
+
+    if name in ("plot", "tuning"):
+        return importlib.import_module(f".{name}", __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 from tsam.config import ClusterConfig, ExtremeConfig, SegmentConfig
 from tsam.result import AccuracyMetrics, AggregationResult
 

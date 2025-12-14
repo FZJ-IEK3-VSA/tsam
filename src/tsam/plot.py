@@ -15,6 +15,9 @@ Two usage patterns are supported:
    >>> result = tsam.aggregate(df, n_periods=8)
    >>> result.plot.heatmap(column="Load")
    >>> result.plot.duration_curve()
+
+Note: This module requires the 'plotly' optional dependency.
+Install with: pip install tsam[plot]
 """
 
 from __future__ import annotations
@@ -22,8 +25,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+except ImportError as e:
+    raise ImportError(
+        "The tsam.plot module requires plotly. Install it with: pip install tsam[plot]"
+    ) from e
 
 if TYPE_CHECKING:
     from tsam.result import AggregationResult
@@ -122,8 +132,6 @@ def heatmaps(
     >>> # Plot all columns from reconstructed data, scaled to original
     >>> tsam.plot.heatmaps(result.reconstruct(), reference_data=df)
     """
-    from plotly.subplots import make_subplots
-
     from tsam.timeseriesaggregation import unstackToPeriods
 
     if columns is None:

@@ -39,13 +39,18 @@ dependencies = [
   "networkx",
   "tqdm",
   "highspy",
-  "plotly>=5.0.0",
-  "notebook>=7.5.0",
 ]
 
 requires-python = ">=3.10,<3.14"
 
 [project.optional-dependencies]
+plot = [
+  "plotly>=5.0.0",
+]
+notebooks = [
+  "notebook>=7.5.0",
+  "plotly>=5.0.0",
+]
 develop = [
   "pytest",
   "pytest-cov",
@@ -60,6 +65,8 @@ develop = [
   "mypy",
   "pandas-stubs",
   "pre-commit",
+  "plotly>=5.0.0",
+  "notebook>=7.5.0",
 ]
 
 [tool.setuptools.packages.find]
