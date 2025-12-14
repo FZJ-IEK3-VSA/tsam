@@ -361,15 +361,14 @@ class TestTuningEquivalence:
         col = "Wind"
         data = sample_data[[col]]
 
-        # Old API
+        # Old API with default settings to match new API defaults
         old_tuner = old_tune.HyperTunedAggregations(
             old_tsam.TimeSeriesAggregation(
                 data,
                 hoursPerPeriod=24,
                 clusterMethod="hierarchical",
                 representationMethod="durationRepresentation",
-                distributionPeriodWise=False,
-                rescaleClusterPeriods=False,
+                # Use defaults: distributionPeriodWise=True, rescaleClusterPeriods=True
                 segmentation=True,
             )
         )
@@ -379,26 +378,7 @@ class TestTuningEquivalence:
             )
         )
 
-        # New API - note: must use rescale=False to match old API config
-        # The new tuning API doesn't have a rescale parameter, so we need to
-        # compare with the old API using rescale=True (the new API default)
-        old_tuner_rescaled = old_tune.HyperTunedAggregations(
-            old_tsam.TimeSeriesAggregation(
-                data,
-                hoursPerPeriod=24,
-                clusterMethod="hierarchical",
-                representationMethod="durationRepresentation",
-                distributionPeriodWise=False,
-                rescaleClusterPeriods=True,  # Match new API default
-                segmentation=True,
-            )
-        )
-        old_segments_rescaled, old_periods_rescaled, old_rmse_rescaled = (
-            old_tuner_rescaled.identifyOptimalSegmentPeriodCombination(
-                dataReduction=data_reduction
-            )
-        )
-
+        # New API
         new_result = find_optimal_combination(
             data,
             data_reduction=data_reduction,
@@ -410,12 +390,10 @@ class TestTuningEquivalence:
             show_progress=False,
         )
 
-        # Results should match the rescaled old API
-        assert new_result.optimal_n_periods == old_periods_rescaled
-        assert new_result.optimal_n_segments == old_segments_rescaled
-        np.testing.assert_allclose(
-            new_result.optimal_rmse, old_rmse_rescaled, rtol=1e-5
-        )
+        # Results should match
+        assert new_result.optimal_n_periods == old_periods
+        assert new_result.optimal_n_segments == old_segments
+        np.testing.assert_allclose(new_result.optimal_rmse, old_rmse, rtol=1e-5)
 
     def test_find_pareto_front(self, small_data):
         """Test find_pareto_front produces decreasing RMSE like old API."""
