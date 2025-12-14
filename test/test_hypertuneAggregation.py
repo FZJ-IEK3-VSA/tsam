@@ -1,11 +1,10 @@
-import os
-
 import numpy as np
 import pandas as pd
 import pytest
 
 import tsam.hyperparametertuning as tune
 import tsam.timeseriesaggregation as tsam
+from conftest import TESTDATA_CSV
 
 
 def test_getPeriodPair():
@@ -32,10 +31,7 @@ def test_getPeriodPair():
 
 
 def test_optimalPair():
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     datareduction = 0.01
 
@@ -95,10 +91,7 @@ def test_steepest_gradient_leads_to_optima():
     of segments and periods smaller than sole segmentation approach
     """
 
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     SEGMENTS_TESTED = 5
 
@@ -149,10 +142,7 @@ def test_steepest_gradient_leads_to_optima():
 
 
 def test_paretoOptimalAggregation():
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     # reduce the set, since it takes otherwise too long
     raw = raw.iloc[:240, :]
