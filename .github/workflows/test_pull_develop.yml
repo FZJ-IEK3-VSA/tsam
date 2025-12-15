@@ -1,64 +1,52 @@
 on:
-    workflow_dispatch:
-    pull_request:
-        branches: ["develop"]
+  workflow_dispatch:
+  pull_request:
+    branches: ["develop"]
 
 jobs:
-    Lint:
-        name: Lint with ruff
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: "3.12"
-            - name: Install ruff
-              run: pip install ruff
-            - name: Run ruff linter
-              run: ruff check src/ test/
-            - name: Run ruff formatter check
-              run: ruff format --check src/ test/
-
-    TestPushCondaForgeDev:
-        name: Test conda-forge development version on ${{ matrix.runner_tag }}
-        strategy:
-            fail-fast: false
-            matrix:
-                runner_tag:
-                    [
-                        "ubuntu-latest",
-                        "ubuntu-22.04",
-                        "macos-latest",
-                        "macos-13",
-                        "windows-latest",
-                        "windows-2022",
-                    ]
-        uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+  Lint:
+    name: Lint with ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-            runner_tag: ${{ matrix.runner_tag }}
-            requirements_file_name: requirements_dev.yml
-            examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
-            multiprocessing_example_string: "-n auto"
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Run ruff linter
+        run: ruff check src/ test/
+      - name: Run ruff formatter check
+        run: ruff format --check src/ test/
 
-    TestPushPyPIDev:
-        name: Test PyPi development version on ${{ matrix.runner_tag }}
-        strategy:
-            fail-fast: false
-            matrix:
-                runner_tag:
-                    [
-                        "ubuntu-latest",
-                        "ubuntu-22.04",
-                        "macos-latest",
-                        "macos-13",
-                        "windows-latest",
-                        "windows-2022",
-                    ]
-        uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_pypi_test.yml@main
+  Test:
+    name: Test on Python ${{ matrix.python-version }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-22.04, macos-latest, macos-13, windows-latest, windows-2022]
+        python-version: ["3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
-            runner_tag: ${{ matrix.runner_tag }}
-            python_version: "3.13"
-            optional_dependency_PyPI_tag: "[develop]"
-            examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
-            multiprocessing_example_string: "-n auto"
+          python-version: ${{ matrix.python-version }}
+      - name: Install package with dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[develop]
+      - name: Run tests
+        run: pytest -n auto -vv
+      - name: Run example notebooks
+        run: |
+          pytest -n auto -vv --dist loadscope --nbval-lax --nbval-current-env --nbval-cell-timeout=900000 --durations=20 \
+            docs/source/examples_notebooks/aggregation_example.ipynb \
+            docs/source/examples_notebooks/aggregation_method_showcase.ipynb \
+            docs/source/examples_notebooks/aggregation_optiinput.ipynb \
+            docs/source/examples_notebooks/aggregation_representation.ipynb \
+            docs/source/examples_notebooks/aggregation_segmentation.ipynb \
+            docs/source/examples_notebooks/example_k_maxoids.ipynb \
+            docs/source/examples_notebooks/predefined_sequence_example.ipynb

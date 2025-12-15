@@ -5,13 +5,17 @@ version: 2
 build:
   os: ubuntu-22.04
   tools:
-    python: "mambaforge-22.9"
+    python: "3.12"
   apt_packages:
     - graphviz
 
-# Use conda environment
-conda:
-  environment: requirements_dev.yml
+# Install package with dependencies
+python:
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - develop
 
 # Build documentation with Sphinx
 sphinx:

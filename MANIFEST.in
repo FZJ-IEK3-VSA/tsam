@@ -1,3 +1,2 @@
 include examples/testdata.csv
 include examples/results/*.csv
-include requirements.yml
