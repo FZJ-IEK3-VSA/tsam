@@ -55,7 +55,6 @@ from tsam.result import AccuracyMetrics, AggregationResult
 
 # Legacy imports for backward compatibility
 from tsam.timeseriesaggregation import TimeSeriesAggregation, unstackToPeriods
-from tsam.utils import reshape_to_periods, reshape_to_periods_array
 
 __version__ = "3.0.0"
 
@@ -68,8 +67,6 @@ __all__ = [
     "TimeSeriesAggregation",
     "aggregate",
     "plot",
-    "reshape_to_periods",
-    "reshape_to_periods_array",
     "tuning",
     "unstackToPeriods",  # Legacy
 ]
