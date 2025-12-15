@@ -1,2 +1,0 @@
-include examples/testdata.csv
-include examples/results/*.csv
