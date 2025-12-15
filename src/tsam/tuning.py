@@ -6,9 +6,8 @@ This module provides functions for finding optimal aggregation parameters.
 from __future__ import annotations
 
 import os
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
-from functools import partial
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -21,26 +20,40 @@ from tsam.config import ClusterConfig, SegmentConfig
 if TYPE_CHECKING:
     from tsam.result import AggregationResult
 
+# Module-level globals for sharing data with worker processes.
+# This avoids pickling the DataFrame for every task - instead it's
+# pickled once per worker during pool initialization.
+_WORKER_DATA: pd.DataFrame | None = None
+_WORKER_CLUSTER: ClusterConfig | None = None
+
+
+def _init_worker(data: pd.DataFrame, cluster: ClusterConfig) -> None:
+    """Initialize worker process with shared data."""
+    global _WORKER_DATA, _WORKER_CLUSTER
+    _WORKER_DATA = data
+    _WORKER_CLUSTER = cluster
+
 
 def _test_single_config(
-    args: tuple[int, int],
-    data: pd.DataFrame,
-    period_hours: int,
-    resolution: float,
-    cluster: ClusterConfig,
+    args: tuple[int, int, int, float],
 ) -> tuple[int, int, float, AggregationResult | None]:
     """Test a single configuration.
 
+    Reads data and cluster config from worker globals (set by initializer).
+    Args contains (n_periods, n_segments, period_hours, resolution).
+
     Returns (n_periods, n_segments, rmse, result).
     """
-    n_periods, n_segments = args
+    n_periods, n_segments, period_hours, resolution = args
+    if _WORKER_DATA is None:
+        return (n_periods, n_segments, float("inf"), None)
     try:
         result = aggregate(
-            data,
+            _WORKER_DATA,
             n_periods=n_periods,
             period_hours=period_hours,
             resolution=resolution,
-            cluster=cluster,
+            cluster=_WORKER_CLUSTER,
             segments=SegmentConfig(n_segments=n_segments),
         )
         rmse = float(result.accuracy.rmse.mean())
@@ -305,24 +318,25 @@ def find_optimal_combination(
             except Exception:
                 continue
     else:
-        # Parallel execution
-        test_func = partial(
-            _test_single_config,
-            data=data,
-            period_hours=period_hours,
-            resolution=resolution,
-            cluster=cluster,
-        )
+        # Parallel execution with initializer to avoid pickling data per task
+        full_configs = [
+            (n_periods, n_segments, period_hours, resolution)
+            for n_periods, n_segments in configs_to_test
+        ]
 
-        with ThreadPoolExecutor(max_workers=n_workers) as executor:
+        with ProcessPoolExecutor(
+            max_workers=n_workers,
+            initializer=_init_worker,
+            initargs=(data, cluster),
+        ) as executor:
             if show_progress:
                 results_iter = tqdm.tqdm(
-                    executor.map(test_func, configs_to_test),
-                    total=len(configs_to_test),
+                    executor.map(_test_single_config, full_configs),
+                    total=len(full_configs),
                     desc=f"Searching configurations ({n_workers} workers)",
                 )
             else:
-                results_iter = executor.map(test_func, configs_to_test)
+                results_iter = executor.map(_test_single_config, full_configs)
 
             for n_periods, n_segments, rmse, result in results_iter:
                 if result is not None:
@@ -459,15 +473,16 @@ def find_pareto_front(
         configs: list[tuple[int, int]],
     ) -> list[tuple[int, int, float, AggregationResult | None]]:
         """Test multiple configurations in parallel."""
-        test_func = partial(
-            _test_single_config,
-            data=data,
-            period_hours=period_hours,
-            resolution=resolution,
-            cluster=cluster,
-        )
-        with ThreadPoolExecutor(max_workers=min(n_workers, len(configs))) as executor:
-            return list(executor.map(test_func, configs))
+        # Add period_hours and resolution to each config tuple
+        full_configs = [
+            (n_per, n_seg, period_hours, resolution) for n_per, n_seg in configs
+        ]
+        with ProcessPoolExecutor(
+            max_workers=min(n_workers, len(configs)),
+            initializer=_init_worker,
+            initargs=(data, cluster),
+        ) as executor:
+            return list(executor.map(_test_single_config, full_configs))
 
     # Start with (1, 1)
     rmse, result = test_config(n_periods, n_segments)
