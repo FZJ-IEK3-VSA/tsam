@@ -36,7 +36,9 @@ def _test_single_config_file(
     n_periods, n_segments, period_hours, resolution, data_path, cluster_dict = args
     try:
         # Load data fresh from file - no pickling
-        data = pd.read_csv(data_path, index_col=0, parse_dates=True)
+        data = pd.read_csv(
+            data_path, index_col=0, parse_dates=True, sep=",", decimal="."
+        )
         cluster = ClusterConfig(**cluster_dict)
 
         result = aggregate(
@@ -317,7 +319,7 @@ def find_optimal_combination(
 
         temp_dir = tempfile.mkdtemp(prefix="tsam_tuning_")
         data_path = Path(temp_dir) / "data.csv"
-        data.to_csv(data_path)
+        data.to_csv(data_path, sep=",", decimal=".")
 
         # Convert cluster to dict (only primitive types passed to workers)
         cluster_dict = asdict(cluster)
@@ -471,7 +473,7 @@ def find_pareto_front(
 
         temp_dir = tempfile.mkdtemp(prefix="tsam_pareto_")
         data_path = str(Path(temp_dir) / "data.csv")
-        data.to_csv(data_path)
+        data.to_csv(data_path, sep=",", decimal=".")
         cluster_dict = asdict(cluster)
 
     if show_progress:
