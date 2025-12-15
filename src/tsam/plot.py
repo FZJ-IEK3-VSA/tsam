@@ -71,15 +71,15 @@ def heatmap(
     >>> import tsam
     >>> tsam.plot.heatmap(df, column="Temperature", period_hours=24)
     """
-    from tsam.timeseriesaggregation import unstackToPeriods
+    from tsam.utils import reshape_to_periods_array
 
     if column is None:
         column = data.columns[0]
 
-    stacked, _ = unstackToPeriods(data[[column]].copy(), period_hours)
+    arr = reshape_to_periods_array(data[[column]], period_hours)[0]
 
     fig = px.imshow(
-        stacked[column].values.T,
+        arr,
         labels={"x": "Period (Day)", "y": "Timestep (Hour)", "color": column},
         title=title or f"{column} Heatmap",
         color_continuous_scale=color_continuous_scale,
@@ -132,13 +132,16 @@ def heatmaps(
     >>> # Plot all columns from reconstructed data, scaled to original
     >>> tsam.plot.heatmaps(result.reconstruct(), reference_data=df)
     """
-    from tsam.timeseriesaggregation import unstackToPeriods
+    from tsam.utils import reshape_to_periods_array
 
     if columns is None:
         columns = list(data.columns)
 
     n_cols = len(columns)
     ref = reference_data if reference_data is not None else data
+
+    # Reshape all columns at once: (n_cols, period_hours, n_days)
+    arr = reshape_to_periods_array(data[columns], period_hours)
 
     fig = make_subplots(
         rows=n_cols,
@@ -148,25 +151,23 @@ def heatmaps(
         vertical_spacing=0.05,
     )
 
-    for i, col in enumerate(columns, 1):
-        stacked, _ = unstackToPeriods(data[[col]].copy(), period_hours)
-
+    for i, col in enumerate(columns):
         fig.add_trace(
             go.Heatmap(
-                z=stacked[col].values.T,
+                z=arr[i],
                 colorscale=color_continuous_scale,
                 zmin=ref[col].min(),
                 zmax=ref[col].max(),
                 colorbar={
                     "title": col,
-                    "y": 1 - (i - 0.5) / n_cols,
+                    "y": 1 - (i + 0.5) / n_cols,
                     "len": 0.9 / n_cols,
                 },
             ),
-            row=i,
+            row=i + 1,
             col=1,
         )
-        fig.update_yaxes(title_text="Hour", row=i, col=1)
+        fig.update_yaxes(title_text="Hour", row=i + 1, col=1)
 
     fig.update_xaxes(title_text="Day", row=n_cols, col=1)
     fig.update_layout(
