@@ -6,7 +6,7 @@ This module provides functions for finding optimal aggregation parameters.
 from __future__ import annotations
 
 import os
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING
@@ -29,7 +29,7 @@ def _test_single_config(
     resolution: float,
     cluster: ClusterConfig,
 ) -> tuple[int, int, float, AggregationResult | None]:
-    """Test a single configuration. Designed for parallel execution.
+    """Test a single configuration.
 
     Returns (n_periods, n_segments, rmse, result).
     """
@@ -314,7 +314,7 @@ def find_optimal_combination(
             cluster=cluster,
         )
 
-        with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        with ThreadPoolExecutor(max_workers=n_workers) as executor:
             if show_progress:
                 results_iter = tqdm.tqdm(
                     executor.map(test_func, configs_to_test),
@@ -466,7 +466,7 @@ def find_pareto_front(
             resolution=resolution,
             cluster=cluster,
         )
-        with ProcessPoolExecutor(max_workers=min(n_workers, len(configs))) as executor:
+        with ThreadPoolExecutor(max_workers=min(n_workers, len(configs))) as executor:
             return list(executor.map(test_func, configs))
 
     # Start with (1, 1)
