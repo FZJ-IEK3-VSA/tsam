@@ -68,5 +68,5 @@ __all__ = [
     "aggregate",
     "plot",
     "tuning",
-    "unstackToPeriods",  # Legacy
+    "unstackToPeriods",
 ]
