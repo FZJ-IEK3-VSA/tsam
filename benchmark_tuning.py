@@ -173,6 +173,12 @@ def main() -> None:
         print("=" * 60)
         print("SUMMARY")
         print("=" * 60)
+        print(
+            f"  Optimal: {result_seq.optimal_n_periods} periods, "
+            f"{result_seq.optimal_n_segments} segments, "
+            f"RMSE: {result_seq.optimal_rmse:.4f}"
+        )
+        print()
         print(f"  Sequential:              {time_sequential:6.2f}s  (baseline)")
         print(
             f"  Parallel + initializer:  {time_parallel:6.2f}s  "
@@ -196,6 +202,12 @@ def main() -> None:
         print("=" * 60)
         print("SUMMARY")
         print("=" * 60)
+        print(
+            f"  Optimal: {result_seq.optimal_n_periods} periods, "
+            f"{result_seq.optimal_n_segments} segments, "
+            f"RMSE: {result_seq.optimal_rmse:.4f}"
+        )
+        print()
         print(f"  Sequential:              {time_sequential:6.2f}s  (baseline)")
         print(
             f"  Parallel + initializer:  {time_parallel:6.2f}s  "
