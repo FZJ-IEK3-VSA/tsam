@@ -6,8 +6,10 @@ This module provides functions for finding optimal aggregation parameters.
 from __future__ import annotations
 
 import os
+import tempfile
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -20,40 +22,29 @@ from tsam.config import ClusterConfig, SegmentConfig
 if TYPE_CHECKING:
     from tsam.result import AggregationResult
 
-# Module-level globals for sharing data with worker processes.
-# This avoids pickling the DataFrame for every task - instead it's
-# pickled once per worker during pool initialization.
-_WORKER_DATA: pd.DataFrame | None = None
-_WORKER_CLUSTER: ClusterConfig | None = None
 
-
-def _init_worker(data: pd.DataFrame, cluster: ClusterConfig) -> None:
-    """Initialize worker process with shared data."""
-    global _WORKER_DATA, _WORKER_CLUSTER
-    _WORKER_DATA = data
-    _WORKER_CLUSTER = cluster
-
-
-def _test_single_config(
-    args: tuple[int, int, int, float],
+def _test_single_config_file(
+    args: tuple[int, int, int, float, str, dict],
 ) -> tuple[int, int, float, AggregationResult | None]:
-    """Test a single configuration.
+    """Test a single configuration for parallel execution.
 
-    Reads data and cluster config from worker globals (set by initializer).
-    Args contains (n_periods, n_segments, period_hours, resolution).
+    Loads data from file - no DataFrame pickling.
+    Args contains (n_periods, n_segments, period_hours, resolution, data_path, cluster_dict).
 
     Returns (n_periods, n_segments, rmse, result).
     """
-    n_periods, n_segments, period_hours, resolution = args
-    if _WORKER_DATA is None:
-        return (n_periods, n_segments, float("inf"), None)
+    n_periods, n_segments, period_hours, resolution, data_path, cluster_dict = args
     try:
+        # Load data fresh from file - no pickling
+        data = pd.read_csv(data_path, index_col=0, parse_dates=True)
+        cluster = ClusterConfig(**cluster_dict)
+
         result = aggregate(
-            _WORKER_DATA,
+            data,
             n_periods=n_periods,
             period_hours=period_hours,
             resolution=resolution,
-            cluster=_WORKER_CLUSTER,
+            cluster=cluster,
             segments=SegmentConfig(n_segments=n_segments),
         )
         rmse = float(result.accuracy.rmse.mean())
@@ -203,7 +194,9 @@ def find_optimal_combination(
     n_jobs : int, optional
         Number of parallel jobs. If None or 1, runs sequentially.
         Use -1 for all available CPUs, or a positive integer for
-        a specific number of workers.
+        a specific number of workers. Parallel execution uses a file-based
+        approach where data is saved to a temp file and workers load from
+        disk - no DataFrame pickling, safe for sensitive data.
 
     Returns
     -------
@@ -216,7 +209,7 @@ def find_optimal_combination(
     >>> print(f"Optimal: {result.optimal_n_periods} periods, "
     ...       f"{result.optimal_n_segments} segments")
 
-    >>> # Use all CPUs for faster search
+    >>> # Use all CPUs for faster search (file-based, no DataFrame pickling)
     >>> result = find_optimal_combination(df, data_reduction=0.01, n_jobs=-1)
     """
     if cluster is None:
@@ -318,44 +311,61 @@ def find_optimal_combination(
             except Exception:
                 continue
     else:
-        # Parallel execution with initializer to avoid pickling data per task
+        # Parallel execution: file-based approach
+        # Data saved to temp file, workers load from disk - no DataFrame pickling
+        import shutil
+
+        temp_dir = tempfile.mkdtemp(prefix="tsam_tuning_")
+        data_path = Path(temp_dir) / "data.csv"
+        data.to_csv(data_path)
+
+        # Convert cluster to dict (only primitive types passed to workers)
+        cluster_dict = asdict(cluster)
+
         full_configs = [
-            (n_periods, n_segments, period_hours, resolution)
+            (
+                n_periods,
+                n_segments,
+                period_hours,
+                resolution,
+                str(data_path),
+                cluster_dict,
+            )
             for n_periods, n_segments in configs_to_test
         ]
 
-        with ProcessPoolExecutor(
-            max_workers=n_workers,
-            initializer=_init_worker,
-            initargs=(data, cluster),
-        ) as executor:
-            if show_progress:
-                results_iter = tqdm.tqdm(
-                    executor.map(_test_single_config, full_configs),
-                    total=len(full_configs),
-                    desc=f"Searching configurations ({n_workers} workers)",
-                )
-            else:
-                results_iter = executor.map(_test_single_config, full_configs)
-
-            for n_periods, n_segments, rmse, result in results_iter:
-                if result is not None:
-                    history.append(
-                        {
-                            "n_periods": n_periods,
-                            "n_segments": n_segments,
-                            "rmse": rmse,
-                        }
+        try:
+            with ProcessPoolExecutor(max_workers=n_workers) as executor:
+                if show_progress:
+                    results_iter = tqdm.tqdm(
+                        executor.map(_test_single_config_file, full_configs),
+                        total=len(full_configs),
+                        desc=f"Searching configurations ({n_workers} workers)",
                     )
+                else:
+                    results_iter = executor.map(_test_single_config_file, full_configs)
 
-                    if save_all_results:
-                        all_results.append(result)
+                for n_periods, n_segments, rmse, result in results_iter:
+                    if result is not None:
+                        history.append(
+                            {
+                                "n_periods": n_periods,
+                                "n_segments": n_segments,
+                                "rmse": rmse,
+                            }
+                        )
 
-                    if rmse < best_rmse:
-                        best_rmse = rmse
-                        best_result = result
-                        best_periods = n_periods
-                        best_segments = n_segments
+                        if save_all_results:
+                            all_results.append(result)
+
+                        if rmse < best_rmse:
+                            best_rmse = rmse
+                            best_result = result
+                            best_periods = n_periods
+                            best_segments = n_segments
+        finally:
+            # Clean up temp file
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
     if best_result is None:
         raise ValueError("No valid configuration found")
@@ -452,6 +462,18 @@ def find_pareto_front(
     n_periods = 1
     n_segments = 1
 
+    # Set up file-based parallel execution if needed (no DataFrame pickling)
+    temp_dir: str | None = None
+    data_path: str | None = None
+    cluster_dict: dict | None = None
+    if n_workers > 1:
+        import shutil
+
+        temp_dir = tempfile.mkdtemp(prefix="tsam_pareto_")
+        data_path = str(Path(temp_dir) / "data.csv")
+        data.to_csv(data_path)
+        cluster_dict = asdict(cluster)
+
     if show_progress:
         pbar = tqdm.tqdm(total=max_timesteps, desc="Building Pareto front")
 
@@ -471,18 +493,16 @@ def find_pareto_front(
 
     def test_configs_parallel(
         configs: list[tuple[int, int]],
+        data_path: str,
+        cluster_dict: dict,
     ) -> list[tuple[int, int, float, AggregationResult | None]]:
-        """Test multiple configurations in parallel."""
-        # Add period_hours and resolution to each config tuple
+        """Test multiple configurations in parallel (file-based, no pickling)."""
         full_configs = [
-            (n_per, n_seg, period_hours, resolution) for n_per, n_seg in configs
+            (n_per, n_seg, period_hours, resolution, data_path, cluster_dict)
+            for n_per, n_seg in configs
         ]
-        with ProcessPoolExecutor(
-            max_workers=min(n_workers, len(configs)),
-            initializer=_init_worker,
-            initargs=(data, cluster),
-        ) as executor:
-            return list(executor.map(_test_single_config, full_configs))
+        with ProcessPoolExecutor(max_workers=min(n_workers, len(configs))) as executor:
+            return list(executor.map(_test_single_config_file, full_configs))
 
     # Start with (1, 1)
     rmse, result = test_config(n_periods, n_segments)
@@ -508,11 +528,12 @@ def find_pareto_front(
     ):
         if n_workers > 1:
             # Test both directions in parallel
+            assert data_path is not None and cluster_dict is not None
             configs = [
                 (n_periods, n_segments + 1),  # Add segment
                 (n_periods + 1, n_segments),  # Add period
             ]
-            results = test_configs_parallel(configs)
+            results = test_configs_parallel(configs, data_path, cluster_dict)
             _, _, rmse_seg, result_seg = results[0]
             _, _, rmse_per, result_per = results[1]
         else:
@@ -581,7 +602,8 @@ def find_pareto_front(
     if remaining_periods:
         if n_workers > 1 and len(remaining_periods) > 1:
             # Batch test remaining period configurations
-            results = test_configs_parallel(remaining_periods)
+            assert data_path is not None and cluster_dict is not None
+            results = test_configs_parallel(remaining_periods, data_path, cluster_dict)
             for n_per, n_seg, rmse, result in results:
                 if result:
                     pareto_results.append(
@@ -624,7 +646,8 @@ def find_pareto_front(
     if remaining_segments:
         if n_workers > 1 and len(remaining_segments) > 1:
             # Batch test remaining segment configurations
-            results = test_configs_parallel(remaining_segments)
+            assert data_path is not None and cluster_dict is not None
+            results = test_configs_parallel(remaining_segments, data_path, cluster_dict)
             for n_per, n_seg, rmse, result in results:
                 if result:
                     pareto_results.append(
@@ -660,5 +683,11 @@ def find_pareto_front(
 
     if show_progress:
         pbar.close()
+
+    # Clean up temp file if used
+    if temp_dir is not None:
+        import shutil
+
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
     return pareto_results
