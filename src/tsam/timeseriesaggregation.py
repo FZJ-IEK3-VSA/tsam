@@ -1110,30 +1110,28 @@ class TimeSeriesAggregation:
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
 
         # check if original time series boundaries are not exceeded
-        if np.array(
-            self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
-        ).any():
-            warning_list = self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
+        exceeds_max = self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
+        if exceeds_max.any():
             diff = self.typicalPeriods.max(axis=0) - self.timeSeries.max(axis=0)
-            if abs(diff).max() > self.numericalTolerance:
+            exceeding_diff = diff[exceeds_max]
+            if exceeding_diff.max() > self.numericalTolerance:
                 warnings.warn(
                     "At least one maximal value of the "
                     + "aggregated time series exceeds the maximal value "
                     + "the input time series for: "
-                    + f"{diff[warning_list[warning_list > 0].index].to_dict()}"
+                    + f"{exceeding_diff.to_dict()}"
                     + ". To silence the warning set the 'numericalTolerance' to a higher value."
                 )
-        if np.array(
-            self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
-        ).any():
-            warning_list = self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
-            diff = self.typicalPeriods.min(axis=0) - self.timeSeries.min(axis=0)
-            if abs(diff).max() > self.numericalTolerance:
+        below_min = self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
+        if below_min.any():
+            diff = self.timeSeries.min(axis=0) - self.typicalPeriods.min(axis=0)
+            exceeding_diff = diff[below_min]
+            if exceeding_diff.max() > self.numericalTolerance:
                 warnings.warn(
                     "Something went wrong... At least one minimal value of the "
                     + "aggregated time series exceeds the minimal value "
                     + "the input time series for: "
-                    + f"{diff[warning_list[warning_list > 0].index].to_dict()}"
+                    + f"{exceeding_diff.to_dict()}"
                     + ". To silence the warning set the 'numericalTolerance' to a higher value."
                 )
         return self.typicalPeriods
