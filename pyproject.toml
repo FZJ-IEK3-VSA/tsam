@@ -50,6 +50,7 @@ plot = [
 notebooks = [
   "notebook>=7.5.0",
   "plotly>=5.0.0",
+  "matplotlib",
 ]
 develop = [
   "pytest",
@@ -67,6 +68,7 @@ develop = [
   "pre-commit",
   "plotly>=5.0.0",
   "notebook>=7.5.0",
+  "matplotlib",
 ]
 
 [tool.setuptools.packages.find]
