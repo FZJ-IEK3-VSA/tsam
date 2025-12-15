@@ -60,7 +60,6 @@ develop = [
   "sphinx",
   "sphinx-autobuild",
   "sphinx_book_theme",
-  "twine",
   "nbval",
   "ruff",
   "mypy",
