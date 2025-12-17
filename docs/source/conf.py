@@ -117,11 +117,7 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = [
-    "examples_notebooks/aggregation_segment_period_opti.ipynb",
-    "examples_notebooks/aggregation_segment_period_building_timeseries.ipynb",
-    "examples_notebooks/aggregation_segment_period_animation.ipynb",
-]
+exclude_patterns = []
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"
