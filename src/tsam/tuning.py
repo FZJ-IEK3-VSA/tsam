@@ -292,23 +292,23 @@ def find_optimal_combination(
                     segments=SegmentConfig(n_segments=n_segments),
                 )
 
-            rmse = float(result.accuracy.rmse.mean())
-            history.append(
-                {
-                    "n_periods": n_periods,
-                    "n_segments": n_segments,
-                    "rmse": rmse,
-                }
-            )
+                rmse = float(result.accuracy.rmse.mean())
+                history.append(
+                    {
+                        "n_periods": n_periods,
+                        "n_segments": n_segments,
+                        "rmse": rmse,
+                    }
+                )
 
-            if save_all_results:
-                all_results.append(result)
+                if save_all_results:
+                    all_results.append(result)
 
-            if rmse < best_rmse:
-                best_rmse = rmse
-                best_result = result
-                best_periods = n_periods
-                best_segments = n_segments
+                if rmse < best_rmse:
+                    best_rmse = rmse
+                    best_result = result
+                    best_periods = n_periods
+                    best_segments = n_segments
 
             except Exception:
                 continue
