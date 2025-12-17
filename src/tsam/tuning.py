@@ -5,10 +5,12 @@ This module provides functions for finding optimal aggregation parameters.
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
+
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -25,6 +27,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
     from tsam.result import AggregationResult
+
+logger = logging.getLogger(__name__)
 
 
 def _test_single_config_file(
@@ -55,7 +59,8 @@ def _test_single_config_file(
         )
         rmse = float(result.accuracy.rmse.mean())
         return (n_periods, n_segments, rmse, result)
-    except Exception:
+    except Exception as e:
+        logger.debug("Config (%d, %d) failed: %s", n_periods, n_segments, e)
         return (n_periods, n_segments, float("inf"), None)
 
 
@@ -159,7 +164,8 @@ def _test_configs(
                 )
                 rmse = float(result.accuracy.rmse.mean())
                 results.append((n_per, n_seg, rmse, result))
-            except Exception:
+            except Exception as e:
+                logger.debug("Config (%d, %d) failed: %s", n_per, n_seg, e)
                 results.append((n_per, n_seg, float("inf"), None))
 
     return results
@@ -182,11 +188,21 @@ def _make_tuning_result(
 
 
 def _get_n_workers(n_jobs: int | None) -> int:
-    """Convert n_jobs parameter to actual worker count."""
+    """Convert n_jobs parameter to actual worker count.
+
+    Follows joblib convention for negative values:
+    - n_jobs=None or 1: single worker (no parallelization)
+    - n_jobs=-1: all CPUs
+    - n_jobs=-2: all CPUs minus 1
+    - n_jobs=-N: all CPUs minus (N-1)
+    - n_jobs>1: exactly that many workers
+    """
     if n_jobs is None or n_jobs == 1:
         return 1
-    elif n_jobs == -1:
-        return os.cpu_count() or 1
+    elif n_jobs < 0:
+        # Negative values: all CPUs + n_jobs + 1 (e.g., -1 = all, -2 = all-1)
+        cpu_count = os.cpu_count() or 1
+        return max(1, cpu_count + n_jobs + 1)
     else:
         return max(1, n_jobs)
 
