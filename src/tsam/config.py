@@ -154,6 +154,8 @@ class SegmentConfig:
     def __post_init__(self) -> None:
         if self.n_segments < 1:
             raise ValueError(f"n_segments must be positive, got {self.n_segments}")
+        # Note: Upper bound validation (n_segments <= timesteps_per_period)
+        # is performed in api.aggregate() when period_hours is known.
 
 
 @dataclass(frozen=True)

@@ -40,12 +40,15 @@ The original class-based API is still available:
 
 from tsam.api import aggregate
 
+# Optional modules loaded on-demand to avoid importing heavy dependencies (e.g., plotly)
+_LAZY_MODULES = ("plot", "tuning")
 
-# Lazy imports for modules with optional dependencies
+
 def __getattr__(name: str):
+    """Lazy import handler for optional modules."""
     import importlib
 
-    if name in ("plot", "tuning"):
+    if name in _LAZY_MODULES:
         return importlib.import_module(f".{name}", __name__)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

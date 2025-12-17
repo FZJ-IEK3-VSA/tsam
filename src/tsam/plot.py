@@ -206,14 +206,19 @@ def duration_curve(
     if columns is None:
         columns = list(data.columns)
 
-    # Build long-form data with sorted values
-    records = []
+    # Build long-form data with sorted values using vectorized operations
+    frames = []
     for col in columns:
         sorted_vals = data[col].sort_values(ascending=False).reset_index(drop=True)
-        for hour, val in enumerate(sorted_vals):
-            records.append({"Hour": hour, "Value": val, "Column": col})
-
-    long_df = pd.DataFrame(records)
+        df_col = pd.DataFrame(
+            {
+                "Hour": range(len(sorted_vals)),
+                "Value": sorted_vals.values,
+                "Column": col,
+            }
+        )
+        frames.append(df_col)
+    long_df = pd.concat(frames, ignore_index=True)
 
     fig = px.line(
         long_df,
