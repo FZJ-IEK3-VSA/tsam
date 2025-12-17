@@ -5,13 +5,11 @@ import numpy as np
 import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
+from conftest import TESTDATA_CSV
 
 
 def test_durationRepresentation():
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     starttime = time.time()
 
@@ -82,10 +80,7 @@ def test_durationRepresentation():
 
 
 def test_distributionMinMaxRepresentation():
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
@@ -117,10 +112,7 @@ def test_distributionMinMaxRepresentation():
 
 
 def test_distributionRepresentation_keeps_mean():
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,

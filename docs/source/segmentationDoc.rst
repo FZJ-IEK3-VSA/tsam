@@ -10,6 +10,6 @@ Descriptions of the basic functions are given below.
 
 **Function descriptions:**
 
-.. automodule:: segmentation
+.. automodule:: tsam.utils.segmentation
    :members:
    :member-order: bysource
