@@ -710,7 +710,8 @@ def _find_pareto_front_steepest(
         for n_per, n_seg, rmse, result in results:
             if result is not None:
                 pareto_results.append(_make_tuning_result(n_per, n_seg, rmse, result))
-            update_progress()
+            if pbar is not None:
+                pbar.update(n_seg * n_per - pbar.n)
 
     # Continue with segments only
     remaining_segments = []
@@ -730,7 +731,8 @@ def _find_pareto_front_steepest(
         for n_per, n_seg, rmse, result in results:
             if result is not None:
                 pareto_results.append(_make_tuning_result(n_per, n_seg, rmse, result))
-            update_progress()
+            if pbar is not None:
+                pbar.update(n_seg * n_per - pbar.n)
 
     if pbar is not None:
         pbar.close()
