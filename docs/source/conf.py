@@ -55,7 +55,7 @@ nbsphinx_timeout = 300  # 5 min timeout per notebook
 nbsphinx_prolog = """
 .. raw:: html
 
-    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-3.3.1.min.js"></script>
 """
 
 # Set Plotly to use notebook_connected renderer during execution
