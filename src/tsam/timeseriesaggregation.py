@@ -892,15 +892,16 @@ class TimeSeriesAggregation:
                 diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
                 a += 1
             if a == MAX_ITERATOR:
-                deviation = str(round((diff / sum_raw) * 100, 2))
-                warnings.warn(
-                    'Max iteration number reached for "'
-                    + str(column)
-                    + '" while rescaling the cluster periods.'
-                    + " The integral of the aggregated time series deviates by: "
-                    + deviation
-                    + "%"
-                )
+                deviation_pct = (diff / sum_raw) * 100 if sum_raw != 0 else 0
+                if deviation_pct > 0.01:  # Only warn if deviation is meaningful
+                    warnings.warn(
+                        'Max iteration number reached for "'
+                        + str(column)
+                        + '" while rescaling the cluster periods.'
+                        + " The integral of the aggregated time series deviates by: "
+                        + str(round(deviation_pct, 2))
+                        + "%"
+                    )
         return typicalPeriods.values
 
     def _clusterSortedPeriods(self, candidates, n_init=20):
@@ -1109,30 +1110,28 @@ class TimeSeriesAggregation:
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
 
         # check if original time series boundaries are not exceeded
-        if np.array(
-            self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
-        ).any():
-            warning_list = self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
+        exceeds_max = self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
+        if exceeds_max.any():
             diff = self.typicalPeriods.max(axis=0) - self.timeSeries.max(axis=0)
-            if abs(diff).max() > self.numericalTolerance:
+            exceeding_diff = diff[exceeds_max]
+            if exceeding_diff.max() > self.numericalTolerance:
                 warnings.warn(
                     "At least one maximal value of the "
                     + "aggregated time series exceeds the maximal value "
                     + "the input time series for: "
-                    + f"{diff[warning_list[warning_list > 0].index].to_dict()}"
+                    + f"{exceeding_diff.to_dict()}"
                     + ". To silence the warning set the 'numericalTolerance' to a higher value."
                 )
-        if np.array(
-            self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
-        ).any():
-            warning_list = self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
-            diff = self.typicalPeriods.min(axis=0) - self.timeSeries.min(axis=0)
-            if abs(diff).max() > self.numericalTolerance:
+        below_min = self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
+        if below_min.any():
+            diff = self.timeSeries.min(axis=0) - self.typicalPeriods.min(axis=0)
+            exceeding_diff = diff[below_min]
+            if exceeding_diff.max() > self.numericalTolerance:
                 warnings.warn(
                     "Something went wrong... At least one minimal value of the "
                     + "aggregated time series exceeds the minimal value "
                     + "the input time series for: "
-                    + f"{diff[warning_list[warning_list > 0].index].to_dict()}"
+                    + f"{exceeding_diff.to_dict()}"
                     + ". To silence the warning set the 'numericalTolerance' to a higher value."
                 )
         return self.typicalPeriods
