@@ -15,6 +15,7 @@ This section contains Jupyter notebook examples demonstrating various features o
    examples_notebooks/aggregation_optiinput
    examples_notebooks/predefined_sequence_example
    examples_notebooks/example_k_maxoids
+   examples_notebooks/tuning_example
 
 .. note::
 
