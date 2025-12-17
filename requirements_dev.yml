@@ -13,7 +13,7 @@ dependencies:
   - tqdm
   - highspy
   - matplotlib
-  - plotly
+  - plotly>=5.0.0
   # Testing
   - pytest
   - pytest-cov
