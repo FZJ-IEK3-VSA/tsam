@@ -20,9 +20,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath("."))
-insertPaths = [x[0] for x in os.walk(r"../..") if (x[0][-1] != "_")]
-for path in insertPaths:
-    sys.path.insert(0, os.path.abspath(path))
+sys.path.insert(0, os.path.abspath("../.."))  # Add project root for autodoc
 
 
 # -- General configuration ------------------------------------------------
@@ -44,7 +42,29 @@ extensions = [
     "sphinx.ext.imgmath",
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
+    "nbsphinx",
 ]
+
+# nbsphinx configuration
+# Execute notebooks during build, but skip heavy ones (configured in examples.rst)
+nbsphinx_execute = "auto"
+nbsphinx_timeout = 300  # 5 min timeout per notebook
+
+# Enable Plotly support in nbsphinx
+# Include Plotly.js in all notebook pages
+nbsphinx_prolog = """
+.. raw:: html
+
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+"""
+
+# Set Plotly to use notebook_connected renderer during execution
+nbsphinx_execute_arguments = [
+    "--InlineBackend.figure_formats={'svg', 'pdf'}",
+]
+
+# Kernel setup code - runs before each notebook
+nbsphinx_kernel_name = "python3"
 
 inheritance_graph_attrs = {
     "rankdir": "LR",
@@ -97,7 +117,11 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = []
+exclude_patterns = [
+    "examples_notebooks/aggregation_segment_period_opti.ipynb",
+    "examples_notebooks/aggregation_segment_period_building_timeseries.ipynb",
+    "examples_notebooks/aggregation_segment_period_animation.ipynb",
+]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"

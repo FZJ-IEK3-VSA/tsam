@@ -1,9 +1,8 @@
-import os
-
 import numpy as np
 import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
+from conftest import TESTDATA_CSV
 
 
 def test_accuracyIndicators():
@@ -11,10 +10,7 @@ def test_accuracyIndicators():
 
     noTypicalPeriods = 8
 
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     aggregation1 = tsam.TimeSeriesAggregation(
         raw,

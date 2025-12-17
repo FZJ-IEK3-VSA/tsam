@@ -1,26 +1,17 @@
-import os
 import time
 
 import numpy as np
 import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
+from conftest import RESULTS_DIR, TESTDATA_CSV
 
 
 def test_k_medoids():
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     orig_raw = pd.read_csv(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "examples",
-            "results",
-            "testperiods_kmedoids.csv",
-        ),
+        RESULTS_DIR / "testperiods_kmedoids.csv",
         index_col=[0, 1],
     )
 

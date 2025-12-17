@@ -10,6 +10,6 @@ Descriptions of the basic functions are given below.
 
 **Function descriptions:**
 
-.. automodule:: k_maxoids
+.. automodule:: tsam.utils.k_maxoids
    :members:
    :member-order: bysource

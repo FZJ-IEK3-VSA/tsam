@@ -79,40 +79,65 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 
 ### Basic workflow
 
-A small example how tsam can be used is decribed as follows
+A small example how tsam can be used is described as follows:
 ```python
-	import pandas as pd
-	import tsam.timeseriesaggregation as tsam
+import pandas as pd
+import tsam
 ```
 
 
 Read in the time series data set with pandas
 ```python
-	raw = pd.read_csv('testdata.csv', index_col = 0)
+raw = pd.read_csv('testdata.csv', index_col=0, parse_dates=True)
 ```
 
-Initialize an aggregation object and define the length of a single period, the number of typical periods, the number of segments in each period, the aggregation method and the representation method - here duration/distribution representation which contains the minimum and maximum value of the original time series
+Run the aggregation - specify the number of typical periods and configure clustering/segmentation options:
 ```python
-	aggregation = tsam.TimeSeriesAggregation(raw,
-						noTypicalPeriods = 8,
-						hoursPerPeriod = 24,
-						segmentation = True,
-						noSegments = 8,
-						representationMethod = "distributionAndMinMaxRepresentation",
-						distributionPeriodWise = False
-						clusterMethod = 'hierarchical'
-						)
+from tsam import aggregate, ClusterConfig, SegmentConfig
+
+result = tsam.aggregate(
+    raw,
+    n_periods=8,
+    period_hours=24,
+    cluster=ClusterConfig(
+        method='hierarchical',
+        representation='distribution_minmax',
+    ),
+    segments=SegmentConfig(n_segments=8),
+)
 ```
 
-Run the aggregation to typical periods
+Access the results:
 ```python
-	typPeriods = aggregation.createTypicalPeriods()
+# Get the typical periods DataFrame
+typical_periods = result.typical_periods
+
+# Check accuracy metrics
+print(f"RMSE: {result.accuracy.rmse.mean():.4f}")
+
+# Reconstruct the original time series from typical periods
+reconstructed = result.reconstruct()
+
+# Save results
+typical_periods.to_csv('typical_periods.csv')
 ```
 
-Store the results as .csv file
+### Legacy API
 
+The class-based API is still available for backward compatibility:
 ```python
-	typPeriods.to_csv('typperiods.csv')
+import tsam.timeseriesaggregation as tsam_legacy
+
+aggregation = tsam_legacy.TimeSeriesAggregation(
+    raw,
+    noTypicalPeriods=8,
+    hoursPerPeriod=24,
+    segmentation=True,
+    noSegments=8,
+    representationMethod="distributionAndMinMaxRepresentation",
+    clusterMethod='hierarchical'
+)
+typical_periods = aggregation.createTypicalPeriods()
 ```
 
 ### Detailed examples

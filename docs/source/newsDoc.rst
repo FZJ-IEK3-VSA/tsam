@@ -2,9 +2,9 @@
 tsam's Change Log
 #################
 
-*********************
-This is outdated. Please refer to the releases on `GitHub <https://github.com/FZJ-IEK3-VSA/tsam/releases>`_ for the most recent changes.
-*********************
+.. note::
+
+   This is outdated. Please refer to the releases on `GitHub <https://github.com/FZJ-IEK3-VSA/tsam/releases>`_ for the most recent changes.
 
 
 

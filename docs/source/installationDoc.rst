@@ -47,9 +47,9 @@ With conda/mamba:
     pip install tsam
 
 
-*****************************
+***********************************
 Local Installation for Development
-*****************************
+***********************************
 
 Clone the repository:
 
@@ -135,9 +135,9 @@ Tests are run using pytest:
     uv run pytest test/ -n auto
 
 
-*****************************
+***************************************
 Installation of an Optimization Solver
-*****************************
+***************************************
 
 Some clustering algorithms in tsam are based on Mixed-Integer Linear Programming. An appropriate solver accessible by `Pyomo <https://github.com/Pyomo/pyomo/>`_ is required.
 

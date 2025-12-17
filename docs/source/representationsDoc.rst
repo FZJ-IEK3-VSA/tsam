@@ -10,6 +10,6 @@ Descriptions of the basic functions are given below.
 
 **Function descriptions:**
 
-.. automodule:: representations
+.. automodule:: tsam.representations
    :members:
    :member-order: bysource
