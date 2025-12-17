@@ -261,10 +261,22 @@ def _build_old_params(
         params["roundOutput"] = round_decimals
 
     # Cluster config
-    params["clusterMethod"] = METHOD_MAPPING[cluster.method]
-    params["representationMethod"] = REPRESENTATION_MAPPING[
-        cluster.get_representation()
-    ]
+    method = METHOD_MAPPING.get(cluster.method)
+    if method is None:
+        raise ValueError(
+            f"Unknown cluster method: {cluster.method!r}. "
+            f"Valid options: {list(METHOD_MAPPING.keys())}"
+        )
+    params["clusterMethod"] = method
+
+    representation = cluster.get_representation()
+    rep_mapped = REPRESENTATION_MAPPING.get(representation)
+    if rep_mapped is None:
+        raise ValueError(
+            f"Unknown representation method: {representation!r}. "
+            f"Valid options: {list(REPRESENTATION_MAPPING.keys())}"
+        )
+    params["representationMethod"] = rep_mapped
     params["sortValues"] = cluster.use_duration_curves
     params["sameMean"] = cluster.normalize_means
     params["evalSumPeriods"] = cluster.include_period_sums

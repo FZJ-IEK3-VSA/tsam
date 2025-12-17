@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -116,7 +116,7 @@ class AggregationResult:
     cluster_center_indices: np.ndarray | None
     accuracy: AccuracyMetrics
     clustering_duration: float
-    _aggregation: TimeSeriesAggregation  # Internal reference
+    _aggregation: TimeSeriesAggregation = field(repr=False, compare=False)
 
     def __repr__(self) -> str:
         seg_info = f", n_segments={self.n_segments}" if self.n_segments else ""
