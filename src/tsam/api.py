@@ -158,8 +158,15 @@ def aggregate(
         if resolution is not None:
             timesteps_per_period = int(period_hours / resolution)
         else:
-            # Infer from data - assume hourly if can't determine
-            timesteps_per_period = period_hours
+            # Infer resolution from data index
+            if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
+                inferred_resolution = (
+                    data.index[1] - data.index[0]
+                ).total_seconds() / 3600
+                timesteps_per_period = int(period_hours / inferred_resolution)
+            else:
+                # Fall back to assuming hourly resolution
+                timesteps_per_period = period_hours
 
         if segments.n_segments > timesteps_per_period:
             raise ValueError(
