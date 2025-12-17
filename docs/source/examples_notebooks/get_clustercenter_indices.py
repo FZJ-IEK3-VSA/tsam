@@ -21,11 +21,14 @@ timesteps = [
 
 print(result.cluster_center_indices)
 
-# get all index for every hour that in day of the clusterCenterIndices
-days = [d for d in raw.index.dayofyear if d in result.cluster_center_indices]  # type: ignore[attr-defined]
+# Get the start datetime for each cluster center period
+# cluster_center_indices are 0-based period indices
+period_hours = 24
+cluster_center_start_indices = [
+    idx * period_hours for idx in result.cluster_center_indices
+]
 
-# select the dates based on this
-dates = raw.iloc[days].index
-
-# TODO: Check index start (1 in dataframe, 0 in numpy -> should fit, otherwise
-# days are offset one day
+# Select the dates for each cluster center period
+cluster_center_dates = [
+    raw.index[start_idx] for start_idx in cluster_center_start_indices
+]
