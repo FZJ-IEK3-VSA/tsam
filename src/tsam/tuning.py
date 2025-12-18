@@ -10,7 +10,6 @@ import os
 import shutil
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
-
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -66,6 +65,8 @@ def _test_single_config_file(
 
 def _infer_resolution(data: pd.DataFrame) -> float:
     """Infer time resolution in hours from DataFrame datetime index."""
+    if len(data) < 2:
+        return 1.0  # Default to hourly
     try:
         timedelta = data.index[1] - data.index[0]
         return float(timedelta.total_seconds()) / 3600

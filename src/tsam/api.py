@@ -11,6 +11,7 @@ from tsam.config import (
     REPRESENTATION_MAPPING,
     ClusterConfig,
     ExtremeConfig,
+    PredefinedConfig,
     SegmentConfig,
 )
 from tsam.result import AccuracyMetrics, AggregationResult
@@ -26,6 +27,7 @@ def aggregate(
     cluster: ClusterConfig | None = None,
     segments: SegmentConfig | None = None,
     extremes: ExtremeConfig | None = None,
+    predefined: PredefinedConfig | dict | None = None,
     rescale: bool = True,
     round_decimals: int | None = None,
 ) -> AggregationResult:
@@ -70,6 +72,11 @@ def aggregate(
     extremes : ExtremeConfig, optional
         Configuration for preserving extreme periods.
         If not provided, no extreme period handling is applied.
+
+    predefined : PredefinedConfig or dict, optional
+        Predefined assignments from a previous aggregation result.
+        Use `result.predefined` to get this, or load from JSON with
+        `PredefinedConfig.from_dict()`. Overrides cluster/segment assignments.
 
     rescale : bool, default True
         Rescale typical periods to match the original data's mean.
@@ -131,6 +138,11 @@ def aggregate(
     ...     extremes=ExtremeConfig(max_timesteps=["demand"]),
     ... )
 
+    Transferring assignments to new data:
+
+    >>> result1 = aggregate(df_wind, n_periods=8)
+    >>> result2 = aggregate(df_all, n_periods=8, predefined=result1.predefined)
+
     See Also
     --------
     ClusterConfig : Clustering algorithm configuration
@@ -152,14 +164,65 @@ def aggregate(
     if cluster is None:
         cluster = ClusterConfig()
 
+    # Apply predefined overrides
+    if predefined is not None:
+        # Convert dict to PredefinedConfig if needed
+        if isinstance(predefined, dict):
+            predefined = PredefinedConfig.from_dict(predefined)
+
+        # Override cluster config with predefined values
+        cluster_kwargs = {
+            "method": cluster.method,
+            "representation": cluster.representation,
+            "weights": cluster.weights,
+            "normalize_means": cluster.normalize_means,
+            "use_duration_curves": cluster.use_duration_curves,
+            "include_period_sums": cluster.include_period_sums,
+            "solver": cluster.solver,
+            "predef_cluster_order": predefined.cluster_order,
+        }
+        if predefined.cluster_centers is not None:
+            cluster_kwargs["predef_cluster_centers"] = predefined.cluster_centers
+        cluster = ClusterConfig(**cluster_kwargs)  # type: ignore[arg-type]
+
+        # Override segment config with predefined values if present
+        if (
+            predefined.segment_order is not None
+            and predefined.segment_durations is not None
+        ):
+            if segments is None:
+                # Infer n_segments from the predefined data
+                n_segments = len(predefined.segment_durations[0])
+                segments = SegmentConfig(
+                    n_segments=n_segments,
+                    predef_segment_order=predefined.segment_order,
+                    predef_segment_durations=predefined.segment_durations,
+                )
+            else:
+                # Merge with existing segment config
+                segments = SegmentConfig(
+                    n_segments=segments.n_segments,
+                    representation=segments.representation,
+                    predef_segment_order=predefined.segment_order,
+                    predef_segment_durations=predefined.segment_durations,
+                    predef_segment_centers=segments.predef_segment_centers,
+                )
+
     # Validate segments against data
     if segments is not None:
         # Calculate timesteps per period
         if resolution is not None:
             timesteps_per_period = int(period_hours / resolution)
         else:
-            # Infer from data - assume hourly if can't determine
-            timesteps_per_period = period_hours
+            # Infer resolution from data index
+            if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
+                inferred_resolution = (
+                    data.index[1] - data.index[0]
+                ).total_seconds() / 3600
+                timesteps_per_period = int(period_hours / inferred_resolution)
+            else:
+                # Fall back to assuming hourly resolution
+                timesteps_per_period = period_hours
 
         if segments.n_segments > timesteps_per_period:
             raise ValueError(
@@ -254,10 +317,22 @@ def _build_old_params(
         params["roundOutput"] = round_decimals
 
     # Cluster config
-    params["clusterMethod"] = METHOD_MAPPING[cluster.method]
-    params["representationMethod"] = REPRESENTATION_MAPPING[
-        cluster.get_representation()
-    ]
+    method = METHOD_MAPPING.get(cluster.method)
+    if method is None:
+        raise ValueError(
+            f"Unknown cluster method: {cluster.method!r}. "
+            f"Valid options: {list(METHOD_MAPPING.keys())}"
+        )
+    params["clusterMethod"] = method
+
+    representation = cluster.get_representation()
+    rep_mapped = REPRESENTATION_MAPPING.get(representation)
+    if rep_mapped is None:
+        raise ValueError(
+            f"Unknown representation method: {representation!r}. "
+            f"Valid options: {list(REPRESENTATION_MAPPING.keys())}"
+        )
+    params["representationMethod"] = rep_mapped
     params["sortValues"] = cluster.use_duration_curves
     params["sameMean"] = cluster.normalize_means
     params["evalSumPeriods"] = cluster.include_period_sums
@@ -279,6 +354,20 @@ def _build_old_params(
         params["segmentRepresentationMethod"] = REPRESENTATION_MAPPING.get(
             segments.representation, "meanRepresentation"
         )
+
+        # Predefined segment parameters
+        if segments.predef_segment_order is not None:
+            params["predefSegmentOrder"] = [
+                list(s) for s in segments.predef_segment_order
+            ]
+        if segments.predef_segment_durations is not None:
+            params["predefSegmentDurations"] = [
+                list(s) for s in segments.predef_segment_durations
+            ]
+        if segments.predef_segment_centers is not None:
+            params["predefSegmentCenters"] = [
+                list(s) for s in segments.predef_segment_centers
+            ]
     else:
         params["segmentation"] = False
 

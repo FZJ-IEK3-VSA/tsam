@@ -172,3 +172,265 @@ class TestImports:
         """Test that version is defined."""
         assert hasattr(tsam, "__version__")
         assert tsam.__version__ == "3.0.0"
+
+
+class TestAssignments:
+    """Tests for the assignments property."""
+
+    def test_assignments_basic(self, sample_data):
+        """Test basic assignments DataFrame structure."""
+        result = aggregate(sample_data, n_periods=8)
+        assignments = result.assignments
+
+        # Should have same length as original data
+        assert len(assignments) == len(sample_data)
+
+        # Should have required columns
+        assert "period_idx" in assignments.columns
+        assert "timestep_idx" in assignments.columns
+        assert "cluster_idx" in assignments.columns
+
+        # Should not have segment_idx without segmentation
+        assert "segment_idx" not in assignments.columns
+
+        # Should have same index as original data
+        assert assignments.index.equals(sample_data.index)
+
+    def test_assignments_with_segmentation(self, sample_data):
+        """Test assignments includes segment_idx when segmentation is used."""
+        result = aggregate(
+            sample_data,
+            n_periods=8,
+            segments=SegmentConfig(n_segments=6),
+        )
+        assignments = result.assignments
+
+        # Should have segment_idx column
+        assert "segment_idx" in assignments.columns
+
+        # Segment indices should be in valid range
+        assert assignments["segment_idx"].min() >= 0
+        assert assignments["segment_idx"].max() < 6
+
+    def test_assignments_values_valid(self, sample_data):
+        """Test that assignment values are within expected ranges."""
+        result = aggregate(sample_data, n_periods=8)
+        assignments = result.assignments
+
+        # Period indices should be sequential
+        n_timesteps_per_period = result.n_timesteps_per_period
+        n_original_periods = len(sample_data) // n_timesteps_per_period
+
+        assert assignments["period_idx"].min() >= 0
+        assert assignments["period_idx"].max() < n_original_periods
+
+        # Timestep indices should be within period
+        assert assignments["timestep_idx"].min() == 0
+        assert assignments["timestep_idx"].max() == n_timesteps_per_period - 1
+
+        # Cluster indices should be in valid range
+        assert assignments["cluster_idx"].min() >= 0
+        assert assignments["cluster_idx"].max() < result.n_periods
+
+
+class TestSegmentTransfer:
+    """Tests for predefined segment transfer."""
+
+    def test_segment_assignments_property(self, sample_data):
+        """Test that segment_assignments property works."""
+        result = aggregate(
+            sample_data,
+            n_periods=8,
+            segments=SegmentConfig(n_segments=6),
+        )
+
+        seg_assignments = result.segment_assignments
+
+        # Should not be None when segmentation is used
+        assert seg_assignments is not None
+
+        # Should have one tuple per typical period
+        assert len(seg_assignments) == result.n_periods
+
+        # Each inner tuple should sum to timesteps per period
+        for period_assignments in seg_assignments:
+            assert len(period_assignments) == result.n_timesteps_per_period
+
+    def test_segment_durations_tuple_property(self, sample_data):
+        """Test that segment_durations_tuple property works."""
+        result = aggregate(
+            sample_data,
+            n_periods=8,
+            segments=SegmentConfig(n_segments=6),
+        )
+
+        seg_durations = result.segment_durations_tuple
+
+        # Should not be None when segmentation is used
+        assert seg_durations is not None
+
+        # Should have one tuple per typical period
+        assert len(seg_durations) == result.n_periods
+
+        # Each inner tuple should have n_segments elements
+        for period_durations in seg_durations:
+            assert len(period_durations) == 6
+
+        # Durations should sum to timesteps per period
+        for period_durations in seg_durations:
+            assert sum(period_durations) == result.n_timesteps_per_period
+
+    def test_segment_transfer(self, sample_data):
+        """Test that segment assignments can be transferred to reproduce results."""
+        # First aggregation
+        result1 = aggregate(
+            sample_data,
+            n_periods=8,
+            segments=SegmentConfig(n_segments=6),
+        )
+
+        # Get segment assignments for transfer
+        seg_assignments = result1.segment_assignments
+        seg_durations = result1.segment_durations_tuple
+
+        # Second aggregation with predefined segments and clusters
+        result2 = aggregate(
+            sample_data,
+            n_periods=8,
+            cluster=ClusterConfig(
+                predef_cluster_order=tuple(result1.cluster_assignments),
+                predef_cluster_centers=tuple(result1.cluster_center_indices),
+            ),
+            segments=SegmentConfig(
+                n_segments=6,
+                predef_segment_order=seg_assignments,
+                predef_segment_durations=seg_durations,
+            ),
+        )
+
+        # Results should match
+        pd.testing.assert_frame_equal(
+            result1.typical_periods,
+            result2.typical_periods,
+        )
+
+    def test_segment_properties_none_without_segmentation(self, sample_data):
+        """Test that segment properties return None without segmentation."""
+        result = aggregate(sample_data, n_periods=8)
+
+        assert result.segment_assignments is None
+        assert result.segment_durations_tuple is None
+
+
+class TestPredef:
+    """Tests for the predefined parameter and PredefinedConfig."""
+
+    def test_predef_property(self, sample_data):
+        """Test that predefined property returns PredefinedConfig."""
+        from tsam import PredefinedConfig
+
+        result = aggregate(sample_data, n_periods=8)
+        predefined = result.predefined
+
+        assert isinstance(predefined, PredefinedConfig)
+        assert len(predefined.cluster_order) == len(result.cluster_assignments)
+
+    def test_predef_transfer(self, sample_data):
+        """Test transferring with predefined parameter."""
+        result1 = aggregate(sample_data, n_periods=8)
+
+        # Transfer using predefined
+        result2 = aggregate(sample_data, n_periods=8, predefined=result1.predefined)
+
+        # Results should match
+        pd.testing.assert_frame_equal(
+            result1.typical_periods,
+            result2.typical_periods,
+        )
+
+    def test_predef_with_segments(self, sample_data):
+        """Test predefined transfer with segmentation."""
+        result1 = aggregate(
+            sample_data,
+            n_periods=8,
+            segments=SegmentConfig(n_segments=6),
+        )
+
+        # Transfer using predefined
+        result2 = aggregate(sample_data, n_periods=8, predefined=result1.predefined)
+
+        # Should automatically apply segmentation
+        assert result2.n_segments == 6
+        pd.testing.assert_frame_equal(
+            result1.typical_periods,
+            result2.typical_periods,
+        )
+
+    def test_predef_from_dict(self, sample_data):
+        """Test predefined transfer via dict (for JSON serialization)."""
+        from tsam import PredefinedConfig
+
+        result1 = aggregate(sample_data, n_periods=8)
+
+        # Convert to dict and back (simulates JSON save/load)
+        predef_dict = result1.predefined.to_dict()
+        predefined = PredefinedConfig.from_dict(predef_dict)
+
+        result2 = aggregate(sample_data, n_periods=8, predefined=predefined)
+
+        pd.testing.assert_frame_equal(
+            result1.typical_periods,
+            result2.typical_periods,
+        )
+
+    def test_predef_dict_directly(self, sample_data):
+        """Test passing dict directly to predefined parameter."""
+        result1 = aggregate(sample_data, n_periods=8)
+
+        # Pass dict directly (API accepts both)
+        result2 = aggregate(
+            sample_data, n_periods=8, predefined=result1.predefined.to_dict()
+        )
+
+        pd.testing.assert_frame_equal(
+            result1.typical_periods,
+            result2.typical_periods,
+        )
+
+
+class TestSegmentConfigValidation:
+    """Tests for SegmentConfig validation."""
+
+    def test_predef_segment_order_requires_durations(self):
+        """Test that predef_segment_order requires predef_segment_durations."""
+        with pytest.raises(ValueError, match="predef_segment_durations"):
+            SegmentConfig(
+                n_segments=6,
+                predef_segment_order=((0, 0, 1, 1, 2, 2),),
+            )
+
+    def test_predef_segment_durations_requires_order(self):
+        """Test that predef_segment_durations requires predef_segment_order."""
+        with pytest.raises(ValueError, match="predef_segment_order"):
+            SegmentConfig(
+                n_segments=6,
+                predef_segment_durations=((2, 2, 2),),
+            )
+
+    def test_predef_segment_centers_requires_order(self):
+        """Test that predef_segment_centers requires predef_segment_order."""
+        with pytest.raises(ValueError, match="predef_segment_order"):
+            SegmentConfig(
+                n_segments=6,
+                predef_segment_centers=((0, 2, 4),),
+            )
+
+    def test_valid_predef_segment_config(self):
+        """Test that valid predefined segment config doesn't raise."""
+        config = SegmentConfig(
+            n_segments=3,
+            predef_segment_order=((0, 0, 1, 1, 2, 2),),
+            predef_segment_durations=((2, 2, 2),),
+        )
+        assert config.predef_segment_order is not None
+        assert config.predef_segment_durations is not None

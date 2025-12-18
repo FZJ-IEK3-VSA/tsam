@@ -206,14 +206,19 @@ def duration_curve(
     if columns is None:
         columns = list(data.columns)
 
-    # Build long-form data with sorted values
-    records = []
+    # Build long-form data with sorted values using vectorized operations
+    frames = []
     for col in columns:
         sorted_vals = data[col].sort_values(ascending=False).reset_index(drop=True)
-        for hour, val in enumerate(sorted_vals):
-            records.append({"Hour": hour, "Value": val, "Column": col})
-
-    long_df = pd.DataFrame(records)
+        df_col = pd.DataFrame(
+            {
+                "Hour": range(len(sorted_vals)),
+                "Value": sorted_vals.values,
+                "Column": col,
+            }
+        )
+        frames.append(df_col)
+    long_df = pd.concat(frames, ignore_index=True)
 
     fig = px.line(
         long_df,
@@ -496,7 +501,7 @@ class ResultPlotAccessor:
 
         if compare_original and self._original is not None:
             # Use compare function for side-by-side comparison
-            col = columns[0] if columns else reconstructed.columns[0]
+            col = columns[0] if columns is not None else reconstructed.columns[0]
             return compare(
                 {"Original": self._original, "Reconstructed": reconstructed},
                 column=col,
@@ -730,7 +735,7 @@ class ResultPlotAccessor:
         reconstructed = self._result.reconstruct()
 
         if compare_original and self._original is not None:
-            col = columns[0] if columns else reconstructed.columns[0]
+            col = columns[0] if columns is not None else reconstructed.columns[0]
             return compare(
                 {"Original": self._original, "Reconstructed": reconstructed},
                 column=col,
