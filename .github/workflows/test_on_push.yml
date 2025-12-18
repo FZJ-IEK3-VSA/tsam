@@ -1,3 +1,5 @@
+name: Test on Push
+
 on:
   workflow_dispatch:
   push:
@@ -37,10 +39,4 @@ jobs:
       - name: Run example notebooks
         run: |
           uv run pytest -n auto -vv --dist loadscope --nbval-lax --nbval-current-env --nbval-cell-timeout=900000 --durations=20 \
-            docs/source/examples_notebooks/aggregation_example.ipynb \
-            docs/source/examples_notebooks/aggregation_method_showcase.ipynb \
-            docs/source/examples_notebooks/aggregation_optiinput.ipynb \
-            docs/source/examples_notebooks/aggregation_representation.ipynb \
-            docs/source/examples_notebooks/aggregation_segmentation.ipynb \
-            docs/source/examples_notebooks/example_k_maxoids.ipynb \
-            docs/source/examples_notebooks/predefined_sequence_example.ipynb
+            docs/source/examples_notebooks/*.ipynb
