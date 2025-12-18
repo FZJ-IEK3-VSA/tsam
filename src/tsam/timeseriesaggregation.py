@@ -128,6 +128,9 @@ class TimeSeriesAggregation:
         segmentRepresentationMethod=None,
         predefClusterOrder=None,
         predefClusterCenterIndices=None,
+        predefSegmentOrder=None,
+        predefSegmentDurations=None,
+        predefSegmentCenters=None,
         solver="highs",
         numericalTolerance=1e-13,
         roundOutput=None,
@@ -319,6 +322,12 @@ class TimeSeriesAggregation:
         self.predefClusterOrder = predefClusterOrder
 
         self.predefClusterCenterIndices = predefClusterCenterIndices
+
+        self.predefSegmentOrder = predefSegmentOrder
+
+        self.predefSegmentDurations = predefSegmentDurations
+
+        self.predefSegmentCenters = predefSegmentCenters
 
         self.solver = solver
 
@@ -513,6 +522,32 @@ class TimeSeriesAggregation:
             raise ValueError(
                 'If "predefClusterCenterIndices" is defined, "predefClusterOrder" needs to be defined as well'
             )
+
+        # check predefSegmentOrder
+        if self.predefSegmentOrder is not None:
+            if not isinstance(self.predefSegmentOrder, (list, tuple)):
+                raise ValueError("predefSegmentOrder has to be a list or tuple")
+            if self.predefSegmentDurations is None:
+                raise ValueError(
+                    'If "predefSegmentOrder" is defined, "predefSegmentDurations" '
+                    "needs to be defined as well"
+                )
+            if not isinstance(self.predefSegmentDurations, (list, tuple)):
+                raise ValueError("predefSegmentDurations has to be a list or tuple")
+        elif self.predefSegmentDurations is not None:
+            raise ValueError(
+                'If "predefSegmentDurations" is defined, "predefSegmentOrder" '
+                "needs to be defined as well"
+            )
+
+        if self.predefSegmentCenters is not None:
+            if self.predefSegmentOrder is None:
+                raise ValueError(
+                    'If "predefSegmentCenters" is defined, "predefSegmentOrder" '
+                    "needs to be defined as well"
+                )
+            if not isinstance(self.predefSegmentCenters, (list, tuple)):
+                raise ValueError("predefSegmentCenters has to be a list or tuple")
 
         return
 
@@ -1102,6 +1137,9 @@ class TimeSeriesAggregation:
                 representationMethod=self.segmentRepresentationMethod,
                 representationDict=self.representationDict,
                 distributionPeriodWise=self.distributionPeriodWise,
+                predefSegmentOrder=self.predefSegmentOrder,
+                predefSegmentDurations=self.predefSegmentDurations,
+                predefSegmentCenters=self.predefSegmentCenters,
             )
             self.normalizedTypicalPeriods = (
                 self.segmentedNormalizedTypicalPeriods.reset_index(level=3, drop=True)
