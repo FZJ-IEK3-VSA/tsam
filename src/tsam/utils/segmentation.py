@@ -12,6 +12,9 @@ def segmentation(
     representationMethod=None,
     representationDict=None,
     distributionPeriodWise=True,
+    predefSegmentOrder=None,
+    predefSegmentDurations=None,
+    predefSegmentCenters=None,
 ):
     """
     Agglomerative clustering of adjacent time steps within a set of typical periods in order to further reduce the
@@ -28,6 +31,22 @@ def segmentation(
     :param timeStepsPerPeriod: Number of time steps per period
     :type timeStepsPerPeriod: integer
 
+    :param predefSegmentOrder: Predefined segment assignments per timestep, per typical period.
+        If provided, skips clustering and uses these assignments directly.
+        List of lists/arrays, one per typical period.
+    :type predefSegmentOrder: list or None
+
+    :param predefSegmentDurations: Predefined durations per segment, per typical period.
+        Required if predefSegmentOrder is provided.
+        List of lists/arrays, one per typical period.
+    :type predefSegmentDurations: list or None
+
+    :param predefSegmentCenters: Predefined center indices per segment, per typical period.
+        If provided with predefSegmentOrder, uses these as segment centers
+        instead of calculating representations.
+        List of lists/arrays, one per typical period.
+    :type predefSegmentCenters: list or None
+
     :returns:     - **segmentedNormalizedTypicalPeriods** (pandas DataFrame) --  MultiIndex DataFrame similar to
                     normalizedTypicalPeriods but with segments instead of time steps. Moreover, two additional index
                     levels define the length of each segment and the time step index at which each segment starts.
@@ -38,39 +57,79 @@ def segmentation(
     # Initialize lists for predicted and segmented DataFrame
     segmentedNormalizedTypicalPeriodsList = []
     predictedSegmentedNormalizedTypicalPeriodsList = []
+
+    # Get unique period indices
+    period_indices = normalizedTypicalPeriods.index.get_level_values(0).unique()
+
     # do for each typical period
-    for i in normalizedTypicalPeriods.index.get_level_values(0).unique():
-        # make numpy array with rows containing the segmenatation candidates (time steps)
+    for period_i, period_label in enumerate(period_indices):
+        # make numpy array with rows containing the segmentation candidates (time steps)
         # and columns as dimensions of the
-        segmentationCandidates = np.asarray(normalizedTypicalPeriods.loc[i, :])
-        # produce adjacency matrix: Each time step is only connected to its preceding and succeeding one
-        adjacencyMatrix = np.eye(timeStepsPerPeriod, k=1) + np.eye(
-            timeStepsPerPeriod, k=-1
+        segmentationCandidates = np.asarray(
+            normalizedTypicalPeriods.loc[period_label, :]
         )
-        # execute clustering of adjacent time steps
-        if noSegments == 1:
-            clusterOrder = np.asarray([0] * len(segmentationCandidates))
+
+        # Check if using predefined segments for this period
+        if predefSegmentOrder is not None:
+            # Use predefined segment order
+            clusterOrder = np.asarray(predefSegmentOrder[period_i])
+
+            # Get predefined durations
+            segmentNoOccur = np.asarray(predefSegmentDurations[period_i])
+
+            # Calculate segment numbers and start indices from durations
+            segNo = np.arange(noSegments)
+            indices = np.concatenate([[0], np.cumsum(segmentNoOccur)[:-1]])
+
+            # The unique cluster order is just 0, 1, 2, ..., n_segments-1 in order
+            clusterOrderUnique = list(range(noSegments))
+
+            # Determine segment values
+            if predefSegmentCenters is not None:
+                # Use predefined centers directly
+                center_indices = predefSegmentCenters[period_i]
+                clusterCenters = segmentationCandidates[center_indices]
+            else:
+                # Calculate representations from predefined order
+                clusterCenters, _clusterCenterIndices = representations(
+                    segmentationCandidates,
+                    clusterOrder,
+                    default="meanRepresentation",
+                    representationMethod=representationMethod,
+                    representationDict=representationDict,
+                    distributionPeriodWise=distributionPeriodWise,
+                    timeStepsPerPeriod=1,
+                )
         else:
-            clustering = AgglomerativeClustering(
-                n_clusters=noSegments, linkage="ward", connectivity=adjacencyMatrix
+            # Original clustering logic
+            # produce adjacency matrix: Each time step is only connected to its preceding and succeeding one
+            adjacencyMatrix = np.eye(timeStepsPerPeriod, k=1) + np.eye(
+                timeStepsPerPeriod, k=-1
             )
-            clusterOrder = clustering.fit_predict(segmentationCandidates)
-        # determine the indices where the segments change and the number of time steps in each segment
-        segNo, indices, segmentNoOccur = np.unique(
-            clusterOrder, return_index=True, return_counts=True
-        )
-        clusterOrderUnique = [clusterOrder[index] for index in sorted(indices)]
-        # determine the segments' values
-        clusterCenters, _clusterCenterIndices = representations(
-            segmentationCandidates,
-            clusterOrder,
-            default="meanRepresentation",
-            representationMethod=representationMethod,
-            representationDict=representationDict,
-            distributionPeriodWise=distributionPeriodWise,
-            timeStepsPerPeriod=1,
-        )
-        # clusterCenters = meanRepresentation(segmentationCandidates, clusterOrder)
+            # execute clustering of adjacent time steps
+            if noSegments == 1:
+                clusterOrder = np.asarray([0] * len(segmentationCandidates))
+            else:
+                clustering = AgglomerativeClustering(
+                    n_clusters=noSegments, linkage="ward", connectivity=adjacencyMatrix
+                )
+                clusterOrder = clustering.fit_predict(segmentationCandidates)
+            # determine the indices where the segments change and the number of time steps in each segment
+            segNo, indices, segmentNoOccur = np.unique(
+                clusterOrder, return_index=True, return_counts=True
+            )
+            clusterOrderUnique = [clusterOrder[index] for index in sorted(indices)]
+            # determine the segments' values
+            clusterCenters, _clusterCenterIndices = representations(
+                segmentationCandidates,
+                clusterOrder,
+                default="meanRepresentation",
+                representationMethod=representationMethod,
+                representationDict=representationDict,
+                distributionPeriodWise=distributionPeriodWise,
+                timeStepsPerPeriod=1,
+            )
+
         # predict each time step of the period by representing it with the corresponding segment's values
         predictedSegmentedNormalizedTypicalPeriods = (
             pd.DataFrame(clusterCenters, columns=normalizedTypicalPeriods.columns)
@@ -105,13 +164,14 @@ def segmentation(
             predictedSegmentedNormalizedTypicalPeriods
         )
         segmentedNormalizedTypicalPeriodsList.append(result)
+
     # create a big DataFrame for all periods for predicted segmented time steps and segments and return
     predictedSegmentedNormalizedTypicalPeriods = pd.concat(
         predictedSegmentedNormalizedTypicalPeriodsList,
-        keys=normalizedTypicalPeriods.index.get_level_values(0).unique(),
+        keys=period_indices,
     ).rename_axis(["", "TimeStep"])
     segmentedNormalizedTypicalPeriods = pd.concat(
         segmentedNormalizedTypicalPeriodsList,
-        keys=normalizedTypicalPeriods.index.get_level_values(0).unique(),
+        keys=period_indices,
     )
     return segmentedNormalizedTypicalPeriods, predictedSegmentedNormalizedTypicalPeriods

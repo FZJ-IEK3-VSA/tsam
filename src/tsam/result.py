@@ -5,10 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
 
-if TYPE_CHECKING:
-    import numpy as np
-    import pandas as pd
+import numpy as np
+import pandas as pd
 
+if TYPE_CHECKING:
+    from tsam.config import PredefinedConfig
     from tsam.plot import ResultPlotAccessor
     from tsam.timeseriesaggregation import TimeSeriesAggregation
 
@@ -164,6 +165,8 @@ class AggregationResult:
             "n_timesteps_per_period": self.n_timesteps_per_period,
             "n_segments": self.n_segments,
             "segment_durations": self.segment_durations,
+            "segment_assignments": self.segment_assignments,
+            "segment_durations_tuple": self.segment_durations_tuple,
             "cluster_center_indices": self.cluster_center_indices.tolist()
             if self.cluster_center_indices is not None
             else None,
@@ -198,6 +201,216 @@ class AggregationResult:
             List of indices [0, 1, ..., n_periods-1].
         """
         return list(range(self.n_periods))
+
+    @property
+    def assignments(self) -> pd.DataFrame:
+        """Get timestep-level assignment information.
+
+        Returns a DataFrame with one row per original timestep containing
+        assignment information for transferring results to another aggregation.
+
+        Columns
+        -------
+        period_idx : int
+            Index of the original period (0-indexed, 0 to n_original_periods-1).
+        timestep_idx : int
+            Timestep index within the period (0 to n_timesteps_per_period-1).
+        cluster_idx : int
+            Which cluster this period is assigned to (0 to n_periods-1).
+        segment_idx : int (only if segmentation was used)
+            Which segment this timestep belongs to within its period.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame indexed by original time index with assignment columns.
+
+        Examples
+        --------
+        >>> result = tsam.aggregate(df, n_periods=8)
+        >>> result.assignments.head()
+                             period_idx  timestep_idx  cluster_idx
+        2010-01-01 00:00:00          0             0            3
+        2010-01-01 01:00:00          0             1            3
+        ...
+
+        >>> # Save and reload assignments
+        >>> result.assignments.to_csv("assignments.csv")
+        """
+        agg = self._aggregation
+
+        # Build period_idx and timestep_idx for each original timestep
+        period_indices = []
+        timestep_indices = []
+        cluster_indices = []
+
+        for orig_period_idx, cluster_idx in enumerate(self.cluster_assignments):
+            for timestep in range(self.n_timesteps_per_period):
+                period_indices.append(orig_period_idx)
+                timestep_indices.append(timestep)
+                cluster_indices.append(cluster_idx)
+
+        result_df = pd.DataFrame(
+            {
+                "period_idx": period_indices,
+                "timestep_idx": timestep_indices,
+                "cluster_idx": cluster_indices,
+            },
+            index=agg.timeIndex,
+        )
+
+        # Add segment_idx if segmentation was used
+        if self.n_segments is not None and hasattr(
+            agg, "segmentedNormalizedTypicalPeriods"
+        ):
+            segment_indices = []
+            for cluster_idx in self.cluster_assignments:
+                # Get segment structure for this cluster's typical period
+                segment_data = agg.segmentedNormalizedTypicalPeriods.loc[cluster_idx]
+                # Segment Step is level 0, Segment Duration is level 1
+                segment_steps = segment_data.index.get_level_values(0)
+                segment_durations = segment_data.index.get_level_values(1)
+                # Repeat each segment index by its duration
+                segment_indices.extend(
+                    np.repeat(segment_steps, segment_durations).tolist()
+                )
+            result_df["segment_idx"] = segment_indices
+
+        return result_df
+
+    @property
+    def segment_assignments(self) -> tuple[tuple[int, ...], ...] | None:
+        """Get segment assignments per typical period for transfer.
+
+        Returns the segment index for each timestep within each typical period.
+        This can be passed to another aggregation's SegmentConfig.predef_segment_order
+        to reproduce the same segmentation.
+
+        Returns
+        -------
+        tuple[tuple[int, ...], ...] | None
+            Tuple of tuples, one per typical period. Each inner tuple contains
+            segment indices (0 to n_segments-1) for each timestep in that period.
+            Returns None if segmentation was not used.
+
+        Examples
+        --------
+        >>> result = tsam.aggregate(df, n_periods=8, segments=SegmentConfig(n_segments=6))
+        >>> result.segment_assignments[0]
+        (0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5)
+
+        >>> # Transfer to another aggregation
+        >>> result2 = tsam.aggregate(
+        ...     other_data,
+        ...     segments=SegmentConfig(
+        ...         n_segments=6,
+        ...         predef_segment_order=result.segment_assignments,
+        ...         predef_segment_durations=result.segment_durations_tuple,
+        ...     ),
+        ... )
+        """
+        if self.n_segments is None:
+            return None
+
+        agg = self._aggregation
+        if not hasattr(agg, "segmentedNormalizedTypicalPeriods"):
+            return None
+
+        result = []
+        segmented_df = agg.segmentedNormalizedTypicalPeriods
+
+        for period_idx in segmented_df.index.get_level_values(0).unique():
+            period_data = segmented_df.loc[period_idx]
+            # Reconstruct full assignment from segment structure
+            # Index levels: Segment Step, Segment Duration, Original Start Step
+            assignments = []
+            for seg_step, seg_dur, _orig_start in period_data.index:
+                assignments.extend([int(seg_step)] * int(seg_dur))
+            result.append(tuple(assignments))
+
+        return tuple(result)
+
+    @property
+    def segment_durations_tuple(self) -> tuple[tuple[int, ...], ...] | None:
+        """Get segment durations per typical period for transfer.
+
+        Returns the duration (number of timesteps) for each segment within
+        each typical period. This can be passed to another aggregation's
+        SegmentConfig.predef_segment_durations to reproduce the same segmentation.
+
+        Returns
+        -------
+        tuple[tuple[int, ...], ...] | None
+            Tuple of tuples, one per typical period. Each inner tuple contains
+            the duration (in timesteps) of each segment.
+            Returns None if segmentation was not used.
+
+        Examples
+        --------
+        >>> result = tsam.aggregate(df, n_periods=8, segments=SegmentConfig(n_segments=6))
+        >>> result.segment_durations_tuple[0]
+        (4, 3, 4, 3, 4, 6)  # 6 segments with varying lengths summing to 24
+        """
+        if self.n_segments is None:
+            return None
+
+        agg = self._aggregation
+        if not hasattr(agg, "segmentedNormalizedTypicalPeriods"):
+            return None
+
+        result = []
+        segmented_df = agg.segmentedNormalizedTypicalPeriods
+
+        for period_idx in segmented_df.index.get_level_values(0).unique():
+            period_data = segmented_df.loc[period_idx]
+            # Index levels: Segment Step, Segment Duration, Original Start Step
+            durations = tuple(
+                int(seg_dur) for _seg_step, seg_dur, _orig_start in period_data.index
+            )
+            result.append(durations)
+
+        return tuple(result)
+
+    @property
+    def predefined(self) -> PredefinedConfig:
+        """Get predefined state for transferring to another aggregation.
+
+        Returns a PredefinedConfig containing all assignment information needed
+        to reproduce this aggregation's clustering and segmentation on new data.
+
+        Returns
+        -------
+        PredefinedConfig
+            Config object with cluster_order, cluster_centers (optional),
+            segment_order (if segmentation), segment_durations (if segmentation).
+
+        Examples
+        --------
+        >>> result = tsam.aggregate(df, n_periods=8, segments=SegmentConfig(n_segments=6))
+
+        >>> # Apply directly to new data
+        >>> result2 = tsam.aggregate(new_data, n_periods=8, predefined=result.predefined)
+
+        >>> # Save to file
+        >>> import json
+        >>> with open("predefined.json", "w") as f:
+        ...     json.dump(result.predefined.to_dict(), f)
+
+        >>> # Load and apply
+        >>> with open("predefined.json") as f:
+        ...     predefined = PredefinedConfig.from_dict(json.load(f))
+        >>> result2 = tsam.aggregate(new_data, n_periods=8, predefined=predefined)
+        """
+        from tsam.config import PredefinedConfig
+
+        return PredefinedConfig(
+            cluster_order=tuple(self.cluster_assignments.tolist()),
+            cluster_centers=tuple(self.cluster_center_indices.tolist())
+            if self.cluster_center_indices is not None
+            else None,
+            segment_order=self.segment_assignments,
+            segment_durations=self.segment_durations_tuple,
+        )
 
     @property
     def plot(self) -> ResultPlotAccessor:
