@@ -27,5 +27,3 @@ dependencies:
   - ruff
   - mypy
   - pre-commit
-  # Publishing
-  - twine
