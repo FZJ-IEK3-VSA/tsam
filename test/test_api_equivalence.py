@@ -231,7 +231,7 @@ class TestAggregateEquivalence:
             n_periods=8,
             period_hours=24,
             cluster=ClusterConfig(method="hierarchical"),
-            extremes=ExtremeConfig(method="append", max_timesteps=["Load"]),
+            extremes=ExtremeConfig(method="append", max_value=["Load"]),
         )
 
         pd.testing.assert_frame_equal(

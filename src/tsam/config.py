@@ -383,37 +383,34 @@ class ExtremeConfig:
         - "replace": Replace the nearest cluster center with the extreme
         - "new_cluster": Add as new cluster and reassign affected periods
 
-    max_timesteps : list[str], optional
-        Column names where the timestep with maximum value should be preserved.
-        The entire period containing that timestep becomes an extreme period.
+    max_value : list[str], optional
+        Column names where the maximum value should be preserved.
+        The entire period containing that single extreme value becomes an extreme period.
         Example: ["electricity_demand"] to preserve peak demand hour.
 
-    min_timesteps : list[str], optional
-        Column names where the timestep with minimum value should be preserved.
+    min_value : list[str], optional
+        Column names where the minimum value should be preserved.
         Example: ["temperature"] to preserve coldest hour.
 
-    max_periods : list[str], optional
-        Column names where the period with maximum sum should be preserved.
+    max_period : list[str], optional
+        Column names where the period with maximum total should be preserved.
         Example: ["solar_generation"] to preserve highest solar day.
 
-    min_periods : list[str], optional
-        Column names where the period with minimum sum should be preserved.
+    min_period : list[str], optional
+        Column names where the period with minimum total should be preserved.
         Example: ["wind_generation"] to preserve lowest wind day.
     """
 
     method: ExtremeMethod = "append"
-    max_timesteps: list[str] = field(default_factory=list)
-    min_timesteps: list[str] = field(default_factory=list)
-    max_periods: list[str] = field(default_factory=list)
-    min_periods: list[str] = field(default_factory=list)
+    max_value: list[str] = field(default_factory=list)
+    min_value: list[str] = field(default_factory=list)
+    max_period: list[str] = field(default_factory=list)
+    min_period: list[str] = field(default_factory=list)
 
     def has_extremes(self) -> bool:
         """Check if any extreme periods are configured."""
         return bool(
-            self.max_timesteps
-            or self.min_timesteps
-            or self.max_periods
-            or self.min_periods
+            self.max_value or self.min_value or self.max_period or self.min_period
         )
 
 

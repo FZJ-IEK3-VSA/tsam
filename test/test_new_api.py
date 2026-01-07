@@ -61,7 +61,7 @@ class TestAggregate:
             n_periods=8,
             extremes=ExtremeConfig(
                 method="append",
-                max_timesteps=[col],
+                max_value=[col],
             ),
         )
 
@@ -116,7 +116,7 @@ class TestValidation:
             aggregate(
                 sample_data,
                 n_periods=8,
-                extremes=ExtremeConfig(max_timesteps=["nonexistent_column"]),
+                extremes=ExtremeConfig(max_value=["nonexistent_column"]),
             )
 
     def test_invalid_weight_columns(self, sample_data):

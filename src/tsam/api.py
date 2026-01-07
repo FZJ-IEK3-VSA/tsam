@@ -135,7 +135,7 @@ def aggregate(
     >>> result = aggregate(
     ...     df,
     ...     n_periods=8,
-    ...     extremes=ExtremeConfig(max_timesteps=["demand"]),
+    ...     extremes=ExtremeConfig(max_value=["demand"]),
     ... )
 
     Transferring assignments to new data:
@@ -233,10 +233,10 @@ def aggregate(
     # Validate extreme columns exist in data
     if extremes is not None:
         all_extreme_cols = (
-            extremes.max_timesteps
-            + extremes.min_timesteps
-            + extremes.max_periods
-            + extremes.min_periods
+            extremes.max_value
+            + extremes.min_value
+            + extremes.max_period
+            + extremes.min_period
         )
         missing = set(all_extreme_cols) - set(data.columns)
         if missing:
@@ -374,10 +374,10 @@ def _build_old_params(
     # Extreme config
     if extremes is not None and extremes.has_extremes():
         params["extremePeriodMethod"] = EXTREME_METHOD_MAPPING[extremes.method]
-        params["addPeakMax"] = extremes.max_timesteps
-        params["addPeakMin"] = extremes.min_timesteps
-        params["addMeanMax"] = extremes.max_periods
-        params["addMeanMin"] = extremes.min_periods
+        params["addPeakMax"] = extremes.max_value
+        params["addPeakMin"] = extremes.min_value
+        params["addMeanMax"] = extremes.max_period
+        params["addMeanMin"] = extremes.min_period
     else:
         params["extremePeriodMethod"] = "None"
 
