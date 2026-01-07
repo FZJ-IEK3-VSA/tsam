@@ -16,6 +16,9 @@ def test_durationRepresentation():
     # Silence warning on machines that cannot detect their physical cpu cores
     os.environ["OMP_NUM_THREADS"] = "1"
 
+    # Set seed for deterministic k-means results
+    np.random.seed(42)
+
     aggregation1 = tsam.TimeSeriesAggregation(
         raw,
         noTypicalPeriods=8,

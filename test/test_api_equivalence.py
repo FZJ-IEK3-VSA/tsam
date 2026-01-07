@@ -75,6 +75,8 @@ class TestAggregateEquivalence:
 
     def test_kmeans(self, sample_data):
         """Test k-means clustering."""
+        # Set seed for deterministic k-means results
+        np.random.seed(42)
         # Old API
         old_agg = old_tsam.TimeSeriesAggregation(
             sample_data,
@@ -84,6 +86,8 @@ class TestAggregateEquivalence:
         )
         old_result = old_agg.createTypicalPeriods()
 
+        # Reset seed to get same random state for new API
+        np.random.seed(42)
         # New API
         new_result = aggregate(
             sample_data,
@@ -92,12 +96,12 @@ class TestAggregateEquivalence:
             cluster=ClusterConfig(method="kmeans"),
         )
 
-        # K-means may have some randomness, but results should be very close
+        # With same seed, results should be identical
         old_accuracy = old_agg.accuracyIndicators()
         np.testing.assert_allclose(
             old_accuracy["RMSE"].values,
             new_result.accuracy.rmse.values,
-            rtol=0.1,  # Allow 10% tolerance for k-means randomness
+            rtol=1e-5,
         )
 
     def test_hierarchical_with_medoid(self, sample_data):
