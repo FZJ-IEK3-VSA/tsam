@@ -363,6 +363,9 @@ def find_optimal_combination(
     if resolution is None:
         resolution = _infer_resolution(data)
 
+    if resolution <= 0:
+        raise ValueError(f"Resolution must be positive, got {resolution}")
+
     n_timesteps = len(data)
     timesteps_per_period = int(period_hours / resolution)
 
@@ -513,6 +516,9 @@ def find_pareto_front(
 
     if resolution is None:
         resolution = _infer_resolution(data)
+
+    if resolution <= 0:
+        raise ValueError(f"Resolution must be positive, got {resolution}")
 
     n_timesteps = len(data)
     timesteps_per_period = int(period_hours / resolution)

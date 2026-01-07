@@ -189,6 +189,7 @@ def aggregate(
         if (
             predefined.segment_order is not None
             and predefined.segment_durations is not None
+            and len(predefined.segment_durations) > 0
         ):
             if segments is None:
                 # Infer n_segments from the predefined data

@@ -14,6 +14,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import time
 from pathlib import Path
 
@@ -39,7 +40,9 @@ def main() -> None:
     args = parser.parse_args()
 
     # Load test data
-    data_path = Path(__file__).parent / "docs/source/examples_notebooks/testdata.csv"
+    data_path = (
+        Path(__file__).parent.parent / "docs/source/examples_notebooks/testdata.csv"
+    )
     if not data_path.exists():
         print(f"Error: Test data not found at {data_path}")
         print("Please ensure the examples_notebooks directory exists.")
@@ -50,8 +53,6 @@ def main() -> None:
     print(f"  Shape: {raw.shape}")
     print(f"  Columns: {list(raw.columns)}")
     print()
-
-    import os
 
     n_workers = args.workers if args.workers > 0 else (os.cpu_count() or 1)
 

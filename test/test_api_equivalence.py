@@ -457,6 +457,7 @@ class TestSubhourlyResolution:
     def test_15min_resolution(self):
         """Test with 15-minute resolution data."""
         # Create 15-min data for 7 days
+        np.random.seed(42)
         dates = pd.date_range("2020-01-01", periods=7 * 96, freq="15min")
         data = pd.DataFrame(
             {
@@ -492,6 +493,7 @@ class TestSubhourlyResolution:
 
     def test_tuning_with_15min_resolution(self):
         """Test tuning functions with 15-minute resolution."""
+        np.random.seed(42)
         dates = pd.date_range("2020-01-01", periods=30 * 96, freq="15min")
         data = pd.DataFrame(
             {

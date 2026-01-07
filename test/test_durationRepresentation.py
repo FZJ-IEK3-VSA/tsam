@@ -61,7 +61,7 @@ def test_durationRepresentation():
         rescaleClusterPeriods=False,
     )
 
-    predictedPeriods3 = aggregation2.predictOriginalData()
+    predictedPeriods3 = aggregation3.predictOriginalData()
 
     print("Clustering took " + str(time.time() - starttime))
 

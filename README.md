@@ -142,9 +142,9 @@ typical_periods = aggregation.createTypicalPeriods()
 
 ### Detailed examples
 
-A [**first example**](/examples/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook.
+A [**first example**](/docs/source/examples_notebooks/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook.
 
-A [**second example**](/examples/aggregation_optiinput.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
+A [**second example**](/docs/source/examples_notebooks/aggregation_optiinput.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
 
 The example time series are based on a department [publication](https://www.mdpi.com/1996-1073/10/3/361) and the [test reference years of the DWD](https://www.dwd.de/DE/leistungen/testreferenzjahre/testreferenzjahre.html).
 

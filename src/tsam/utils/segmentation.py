@@ -60,6 +60,48 @@ def segmentation(
 
     # Get unique period indices
     period_indices = normalizedTypicalPeriods.index.get_level_values(0).unique()
+    n_periods = len(period_indices)
+
+    # Validate predefined segment array lengths
+    if predefSegmentOrder is not None:
+        if len(predefSegmentOrder) != n_periods:
+            raise ValueError(
+                f"predefSegmentOrder has {len(predefSegmentOrder)} entries "
+                f"but data has {n_periods} periods"
+            )
+        if (
+            predefSegmentDurations is not None
+            and len(predefSegmentDurations) != n_periods
+        ):
+            raise ValueError(
+                f"predefSegmentDurations has {len(predefSegmentDurations)} entries "
+                f"but data has {n_periods} periods"
+            )
+        if predefSegmentCenters is not None and len(predefSegmentCenters) != n_periods:
+            raise ValueError(
+                f"predefSegmentCenters has {len(predefSegmentCenters)} entries "
+                f"but data has {n_periods} periods"
+            )
+
+        # Validate segment durations sum to timesteps per period
+        if predefSegmentDurations is not None:
+            for i, durations in enumerate(predefSegmentDurations):
+                duration_sum = sum(durations)
+                if duration_sum != timeStepsPerPeriod:
+                    raise ValueError(
+                        f"predefSegmentDurations for period {i} sum to {duration_sum} "
+                        f"but timeStepsPerPeriod is {timeStepsPerPeriod}"
+                    )
+
+        # Validate segment center indices are within bounds
+        if predefSegmentCenters is not None:
+            for i, centers in enumerate(predefSegmentCenters):
+                for idx in centers:
+                    if idx < 0 or idx >= timeStepsPerPeriod:
+                        raise ValueError(
+                            f"predefSegmentCenters index {idx} for period {i} "
+                            f"is out of bounds [0, {timeStepsPerPeriod})"
+                        )
 
     # do for each typical period
     for period_i, period_label in enumerate(period_indices):
