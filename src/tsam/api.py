@@ -20,7 +20,7 @@ from tsam.timeseriesaggregation import TimeSeriesAggregation
 
 def aggregate(
     data: pd.DataFrame,
-    n_periods: int,
+    n_clusters: int,
     *,
     period_hours: int = 24,
     resolution: float | None = None,
@@ -28,7 +28,7 @@ def aggregate(
     segments: SegmentConfig | None = None,
     extremes: ExtremeConfig | None = None,
     predefined: PredefinedConfig | dict | None = None,
-    rescale: bool = True,
+    preserve_column_means: bool = True,
     round_decimals: int | None = None,
 ) -> AggregationResult:
     """Aggregate time series data into typical periods.
@@ -43,8 +43,8 @@ def aggregate(
         Each column represents a different variable (e.g., solar, wind, demand).
         The index should be a DatetimeIndex with regular intervals.
 
-    n_periods : int
-        Number of typical periods (clusters) to create.
+    n_clusters : int
+        Number of clusters (typical periods) to create.
         Higher values = more accuracy but less data reduction.
         Typical range: 4-20 for energy system models.
 
@@ -78,9 +78,10 @@ def aggregate(
         Use `result.predefined` to get this, or load from JSON with
         `PredefinedConfig.from_dict()`. Overrides cluster/segment assignments.
 
-    rescale : bool, default True
-        Rescale typical periods to match the original data's mean.
-        Preserves total energy/load values across the aggregation.
+    preserve_column_means : bool, default True
+        Rescale typical periods so each column's weighted mean matches
+        the original data's mean. Ensures total energy/load is preserved
+        when weights represent occurrence counts.
 
     round_decimals : int, optional
         Round output values to this many decimal places.
@@ -108,7 +109,7 @@ def aggregate(
     Basic usage with defaults:
 
     >>> import tsam
-    >>> result = tsam.aggregate(df, n_periods=8)
+    >>> result = tsam.aggregate(df, n_clusters=8)
     >>> typical = result.typical_periods
 
     With custom clustering:
@@ -116,7 +117,7 @@ def aggregate(
     >>> from tsam import aggregate, ClusterConfig
     >>> result = aggregate(
     ...     df,
-    ...     n_periods=8,
+    ...     n_clusters=8,
     ...     cluster=ClusterConfig(method="kmeans", representation="mean"),
     ... )
 
@@ -125,7 +126,7 @@ def aggregate(
     >>> from tsam import aggregate, SegmentConfig
     >>> result = aggregate(
     ...     df,
-    ...     n_periods=8,
+    ...     n_clusters=8,
     ...     segments=SegmentConfig(n_segments=12),
     ... )
 
@@ -134,14 +135,14 @@ def aggregate(
     >>> from tsam import aggregate, ExtremeConfig
     >>> result = aggregate(
     ...     df,
-    ...     n_periods=8,
+    ...     n_clusters=8,
     ...     extremes=ExtremeConfig(max_value=["demand"]),
     ... )
 
     Transferring assignments to new data:
 
-    >>> result1 = aggregate(df_wind, n_periods=8)
-    >>> result2 = aggregate(df_all, n_periods=8, predefined=result1.predefined)
+    >>> result1 = aggregate(df_wind, n_clusters=8)
+    >>> result2 = aggregate(df_all, n_clusters=8, predefined=result1.predefined)
 
     See Also
     --------
@@ -154,8 +155,8 @@ def aggregate(
     if not isinstance(data, pd.DataFrame):
         raise TypeError(f"data must be a pandas DataFrame, got {type(data).__name__}")
 
-    if not isinstance(n_periods, int) or n_periods < 1:
-        raise ValueError(f"n_periods must be a positive integer, got {n_periods}")
+    if not isinstance(n_clusters, int) or n_clusters < 1:
+        raise ValueError(f"n_clusters must be a positive integer, got {n_clusters}")
 
     if not isinstance(period_hours, int) or period_hours < 1:
         raise ValueError(f"period_hours must be a positive integer, got {period_hours}")
@@ -175,7 +176,7 @@ def aggregate(
             "method": cluster.method,
             "representation": cluster.representation,
             "weights": cluster.weights,
-            "normalize_means": cluster.normalize_means,
+            "normalize_column_means": cluster.normalize_column_means,
             "use_duration_curves": cluster.use_duration_curves,
             "include_period_sums": cluster.include_period_sums,
             "solver": cluster.solver,
@@ -252,13 +253,13 @@ def aggregate(
     # Build old API parameters
     old_params = _build_old_params(
         data=data,
-        n_periods=n_periods,
+        n_clusters=n_clusters,
         period_hours=period_hours,
         resolution=resolution,
         cluster=cluster,
         segments=segments,
         extremes=extremes,
-        rescale=rescale,
+        preserve_column_means=preserve_column_means,
         round_decimals=round_decimals,
     )
 
@@ -293,7 +294,7 @@ def aggregate(
         typical_periods=typical_periods,
         cluster_assignments=np.array(agg.clusterOrder),
         cluster_weights=dict(agg.clusterPeriodNoOccur),
-        n_periods=len(agg.clusterPeriodIdx),
+        n_clusters=len(agg.clusterPeriodIdx),
         n_timesteps_per_period=agg.timeStepsPerPeriod,
         n_segments=segments.n_segments if segments else None,
         segment_durations=segment_durations_tuple,
@@ -308,21 +309,21 @@ def aggregate(
 
 def _build_old_params(
     data: pd.DataFrame,
-    n_periods: int,
+    n_clusters: int,
     period_hours: int,
     resolution: float | None,
     cluster: ClusterConfig,
     segments: SegmentConfig | None,
     extremes: ExtremeConfig | None,
-    rescale: bool,
+    preserve_column_means: bool,
     round_decimals: int | None,
 ) -> dict:
     """Build parameters for the old TimeSeriesAggregation API."""
     params: dict = {
         "timeSeries": data,
-        "noTypicalPeriods": n_periods,
+        "noTypicalPeriods": n_clusters,
         "hoursPerPeriod": period_hours,
-        "rescaleClusterPeriods": rescale,
+        "rescaleClusterPeriods": preserve_column_means,
     }
 
     if resolution is not None:
@@ -349,7 +350,7 @@ def _build_old_params(
         )
     params["representationMethod"] = rep_mapped
     params["sortValues"] = cluster.use_duration_curves
-    params["sameMean"] = cluster.normalize_means
+    params["sameMean"] = cluster.normalize_column_means
     params["evalSumPeriods"] = cluster.include_period_sums
     params["solver"] = cluster.solver
 

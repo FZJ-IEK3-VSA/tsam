@@ -21,7 +21,6 @@ RepresentationMethod = Literal[
     "mean",
     "medoid",
     "maxoid",
-    "duration",
     "distribution",
     "distribution_minmax",
     "minmax_mean",
@@ -56,7 +55,6 @@ class ClusterConfig:
         - "mean": Centroid (average of cluster members)
         - "medoid": Actual period closest to centroid
         - "maxoid": Actual period most dissimilar to others
-        - "duration": Preserve value distribution (duration curve)
         - "distribution": Preserve value distribution (duration curve)
         - "distribution_minmax": Distribution + preserve min/max values
         - "minmax_mean": Combine min/max/mean per timestep
@@ -71,7 +69,7 @@ class ClusterConfig:
         Higher weight = more influence on clustering.
         Example: {"demand": 2.0, "solar": 1.0}
 
-    normalize_means : bool, default False
+    normalize_column_means : bool, default False
         Normalize all columns to the same mean before clustering.
         Useful when columns have very different scales.
 
@@ -101,7 +99,7 @@ class ClusterConfig:
     method: ClusterMethod = "hierarchical"
     representation: RepresentationMethod | None = None
     weights: dict[str, float] | None = None
-    normalize_means: bool = False
+    normalize_column_means: bool = False
     use_duration_curves: bool = False
     include_period_sums: bool = False
     solver: Solver = "highs"
@@ -149,7 +147,7 @@ class SegmentConfig:
     predef_segment_assignments : tuple[tuple[int, ...], ...], optional
         Predefined segment assignments per timestep, per typical period.
         Use this to transfer segment assignments from one aggregation to another.
-        Outer tuple has one entry per typical period (length = n_periods).
+        Outer tuple has one entry per typical period (length = n_clusters).
         Inner tuple has one entry per timestep (length = n_timesteps_per_period),
         containing the segment index (0 to n_segments-1) for that timestep.
 
@@ -251,7 +249,7 @@ class PredefinedConfig:
     >>> predefined = PredefinedConfig.from_dict(data)
 
     >>> # Apply to new data
-    >>> result2 = tsam.aggregate(new_data, n_periods=8, predefined=predefined)
+    >>> result2 = tsam.aggregate(new_data, n_clusters=8, predefined=predefined)
     """
 
     cluster_assignments: tuple[int, ...]
@@ -336,12 +334,12 @@ class PredefinedConfig:
         if self.segment_durations is None:
             return None
 
-        n_periods = len(self.segment_durations)
+        n_clusters = len(self.segment_durations)
         n_segments = len(self.segment_durations[0])
 
         return pd.DataFrame(
             list(self.segment_durations),
-            index=pd.RangeIndex(n_periods, name="typical_period"),
+            index=pd.RangeIndex(n_clusters, name="typical_period"),
             columns=pd.RangeIndex(n_segments, name="segment"),
         )
 
@@ -433,7 +431,6 @@ REPRESENTATION_MAPPING: dict[RepresentationMethod, str] = {
     "mean": "meanRepresentation",
     "medoid": "medoidRepresentation",
     "maxoid": "maxoidRepresentation",
-    "duration": "durationRepresentation",
     "distribution": "distributionRepresentation",
     "distribution_minmax": "distributionAndMinMaxRepresentation",
     "minmax_mean": "minmaxmeanRepresentation",

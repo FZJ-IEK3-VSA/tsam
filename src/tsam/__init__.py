@@ -12,7 +12,7 @@ Quick Start
 >>> df = pd.read_csv("data.csv", index_col=0, parse_dates=True)
 >>>
 >>> # Aggregate to 8 typical days
->>> result = tsam.aggregate(df, n_periods=8)
+>>> result = tsam.aggregate(df, n_clusters=8)
 >>>
 >>> # Access results
 >>> typical_periods = result.typical_periods
@@ -24,7 +24,7 @@ For more control, use configuration objects:
 >>>
 >>> result = aggregate(
 ...     df,
-...     n_periods=8,
+...     n_clusters=8,
 ...     cluster=ClusterConfig(method="hierarchical", representation="distribution"),
 ...     segments=SegmentConfig(n_segments=12),
 ... )

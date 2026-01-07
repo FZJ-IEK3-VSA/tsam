@@ -19,10 +19,10 @@ class TestAggregate:
 
     def test_basic_aggregation(self, sample_data):
         """Test basic aggregation with minimal parameters."""
-        result = aggregate(sample_data, n_periods=8)
+        result = aggregate(sample_data, n_clusters=8)
 
         assert result.typical_periods is not None
-        assert result.n_periods == 8
+        assert result.n_clusters == 8
         assert len(result.cluster_weights) == 8
         assert result.accuracy is not None
 
@@ -30,21 +30,21 @@ class TestAggregate:
         """Test aggregation with custom cluster configuration."""
         result = aggregate(
             sample_data,
-            n_periods=8,
+            n_clusters=8,
             cluster=ClusterConfig(
                 method="kmeans",
                 representation="mean",
             ),
         )
 
-        assert result.n_periods == 8
+        assert result.n_clusters == 8
         assert result.typical_periods is not None
 
     def test_with_segmentation(self, sample_data):
         """Test aggregation with segmentation."""
         result = aggregate(
             sample_data,
-            n_periods=8,
+            n_clusters=8,
             segments=SegmentConfig(n_segments=12),
         )
 
@@ -58,7 +58,7 @@ class TestAggregate:
 
         result = aggregate(
             sample_data,
-            n_periods=8,
+            n_clusters=8,
             extremes=ExtremeConfig(
                 method="append",
                 max_value=[col],
@@ -66,18 +66,18 @@ class TestAggregate:
         )
 
         # With append, we should have more periods
-        assert result.n_periods >= 8
+        assert result.n_clusters >= 8
 
     def test_result_reconstruct(self, sample_data):
         """Test that reconstruction works."""
-        result = aggregate(sample_data, n_periods=8)
+        result = aggregate(sample_data, n_clusters=8)
         reconstructed = result.reconstruct()
 
         assert reconstructed.shape == sample_data.shape
 
     def test_result_to_dict(self, sample_data):
         """Test that to_dict works."""
-        result = aggregate(sample_data, n_periods=8)
+        result = aggregate(sample_data, n_clusters=8)
         data = result.to_dict()
 
         assert "typical_periods" in data
@@ -86,7 +86,7 @@ class TestAggregate:
 
     def test_accuracy_metrics(self, sample_data):
         """Test accuracy metrics."""
-        result = aggregate(sample_data, n_periods=8)
+        result = aggregate(sample_data, n_clusters=8)
 
         assert hasattr(result.accuracy, "rmse")
         assert hasattr(result.accuracy, "mae")
@@ -97,25 +97,25 @@ class TestAggregate:
 class TestValidation:
     """Tests for input validation."""
 
-    def test_invalid_n_periods(self, sample_data):
-        """Test that invalid n_periods raises error."""
-        with pytest.raises(ValueError, match="n_periods"):
-            aggregate(sample_data, n_periods=0)
+    def test_invalid_n_clusters(self, sample_data):
+        """Test that invalid n_clusters raises error."""
+        with pytest.raises(ValueError, match="n_clusters"):
+            aggregate(sample_data, n_clusters=0)
 
-        with pytest.raises(ValueError, match="n_periods"):
-            aggregate(sample_data, n_periods=-1)
+        with pytest.raises(ValueError, match="n_clusters"):
+            aggregate(sample_data, n_clusters=-1)
 
     def test_invalid_data_type(self):
         """Test that non-DataFrame data raises error."""
         with pytest.raises(TypeError, match="DataFrame"):
-            aggregate([1, 2, 3], n_periods=8)
+            aggregate([1, 2, 3], n_clusters=8)
 
     def test_invalid_extreme_columns(self, sample_data):
         """Test that invalid extreme columns raise error."""
         with pytest.raises(ValueError, match="not found"):
             aggregate(
                 sample_data,
-                n_periods=8,
+                n_clusters=8,
                 extremes=ExtremeConfig(max_value=["nonexistent_column"]),
             )
 
@@ -124,7 +124,7 @@ class TestValidation:
         with pytest.raises(ValueError, match="not found"):
             aggregate(
                 sample_data,
-                n_periods=8,
+                n_clusters=8,
                 cluster=ClusterConfig(weights={"nonexistent": 1.0}),
             )
 
@@ -133,7 +133,7 @@ class TestValidation:
         with pytest.raises(ValueError, match="n_segments"):
             aggregate(
                 sample_data,
-                n_periods=8,
+                n_clusters=8,
                 period_hours=24,
                 segments=SegmentConfig(n_segments=100),
             )
@@ -179,7 +179,7 @@ class TestAssignments:
 
     def test_assignments_basic(self, sample_data):
         """Test basic assignments DataFrame structure."""
-        result = aggregate(sample_data, n_periods=8)
+        result = aggregate(sample_data, n_clusters=8)
         assignments = result.assignments
 
         # Should have same length as original data
@@ -200,7 +200,7 @@ class TestAssignments:
         """Test assignments includes segment_idx when segmentation is used."""
         result = aggregate(
             sample_data,
-            n_periods=8,
+            n_clusters=8,
             segments=SegmentConfig(n_segments=6),
         )
         assignments = result.assignments
@@ -214,7 +214,7 @@ class TestAssignments:
 
     def test_assignments_values_valid(self, sample_data):
         """Test that assignment values are within expected ranges."""
-        result = aggregate(sample_data, n_periods=8)
+        result = aggregate(sample_data, n_clusters=8)
         assignments = result.assignments
 
         # Period indices should be sequential
@@ -230,7 +230,7 @@ class TestAssignments:
 
         # Cluster indices should be in valid range
         assert assignments["cluster_idx"].min() >= 0
-        assert assignments["cluster_idx"].max() < result.n_periods
+        assert assignments["cluster_idx"].max() < result.n_clusters
 
 
 class TestSegmentTransfer:
@@ -240,7 +240,7 @@ class TestSegmentTransfer:
         """Test that segment_assignments property works."""
         result = aggregate(
             sample_data,
-            n_periods=8,
+            n_clusters=8,
             segments=SegmentConfig(n_segments=6),
         )
 
@@ -250,7 +250,7 @@ class TestSegmentTransfer:
         assert seg_assignments is not None
 
         # Should have one tuple per typical period
-        assert len(seg_assignments) == result.n_periods
+        assert len(seg_assignments) == result.n_clusters
 
         # Each inner tuple should sum to timesteps per period
         for period_assignments in seg_assignments:
@@ -260,7 +260,7 @@ class TestSegmentTransfer:
         """Test that segment_durations property works."""
         result = aggregate(
             sample_data,
-            n_periods=8,
+            n_clusters=8,
             segments=SegmentConfig(n_segments=6),
         )
 
@@ -270,7 +270,7 @@ class TestSegmentTransfer:
         assert seg_durations is not None
 
         # Should have one tuple per typical period
-        assert len(seg_durations) == result.n_periods
+        assert len(seg_durations) == result.n_clusters
 
         # Each inner tuple should have n_segments elements
         for period_durations in seg_durations:
@@ -285,7 +285,7 @@ class TestSegmentTransfer:
         # First aggregation
         result1 = aggregate(
             sample_data,
-            n_periods=8,
+            n_clusters=8,
             segments=SegmentConfig(n_segments=6),
         )
 
@@ -296,7 +296,7 @@ class TestSegmentTransfer:
         # Second aggregation with predefined segments and clusters
         result2 = aggregate(
             sample_data,
-            n_periods=8,
+            n_clusters=8,
             cluster=ClusterConfig(
                 predef_cluster_assignments=tuple(result1.cluster_assignments),
                 predef_cluster_centers=tuple(result1.cluster_centers),
@@ -316,7 +316,7 @@ class TestSegmentTransfer:
 
     def test_segment_properties_none_without_segmentation(self, sample_data):
         """Test that segment properties return None without segmentation."""
-        result = aggregate(sample_data, n_periods=8)
+        result = aggregate(sample_data, n_clusters=8)
 
         assert result.segment_assignments is None
         assert result.segment_durations is None
@@ -329,7 +329,7 @@ class TestPredef:
         """Test that predefined property returns PredefinedConfig."""
         from tsam import PredefinedConfig
 
-        result = aggregate(sample_data, n_periods=8)
+        result = aggregate(sample_data, n_clusters=8)
         predefined = result.predefined
 
         assert isinstance(predefined, PredefinedConfig)
@@ -337,10 +337,10 @@ class TestPredef:
 
     def test_predef_transfer(self, sample_data):
         """Test transferring with predefined parameter."""
-        result1 = aggregate(sample_data, n_periods=8)
+        result1 = aggregate(sample_data, n_clusters=8)
 
         # Transfer using predefined
-        result2 = aggregate(sample_data, n_periods=8, predefined=result1.predefined)
+        result2 = aggregate(sample_data, n_clusters=8, predefined=result1.predefined)
 
         # Results should match
         pd.testing.assert_frame_equal(
@@ -352,12 +352,12 @@ class TestPredef:
         """Test predefined transfer with segmentation."""
         result1 = aggregate(
             sample_data,
-            n_periods=8,
+            n_clusters=8,
             segments=SegmentConfig(n_segments=6),
         )
 
         # Transfer using predefined
-        result2 = aggregate(sample_data, n_periods=8, predefined=result1.predefined)
+        result2 = aggregate(sample_data, n_clusters=8, predefined=result1.predefined)
 
         # Should automatically apply segmentation
         assert result2.n_segments == 6
@@ -370,13 +370,13 @@ class TestPredef:
         """Test predefined transfer via dict (for JSON serialization)."""
         from tsam import PredefinedConfig
 
-        result1 = aggregate(sample_data, n_periods=8)
+        result1 = aggregate(sample_data, n_clusters=8)
 
         # Convert to dict and back (simulates JSON save/load)
         predef_dict = result1.predefined.to_dict()
         predefined = PredefinedConfig.from_dict(predef_dict)
 
-        result2 = aggregate(sample_data, n_periods=8, predefined=predefined)
+        result2 = aggregate(sample_data, n_clusters=8, predefined=predefined)
 
         pd.testing.assert_frame_equal(
             result1.typical_periods,
@@ -385,11 +385,11 @@ class TestPredef:
 
     def test_predef_dict_directly(self, sample_data):
         """Test passing dict directly to predefined parameter."""
-        result1 = aggregate(sample_data, n_periods=8)
+        result1 = aggregate(sample_data, n_clusters=8)
 
         # Pass dict directly (API accepts both)
         result2 = aggregate(
-            sample_data, n_periods=8, predefined=result1.predefined.to_dict()
+            sample_data, n_clusters=8, predefined=result1.predefined.to_dict()
         )
 
         pd.testing.assert_frame_equal(

@@ -12,7 +12,7 @@ Two usage patterns are supported:
    >>> tsam.plot.compare({"Original": df, "Aggregated": result.reconstruct()}, column="Load")
 
 2. Accessor pattern on results:
-   >>> result = tsam.aggregate(df, n_periods=8)
+   >>> result = tsam.aggregate(df, n_clusters=8)
    >>> result.plot.heatmap(column="Load")
    >>> result.plot.duration_curve()
 
@@ -128,7 +128,7 @@ def heatmaps(
     Examples
     --------
     >>> import tsam
-    >>> result = tsam.aggregate(df, n_periods=8)
+    >>> result = tsam.aggregate(df, n_clusters=8)
     >>> # Plot all columns from reconstructed data, scaled to original
     >>> tsam.plot.heatmaps(result.reconstruct(), reference_data=df)
     """
@@ -321,8 +321,8 @@ def compare(
     Examples
     --------
     >>> import tsam
-    >>> result1 = tsam.aggregate(df, n_periods=8, cluster=ClusterConfig(method="kmeans"))
-    >>> result2 = tsam.aggregate(df, n_periods=8, cluster=ClusterConfig(method="hierarchical"))
+    >>> result1 = tsam.aggregate(df, n_clusters=8, cluster=ClusterConfig(method="kmeans"))
+    >>> result2 = tsam.aggregate(df, n_clusters=8, cluster=ClusterConfig(method="hierarchical"))
     >>> fig = tsam.plot.compare(
     ...     {"Original": df, "K-means": result1.reconstruct(), "Hierarchical": result2.reconstruct()},
     ...     column="Load",
@@ -385,7 +385,7 @@ class ResultPlotAccessor:
 
     Examples
     --------
-    >>> result = tsam.aggregate(df, n_periods=8)
+    >>> result = tsam.aggregate(df, n_clusters=8)
     >>> result.plot.heatmap(column="Load")
     >>> result.plot.duration_curve()
     >>> result.plot.typical_periods()

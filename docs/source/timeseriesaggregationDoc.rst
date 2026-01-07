@@ -39,7 +39,7 @@ Tuning Functions
 ================
 
 .. automodule:: tsam.tuning
-   :members: find_optimal_combination, find_pareto_front, find_periods_for_reduction, find_segments_for_reduction, TuningResult
+   :members: find_optimal_combination, find_pareto_front, find_clusters_for_reduction, find_segments_for_reduction, TuningResult
    :member-order: bysource
 
 *****************************

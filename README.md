@@ -97,7 +97,7 @@ from tsam import aggregate, ClusterConfig, SegmentConfig
 
 result = tsam.aggregate(
     raw,
-    n_periods=8,
+    n_clusters=8,
     period_hours=24,
     cluster=ClusterConfig(
         method='hierarchical',
