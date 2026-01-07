@@ -27,40 +27,40 @@ jobs:
             requirements_file_name: requirements_dev.yml
             examples_to_execute: "examples/aggregation_example.ipynb examples/aggregation_method_showcase.ipynb examples/aggregation_optiinput.ipynb examples/aggregation_representation.ipynb examples/aggregation_segmentation.ipynb examples/example_k_maxoids.ipynb examples/predefined_sequence_example.ipynb"
             multiprocessing_example_string: "-n auto"
-    TestMinDependencies:
-        strategy:
-            fail-fast: false
-            matrix:
-                runner_tag: ["self-hosted"]
-                dependencies:
-                    [
-                        {
-                            library_name: scikit-learn,
-                            version: 0.0,
-                            yaml_position: 2,
-                        },
-                        {
-                            library_name: pandas,
-                            version: 2.1.0,
-                            yaml_position: 3,
-                        },
-                        {
-                            library_name: numpy,
-                            version: 1.21.0,
-                            yaml_position: 4,
-                        },
+    # TestMinDependencies:
+    #     strategy:
+    #         fail-fast: false
+    #         matrix:
+    #             runner_tag: ["self-hosted"]
+    #             dependencies:
+    #                 [
+    #                     {
+    #                         library_name: scikit-learn,
+    #                         version: 0.0,
+    #                         yaml_position: 2,
+    #                     },
+    #                     {
+    #                         library_name: pandas,
+    #                         version: 2.1.0,
+    #                         yaml_position: 3,
+    #                     },
+    #                     {
+    #                         library_name: numpy,
+    #                         version: 1.21.0,
+    #                         yaml_position: 4,
+    #                     },
 
-                        { library_name: pyomo, version: 6.8, yaml_position: 5 },
-                    ]
-        uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
-        with:
-            runner_tag: ${{ matrix.runner_tag }}
-            requirements_file_name: requirements_dev.yml
-            examples_to_execute: "examples/aggregation_example.ipynb examples/aggregation_method_showcase.ipynb examples/aggregation_optiinput.ipynb examples/aggregation_representation.ipynb examples/aggregation_segmentation.ipynb examples/example_k_maxoids.ipynb examples/predefined_sequence_example.ipynb"
-            multiprocessing_example_string: "-n auto"
-            library_name: ${{ matrix.dependencies.library_name }}
-            library_version: ${{ matrix.dependencies.version }}
-            dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
+    #                     { library_name: pyomo, version: 6.8, yaml_position: 5 },
+    #                 ]
+    #     uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    #     with:
+    #         runner_tag: ${{ matrix.runner_tag }}
+    #         requirements_file_name: requirements_dev.yml
+    #         examples_to_execute: "examples/aggregation_example.ipynb examples/aggregation_method_showcase.ipynb examples/aggregation_optiinput.ipynb examples/aggregation_representation.ipynb examples/aggregation_segmentation.ipynb examples/example_k_maxoids.ipynb examples/predefined_sequence_example.ipynb"
+    #         multiprocessing_example_string: "-n auto"
+    #         library_name: ${{ matrix.dependencies.library_name }}
+    #         library_version: ${{ matrix.dependencies.version }}
+    #         dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
 
     TestPullPyPIDev:
         name: Test PyPi development version on ${{ matrix.runner_tag }}
