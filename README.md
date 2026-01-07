@@ -20,36 +20,47 @@ The documentation of the tsam code can be found [**here**](https://tsam.readthed
 
 ## Installation
 
-**Quick Install**
+To avoid dependency conflicts, it is recommended that you install Tsam in its own environment. You can use either [uv](https://docs.astral.sh/uv/)  or [conda/mamba](https://conda-forge.org/download/) ) to manage environments and installations. Before proceeding, you must install either UV or Conda/Mamba, or both. 
+
+**Quick Install with uv**
 
 The fastest way to install tsam is using [uv](https://docs.astral.sh/uv/):
 
 ```bash
+uv venv tsam_env
 uv pip install tsam
 ```
 
-Or using pip:
-
-```bash
-pip install tsam
-```
-
+** Install from conda forge into a new environment**
 Or from conda-forge:
 
 ```bash
-conda install tsam -c conda-forge
+conda create -n tsam_env -c conda-forge tsam
 ```
+
+conda and mamba can be used interchangeably
 
 ### Development Installation
 
 ```bash
 git clone https://github.com/FZJ-IEK3-VSA/tsam.git
 cd tsam
+```
 
 # Using uv (recommended)
+```bash
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e ".[develop]"
+```
+
+# Using conda-forge
+
+```bash
+conda env create -n tsam_env --file=requirements_dev.yml
+conda activate tsam_env
+pip install -e . --no-deps
+```
 
 # Set up pre-commit hooks
 pre-commit install
