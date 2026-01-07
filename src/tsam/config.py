@@ -12,7 +12,6 @@ ClusterMethod = Literal[
     "averaging",
     "kmeans",
     "kmedoids",
-    "kmedoids_exact",
     "kmaxoids",
     "hierarchical",
     "contiguous",
@@ -47,8 +46,7 @@ class ClusterConfig:
         Clustering algorithm to use:
         - "averaging": Sequential averaging of periods
         - "kmeans": K-means clustering (fast, uses centroids)
-        - "kmedoids": K-medoids using heuristic (uses actual periods)
-        - "kmedoids_exact": K-medoids using MILP optimization (slower, optimal)
+        - "kmedoids": K-medoids using MILP optimization (uses actual periods)
         - "kmaxoids": K-maxoids (selects most dissimilar periods)
         - "hierarchical": Agglomerative hierarchical clustering
         - "contiguous": Hierarchical with temporal contiguity constraint
@@ -86,7 +84,7 @@ class ClusterConfig:
         Helps preserve total energy/load values.
 
     solver : str, default "highs"
-        MILP solver for kmedoids_exact method.
+        MILP solver for kmedoids method.
         Options: "highs" (default, open source), "cbc", "gurobi", "cplex"
 
     predef_cluster_order : array-like, optional
@@ -120,7 +118,6 @@ class ClusterConfig:
             "averaging": "mean",
             "kmeans": "mean",
             "kmedoids": "medoid",
-            "kmedoids_exact": "medoid",
             "kmaxoids": "maxoid",
             "hierarchical": "medoid",
             "contiguous": "medoid",
@@ -419,7 +416,6 @@ METHOD_MAPPING: dict[ClusterMethod, str] = {
     "averaging": "averaging",
     "kmeans": "k_means",
     "kmedoids": "k_medoids",
-    "kmedoids_exact": "k_medoids",  # Same, but uses exact solver
     "kmaxoids": "k_maxoids",
     "hierarchical": "hierarchical",
     "contiguous": "adjacent_periods",
