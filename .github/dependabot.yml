@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Python dependencies
+  # PyPI dependencies
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -9,7 +9,18 @@ updates:
     labels:
       - "dependencies"
     commit-message:
-      prefix: "deps"
+      prefix: "PyPI dependencies"
+ 
+  # Conda-forge dependencies
+  - package-ecosystem: "conda"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "Conda forge dependencies"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -20,4 +31,4 @@ updates:
       - "dependencies"
       - "github-actions"
     commit-message:
-      prefix: "ci"
+      prefix: "ci updates"
