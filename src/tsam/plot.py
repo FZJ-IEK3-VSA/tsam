@@ -542,7 +542,7 @@ class ResultPlotAccessor:
         weights = self._result.cluster_weights
 
         # Get column names (excluding index levels if they're columns)
-        all_columns = [c for c in typ.columns if c not in ["period", "timestep"]]
+        all_columns = [c for c in typ.columns if c not in ["cluster", "timestep"]]
         if columns is None:
             columns = all_columns
         else:

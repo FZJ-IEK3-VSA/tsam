@@ -156,4 +156,4 @@ Key concepts used in the tsam API:
    * - ``segment_durations``
      - Nested tuple with duration (in timesteps) for each segment in each typical period.
    * - ``cluster_representatives``
-     - MultiIndex DataFrame with aggregated data. Index levels are (period, timestep) or (period, segment) if segmented.
+     - MultiIndex DataFrame with aggregated data. Index levels are (cluster, timestep) or (cluster, segment) if segmented.

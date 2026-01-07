@@ -267,6 +267,11 @@ def aggregate(
     agg = TimeSeriesAggregation(**old_params)
     cluster_representatives = agg.createTypicalPeriods()
 
+    # Rename index levels for consistency with new API terminology
+    cluster_representatives = cluster_representatives.rename_axis(
+        index={"PeriodNum": "cluster", "TimeStep": "timestep"}
+    )
+
     # Build accuracy metrics
     accuracy_df = agg.accuracyIndicators()
     accuracy = AccuracyMetrics(

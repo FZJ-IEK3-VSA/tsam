@@ -52,8 +52,8 @@ class AggregationResult:
     Attributes
     ----------
     cluster_representatives : pd.DataFrame
-        The aggregated typical periods with MultiIndex (period, timestep).
-        Each row represents one timestep in one typical period.
+        The aggregated typical periods with MultiIndex (cluster, timestep).
+        Each row represents one timestep in one cluster representative.
 
     cluster_assignments : np.ndarray
         Which cluster each original period belongs to.
@@ -93,9 +93,9 @@ class AggregationResult:
     >>> result = tsam.aggregate(df, n_clusters=8)
     >>> result.cluster_representatives
                         solar  wind  demand
-    period timestep
-    0      0           0.12   0.45   0.78
-           1           0.15   0.42   0.82
+    cluster timestep
+    0       0           0.12   0.45   0.78
+            1           0.15   0.42   0.82
     ...
 
     >>> result.cluster_weights
