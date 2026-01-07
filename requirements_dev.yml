@@ -6,9 +6,9 @@ dependencies:
   - pip
   # Core dependencies
   - scikit-learn>=0.0
-  - pandas>=2.0.3
-  - numpy>=1.20.0
-  - pyomo>=6.4.3
+  - pandas>=2.1.0
+  - numpy>=1.21.0
+  - pyomo>=6.8
   - networkx
   - tqdm
   - highspy
