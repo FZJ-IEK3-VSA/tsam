@@ -23,9 +23,9 @@ Initialize an aggregation object and define the number of typical periods, the l
 
 .. code-block:: python
 
-  aggregation = tsam.TimeSeriesAggregation(raw, 
-    noTypicalPeriods = 8, 
-    hoursPerPeriod = 24, 
+  aggregation = tsam.TimeSeriesAggregation(raw,
+    noTypicalPeriods = 8,
+    hoursPerPeriod = 24,
     segmentation = True,
     noSegments = 8,
     representationMethod = "distributionAndMinMaxRepresentation",
@@ -77,7 +77,7 @@ Afterwards, define the aggregation level you want to reach. The following exampl
 
 Since, it is quite time consuming, I would recommend to just run it once at the beginning for your time series set, save the resulting segment and period number, and use it as fix values for the original TimeSeriesAggregation object in production.
 
-The scientific documentation of the methodology can be found here: 
+The scientific documentation of the methodology can be found here:
 `The Pareto-Optimal Temporal Aggregation of Energy System Models <https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342>`_
 
 **Additional Examples**

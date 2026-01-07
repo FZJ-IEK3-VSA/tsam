@@ -8,7 +8,6 @@ import tsam.timeseriesaggregation as tsam
 
 
 def test_durationRepresentation():
-
     raw = pd.read_csv(
         os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
         index_col=0,
@@ -83,7 +82,6 @@ def test_durationRepresentation():
 
 
 def test_distributionMinMaxRepresentation():
-
     raw = pd.read_csv(
         os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
         index_col=0,
@@ -119,7 +117,6 @@ def test_distributionMinMaxRepresentation():
 
 
 def test_distributionRepresentation_keeps_mean():
-
     raw = pd.read_csv(
         os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
         index_col=0,

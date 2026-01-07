@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
+
 from tsam.representations import representations
 
 
@@ -62,7 +61,7 @@ def segmentation(
         )
         clusterOrderUnique = [clusterOrder[index] for index in sorted(indices)]
         # determine the segments' values
-        clusterCenters, clusterCenterIndices = representations(
+        clusterCenters, _clusterCenterIndices = representations(
             segmentationCandidates,
             clusterOrder,
             default="meanRepresentation",

@@ -1,14 +1,11 @@
-# -*- coding: utf-8 -*-
-
 import numpy as np
-
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array
 
-# switch to numpy 2.0
-np.float_ = np.float64
-np.complex_=np.complex128
+# switch to numpy 2.0 (restore deprecated aliases for backward compatibility)
+np.float_ = np.float64  # type: ignore[attr-defined]
+np.complex_ = np.complex128  # type: ignore[attr-defined]
 
 import pyomo.environ as pyomo
 import pyomo.opt as opt
@@ -43,7 +40,6 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         threads=7,
         solver="highs",
     ):
-
         self.n_clusters = n_clusters
 
         self.distance_metric = distance_metric
@@ -55,7 +51,6 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         self.threads = threads
 
     def _check_init_args(self):
-
         # Check n_clusters
         if (
             self.n_clusters is None
@@ -74,8 +69,8 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
                 "distance_metric needs to be "
                 + "callable or one of the "
                 + "following strings: "
-                + "{}".format(PAIRWISE_DISTANCE_FUNCTIONS.keys())
-                + ". Instead, '{}' ".format(self.distance_metric)
+                + f"{PAIRWISE_DISTANCE_FUNCTIONS.keys()}"
+                + f". Instead, '{self.distance_metric}' "
                 + "was given."
             )
 
@@ -98,7 +93,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         D = self.distance_func(X)
 
         # run exact optimization
-        r_y, r_x, best_inertia = self._k_medoids_exact(D, self.n_clusters)
+        r_y, r_x, _best_inertia = self._k_medoids_exact(D, self.n_clusters)
 
         labels_raw = r_x.argmax(axis=0)
 
@@ -120,7 +115,6 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         return self
 
     def _check_array(self, X):
-
         X = check_array(X)
 
         # Check that the number of clusters is less than or equal to
@@ -128,9 +122,9 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         if self.n_clusters > X.shape[0]:
             raise ValueError(
                 "The number of medoids "
-                + "({}) ".format(self.n_clusters)
+                + f"({self.n_clusters}) "
                 + "must be larger than the number "
-                + "of samples ({})".format(X.shape[0])
+                + f"of samples ({X.shape[0]})"
             )
 
         return X
@@ -226,8 +220,7 @@ def _solve_given_pyomo_model(M, solver="highs"):
         solver_instance = appsi.solvers.Highs()
     else:
         solver_instance = opt.SolverFactory(solver)
-    results = solver_instance.solve(M)
-    # check that it does not fail
+    _results = solver_instance.solve(M)  # results checked via model state
 
     # Get results
     r_x = np.array([[round(M.z[i, j].value) for i in M.i] for j in M.j])

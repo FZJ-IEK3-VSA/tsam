@@ -1,14 +1,12 @@
 import os
-import time
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
 
 
 def test_aggregate_hiearchical():
-
     normalizedPeriodlyProfiles = pd.read_csv(
         os.path.join(
             os.path.dirname(__file__),
@@ -21,7 +19,7 @@ def test_aggregate_hiearchical():
         header=[0, 1],
     )
 
-    clusterCenters, clusterCenterIndices, clusterOrder = tsam.aggregatePeriods(
+    _clusterCenters, _clusterCenterIndices, clusterOrder = tsam.aggregatePeriods(
         normalizedPeriodlyProfiles.values,
         n_clusters=8,
         clusterMethod="hierarchical",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Orders a set of representation values to fit several candidate value sets"""
 
 import warnings
@@ -51,20 +50,21 @@ def durationRepresentation(
 
             # Skip empty clusters
             if len(indice) == 0:
-                continue     
-            
+                continue
+
             # This list will hold the representative values for each attribute
-            clusterCenter_parts = [] 
+            clusterCenter_parts = []
 
             for a in candidates_df.columns.levels[0]:
-
                 candidateValues_np = candidates_df.loc[indice, a].values
 
                 # flatten the 2D array (candidates, timesteps) into a 1D array and sort it.
                 sorted_flat_values = np.sort(candidateValues_np.flatten())
 
                 # reshape the sorted values and calculate the mean for each representative time step.
-                representationValues_np = sorted_flat_values.reshape(timeStepsPerPeriod, noCandidates).mean(axis=1)
+                representationValues_np = sorted_flat_values.reshape(
+                    timeStepsPerPeriod, noCandidates
+                ).mean(axis=1)
 
                 # respect max and min of the attributes
                 if representMinMax:
@@ -74,16 +74,18 @@ def durationRepresentation(
                 # get the order of the representation values such that euclidean distance
                 # to the candidates' mean profile is minimized.
                 mean_profile_order = np.argsort(candidateValues_np.mean(axis=0))
-                
+
                 # Create an empty array to place the results in the correct order
                 final_representation_for_attr = np.empty_like(representationValues_np)
-                final_representation_for_attr[mean_profile_order] = representationValues_np
-                
+                final_representation_for_attr[mean_profile_order] = (
+                    representationValues_np
+                )
+
                 # add to cluster center
                 clusterCenter_parts.append(final_representation_for_attr)
 
             clusterCenters.append(np.concatenate(clusterCenter_parts))
-    
+
     else:
         clusterCentersList = []
         for a in candidates_df.columns.levels[0]:
@@ -190,7 +192,6 @@ def _representMinMax(
         return representationValues
 
     if keepSum:
-
         # now anticipate the shift of the sum of the time series
         # due to the change of the min and max values
         # of the duration curve

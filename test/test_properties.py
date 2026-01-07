@@ -8,7 +8,6 @@ import tsam.timeseriesaggregation as tsam
 
 
 def test_properties():
-
     hoursPerPeriod = 24
 
     noSegments = 8

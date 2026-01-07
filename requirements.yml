@@ -4,20 +4,12 @@ channels:
 dependencies:
   - python>=3.10,<3.14
   - pip
+  # Core dependencies
   - scikit-learn>=0.0
-  - pandas>=2.0.3
-  - numpy>=1.20.0
-  - pyomo>=6.4.3
+  - pandas>=2.1.0
+  - numpy>=1.21.0
+  - pyomo>=6.8
   - networkx
   - tqdm
   - highspy
   - matplotlib
-  # - pytest
-  # - pytest-cov
-  # - pytest-xdist
-  # - codecov
-  # - sphinx
-  # - sphinx-autobuild
-  # - sphinx-book-theme
-  # - twine
-  # - nbval

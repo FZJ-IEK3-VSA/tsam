@@ -1,14 +1,13 @@
 import os
 import time
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
 
 
 def test_minmaxRepresentation():
-
     raw = pd.read_csv(
         os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
         index_col=0,
