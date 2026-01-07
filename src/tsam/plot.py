@@ -501,7 +501,12 @@ class ResultPlotAccessor:
 
         if compare_original and self._original is not None:
             # Use compare function for side-by-side comparison
-            col = columns[0] if columns is not None else reconstructed.columns[0]
+            if columns is not None:
+                col = columns[0]
+            elif len(reconstructed.columns) > 0:
+                col = reconstructed.columns[0]
+            else:
+                raise ValueError("No columns available to plot")
             return compare(
                 {"Original": self._original, "Reconstructed": reconstructed},
                 column=col,
@@ -735,7 +740,12 @@ class ResultPlotAccessor:
         reconstructed = self._result.reconstruct()
 
         if compare_original and self._original is not None:
-            col = columns[0] if columns is not None else reconstructed.columns[0]
+            if columns is not None:
+                col = columns[0]
+            elif len(reconstructed.columns) > 0:
+                col = reconstructed.columns[0]
+            else:
+                raise ValueError("No columns available to plot")
             return compare(
                 {"Original": self._original, "Reconstructed": reconstructed},
                 column=col,

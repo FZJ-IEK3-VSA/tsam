@@ -59,7 +59,13 @@ def _test_single_config_file(
         rmse = float(result.accuracy.rmse.mean())
         return (n_periods, n_segments, rmse, result)
     except Exception as e:
-        logger.debug("Config (%d, %d) failed: %s", n_periods, n_segments, e)
+        logger.warning(
+            "Config (n_periods=%d, n_segments=%d) failed: %s: %s",
+            n_periods,
+            n_segments,
+            type(e).__name__,
+            e,
+        )
         return (n_periods, n_segments, float("inf"), None)
 
 
@@ -76,7 +82,7 @@ def _infer_resolution(data: pd.DataFrame) -> float:
             index = pd.to_datetime(data.index)
             timedelta = index[1] - index[0]
             return float(timedelta.total_seconds()) / 3600
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             # Default to hourly if can't infer
             return 1.0
 
