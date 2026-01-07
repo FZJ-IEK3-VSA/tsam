@@ -41,7 +41,7 @@ Access the results:
 .. code-block:: python
 
    # Get the typical periods DataFrame
-   typical_periods = result.typical_periods
+   cluster_representatives = result.cluster_representatives
 
    # Check accuracy metrics
    print(f"RMSE: {result.accuracy.rmse.mean():.4f}")
@@ -53,7 +53,7 @@ Store the results as .csv file
 
 .. code-block:: python
 
-   typical_periods.to_csv('typical_periods.csv')
+   cluster_representatives.to_csv('cluster_representatives.csv')
 
 
 **Hypertuned aggregation**
@@ -80,7 +80,7 @@ In case you do not know which number of segments or typical periods to choose, y
    print(f"RMSE: {result.optimal_rmse:.4f}")
 
    # Access the best aggregation result directly
-   typical_periods = result.best_result.typical_periods
+   cluster_representatives = result.best_result.cluster_representatives
 
 Since tuning can be time consuming, it is recommended to run it once at the beginning for your time series set, save the resulting segment and period numbers, and use them as fixed values in production.
 
@@ -115,7 +115,7 @@ The class-based API is still available for backward compatibility:
        representationMethod="distributionAndMinMaxRepresentation",
        clusterMethod='hierarchical'
    )
-   typical_periods = aggregation.createTypicalPeriods()
+   cluster_representatives = aggregation.createTypicalPeriods()
 
 
 **Additional Examples**
@@ -155,5 +155,5 @@ Key concepts used in the tsam API:
      - Dictionary mapping cluster index to occurrence count (how many original periods each cluster represents).
    * - ``segment_durations``
      - Nested tuple with duration (in timesteps) for each segment in each typical period.
-   * - ``typical_periods``
+   * - ``cluster_representatives``
      - MultiIndex DataFrame with aggregated data. Index levels are (period, timestep) or (period, segment) if segmented.

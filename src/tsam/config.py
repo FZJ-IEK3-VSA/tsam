@@ -339,7 +339,7 @@ class PredefinedConfig:
 
         return pd.DataFrame(
             list(self.segment_durations),
-            index=pd.RangeIndex(n_clusters, name="typical_period"),
+            index=pd.RangeIndex(n_clusters, name="cluster"),
             columns=pd.RangeIndex(n_segments, name="segment"),
         )
 

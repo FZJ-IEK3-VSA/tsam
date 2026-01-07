@@ -388,7 +388,7 @@ class ResultPlotAccessor:
     >>> result = tsam.aggregate(df, n_clusters=8)
     >>> result.plot.heatmap(column="Load")
     >>> result.plot.duration_curve()
-    >>> result.plot.typical_periods()
+    >>> result.plot.cluster_representatives()
     >>> result.plot.cluster_weights()
     """
 
@@ -520,25 +520,25 @@ class ResultPlotAccessor:
                 title=title or "Duration Curve",
             )
 
-    def typical_periods(
+    def cluster_representatives(
         self,
         columns: list[str] | None = None,
-        title: str = "Typical Periods",
+        title: str = "Cluster Representatives",
     ) -> go.Figure:
-        """Plot all typical periods.
+        """Plot all cluster representatives (typical periods).
 
         Parameters
         ----------
         columns : list[str], optional
             Columns to plot.
-        title : str, default "Typical Periods"
+        title : str, default "Cluster Representatives"
             Plot title.
 
         Returns
         -------
         go.Figure
         """
-        typ = self._result.typical_periods
+        typ = self._result.cluster_representatives
         weights = self._result.cluster_weights
 
         # Get column names (excluding index levels if they're columns)

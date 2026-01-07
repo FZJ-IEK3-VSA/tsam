@@ -21,7 +21,7 @@ class TestAggregate:
         """Test basic aggregation with minimal parameters."""
         result = aggregate(sample_data, n_clusters=8)
 
-        assert result.typical_periods is not None
+        assert result.cluster_representatives is not None
         assert result.n_clusters == 8
         assert len(result.cluster_weights) == 8
         assert result.accuracy is not None
@@ -38,7 +38,7 @@ class TestAggregate:
         )
 
         assert result.n_clusters == 8
-        assert result.typical_periods is not None
+        assert result.cluster_representatives is not None
 
     def test_with_segmentation(self, sample_data):
         """Test aggregation with segmentation."""
@@ -80,7 +80,7 @@ class TestAggregate:
         result = aggregate(sample_data, n_clusters=8)
         data = result.to_dict()
 
-        assert "typical_periods" in data
+        assert "cluster_representatives" in data
         assert "cluster_assignments" in data
         assert "accuracy" in data
 
@@ -310,8 +310,8 @@ class TestSegmentTransfer:
 
         # Results should match
         pd.testing.assert_frame_equal(
-            result1.typical_periods,
-            result2.typical_periods,
+            result1.cluster_representatives,
+            result2.cluster_representatives,
         )
 
     def test_segment_properties_none_without_segmentation(self, sample_data):
@@ -344,8 +344,8 @@ class TestPredef:
 
         # Results should match
         pd.testing.assert_frame_equal(
-            result1.typical_periods,
-            result2.typical_periods,
+            result1.cluster_representatives,
+            result2.cluster_representatives,
         )
 
     def test_predef_with_segments(self, sample_data):
@@ -362,8 +362,8 @@ class TestPredef:
         # Should automatically apply segmentation
         assert result2.n_segments == 6
         pd.testing.assert_frame_equal(
-            result1.typical_periods,
-            result2.typical_periods,
+            result1.cluster_representatives,
+            result2.cluster_representatives,
         )
 
     def test_predef_from_dict(self, sample_data):
@@ -379,8 +379,8 @@ class TestPredef:
         result2 = aggregate(sample_data, n_clusters=8, predefined=predefined)
 
         pd.testing.assert_frame_equal(
-            result1.typical_periods,
-            result2.typical_periods,
+            result1.cluster_representatives,
+            result2.cluster_representatives,
         )
 
     def test_predef_dict_directly(self, sample_data):
@@ -393,8 +393,8 @@ class TestPredef:
         )
 
         pd.testing.assert_frame_equal(
-            result1.typical_periods,
-            result2.typical_periods,
+            result1.cluster_representatives,
+            result2.cluster_representatives,
         )
 
 

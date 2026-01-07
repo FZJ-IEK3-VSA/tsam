@@ -15,7 +15,7 @@ Quick Start
 >>> result = tsam.aggregate(df, n_clusters=8)
 >>>
 >>> # Access results
->>> typical_periods = result.typical_periods
+>>> typical_periods = result.cluster_representatives
 >>> print(f"RMSE: {result.accuracy.rmse.mean():.4f}")
 
 For more control, use configuration objects:

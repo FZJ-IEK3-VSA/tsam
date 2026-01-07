@@ -91,7 +91,7 @@ def aggregate(
     -------
     AggregationResult
         Object containing:
-        - typical_periods: DataFrame with aggregated periods
+        - cluster_representatives: DataFrame with aggregated periods
         - cluster_assignments: Which cluster each original period belongs to
         - cluster_weights: Occurrence count per cluster
         - accuracy: RMSE, MAE metrics
@@ -110,7 +110,7 @@ def aggregate(
 
     >>> import tsam
     >>> result = tsam.aggregate(df, n_clusters=8)
-    >>> typical = result.typical_periods
+    >>> typical = result.cluster_representatives
 
     With custom clustering:
 
@@ -265,7 +265,7 @@ def aggregate(
 
     # Run aggregation using old implementation
     agg = TimeSeriesAggregation(**old_params)
-    typical_periods = agg.createTypicalPeriods()
+    cluster_representatives = agg.createTypicalPeriods()
 
     # Build accuracy metrics
     accuracy_df = agg.accuracyIndicators()
@@ -291,7 +291,7 @@ def aggregate(
 
     # Build result object
     return AggregationResult(
-        typical_periods=typical_periods,
+        cluster_representatives=cluster_representatives,
         cluster_assignments=np.array(agg.clusterOrder),
         cluster_weights=dict(agg.clusterPeriodNoOccur),
         n_clusters=len(agg.clusterPeriodIdx),
