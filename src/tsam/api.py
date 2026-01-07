@@ -179,7 +179,7 @@ def aggregate(
             "use_duration_curves": cluster.use_duration_curves,
             "include_period_sums": cluster.include_period_sums,
             "solver": cluster.solver,
-            "predef_cluster_order": predefined.cluster_order,
+            "predef_cluster_assignments": predefined.cluster_assignments,
         }
         if predefined.cluster_centers is not None:
             cluster_kwargs["predef_cluster_centers"] = predefined.cluster_centers
@@ -187,7 +187,7 @@ def aggregate(
 
         # Override segment config with predefined values if present
         if (
-            predefined.segment_order is not None
+            predefined.segment_assignments is not None
             and predefined.segment_durations is not None
             and len(predefined.segment_durations) > 0
         ):
@@ -196,7 +196,7 @@ def aggregate(
                 n_segments = len(predefined.segment_durations[0])
                 segments = SegmentConfig(
                     n_segments=n_segments,
-                    predef_segment_order=predefined.segment_order,
+                    predef_segment_assignments=predefined.segment_assignments,
                     predef_segment_durations=predefined.segment_durations,
                 )
             else:
@@ -204,7 +204,7 @@ def aggregate(
                 segments = SegmentConfig(
                     n_segments=segments.n_segments,
                     representation=segments.representation,
-                    predef_segment_order=predefined.segment_order,
+                    predef_segment_assignments=predefined.segment_assignments,
                     predef_segment_durations=predefined.segment_durations,
                     predef_segment_centers=segments.predef_segment_centers,
                 )
@@ -274,6 +274,20 @@ def aggregate(
         rmse_duration=accuracy_df["RMSE_duration"],
     )
 
+    # Compute segment_durations as tuple of tuples
+    segment_durations_tuple = None
+    if segments and hasattr(agg, "segmentedNormalizedTypicalPeriods"):
+        segmented_df = agg.segmentedNormalizedTypicalPeriods
+        segment_durations_tuple = tuple(
+            tuple(
+                int(seg_dur)
+                for _seg_step, seg_dur, _orig_start in segmented_df.loc[
+                    period_idx
+                ].index
+            )
+            for period_idx in segmented_df.index.get_level_values(0).unique()
+        )
+
     # Build result object
     return AggregationResult(
         typical_periods=typical_periods,
@@ -282,8 +296,8 @@ def aggregate(
         n_periods=len(agg.clusterPeriodIdx),
         n_timesteps_per_period=agg.timeStepsPerPeriod,
         n_segments=segments.n_segments if segments else None,
-        segment_durations=agg.segmentDurationDict if segments else None,
-        cluster_center_indices=np.array(agg.clusterCenterIndices)
+        segment_durations=segment_durations_tuple,
+        cluster_centers=np.array(agg.clusterCenterIndices)
         if agg.clusterCenterIndices is not None
         else None,
         accuracy=accuracy,
@@ -342,8 +356,8 @@ def _build_old_params(
     if cluster.weights is not None:
         params["weightDict"] = cluster.weights
 
-    if cluster.predef_cluster_order is not None:
-        params["predefClusterOrder"] = list(cluster.predef_cluster_order)
+    if cluster.predef_cluster_assignments is not None:
+        params["predefClusterOrder"] = list(cluster.predef_cluster_assignments)
 
     if cluster.predef_cluster_centers is not None:
         params["predefClusterCenterIndices"] = list(cluster.predef_cluster_centers)
@@ -357,9 +371,9 @@ def _build_old_params(
         )
 
         # Predefined segment parameters
-        if segments.predef_segment_order is not None:
+        if segments.predef_segment_assignments is not None:
             params["predefSegmentOrder"] = [
-                list(s) for s in segments.predef_segment_order
+                list(s) for s in segments.predef_segment_assignments
             ]
         if segments.predef_segment_durations is not None:
             params["predefSegmentDurations"] = [

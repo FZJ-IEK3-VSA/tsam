@@ -87,14 +87,14 @@ class ClusterConfig:
         MILP solver for kmedoids method.
         Options: "highs" (default, open source), "cbc", "gurobi", "cplex"
 
-    predef_cluster_order : array-like, optional
+    predef_cluster_assignments : array-like, optional
         Predefined cluster assignments for each period.
         Use this to apply cluster assignments from one aggregation to another.
         Example: Use wind-only clustering order for multi-variable aggregation.
 
     predef_cluster_centers : array-like, optional
         Predefined cluster center indices.
-        When combined with predef_cluster_order, uses the exact same
+        When combined with predef_cluster_assignments, uses the exact same
         representative periods instead of recalculating them.
     """
 
@@ -105,7 +105,7 @@ class ClusterConfig:
     use_duration_curves: bool = False
     include_period_sums: bool = False
     solver: Solver = "highs"
-    predef_cluster_order: tuple[int, ...] | None = None
+    predef_cluster_assignments: tuple[int, ...] | None = None
     predef_cluster_centers: tuple[int, ...] | None = None
 
     def get_representation(self) -> RepresentationMethod:
@@ -146,7 +146,7 @@ class SegmentConfig:
         - "medoid": Actual timestep closest to segment mean
         - "distribution": Preserve distribution within segment
 
-    predef_segment_order : tuple[tuple[int, ...], ...], optional
+    predef_segment_assignments : tuple[tuple[int, ...], ...], optional
         Predefined segment assignments per timestep, per typical period.
         Use this to transfer segment assignments from one aggregation to another.
         Outer tuple has one entry per typical period (length = n_periods).
@@ -155,14 +155,14 @@ class SegmentConfig:
 
     predef_segment_durations : tuple[tuple[int, ...], ...], optional
         Predefined durations (in timesteps) per segment, per typical period.
-        Required when predef_segment_order is specified.
+        Required when predef_segment_assignments is specified.
         Outer tuple has one entry per typical period.
         Inner tuple has one entry per segment, containing the number of
         timesteps in that segment.
 
     predef_segment_centers : tuple[tuple[int, ...], ...], optional
         Predefined center indices per segment, per typical period.
-        When combined with predef_segment_order, uses the exact same
+        When combined with predef_segment_assignments, uses the exact same
         segment representatives instead of recalculating them.
         Outer tuple has one entry per typical period.
         Inner tuple has one entry per segment, containing the original
@@ -171,7 +171,7 @@ class SegmentConfig:
 
     n_segments: int
     representation: RepresentationMethod = "mean"
-    predef_segment_order: tuple[tuple[int, ...], ...] | None = None
+    predef_segment_assignments: tuple[tuple[int, ...], ...] | None = None
     predef_segment_durations: tuple[tuple[int, ...], ...] | None = None
     predef_segment_centers: tuple[tuple[int, ...], ...] | None = None
 
@@ -182,28 +182,30 @@ class SegmentConfig:
         # is performed in api.aggregate() when period_hours is known.
 
         # Validate predefined segment parameters
-        if self.predef_segment_order is not None:
+        if self.predef_segment_assignments is not None:
             if self.predef_segment_durations is None:
                 raise ValueError(
                     "predef_segment_durations must be provided when "
-                    "predef_segment_order is specified"
+                    "predef_segment_assignments is specified"
                 )
-            if len(self.predef_segment_order) != len(self.predef_segment_durations):
+            if len(self.predef_segment_assignments) != len(
+                self.predef_segment_durations
+            ):
                 raise ValueError(
-                    f"predef_segment_order ({len(self.predef_segment_order)} periods) "
+                    f"predef_segment_assignments ({len(self.predef_segment_assignments)} periods) "
                     f"and predef_segment_durations ({len(self.predef_segment_durations)} periods) "
                     "must have the same number of periods"
                 )
         elif self.predef_segment_durations is not None:
             raise ValueError(
-                "predef_segment_order must be provided when "
+                "predef_segment_assignments must be provided when "
                 "predef_segment_durations is specified"
             )
 
         if self.predef_segment_centers is not None:
-            if self.predef_segment_order is None:
+            if self.predef_segment_assignments is None:
                 raise ValueError(
-                    "predef_segment_order must be provided when "
+                    "predef_segment_assignments must be provided when "
                     "predef_segment_centers is specified"
                 )
 
@@ -217,7 +219,7 @@ class PredefinedConfig:
 
     Parameters
     ----------
-    cluster_order : tuple[int, ...]
+    cluster_assignments : tuple[int, ...]
         Cluster assignments for each original period.
         Length equals the number of original periods in the data.
 
@@ -225,13 +227,13 @@ class PredefinedConfig:
         Indices of original periods used as cluster centers.
         If not provided, centers will be recalculated.
 
-    segment_order : tuple[tuple[int, ...], ...], optional
+    segment_assignments : tuple[tuple[int, ...], ...], optional
         Segment assignments per timestep, per typical period.
         Only needed if transferring segmentation results.
 
     segment_durations : tuple[tuple[int, ...], ...], optional
         Duration (in timesteps) per segment, per typical period.
-        Required if segment_order is provided.
+        Required if segment_assignments is provided.
 
     Examples
     --------
@@ -252,26 +254,26 @@ class PredefinedConfig:
     >>> result2 = tsam.aggregate(new_data, n_periods=8, predefined=predefined)
     """
 
-    cluster_order: tuple[int, ...]
+    cluster_assignments: tuple[int, ...]
     cluster_centers: tuple[int, ...] | None = None
-    segment_order: tuple[tuple[int, ...], ...] | None = None
+    segment_assignments: tuple[tuple[int, ...], ...] | None = None
     segment_durations: tuple[tuple[int, ...], ...] | None = None
 
     def __post_init__(self) -> None:
-        if self.segment_order is not None and self.segment_durations is None:
+        if self.segment_assignments is not None and self.segment_durations is None:
             raise ValueError(
-                "segment_durations must be provided when segment_order is specified"
+                "segment_durations must be provided when segment_assignments is specified"
             )
-        if self.segment_durations is not None and self.segment_order is None:
+        if self.segment_durations is not None and self.segment_assignments is None:
             raise ValueError(
-                "segment_order must be provided when segment_durations is specified"
+                "segment_assignments must be provided when segment_durations is specified"
             )
 
     def __repr__(self) -> str:
-        n_original_periods = len(self.cluster_order)
-        n_typical_periods = len(set(self.cluster_order))
+        n_original_periods = len(self.cluster_assignments)
+        n_typical_periods = len(set(self.cluster_assignments))
         has_centers = self.cluster_centers is not None
-        has_segments = self.segment_order is not None
+        has_segments = self.segment_assignments is not None
 
         lines = [
             "PredefinedConfig(",
@@ -282,7 +284,9 @@ class PredefinedConfig:
 
         if has_segments:
             n_segments = len(self.segment_durations[0]) if self.segment_durations else 0
-            n_timesteps = len(self.segment_order[0]) if self.segment_order else 0
+            n_timesteps = (
+                len(self.segment_assignments[0]) if self.segment_assignments else 0
+            )
             lines.append(f"  n_segments={n_segments},")
             lines.append(f"  n_timesteps_per_period={n_timesteps},")
 
@@ -299,19 +303,21 @@ class PredefinedConfig:
         Returns
         -------
         pd.DataFrame
-            DataFrame with cluster_order indexed by original period.
+            DataFrame with cluster_assignments indexed by original period.
             If segments are present, includes additional columns.
         """
         # Base DataFrame with cluster assignments
         df = pd.DataFrame(
-            {"cluster": list(self.cluster_order)},
-            index=pd.RangeIndex(len(self.cluster_order), name="original_period"),
+            {"cluster": list(self.cluster_assignments)},
+            index=pd.RangeIndex(len(self.cluster_assignments), name="original_period"),
         )
 
         if self.cluster_centers is not None:
             # Add a column showing which periods are cluster centers
             center_set = set(self.cluster_centers)
-            df["is_center"] = [i in center_set for i in range(len(self.cluster_order))]
+            df["is_center"] = [
+                i in center_set for i in range(len(self.cluster_assignments))
+            ]
 
         return df
 
@@ -341,11 +347,11 @@ class PredefinedConfig:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        result: dict[str, Any] = {"cluster_order": list(self.cluster_order)}
+        result: dict[str, Any] = {"cluster_assignments": list(self.cluster_assignments)}
         if self.cluster_centers is not None:
             result["cluster_centers"] = list(self.cluster_centers)
-        if self.segment_order is not None:
-            result["segment_order"] = [list(s) for s in self.segment_order]
+        if self.segment_assignments is not None:
+            result["segment_assignments"] = [list(s) for s in self.segment_assignments]
         if self.segment_durations is not None:
             result["segment_durations"] = [list(s) for s in self.segment_durations]
         return result
@@ -353,11 +359,13 @@ class PredefinedConfig:
     @classmethod
     def from_dict(cls, data: dict) -> PredefinedConfig:
         """Create from dictionary (e.g., loaded from JSON)."""
-        kwargs = {"cluster_order": tuple(data["cluster_order"])}
+        kwargs = {"cluster_assignments": tuple(data["cluster_assignments"])}
         if "cluster_centers" in data:
             kwargs["cluster_centers"] = tuple(data["cluster_centers"])
-        if "segment_order" in data:
-            kwargs["segment_order"] = tuple(tuple(s) for s in data["segment_order"])
+        if "segment_assignments" in data:
+            kwargs["segment_assignments"] = tuple(
+                tuple(s) for s in data["segment_assignments"]
+            )
         if "segment_durations" in data:
             kwargs["segment_durations"] = tuple(
                 tuple(s) for s in data["segment_durations"]

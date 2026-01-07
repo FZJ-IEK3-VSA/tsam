@@ -73,11 +73,12 @@ class AggregationResult:
     n_segments : int | None
         Number of segments per period if segmentation was used, else None.
 
-    segment_durations : dict[int, float] | None
-        Duration of each segment if segmentation was used.
-        Keys are segment indices, values are durations in hours.
+    segment_durations : tuple[tuple[int, ...], ...] | None
+        Duration (in timesteps) for each segment in each typical period.
+        Outer tuple has one entry per typical period, inner tuple has
+        duration for each segment. Use for transferring to another aggregation.
 
-    cluster_center_indices : np.ndarray
+    cluster_centers : np.ndarray | None
         Indices of original periods used as cluster centers.
         These are the "representative" periods for each cluster.
 
@@ -113,8 +114,8 @@ class AggregationResult:
     n_periods: int
     n_timesteps_per_period: int
     n_segments: int | None
-    segment_durations: dict[int, float] | None
-    cluster_center_indices: np.ndarray | None
+    segment_durations: tuple[tuple[int, ...], ...] | None
+    cluster_centers: np.ndarray | None
     accuracy: AccuracyMetrics
     clustering_duration: float
     _aggregation: TimeSeriesAggregation = field(repr=False, compare=False)
@@ -164,11 +165,12 @@ class AggregationResult:
             "n_periods": self.n_periods,
             "n_timesteps_per_period": self.n_timesteps_per_period,
             "n_segments": self.n_segments,
-            "segment_durations": self.segment_durations,
+            "segment_durations": [list(s) for s in self.segment_durations]
+            if self.segment_durations is not None
+            else None,
             "segment_assignments": self.segment_assignments,
-            "segment_durations_tuple": self.segment_durations_tuple,
-            "cluster_center_indices": self.cluster_center_indices.tolist()
-            if self.cluster_center_indices is not None
+            "cluster_centers": self.cluster_centers.tolist()
+            if self.cluster_centers is not None
             else None,
             "accuracy": {
                 "rmse": self.accuracy.rmse.to_dict(),
@@ -283,7 +285,7 @@ class AggregationResult:
         """Get segment assignments per typical period for transfer.
 
         Returns the segment index for each timestep within each typical period.
-        This can be passed to another aggregation's SegmentConfig.predef_segment_order
+        This can be passed to another aggregation's SegmentConfig.predef_segment_assignments
         to reproduce the same segmentation.
 
         Returns
@@ -304,8 +306,8 @@ class AggregationResult:
         ...     other_data,
         ...     segments=SegmentConfig(
         ...         n_segments=6,
-        ...         predef_segment_order=result.segment_assignments,
-        ...         predef_segment_durations=result.segment_durations_tuple,
+        ...         predef_segment_assignments=result.segment_assignments,
+        ...         predef_segment_durations=result.segment_durations,
         ...     ),
         ... )
         """
@@ -331,47 +333,6 @@ class AggregationResult:
         return tuple(result)
 
     @property
-    def segment_durations_tuple(self) -> tuple[tuple[int, ...], ...] | None:
-        """Get segment durations per typical period for transfer.
-
-        Returns the duration (number of timesteps) for each segment within
-        each typical period. This can be passed to another aggregation's
-        SegmentConfig.predef_segment_durations to reproduce the same segmentation.
-
-        Returns
-        -------
-        tuple[tuple[int, ...], ...] | None
-            Tuple of tuples, one per typical period. Each inner tuple contains
-            the duration (in timesteps) of each segment.
-            Returns None if segmentation was not used.
-
-        Examples
-        --------
-        >>> result = tsam.aggregate(df, n_periods=8, segments=SegmentConfig(n_segments=6))
-        >>> result.segment_durations_tuple[0]
-        (4, 3, 4, 3, 4, 6)  # 6 segments with varying lengths summing to 24
-        """
-        if self.n_segments is None:
-            return None
-
-        agg = self._aggregation
-        if not hasattr(agg, "segmentedNormalizedTypicalPeriods"):
-            return None
-
-        result = []
-        segmented_df = agg.segmentedNormalizedTypicalPeriods
-
-        for period_idx in segmented_df.index.get_level_values(0).unique():
-            period_data = segmented_df.loc[period_idx]
-            # Index levels: Segment Step, Segment Duration, Original Start Step
-            durations = tuple(
-                int(seg_dur) for _seg_step, seg_dur, _orig_start in period_data.index
-            )
-            result.append(durations)
-
-        return tuple(result)
-
-    @property
     def predefined(self) -> PredefinedConfig:
         """Get predefined state for transferring to another aggregation.
 
@@ -381,8 +342,8 @@ class AggregationResult:
         Returns
         -------
         PredefinedConfig
-            Config object with cluster_order, cluster_centers (optional),
-            segment_order (if segmentation), segment_durations (if segmentation).
+            Config object with cluster_assignments, cluster_centers (optional),
+            segment_assignments (if segmentation), segment_durations (if segmentation).
 
         Examples
         --------
@@ -404,12 +365,12 @@ class AggregationResult:
         from tsam.config import PredefinedConfig
 
         return PredefinedConfig(
-            cluster_order=tuple(self.cluster_assignments.tolist()),
-            cluster_centers=tuple(self.cluster_center_indices.tolist())
-            if self.cluster_center_indices is not None
+            cluster_assignments=tuple(self.cluster_assignments.tolist()),
+            cluster_centers=tuple(self.cluster_centers.tolist())
+            if self.cluster_centers is not None
             else None,
-            segment_order=self.segment_assignments,
-            segment_durations=self.segment_durations_tuple,
+            segment_assignments=self.segment_assignments,
+            segment_durations=self.segment_durations,
         )
 
     @property

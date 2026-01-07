@@ -242,7 +242,7 @@ class TuningResult:
     all_results: list[AggregationResult] = field(default_factory=list)
 
 
-def periods_for_reduction(
+def find_periods_for_reduction(
     n_timesteps: int,
     n_segments: int,
     data_reduction: float,
@@ -265,13 +265,13 @@ def periods_for_reduction(
 
     Examples
     --------
-    >>> periods_for_reduction(8760, 24, 0.01)  # 1% of hourly year
+    >>> find_periods_for_reduction(8760, 24, 0.01)  # 1% of hourly year
     3
     """
     return int(np.floor(data_reduction * float(n_timesteps) / n_segments))
 
 
-def segments_for_reduction(
+def find_segments_for_reduction(
     n_timesteps: int,
     n_periods: int,
     data_reduction: float,
@@ -294,7 +294,7 @@ def segments_for_reduction(
 
     Examples
     --------
-    >>> segments_for_reduction(8760, 8, 0.01)  # 1% with 8 periods
+    >>> find_segments_for_reduction(8760, 8, 0.01)  # 1% with 8 periods
     10
     """
     return int(np.floor(data_reduction * float(n_timesteps) / n_periods))

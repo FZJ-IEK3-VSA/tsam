@@ -688,11 +688,19 @@ class ResultPlotAccessor:
         if self._result.segment_durations is None:
             raise ValueError("No segmentation was used in this aggregation")
 
+        # segment_durations is tuple[tuple[int, ...], ...] - one tuple per period
+        # Average durations across all typical periods for the bar chart
         durations = self._result.segment_durations
+        n_segments = len(durations[0])
+        avg_durations = [
+            sum(period[s] for period in durations) / len(durations)
+            for s in range(n_segments)
+        ]
+
         df = pd.DataFrame(
             {
-                "Segment": [f"Segment {s}" for s in durations],
-                "Duration": list(durations.values()),
+                "Segment": [f"Segment {s}" for s in range(n_segments)],
+                "Duration": avg_durations,
             }
         )
 
@@ -705,8 +713,8 @@ class ResultPlotAccessor:
             color="Duration",
             color_continuous_scale="Viridis",
         )
-        fig.update_traces(texttemplate="%{text:.1f}h", textposition="auto")
-        fig.update_layout(showlegend=False, yaxis_title="Duration (hours)")
+        fig.update_traces(texttemplate="%{text:.1f}", textposition="auto")
+        fig.update_layout(showlegend=False, yaxis_title="Duration (timesteps)")
 
         return fig
 

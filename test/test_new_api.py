@@ -256,15 +256,15 @@ class TestSegmentTransfer:
         for period_assignments in seg_assignments:
             assert len(period_assignments) == result.n_timesteps_per_period
 
-    def test_segment_durations_tuple_property(self, sample_data):
-        """Test that segment_durations_tuple property works."""
+    def test_segment_durations_property(self, sample_data):
+        """Test that segment_durations property works."""
         result = aggregate(
             sample_data,
             n_periods=8,
             segments=SegmentConfig(n_segments=6),
         )
 
-        seg_durations = result.segment_durations_tuple
+        seg_durations = result.segment_durations
 
         # Should not be None when segmentation is used
         assert seg_durations is not None
@@ -291,19 +291,19 @@ class TestSegmentTransfer:
 
         # Get segment assignments for transfer
         seg_assignments = result1.segment_assignments
-        seg_durations = result1.segment_durations_tuple
+        seg_durations = result1.segment_durations
 
         # Second aggregation with predefined segments and clusters
         result2 = aggregate(
             sample_data,
             n_periods=8,
             cluster=ClusterConfig(
-                predef_cluster_order=tuple(result1.cluster_assignments),
-                predef_cluster_centers=tuple(result1.cluster_center_indices),
+                predef_cluster_assignments=tuple(result1.cluster_assignments),
+                predef_cluster_centers=tuple(result1.cluster_centers),
             ),
             segments=SegmentConfig(
                 n_segments=6,
-                predef_segment_order=seg_assignments,
+                predef_segment_assignments=seg_assignments,
                 predef_segment_durations=seg_durations,
             ),
         )
@@ -319,7 +319,7 @@ class TestSegmentTransfer:
         result = aggregate(sample_data, n_periods=8)
 
         assert result.segment_assignments is None
-        assert result.segment_durations_tuple is None
+        assert result.segment_durations is None
 
 
 class TestPredef:
@@ -333,7 +333,7 @@ class TestPredef:
         predefined = result.predefined
 
         assert isinstance(predefined, PredefinedConfig)
-        assert len(predefined.cluster_order) == len(result.cluster_assignments)
+        assert len(predefined.cluster_assignments) == len(result.cluster_assignments)
 
     def test_predef_transfer(self, sample_data):
         """Test transferring with predefined parameter."""
@@ -401,25 +401,25 @@ class TestPredef:
 class TestSegmentConfigValidation:
     """Tests for SegmentConfig validation."""
 
-    def test_predef_segment_order_requires_durations(self):
-        """Test that predef_segment_order requires predef_segment_durations."""
+    def test_predef_segment_assignments_requires_durations(self):
+        """Test that predef_segment_assignments requires predef_segment_durations."""
         with pytest.raises(ValueError, match="predef_segment_durations"):
             SegmentConfig(
                 n_segments=6,
-                predef_segment_order=((0, 0, 1, 1, 2, 2),),
+                predef_segment_assignments=((0, 0, 1, 1, 2, 2),),
             )
 
     def test_predef_segment_durations_requires_order(self):
-        """Test that predef_segment_durations requires predef_segment_order."""
-        with pytest.raises(ValueError, match="predef_segment_order"):
+        """Test that predef_segment_durations requires predef_segment_assignments."""
+        with pytest.raises(ValueError, match="predef_segment_assignments"):
             SegmentConfig(
                 n_segments=6,
                 predef_segment_durations=((2, 2, 2),),
             )
 
     def test_predef_segment_centers_requires_order(self):
-        """Test that predef_segment_centers requires predef_segment_order."""
-        with pytest.raises(ValueError, match="predef_segment_order"):
+        """Test that predef_segment_centers requires predef_segment_assignments."""
+        with pytest.raises(ValueError, match="predef_segment_assignments"):
             SegmentConfig(
                 n_segments=6,
                 predef_segment_centers=((0, 2, 4),),
@@ -429,8 +429,8 @@ class TestSegmentConfigValidation:
         """Test that valid predefined segment config doesn't raise."""
         config = SegmentConfig(
             n_segments=3,
-            predef_segment_order=((0, 0, 1, 1, 2, 2),),
+            predef_segment_assignments=((0, 0, 1, 1, 2, 2),),
             predef_segment_durations=((2, 2, 2),),
         )
-        assert config.predef_segment_order is not None
+        assert config.predef_segment_assignments is not None
         assert config.predef_segment_durations is not None

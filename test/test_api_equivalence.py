@@ -14,8 +14,8 @@ from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
 from tsam.tuning import (
     find_optimal_combination,
     find_pareto_front,
-    periods_for_reduction,
-    segments_for_reduction,
+    find_periods_for_reduction,
+    find_segments_for_reduction,
 )
 
 
@@ -324,8 +324,8 @@ class TestAggregateEquivalence:
 class TestTuningEquivalence:
     """Tests that new tuning functions produce equivalent results to old API."""
 
-    def test_periods_for_reduction(self):
-        """Test periods_for_reduction matches old function."""
+    def test_find_periods_for_reduction(self):
+        """Test find_periods_for_reduction matches old function."""
         test_cases = [
             (100, 10, 0.5),
             (101, 10, 0.5),
@@ -337,14 +337,16 @@ class TestTuningEquivalence:
             old_result = old_tune.getNoPeriodsForDataReduction(
                 n_timesteps, n_segments, data_reduction
             )
-            new_result = periods_for_reduction(n_timesteps, n_segments, data_reduction)
+            new_result = find_periods_for_reduction(
+                n_timesteps, n_segments, data_reduction
+            )
             assert old_result == new_result, (
                 f"Mismatch for ({n_timesteps}, {n_segments}, {data_reduction}): "
                 f"old={old_result}, new={new_result}"
             )
 
-    def test_segments_for_reduction(self):
-        """Test segments_for_reduction matches old function."""
+    def test_find_segments_for_reduction(self):
+        """Test find_segments_for_reduction matches old function."""
         test_cases = [
             (100, 10, 0.5),
             (8760, 8, 0.01),
@@ -354,7 +356,9 @@ class TestTuningEquivalence:
             old_result = old_tune.getNoSegmentsForDataReduction(
                 n_timesteps, n_periods, data_reduction
             )
-            new_result = segments_for_reduction(n_timesteps, n_periods, data_reduction)
+            new_result = find_segments_for_reduction(
+                n_timesteps, n_periods, data_reduction
+            )
             assert old_result == new_result
 
     def test_find_optimal_combination(self, sample_data):
