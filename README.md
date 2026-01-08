@@ -29,12 +29,6 @@ uv venv tsam_env
 uv pip install tsam
 ```
 
-Or using pip:
-
-```bash
-pip install tsam
-```
-
 Or from conda-forge:
 
 ```bash
