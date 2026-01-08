@@ -35,6 +35,8 @@ Or from conda-forge:
 conda create -n tsam_env -c conda-forge tsam
 ```
 
+conda and mamba can be used interchangeably
+
 ### Development Installation
 
 ```bash
