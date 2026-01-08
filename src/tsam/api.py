@@ -30,6 +30,7 @@ def aggregate(
     predefined: PredefinedConfig | dict | None = None,
     rescale: bool = True,
     round_decimals: int | None = None,
+    numerical_tolerance: float = 1e-13,
 ) -> AggregationResult:
     """Aggregate time series data into typical periods.
 
@@ -85,6 +86,12 @@ def aggregate(
     round_decimals : int, optional
         Round output values to this many decimal places.
         If not provided, no rounding is applied.
+
+    numerical_tolerance : float, default 1e-13
+        Tolerance for numerical precision issues.
+        Controls when warnings are raised for aggregated values exceeding
+        the original time series bounds. Increase this value to silence
+        warnings caused by floating-point precision errors.
 
     Returns
     -------
@@ -260,6 +267,7 @@ def aggregate(
         extremes=extremes,
         rescale=rescale,
         round_decimals=round_decimals,
+        numerical_tolerance=numerical_tolerance,
     )
 
     # Run aggregation using old implementation
@@ -302,6 +310,7 @@ def _build_old_params(
     extremes: ExtremeConfig | None,
     rescale: bool,
     round_decimals: int | None,
+    numerical_tolerance: float,
 ) -> dict:
     """Build parameters for the old TimeSeriesAggregation API."""
     params: dict = {
@@ -309,6 +318,7 @@ def _build_old_params(
         "noTypicalPeriods": n_periods,
         "hoursPerPeriod": period_hours,
         "rescaleClusterPeriods": rescale,
+        "numericalTolerance": numerical_tolerance,
     }
 
     if resolution is not None:
