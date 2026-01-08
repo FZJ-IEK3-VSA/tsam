@@ -14,10 +14,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import time
 from pathlib import Path
-import math
 
 import pandas as pd
 
