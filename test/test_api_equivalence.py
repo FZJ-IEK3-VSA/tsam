@@ -49,7 +49,7 @@ class TestAggregateEquivalence:
         new_result = aggregate(
             sample_data,
             n_clusters=8,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(method="hierarchical"),
         )
 
@@ -92,7 +92,7 @@ class TestAggregateEquivalence:
         new_result = aggregate(
             sample_data,
             n_clusters=8,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(method="kmeans"),
         )
 
@@ -120,7 +120,7 @@ class TestAggregateEquivalence:
         new_result = aggregate(
             sample_data,
             n_clusters=8,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(method="hierarchical", representation="medoid"),
         )
 
@@ -148,7 +148,7 @@ class TestAggregateEquivalence:
         new_result = aggregate(
             sample_data,
             n_clusters=8,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(method="hierarchical", weights=weights),
         )
 
@@ -175,7 +175,7 @@ class TestAggregateEquivalence:
         new_result = aggregate(
             sample_data,
             n_clusters=8,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(method="hierarchical"),
             segments=SegmentConfig(n_segments=12),
         )
@@ -202,7 +202,7 @@ class TestAggregateEquivalence:
         new_result = aggregate(
             sample_data,
             n_clusters=8,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(method="hierarchical", representation="distribution"),
         )
 
@@ -229,7 +229,7 @@ class TestAggregateEquivalence:
         new_result = aggregate(
             sample_data,
             n_clusters=8,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(method="hierarchical"),
             extremes=ExtremeConfig(method="append", max_value=["Load"]),
         )
@@ -255,7 +255,7 @@ class TestAggregateEquivalence:
         new_result = aggregate(
             sample_data,
             n_clusters=8,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(method="contiguous"),
         )
 
@@ -281,7 +281,7 @@ class TestAggregateEquivalence:
         new_result = aggregate(
             sample_data,
             n_clusters=8,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(method="hierarchical"),
             preserve_column_means=False,
         )
@@ -308,7 +308,7 @@ class TestAggregateEquivalence:
         new_result = aggregate(
             sample_data,
             n_clusters=8,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(
                 method="hierarchical", representation="distribution_minmax"
             ),
@@ -388,7 +388,7 @@ class TestTuningEquivalence:
         new_result = find_optimal_combination(
             data,
             data_reduction=data_reduction,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(
                 method="hierarchical",
                 representation="distribution",
@@ -421,7 +421,7 @@ class TestTuningEquivalence:
         # New API
         new_results = find_pareto_front(
             small_data,
-            period_hours=12,
+            period_duration=12,
             cluster=ClusterConfig(method="hierarchical", representation="mean"),
             show_progress=False,
         )
@@ -441,7 +441,7 @@ class TestTuningEquivalence:
         result = find_optimal_combination(
             small_data,
             data_reduction=0.1,
-            period_hours=12,
+            period_duration=12,
             show_progress=False,
             save_all_results=True,
         )
@@ -485,7 +485,7 @@ class TestSubhourlyResolution:
         new_result = aggregate(
             data,
             n_clusters=4,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(method="hierarchical"),
         )
 
@@ -511,7 +511,7 @@ class TestSubhourlyResolution:
         result = find_optimal_combination(
             data,
             data_reduction=0.1,
-            period_hours=24,
+            period_duration=24,
             show_progress=False,
         )
 
@@ -540,7 +540,7 @@ class TestReconstructionEquivalence:
         new_result = aggregate(
             sample_data,
             n_clusters=8,
-            period_hours=24,
+            period_duration=24,
             cluster=ClusterConfig(method="hierarchical"),
         )
         new_reconstructed = new_result.reconstruct()

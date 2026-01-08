@@ -28,7 +28,7 @@ Run the aggregation using the new function-based API. Specify the number of typi
    result = tsam.aggregate(
        raw,
        n_clusters=8,
-       period_hours=24,
+       period_duration='1D',
        cluster=ClusterConfig(
            method='hierarchical',
            representation='distribution_minmax',
@@ -68,7 +68,7 @@ In case you do not know which number of segments or typical periods to choose, y
    result = find_optimal_combination(
        raw,
        data_reduction=0.05,  # Reduce to 5% of original size
-       period_hours=24,
+       period_duration='1D',
        cluster=ClusterConfig(
            method='hierarchical',
            representation='distribution',
@@ -149,6 +149,10 @@ Key concepts used in the tsam API:
      - Number of clusters to create. Each cluster is represented by one typical period.
    * - ``n_segments``
      - Number of segments per period. If not specified, equals timesteps per period (no segmentation).
+   * - ``period_duration``
+     - Length of each period. Accepts int/float (hours) or pandas Timedelta strings (e.g., ``24``, ``'24h'``, ``'1d'``).
+   * - ``timestep_duration``
+     - Time resolution of input data. Accepts float (hours) or pandas Timedelta strings (e.g., ``1.0``, ``'1h'``, ``'15min'``). If not provided, inferred from the datetime index.
    * - ``cluster_assignments``
      - Array mapping each original period to its cluster index (0 to n_clusters-1).
    * - ``cluster_weights``

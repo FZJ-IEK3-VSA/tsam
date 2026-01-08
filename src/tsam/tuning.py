@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-from tsam.api import aggregate
+from tsam.api import _parse_duration_hours, aggregate
 from tsam.config import ClusterConfig, SegmentConfig
 
 if TYPE_CHECKING:
@@ -51,8 +51,8 @@ def _test_single_config_file(
         result = aggregate(
             data,
             n_clusters=n_clusters,
-            period_hours=period_hours,
-            resolution=resolution,
+            period_duration=period_hours,
+            timestep_duration=resolution,
             cluster=cluster,
             segments=SegmentConfig(n_segments=n_segments),
         )
@@ -111,7 +111,7 @@ def _parallel_context(
 def _test_configs(
     configs: list[tuple[int, int]],
     data: pd.DataFrame,
-    period_hours: int,
+    period_hours: float,
     resolution: float,
     cluster: ClusterConfig,
     n_workers: int,
@@ -164,8 +164,8 @@ def _test_configs(
                 result = aggregate(
                     data,
                     n_clusters=n_per,
-                    period_hours=period_hours,
-                    resolution=resolution,
+                    period_duration=period_hours,
+                    timestep_duration=resolution,
                     cluster=cluster,
                     segments=SegmentConfig(n_segments=n_seg),
                 )
@@ -304,8 +304,8 @@ def find_optimal_combination(
     data: pd.DataFrame,
     data_reduction: float,
     *,
-    period_hours: int = 24,
-    resolution: float | None = None,
+    period_duration: int | float | str = 24,
+    timestep_duration: float | str | None = None,
     cluster: ClusterConfig | None = None,
     show_progress: bool = True,
     save_all_results: bool = False,
@@ -323,12 +323,15 @@ def find_optimal_combination(
         Input time series data.
     data_reduction : float
         Target reduction factor (e.g., 0.01 for 1% of original size).
-    period_hours : int, default 24
-        Hours per period.
-    resolution : float, optional
-        Time resolution of input data in hours.
+    period_duration : int, float, or str, default 24
+        Length of each period. Accepts:
+        - int/float: hours (e.g., 24 for daily, 168 for weekly)
+        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
+    timestep_duration : float or str, optional
+        Time resolution of input data. Accepts:
+        - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
+        - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
         If not provided, inferred from the datetime index.
-        Examples: 1.0 (hourly), 0.25 (15-minute), 0.5 (30-minute)
     cluster : ClusterConfig, optional
         Clustering configuration.
     show_progress : bool, default True
@@ -360,11 +363,16 @@ def find_optimal_combination(
     if cluster is None:
         cluster = ClusterConfig()
 
-    if resolution is None:
-        resolution = _infer_resolution(data)
+    # Parse duration parameters to hours
+    period_hours = _parse_duration_hours(period_duration, "period_duration")
+    resolution = (
+        _parse_duration_hours(timestep_duration, "timestep_duration")
+        if timestep_duration is not None
+        else _infer_resolution(data)
+    )
 
     if resolution <= 0:
-        raise ValueError(f"Resolution must be positive, got {resolution}")
+        raise ValueError(f"timestep_duration must be positive, got {timestep_duration}")
 
     n_timesteps = len(data)
     timesteps_per_period = int(period_hours / resolution)
@@ -448,8 +456,8 @@ def find_optimal_combination(
 def find_pareto_front(
     data: pd.DataFrame,
     *,
-    period_hours: int = 24,
-    resolution: float | None = None,
+    period_duration: int | float | str = 24,
+    timestep_duration: float | str | None = None,
     max_timesteps: int | None = None,
     timesteps: Sequence[int] | None = None,
     cluster: ClusterConfig | None = None,
@@ -466,12 +474,15 @@ def find_pareto_front(
     ----------
     data : pd.DataFrame
         Input time series data.
-    period_hours : int, default 24
-        Hours per period.
-    resolution : float, optional
-        Time resolution of input data in hours.
+    period_duration : int, float, or str, default 24
+        Length of each period. Accepts:
+        - int/float: hours (e.g., 24 for daily, 168 for weekly)
+        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
+    timestep_duration : float or str, optional
+        Time resolution of input data. Accepts:
+        - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
+        - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
         If not provided, inferred from the datetime index.
-        Examples: 1.0 (hourly), 0.25 (15-minute), 0.5 (30-minute)
     max_timesteps : int, optional
         Stop when reaching this many timesteps. If None, explores
         up to full resolution. Ignored if `timesteps` is provided.
@@ -514,11 +525,16 @@ def find_pareto_front(
     if cluster is None:
         cluster = ClusterConfig()
 
-    if resolution is None:
-        resolution = _infer_resolution(data)
+    # Parse duration parameters to hours
+    period_hours = _parse_duration_hours(period_duration, "period_duration")
+    resolution = (
+        _parse_duration_hours(timestep_duration, "timestep_duration")
+        if timestep_duration is not None
+        else _infer_resolution(data)
+    )
 
     if resolution <= 0:
-        raise ValueError(f"Resolution must be positive, got {resolution}")
+        raise ValueError(f"timestep_duration must be positive, got {timestep_duration}")
 
     n_timesteps = len(data)
     timesteps_per_period = int(period_hours / resolution)
@@ -562,7 +578,7 @@ def find_pareto_front(
 def _find_pareto_front_targeted(
     data: pd.DataFrame,
     timesteps: Sequence[int],
-    period_hours: int,
+    period_hours: float,
     resolution: float,
     max_periods: int,
     max_segments: int,
@@ -633,7 +649,7 @@ def _find_pareto_front_targeted(
 
 def _find_pareto_front_steepest(
     data: pd.DataFrame,
-    period_hours: int,
+    period_hours: float,
     resolution: float,
     max_periods: int,
     max_segments: int,

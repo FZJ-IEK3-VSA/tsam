@@ -134,7 +134,7 @@ class TestValidation:
             aggregate(
                 sample_data,
                 n_clusters=8,
-                period_hours=24,
+                period_duration=24,
                 segments=SegmentConfig(n_segments=100),
             )
 
@@ -434,3 +434,59 @@ class TestSegmentConfigValidation:
         )
         assert config.predef_segment_assignments is not None
         assert config.predef_segment_durations is not None
+
+
+class TestDurationParsing:
+    """Tests for pandas Timedelta string parsing in duration parameters."""
+
+    def test_period_duration_string(self, sample_data):
+        """Test that period_duration accepts pandas Timedelta strings."""
+        # All these should produce equivalent results
+        result_int = aggregate(sample_data, n_clusters=8, period_duration=24)
+        result_float = aggregate(sample_data, n_clusters=8, period_duration=24.0)
+        result_hours = aggregate(sample_data, n_clusters=8, period_duration="24h")
+        result_day = aggregate(sample_data, n_clusters=8, period_duration="1d")
+
+        # All should produce same typical periods
+        pd.testing.assert_frame_equal(
+            result_int.cluster_representatives,
+            result_hours.cluster_representatives,
+        )
+        pd.testing.assert_frame_equal(
+            result_int.cluster_representatives,
+            result_day.cluster_representatives,
+        )
+        pd.testing.assert_frame_equal(
+            result_int.cluster_representatives,
+            result_float.cluster_representatives,
+        )
+
+    def test_timestep_duration_string(self, sample_data):
+        """Test that timestep_duration accepts pandas Timedelta strings."""
+        # Should be equivalent: 1.0 hours and '1h'
+        result_float = aggregate(
+            sample_data, n_clusters=8, period_duration=24, timestep_duration=1.0
+        )
+        result_str = aggregate(
+            sample_data, n_clusters=8, period_duration="24h", timestep_duration="1h"
+        )
+
+        pd.testing.assert_frame_equal(
+            result_float.cluster_representatives,
+            result_str.cluster_representatives,
+        )
+
+    def test_invalid_duration_string(self, sample_data):
+        """Test that invalid duration strings raise clear errors."""
+        with pytest.raises(ValueError, match="period_duration"):
+            aggregate(sample_data, n_clusters=8, period_duration="invalid")
+
+    def test_invalid_duration_type(self, sample_data):
+        """Test that wrong types raise TypeError."""
+        with pytest.raises(TypeError, match="period_duration"):
+            aggregate(sample_data, n_clusters=8, period_duration=[24])
+
+    def test_negative_duration(self, sample_data):
+        """Test that negative durations raise ValueError."""
+        with pytest.raises(ValueError, match="positive"):
+            aggregate(sample_data, n_clusters=8, period_duration=-24)

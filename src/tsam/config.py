@@ -269,14 +269,14 @@ class PredefinedConfig:
 
     def __repr__(self) -> str:
         n_original_periods = len(self.cluster_assignments)
-        n_typical_periods = len(set(self.cluster_assignments))
+        n_clusters = len(set(self.cluster_assignments))
         has_centers = self.cluster_centers is not None
         has_segments = self.segment_assignments is not None
 
         lines = [
             "PredefinedConfig(",
             f"  n_original_periods={n_original_periods},",
-            f"  n_typical_periods={n_typical_periods},",
+            f"  n_clusters={n_clusters},",
             f"  has_cluster_centers={has_centers},",
         ]
 

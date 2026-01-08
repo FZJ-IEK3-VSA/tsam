@@ -18,12 +18,36 @@ from tsam.result import AccuracyMetrics, AggregationResult
 from tsam.timeseriesaggregation import TimeSeriesAggregation
 
 
+def _parse_duration_hours(value: int | float | str, param_name: str) -> float:
+    """Parse a duration value to hours.
+
+    Accepts:
+    - int/float: interpreted as hours (e.g., 24 → 24.0 hours)
+    - str: pandas Timedelta string (e.g., '24h', '1d', '15min')
+
+    Returns duration in hours as float.
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            td = pd.Timedelta(value)
+            return td.total_seconds() / 3600
+        except ValueError as e:
+            raise ValueError(
+                f"{param_name}: invalid duration string '{value}': {e}"
+            ) from e
+    raise TypeError(
+        f"{param_name} must be int, float, or string, got {type(value).__name__}"
+    )
+
+
 def aggregate(
     data: pd.DataFrame,
     n_clusters: int,
     *,
-    period_hours: int = 24,
-    resolution: float | None = None,
+    period_duration: int | float | str = 24,
+    timestep_duration: float | str | None = None,
     cluster: ClusterConfig | None = None,
     segments: SegmentConfig | None = None,
     extremes: ExtremeConfig | None = None,
@@ -48,17 +72,16 @@ def aggregate(
         Higher values = more accuracy but less data reduction.
         Typical range: 4-20 for energy system models.
 
-    period_hours : int, default 24
-        Length of each period in hours.
-        Common values:
-        - 24: Daily periods (most common)
-        - 168: Weekly periods
-        - 1: Hourly periods (for sub-hourly data)
+    period_duration : int, float, or str, default 24
+        Length of each period. Accepts:
+        - int/float: hours (e.g., 24 for daily, 168 for weekly)
+        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
 
-    resolution : float, optional
-        Time resolution of input data in hours.
+    timestep_duration : float or str, optional
+        Time resolution of input data. Accepts:
+        - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
+        - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
         If not provided, inferred from the datetime index.
-        Examples: 1.0 (hourly), 0.25 (15-minute), 0.5 (30-minute)
 
     cluster : ClusterConfig, optional
         Clustering configuration. If not provided, uses defaults:
@@ -158,8 +181,18 @@ def aggregate(
     if not isinstance(n_clusters, int) or n_clusters < 1:
         raise ValueError(f"n_clusters must be a positive integer, got {n_clusters}")
 
-    if not isinstance(period_hours, int) or period_hours < 1:
-        raise ValueError(f"period_hours must be a positive integer, got {period_hours}")
+    # Parse duration parameters to hours
+    period_hours = _parse_duration_hours(period_duration, "period_duration")
+    if period_hours <= 0:
+        raise ValueError(f"period_duration must be positive, got {period_duration}")
+
+    resolution = (
+        _parse_duration_hours(timestep_duration, "timestep_duration")
+        if timestep_duration is not None
+        else None
+    )
+    if resolution is not None and resolution <= 0:
+        raise ValueError(f"timestep_duration must be positive, got {timestep_duration}")
 
     # Apply defaults
     if cluster is None:
@@ -224,7 +257,7 @@ def aggregate(
                 timesteps_per_period = int(period_hours / inferred_resolution)
             else:
                 # Fall back to assuming hourly resolution
-                timesteps_per_period = period_hours
+                timesteps_per_period = int(period_hours)
 
         if segments.n_segments > timesteps_per_period:
             raise ValueError(
@@ -315,7 +348,7 @@ def aggregate(
 def _build_old_params(
     data: pd.DataFrame,
     n_clusters: int,
-    period_hours: int,
+    period_hours: float,
     resolution: float | None,
     cluster: ClusterConfig,
     segments: SegmentConfig | None,
