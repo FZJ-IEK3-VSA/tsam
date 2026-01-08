@@ -97,15 +97,17 @@ def main() -> None:
     print()
 
     # Validation
-    assert math.isclose(result_par.optimal_rmse, result_seq.optimal_rmse, rel_tol=1e-6), (
-        "Parallel and sequential results differ (RMSE mismatch)"
+    assert math.isclose(
+        result_par.optimal_rmse, result_seq.optimal_rmse, rel_tol=1e-6
+    ), "Parallel and sequential results differ (RMSE mismatch)"
+
+    assert result_par.optimal_n_periods == result_seq.optimal_n_periods, (
+        "Parallel and sequential results differ (n_periods mismatch)"
     )
-    assert (
-        result_par.optimal_n_periods == result_seq.optimal_n_periods
-    ), "Parallel and sequential results differ (n_periods mismatch)"
-    assert (
-        result_par.optimal_n_segments == result_seq.optimal_n_segments
-    ), "Parallel and sequential results differ (n_segments mismatch)"
+
+    assert result_par.optimal_n_segments == result_seq.optimal_n_segments, (
+        "Parallel and sequential results differ (n_segments mismatch)"
+    )
 
     # Summary
     print("=" * 60)
