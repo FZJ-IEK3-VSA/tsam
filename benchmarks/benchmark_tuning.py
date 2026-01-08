@@ -17,6 +17,7 @@ import argparse
 import os
 import time
 from pathlib import Path
+import math
 
 import pandas as pd
 
@@ -84,7 +85,7 @@ def main() -> None:
     print("  No DataFrame pickling - safe for sensitive data")
     print("=" * 60)
     start = time.perf_counter()
-    find_optimal_combination(
+    result_par = find_optimal_combination(
         raw,
         data_reduction=args.reduction,
         n_jobs=args.workers,
@@ -94,6 +95,17 @@ def main() -> None:
     print(f"  Time: {time_parallel:.2f}s")
     print(f"  Speedup vs sequential: {time_sequential / time_parallel:.2f}x")
     print()
+
+    # Validation
+    assert math.isclose(result_par.optimal_rmse, result_seq.optimal_rmse, rel_tol=1e-6), (
+        "Parallel and sequential results differ (RMSE mismatch)"
+    )
+    assert (
+        result_par.optimal_n_periods == result_seq.optimal_n_periods
+    ), "Parallel and sequential results differ (n_periods mismatch)"
+    assert (
+        result_par.optimal_n_segments == result_seq.optimal_n_segments
+    ), "Parallel and sequential results differ (n_segments mismatch)"
 
     # Summary
     print("=" * 60)
