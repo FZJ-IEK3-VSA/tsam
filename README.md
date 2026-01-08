@@ -135,6 +135,7 @@ typical_periods = aggregation.createTypicalPeriods()
 ```
 
 ### Detailed examples
+Detailed examples can be found at:/docs/source/examples_notebooks/
 
 A [**first example**](/docs/source/examples_notebooks/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook.
 
