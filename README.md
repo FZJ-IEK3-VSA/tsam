@@ -118,7 +118,7 @@ typical_periods.to_csv('typical_periods.csv')
 
 ### Legacy API
 
-The class-based API is still available for backward compatibility:
+For backward compatibility, the class-based API of TSAM Version 2 is still available.
 ```python
 import tsam.timeseriesaggregation as tsam_legacy
 
