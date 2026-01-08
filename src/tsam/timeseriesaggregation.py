@@ -867,6 +867,9 @@ class TimeSeriesAggregation:
         series in the typical Periods fits the mean value of the original time
         series, without changing the values of the extremePeriods.
         """
+        # Initialize dict to store rescaling deviations per column
+        self._rescaleDeviations = {}
+
         weightingVec = pd.Series(self._clusterPeriodNoOccur).values
         typicalPeriods = pd.concat(
             [
@@ -926,17 +929,24 @@ class TimeSeriesAggregation:
                 )
                 diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
                 a += 1
-            if a == MAX_ITERATOR:
-                deviation_pct = (diff / sum_raw) * 100 if sum_raw != 0 else 0
-                if deviation_pct > 0.01:  # Only warn if deviation is meaningful
-                    warnings.warn(
-                        'Max iteration number reached for "'
-                        + str(column)
-                        + '" while rescaling the cluster periods.'
-                        + " The integral of the aggregated time series deviates by: "
-                        + str(round(deviation_pct, 2))
-                        + "%"
-                    )
+            # Calculate and store final deviation
+            deviation_pct = (diff / sum_raw) * 100 if sum_raw != 0 else 0.0
+            converged = a < MAX_ITERATOR
+            self._rescaleDeviations[column] = {
+                "deviation_pct": deviation_pct,
+                "converged": converged,
+                "iterations": a,
+            }
+
+            if not converged and deviation_pct > 0.01:
+                warnings.warn(
+                    'Max iteration number reached for "'
+                    + str(column)
+                    + '" while rescaling the cluster periods.'
+                    + " The integral of the aggregated time series deviates by: "
+                    + str(round(deviation_pct, 2))
+                    + "%"
+                )
         return typicalPeriods.values
 
     def _clusterSortedPeriods(self, candidates, n_init=20):

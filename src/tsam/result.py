@@ -26,18 +26,31 @@ class AccuracyMetrics:
         Mean Absolute Error per column.
     rmse_duration : pd.Series
         RMSE on duration curves (sorted values) per column.
+    rescale_deviations : pd.DataFrame
+        Rescaling deviation information per column. Contains columns:
+        - deviation_pct: Final deviation percentage after rescaling
+        - converged: Whether rescaling converged within max iterations
+        - iterations: Number of iterations used
+        Only populated if rescaling was enabled, otherwise empty DataFrame.
     """
 
     rmse: pd.Series
     mae: pd.Series
     rmse_duration: pd.Series
+    rescale_deviations: pd.DataFrame
 
     def __repr__(self) -> str:
+        rescale_info = ""
+        if not self.rescale_deviations.empty:
+            n_failed = (~self.rescale_deviations["converged"]).sum()
+            if n_failed > 0:
+                max_dev = self.rescale_deviations["deviation_pct"].max()
+                rescale_info = f",\n  rescale_failures={n_failed} (max {max_dev:.2f}%)"
         return (
             f"AccuracyMetrics(\n"
             f"  rmse={self.rmse.mean():.4f} (mean),\n"
             f"  mae={self.mae.mean():.4f} (mean),\n"
-            f"  rmse_duration={self.rmse_duration.mean():.4f} (mean)\n"
+            f"  rmse_duration={self.rmse_duration.mean():.4f} (mean){rescale_info}\n"
             f")"
         )
 
@@ -174,6 +187,7 @@ class AggregationResult:
                 "rmse": self.accuracy.rmse.to_dict(),
                 "mae": self.accuracy.mae.to_dict(),
                 "rmse_duration": self.accuracy.rmse_duration.to_dict(),
+                "rescale_deviations": self.accuracy.rescale_deviations.to_dict(),
             },
             "clustering_duration": self.clustering_duration,
         }

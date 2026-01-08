@@ -276,10 +276,24 @@ def aggregate(
 
     # Build accuracy metrics
     accuracy_df = agg.accuracyIndicators()
+
+    # Build rescale deviations DataFrame
+    rescale_deviations_dict = getattr(agg, "_rescaleDeviations", {})
+    if rescale_deviations_dict:
+        rescale_deviations = pd.DataFrame.from_dict(
+            rescale_deviations_dict, orient="index"
+        )
+        rescale_deviations.index.name = "column"
+    else:
+        rescale_deviations = pd.DataFrame(
+            columns=["deviation_pct", "converged", "iterations"]
+        )
+
     accuracy = AccuracyMetrics(
         rmse=accuracy_df["RMSE"],
         mae=accuracy_df["MAE"],
         rmse_duration=accuracy_df["RMSE_duration"],
+        rescale_deviations=rescale_deviations,
     )
 
     # Build result object
