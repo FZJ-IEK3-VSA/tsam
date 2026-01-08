@@ -135,7 +135,7 @@ class SegmentConfig:
     n_segments : int
         Number of segments per period.
         Must be less than or equal to the number of timesteps per period.
-        Example: period_hours=24 with hourly data has 24 timesteps,
+        Example: period_duration=24 with hourly data has 24 timesteps,
         so n_segments could be 1-24.
 
     representation : str, default "mean"
@@ -177,7 +177,7 @@ class SegmentConfig:
         if self.n_segments < 1:
             raise ValueError(f"n_segments must be positive, got {self.n_segments}")
         # Note: Upper bound validation (n_segments <= timesteps_per_period)
-        # is performed in api.aggregate() when period_hours is known.
+        # is performed in api.aggregate() when period_duration is known.
 
         # Validate predefined segment parameters
         if self.predef_segment_assignments is not None:

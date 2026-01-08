@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 def heatmap(
     data: pd.DataFrame,
     column: str | None = None,
-    period_hours: int = 24,
+    period_duration: int | float | str = 24,
     title: str | None = None,
     color_continuous_scale: str = "Viridis",
 ) -> go.Figure:
@@ -54,8 +54,10 @@ def heatmap(
         Time series data to plot.
     column : str, optional
         Column to plot. If None, uses the first column.
-    period_hours : int, default 24
-        Number of hours per period.
+    period_duration : int, float, or str, default 24
+        Length of each period. Accepts:
+        - int/float: hours (e.g., 24 for daily, 168 for weekly)
+        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
     title : str, optional
         Plot title.
     color_continuous_scale : str, default "Viridis"
@@ -69,13 +71,15 @@ def heatmap(
     Examples
     --------
     >>> import tsam
-    >>> tsam.plot.heatmap(df, column="Temperature", period_hours=24)
+    >>> tsam.plot.heatmap(df, column="Temperature", period_duration=24)
     """
+    from tsam.api import _parse_duration_hours
     from tsam.timeseriesaggregation import unstackToPeriods
 
     if column is None:
         column = data.columns[0]
 
+    period_hours = int(_parse_duration_hours(period_duration, "period_duration"))
     stacked, _ = unstackToPeriods(data[[column]].copy(), period_hours)
 
     fig = px.imshow(
@@ -92,7 +96,7 @@ def heatmap(
 def heatmaps(
     data: pd.DataFrame,
     columns: list[str] | None = None,
-    period_hours: int = 24,
+    period_duration: int | float | str = 24,
     title: str | None = None,
     color_continuous_scale: str = "Viridis",
     reference_data: pd.DataFrame | None = None,
@@ -109,8 +113,10 @@ def heatmaps(
         Time series data to plot.
     columns : list[str], optional
         Columns to plot. If None, plots all columns.
-    period_hours : int, default 24
-        Number of hours per period.
+    period_duration : int, float, or str, default 24
+        Length of each period. Accepts:
+        - int/float: hours (e.g., 24 for daily, 168 for weekly)
+        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
     title : str, optional
         Overall figure title.
     color_continuous_scale : str, default "Viridis"
@@ -132,11 +138,13 @@ def heatmaps(
     >>> # Plot all columns from reconstructed data, scaled to original
     >>> tsam.plot.heatmaps(result.reconstruct(), reference_data=df)
     """
+    from tsam.api import _parse_duration_hours
     from tsam.timeseriesaggregation import unstackToPeriods
 
     if columns is None:
         columns = list(data.columns)
 
+    period_hours = int(_parse_duration_hours(period_duration, "period_duration"))
     n_cols = len(columns)
     ref = reference_data if reference_data is not None else data
 
@@ -430,7 +438,7 @@ class ResultPlotAccessor:
         return heatmap(
             data,
             column=column,
-            period_hours=self._result.n_timesteps_per_period,
+            period_duration=self._result.n_timesteps_per_period,
             title=title,
             color_continuous_scale=color_continuous_scale,
         )
@@ -470,7 +478,7 @@ class ResultPlotAccessor:
         return heatmaps(
             data,
             columns=columns,
-            period_hours=self._result.n_timesteps_per_period,
+            period_duration=self._result.n_timesteps_per_period,
             title=title,
             color_continuous_scale=color_continuous_scale,
             reference_data=ref,
