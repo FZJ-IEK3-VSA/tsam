@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 
 from tsam.config import (
@@ -10,8 +9,8 @@ from tsam.config import (
     METHOD_MAPPING,
     REPRESENTATION_MAPPING,
     ClusterConfig,
+    ClusteringResult,
     ExtremeConfig,
-    PredefinedConfig,
     SegmentConfig,
 )
 from tsam.result import AccuracyMetrics, AggregationResult
@@ -27,7 +26,6 @@ def aggregate(
     cluster: ClusterConfig | None = None,
     segments: SegmentConfig | None = None,
     extremes: ExtremeConfig | None = None,
-    predefined: PredefinedConfig | dict | None = None,
     rescale: bool = True,
     round_decimals: int | None = None,
     numerical_tolerance: float = 1e-13,
@@ -73,11 +71,6 @@ def aggregate(
     extremes : ExtremeConfig, optional
         Configuration for preserving extreme periods.
         If not provided, no extreme period handling is applied.
-
-    predefined : PredefinedConfig or dict, optional
-        Predefined assignments from a previous aggregation result.
-        Use `result.predefined` to get this, or load from JSON with
-        `PredefinedConfig.from_dict()`. Overrides cluster/segment assignments.
 
     rescale : bool, default True
         Rescale typical periods to match the original data's mean.
@@ -148,7 +141,7 @@ def aggregate(
     Transferring assignments to new data:
 
     >>> result1 = aggregate(df_wind, n_periods=8)
-    >>> result2 = aggregate(df_all, n_periods=8, predefined=result1.predefined)
+    >>> result2 = result1.clustering.apply(df_all)
 
     See Also
     --------
@@ -170,51 +163,6 @@ def aggregate(
     # Apply defaults
     if cluster is None:
         cluster = ClusterConfig()
-
-    # Apply predefined overrides
-    if predefined is not None:
-        # Convert dict to PredefinedConfig if needed
-        if isinstance(predefined, dict):
-            predefined = PredefinedConfig.from_dict(predefined)
-
-        # Override cluster config with predefined values
-        cluster_kwargs = {
-            "method": cluster.method,
-            "representation": cluster.representation,
-            "weights": cluster.weights,
-            "normalize_means": cluster.normalize_means,
-            "use_duration_curves": cluster.use_duration_curves,
-            "include_period_sums": cluster.include_period_sums,
-            "solver": cluster.solver,
-            "predef_cluster_order": predefined.cluster_order,
-        }
-        if predefined.cluster_centers is not None:
-            cluster_kwargs["predef_cluster_centers"] = predefined.cluster_centers
-        cluster = ClusterConfig(**cluster_kwargs)  # type: ignore[arg-type]
-
-        # Override segment config with predefined values if present
-        if (
-            predefined.segment_order is not None
-            and predefined.segment_durations is not None
-            and len(predefined.segment_durations) > 0
-        ):
-            if segments is None:
-                # Infer n_segments from the predefined data
-                n_segments = len(predefined.segment_durations[0])
-                segments = SegmentConfig(
-                    n_segments=n_segments,
-                    predef_segment_order=predefined.segment_order,
-                    predef_segment_durations=predefined.segment_durations,
-                )
-            else:
-                # Merge with existing segment config
-                segments = SegmentConfig(
-                    n_segments=segments.n_segments,
-                    representation=segments.representation,
-                    predef_segment_order=predefined.segment_order,
-                    predef_segment_durations=predefined.segment_durations,
-                    predef_segment_centers=segments.predef_segment_centers,
-                )
 
     # Validate segments against data
     if segments is not None:
@@ -296,21 +244,86 @@ def aggregate(
         rescale_deviations=rescale_deviations,
     )
 
+    # Build ClusteringResult
+    clustering_result = _build_clustering_result(
+        agg=agg,
+        n_segments=segments.n_segments if segments else None,
+        cluster_config=cluster,
+        segment_config=segments,
+        extremes_config=extremes,
+        rescale=rescale,
+        resolution=resolution,
+    )
+
     # Build result object
     return AggregationResult(
         typical_periods=typical_periods,
-        cluster_assignments=np.array(agg.clusterOrder),
         cluster_weights=dict(agg.clusterPeriodNoOccur),
-        n_periods=len(agg.clusterPeriodIdx),
         n_timesteps_per_period=agg.timeStepsPerPeriod,
-        n_segments=segments.n_segments if segments else None,
         segment_durations=agg.segmentDurationDict if segments else None,
-        cluster_center_indices=np.array(agg.clusterCenterIndices)
-        if agg.clusterCenterIndices is not None
-        else None,
         accuracy=accuracy,
         clustering_duration=getattr(agg, "clusteringDuration", 0.0),
+        clustering=clustering_result,
         _aggregation=agg,
+    )
+
+
+def _build_clustering_result(
+    agg: TimeSeriesAggregation,
+    n_segments: int | None,
+    cluster_config: ClusterConfig,
+    segment_config: SegmentConfig | None,
+    extremes_config: ExtremeConfig | None,
+    rescale: bool,
+    resolution: float | None,
+) -> ClusteringResult:
+    """Build ClusteringResult from a TimeSeriesAggregation object."""
+    # Get cluster centers (convert to Python ints for JSON serialization)
+    cluster_centers: tuple[int, ...] | None = None
+    if agg.clusterCenterIndices is not None:
+        cluster_centers = tuple(int(x) for x in agg.clusterCenterIndices)
+
+    # Compute segment data if segmentation was used
+    segment_order: tuple[tuple[int, ...], ...] | None = None
+    segment_durations: tuple[tuple[int, ...], ...] | None = None
+
+    if n_segments is not None and hasattr(agg, "segmentedNormalizedTypicalPeriods"):
+        segmented_df = agg.segmentedNormalizedTypicalPeriods
+        segment_order_list = []
+        segment_durations_list = []
+
+        for period_idx in segmented_df.index.get_level_values(0).unique():
+            period_data = segmented_df.loc[period_idx]
+            # Index levels: Segment Step, Segment Duration, Original Start Step
+            assignments = []
+            durations = []
+            for seg_step, seg_dur, _orig_start in period_data.index:
+                assignments.extend([int(seg_step)] * int(seg_dur))
+                durations.append(int(seg_dur))
+            segment_order_list.append(tuple(assignments))
+            segment_durations_list.append(tuple(durations))
+
+        segment_order = tuple(segment_order_list)
+        segment_durations = tuple(segment_durations_list)
+
+    # Extract representation from configs
+    representation = cluster_config.get_representation()
+    segment_representation = segment_config.representation if segment_config else None
+
+    return ClusteringResult(
+        period_hours=agg.hoursPerPeriod,
+        cluster_order=tuple(int(x) for x in agg.clusterOrder),
+        cluster_centers=cluster_centers,
+        segment_order=segment_order,
+        segment_durations=segment_durations,
+        segment_centers=None,  # Not currently captured by segmentation
+        rescale=rescale,
+        representation=representation,
+        segment_representation=segment_representation,
+        resolution=resolution,
+        cluster_config=cluster_config,
+        segment_config=segment_config,
+        extremes_config=extremes_config,
     )
 
 
@@ -325,6 +338,13 @@ def _build_old_params(
     rescale: bool,
     round_decimals: int | None,
     numerical_tolerance: float,
+    *,
+    # Predefined parameters (used internally by ClusteringResult.apply())
+    predef_cluster_order: tuple[int, ...] | None = None,
+    predef_cluster_centers: tuple[int, ...] | None = None,
+    predef_segment_order: tuple[tuple[int, ...], ...] | None = None,
+    predef_segment_durations: tuple[tuple[int, ...], ...] | None = None,
+    predef_segment_centers: tuple[tuple[int, ...], ...] | None = None,
 ) -> dict:
     """Build parameters for the old TimeSeriesAggregation API."""
     params: dict = {
@@ -366,11 +386,12 @@ def _build_old_params(
     if cluster.weights is not None:
         params["weightDict"] = cluster.weights
 
-    if cluster.predef_cluster_order is not None:
-        params["predefClusterOrder"] = list(cluster.predef_cluster_order)
+    # Predefined cluster parameters (from ClusteringResult)
+    if predef_cluster_order is not None:
+        params["predefClusterOrder"] = list(predef_cluster_order)
 
-    if cluster.predef_cluster_centers is not None:
-        params["predefClusterCenterIndices"] = list(cluster.predef_cluster_centers)
+    if predef_cluster_centers is not None:
+        params["predefClusterCenterIndices"] = list(predef_cluster_centers)
 
     # Segmentation config
     if segments is not None:
@@ -380,19 +401,15 @@ def _build_old_params(
             segments.representation, "meanRepresentation"
         )
 
-        # Predefined segment parameters
-        if segments.predef_segment_order is not None:
-            params["predefSegmentOrder"] = [
-                list(s) for s in segments.predef_segment_order
-            ]
-        if segments.predef_segment_durations is not None:
+        # Predefined segment parameters (from ClusteringResult)
+        if predef_segment_order is not None:
+            params["predefSegmentOrder"] = [list(s) for s in predef_segment_order]
+        if predef_segment_durations is not None:
             params["predefSegmentDurations"] = [
-                list(s) for s in segments.predef_segment_durations
+                list(s) for s in predef_segment_durations
             ]
-        if segments.predef_segment_centers is not None:
-            params["predefSegmentCenters"] = [
-                list(s) for s in segments.predef_segment_centers
-            ]
+        if predef_segment_centers is not None:
+            params["predefSegmentCenters"] = [list(s) for s in predef_segment_centers]
     else:
         params["segmentation"] = False
 

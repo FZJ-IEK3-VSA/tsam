@@ -628,6 +628,48 @@ class ResultPlotAccessor:
 
         return fig
 
+    def cluster_assignments(
+        self,
+        title: str = "Cluster Assignments",
+        color_continuous_scale: str = "Viridis",
+    ) -> go.Figure:
+        """Plot which cluster each original period was assigned to.
+
+        Shows a heatmap visualization of the cluster assignment for each
+        original period in the dataset.
+
+        Parameters
+        ----------
+        title : str, default "Cluster Assignments"
+            Plot title.
+        color_continuous_scale : str, default "Viridis"
+            Plotly color scale name.
+
+        Returns
+        -------
+        go.Figure
+
+        Examples
+        --------
+        >>> result = tsam.aggregate(df, n_periods=8)
+        >>> result.plot.cluster_assignments()
+        """
+        assignments = self._result.cluster_assignments
+
+        fig = px.imshow(
+            [assignments],
+            labels={"x": "Original Period", "color": "Cluster"},
+            title=title,
+            color_continuous_scale=color_continuous_scale,
+            aspect="auto",
+        )
+        fig.update_layout(
+            yaxis={"visible": False},
+            coloraxis_colorbar={"dtick": 1},
+        )
+
+        return fig
+
     def accuracy(self, title: str = "Accuracy Metrics") -> go.Figure:
         """Plot accuracy metrics by column.
 
