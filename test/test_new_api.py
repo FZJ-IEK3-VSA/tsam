@@ -544,3 +544,87 @@ class TestSegmentConfigValidation:
         config = SegmentConfig(n_segments=6)
         assert config.n_segments == 6
         assert config.representation == "mean"
+
+
+class TestSegmentCenters:
+    """Tests for segment center preservation."""
+
+    def test_segment_centers_with_medoid(self, sample_data):
+        """Test that segment centers are captured with medoid representation."""
+        result = aggregate(
+            sample_data,
+            n_periods=8,
+            segments=SegmentConfig(n_segments=6, representation="medoid"),
+        )
+
+        segment_centers = result.clustering.segment_centers
+
+        # Should not be None for medoid representation
+        assert segment_centers is not None
+
+        # Should have one tuple per typical period
+        assert len(segment_centers) == result.n_periods
+
+        # Each inner tuple should have n_segments elements
+        for period_centers in segment_centers:
+            assert len(period_centers) == 6
+
+        # All center indices should be valid (within timesteps per period)
+        for period_centers in segment_centers:
+            for idx in period_centers:
+                assert 0 <= idx < result.n_timesteps_per_period
+
+    def test_segment_centers_none_with_mean(self, sample_data):
+        """Test that segment centers are None with mean representation."""
+        result = aggregate(
+            sample_data,
+            n_periods=8,
+            segments=SegmentConfig(n_segments=6, representation="mean"),
+        )
+
+        # Mean representation doesn't have center indices
+        assert result.clustering.segment_centers is None
+
+    def test_segment_centers_preserved_in_json(self, sample_data, tmp_path):
+        """Test that segment centers are preserved through JSON roundtrip."""
+        from tsam import ClusteringResult
+
+        result1 = aggregate(
+            sample_data,
+            n_periods=8,
+            segments=SegmentConfig(n_segments=6, representation="medoid"),
+        )
+
+        # Save and load
+        json_path = tmp_path / "clustering_seg_centers.json"
+        result1.clustering.to_json(str(json_path))
+        clustering = ClusteringResult.from_json(str(json_path))
+
+        # Segment centers should be preserved
+        assert clustering.segment_centers is not None
+        assert clustering.segment_centers == result1.clustering.segment_centers
+
+        # Apply and verify results are identical
+        result2 = clustering.apply(sample_data)
+        pd.testing.assert_frame_equal(
+            result1.typical_periods,
+            result2.typical_periods,
+        )
+
+    def test_segment_centers_deterministic_transfer(self, sample_data):
+        """Test that segment centers produce deterministic results when reapplied."""
+        # First aggregation with medoid segments
+        result1 = aggregate(
+            sample_data,
+            n_periods=8,
+            segments=SegmentConfig(n_segments=6, representation="medoid"),
+        )
+
+        # Apply clustering (which uses predefined segment centers)
+        result2 = result1.clustering.apply(sample_data)
+
+        # Results should be identical
+        pd.testing.assert_frame_equal(
+            result1.typical_periods,
+            result2.typical_periods,
+        )

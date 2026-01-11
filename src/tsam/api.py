@@ -286,6 +286,7 @@ def _build_clustering_result(
     # Compute segment data if segmentation was used
     segment_order: tuple[tuple[int, ...], ...] | None = None
     segment_durations: tuple[tuple[int, ...], ...] | None = None
+    segment_centers: tuple[tuple[int, ...], ...] | None = None
 
     if n_segments is not None and hasattr(agg, "segmentedNormalizedTypicalPeriods"):
         segmented_df = agg.segmentedNormalizedTypicalPeriods
@@ -306,6 +307,18 @@ def _build_clustering_result(
         segment_order = tuple(segment_order_list)
         segment_durations = tuple(segment_durations_list)
 
+        # Extract segment center indices (only available for medoid/maxoid representations)
+        if (
+            hasattr(agg, "segmentCenterIndices")
+            and agg.segmentCenterIndices is not None
+        ):
+            # Check if any period has center indices (None for mean representation)
+            if all(pc is not None for pc in agg.segmentCenterIndices):
+                segment_centers = tuple(
+                    tuple(int(x) for x in period_centers)
+                    for period_centers in agg.segmentCenterIndices
+                )
+
     # Extract representation from configs
     representation = cluster_config.get_representation()
     segment_representation = segment_config.representation if segment_config else None
@@ -316,7 +329,7 @@ def _build_clustering_result(
         cluster_centers=cluster_centers,
         segment_order=segment_order,
         segment_durations=segment_durations,
-        segment_centers=None,  # Not currently captured by segmentation
+        segment_centers=segment_centers,
         rescale=rescale,
         representation=representation,
         segment_representation=segment_representation,

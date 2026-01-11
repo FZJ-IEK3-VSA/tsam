@@ -53,10 +53,13 @@ def segmentation(
                   - **predictedSegmentedNormalizedTypicalPeriods** (pandas DataFrame) -- MultiIndex DataFrame with the same
                     shape of normalizedTypicalPeriods, but with overwritten values derived from segmentation used for
                     prediction of the original periods and accuracy indicators.
+                  - **segmentCenterIndicesList** (list) -- List of segment center indices per typical period.
+                    Each entry is a list of indices indicating which timestep is the representative for each segment.
     """
     # Initialize lists for predicted and segmented DataFrame
     segmentedNormalizedTypicalPeriodsList = []
     predictedSegmentedNormalizedTypicalPeriodsList = []
+    segmentCenterIndicesList = []
 
     # Get unique period indices
     period_indices = normalizedTypicalPeriods.index.get_level_values(0).unique()
@@ -129,11 +132,11 @@ def segmentation(
             # Determine segment values
             if predefSegmentCenters is not None:
                 # Use predefined centers directly
-                center_indices = predefSegmentCenters[period_i]
-                clusterCenters = segmentationCandidates[center_indices]
+                segmentCenterIndices = list(predefSegmentCenters[period_i])
+                clusterCenters = segmentationCandidates[segmentCenterIndices]
             else:
                 # Calculate representations from predefined order
-                clusterCenters, _clusterCenterIndices = representations(
+                clusterCenters, segmentCenterIndices = representations(
                     segmentationCandidates,
                     clusterOrder,
                     default="meanRepresentation",
@@ -162,7 +165,7 @@ def segmentation(
             )
             clusterOrderUnique = [clusterOrder[index] for index in sorted(indices)]
             # determine the segments' values
-            clusterCenters, _clusterCenterIndices = representations(
+            clusterCenters, segmentCenterIndices = representations(
                 segmentationCandidates,
                 clusterOrder,
                 default="meanRepresentation",
@@ -171,6 +174,11 @@ def segmentation(
                 distributionPeriodWise=distributionPeriodWise,
                 timeStepsPerPeriod=1,
             )
+            # Reorder segment center indices to match temporal order (clusterOrderUnique)
+            if segmentCenterIndices is not None:
+                segmentCenterIndices = [
+                    segmentCenterIndices[c] for c in clusterOrderUnique
+                ]
 
         # predict each time step of the period by representing it with the corresponding segment's values
         predictedSegmentedNormalizedTypicalPeriods = (
@@ -206,6 +214,7 @@ def segmentation(
             predictedSegmentedNormalizedTypicalPeriods
         )
         segmentedNormalizedTypicalPeriodsList.append(result)
+        segmentCenterIndicesList.append(segmentCenterIndices)
 
     # create a big DataFrame for all periods for predicted segmented time steps and segments and return
     predictedSegmentedNormalizedTypicalPeriods = pd.concat(
@@ -216,4 +225,8 @@ def segmentation(
         segmentedNormalizedTypicalPeriodsList,
         keys=period_indices,
     )
-    return segmentedNormalizedTypicalPeriods, predictedSegmentedNormalizedTypicalPeriods
+    return (
+        segmentedNormalizedTypicalPeriods,
+        predictedSegmentedNormalizedTypicalPeriods,
+        segmentCenterIndicesList,
+    )

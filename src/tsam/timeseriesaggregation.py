@@ -1140,6 +1140,7 @@ class TimeSeriesAggregation:
             (
                 self.segmentedNormalizedTypicalPeriods,
                 self.predictedSegmentedNormalizedTypicalPeriods,
+                self.segmentCenterIndices,
             ) = segmentation(
                 self.normalizedTypicalPeriods,
                 self.noSegments,
