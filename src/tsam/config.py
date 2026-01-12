@@ -212,6 +212,10 @@ class ClusteringResult:
         Cluster assignments for each original period.
         Length equals the number of original periods in the data.
 
+    n_timesteps_per_period : int
+        Number of timesteps in each period. Used to validate that new data
+        has compatible structure when calling apply().
+
     cluster_centers : tuple[int, ...], optional
         Indices of original periods used as cluster centers.
         If not provided, centers will be recalculated when applying.
@@ -270,6 +274,7 @@ class ClusteringResult:
     # === Transfer fields (used by apply()) ===
     period_duration: float
     cluster_assignments: tuple[int, ...]
+    n_timesteps_per_period: int
     cluster_centers: tuple[int, ...] | None = None
     segment_assignments: tuple[tuple[int, ...], ...] | None = None
     segment_durations: tuple[tuple[int, ...], ...] | None = None
@@ -394,6 +399,7 @@ class ClusteringResult:
         result: dict[str, Any] = {
             "period_duration": self.period_duration,
             "cluster_assignments": list(self.cluster_assignments),
+            "n_timesteps_per_period": self.n_timesteps_per_period,
             "preserve_column_means": self.preserve_column_means,
             "representation": self.representation,
         }
@@ -425,6 +431,7 @@ class ClusteringResult:
         kwargs: dict[str, Any] = {
             "period_duration": data["period_duration"],
             "cluster_assignments": tuple(data["cluster_assignments"]),
+            "n_timesteps_per_period": data["n_timesteps_per_period"],
             "preserve_column_means": data.get("preserve_column_means", True),
             "representation": data.get("representation", "medoid"),
         }
@@ -549,6 +556,24 @@ class ClusteringResult:
             if timestep_duration is not None
             else self.timestep_duration
         )
+
+        # Validate n_timesteps_per_period matches data
+        # Infer timestep duration from data if not provided
+        if effective_timestep_duration is None:
+            if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
+                inferred = (data.index[1] - data.index[0]).total_seconds() / 3600
+            else:
+                inferred = 1.0  # Default to hourly
+        else:
+            inferred = effective_timestep_duration
+
+        inferred_timesteps = int(self.period_duration / inferred)
+        if inferred_timesteps != self.n_timesteps_per_period:
+            raise ValueError(
+                f"Data has {inferred_timesteps} timesteps per period "
+                f"(period_duration={self.period_duration}h, timestep={inferred}h), "
+                f"but clustering expects {self.n_timesteps_per_period} timesteps per period"
+            )
 
         # Use stored config if available, otherwise build minimal one from transfer fields
         cluster = self.cluster_config or ClusterConfig(

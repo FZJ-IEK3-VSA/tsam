@@ -387,6 +387,7 @@ def _build_clustering_result(
         representation=representation,
         segment_representation=segment_representation,
         timestep_duration=timestep_duration,
+        n_timesteps_per_period=agg.timeStepsPerPeriod,
         cluster_config=cluster_config,
         segment_config=segment_config,
         extremes_config=extremes_config,
