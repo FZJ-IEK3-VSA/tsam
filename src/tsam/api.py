@@ -17,16 +17,40 @@ from tsam.result import AccuracyMetrics, AggregationResult
 from tsam.timeseriesaggregation import TimeSeriesAggregation
 
 
+def _parse_duration_hours(value: int | float | str, param_name: str) -> float:
+    """Parse a duration value to hours.
+
+    Accepts:
+    - int/float: interpreted as hours (e.g., 24 → 24.0 hours)
+    - str: pandas Timedelta string (e.g., '24h', '1d', '15min')
+
+    Returns duration in hours as float.
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            td = pd.Timedelta(value)
+            return td.total_seconds() / 3600
+        except ValueError as e:
+            raise ValueError(
+                f"{param_name}: invalid duration string '{value}': {e}"
+            ) from e
+    raise TypeError(
+        f"{param_name} must be int, float, or string, got {type(value).__name__}"
+    )
+
+
 def aggregate(
     data: pd.DataFrame,
-    n_periods: int,
+    n_clusters: int,
     *,
-    period_hours: int = 24,
-    resolution: float | None = None,
+    period_duration: int | float | str = 24,
+    timestep_duration: float | str | None = None,
     cluster: ClusterConfig | None = None,
     segments: SegmentConfig | None = None,
     extremes: ExtremeConfig | None = None,
-    rescale: bool = True,
+    preserve_column_means: bool = True,
     round_decimals: int | None = None,
     numerical_tolerance: float = 1e-13,
 ) -> AggregationResult:
@@ -42,22 +66,21 @@ def aggregate(
         Each column represents a different variable (e.g., solar, wind, demand).
         The index should be a DatetimeIndex with regular intervals.
 
-    n_periods : int
-        Number of typical periods (clusters) to create.
+    n_clusters : int
+        Number of clusters (typical periods) to create.
         Higher values = more accuracy but less data reduction.
         Typical range: 4-20 for energy system models.
 
-    period_hours : int, default 24
-        Length of each period in hours.
-        Common values:
-        - 24: Daily periods (most common)
-        - 168: Weekly periods
-        - 1: Hourly periods (for sub-hourly data)
+    period_duration : int, float, or str, default 24
+        Length of each period. Accepts:
+        - int/float: hours (e.g., 24 for daily, 168 for weekly)
+        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
 
-    resolution : float, optional
-        Time resolution of input data in hours.
+    timestep_duration : float or str, optional
+        Time resolution of input data. Accepts:
+        - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
+        - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
         If not provided, inferred from the datetime index.
-        Examples: 1.0 (hourly), 0.25 (15-minute), 0.5 (30-minute)
 
     cluster : ClusterConfig, optional
         Clustering configuration. If not provided, uses defaults:
@@ -72,9 +95,10 @@ def aggregate(
         Configuration for preserving extreme periods.
         If not provided, no extreme period handling is applied.
 
-    rescale : bool, default True
-        Rescale typical periods to match the original data's mean.
-        Preserves total energy/load values across the aggregation.
+    preserve_column_means : bool, default True
+        Rescale typical periods so each column's weighted mean matches
+        the original data's mean. Ensures total energy/load is preserved
+        when weights represent occurrence counts.
 
     round_decimals : int, optional
         Round output values to this many decimal places.
@@ -90,7 +114,7 @@ def aggregate(
     -------
     AggregationResult
         Object containing:
-        - typical_periods: DataFrame with aggregated periods
+        - cluster_representatives: DataFrame with aggregated periods
         - cluster_assignments: Which cluster each original period belongs to
         - cluster_weights: Occurrence count per cluster
         - accuracy: RMSE, MAE metrics
@@ -108,15 +132,15 @@ def aggregate(
     Basic usage with defaults:
 
     >>> import tsam
-    >>> result = tsam.aggregate(df, n_periods=8)
-    >>> typical = result.typical_periods
+    >>> result = tsam.aggregate(df, n_clusters=8)
+    >>> typical = result.cluster_representatives
 
     With custom clustering:
 
     >>> from tsam import aggregate, ClusterConfig
     >>> result = aggregate(
     ...     df,
-    ...     n_periods=8,
+    ...     n_clusters=8,
     ...     cluster=ClusterConfig(method="kmeans", representation="mean"),
     ... )
 
@@ -125,7 +149,7 @@ def aggregate(
     >>> from tsam import aggregate, SegmentConfig
     >>> result = aggregate(
     ...     df,
-    ...     n_periods=8,
+    ...     n_clusters=8,
     ...     segments=SegmentConfig(n_segments=12),
     ... )
 
@@ -134,13 +158,13 @@ def aggregate(
     >>> from tsam import aggregate, ExtremeConfig
     >>> result = aggregate(
     ...     df,
-    ...     n_periods=8,
+    ...     n_clusters=8,
     ...     extremes=ExtremeConfig(max_value=["demand"]),
     ... )
 
     Transferring assignments to new data:
 
-    >>> result1 = aggregate(df_wind, n_periods=8)
+    >>> result1 = aggregate(df_wind, n_clusters=8)
     >>> result2 = result1.clustering.apply(df_all)
 
     See Also
@@ -154,11 +178,21 @@ def aggregate(
     if not isinstance(data, pd.DataFrame):
         raise TypeError(f"data must be a pandas DataFrame, got {type(data).__name__}")
 
-    if not isinstance(n_periods, int) or n_periods < 1:
-        raise ValueError(f"n_periods must be a positive integer, got {n_periods}")
+    if not isinstance(n_clusters, int) or n_clusters < 1:
+        raise ValueError(f"n_clusters must be a positive integer, got {n_clusters}")
 
-    if not isinstance(period_hours, int) or period_hours < 1:
-        raise ValueError(f"period_hours must be a positive integer, got {period_hours}")
+    # Parse duration parameters to hours
+    period_duration = _parse_duration_hours(period_duration, "period_duration")
+    if period_duration <= 0:
+        raise ValueError(f"period_duration must be positive, got {period_duration}")
+
+    timestep_duration = (
+        _parse_duration_hours(timestep_duration, "timestep_duration")
+        if timestep_duration is not None
+        else None
+    )
+    if timestep_duration is not None and timestep_duration <= 0:
+        raise ValueError(f"timestep_duration must be positive, got {timestep_duration}")
 
     # Apply defaults
     if cluster is None:
@@ -167,18 +201,18 @@ def aggregate(
     # Validate segments against data
     if segments is not None:
         # Calculate timesteps per period
-        if resolution is not None:
-            timesteps_per_period = int(period_hours / resolution)
+        if timestep_duration is not None:
+            timesteps_per_period = int(period_duration / timestep_duration)
         else:
             # Infer resolution from data index
             if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
                 inferred_resolution = (
                     data.index[1] - data.index[0]
                 ).total_seconds() / 3600
-                timesteps_per_period = int(period_hours / inferred_resolution)
+                timesteps_per_period = int(period_duration / inferred_resolution)
             else:
                 # Fall back to assuming hourly resolution
-                timesteps_per_period = period_hours
+                timesteps_per_period = int(period_duration)
 
         if segments.n_segments > timesteps_per_period:
             raise ValueError(
@@ -207,20 +241,25 @@ def aggregate(
     # Build old API parameters
     old_params = _build_old_params(
         data=data,
-        n_periods=n_periods,
-        period_hours=period_hours,
-        resolution=resolution,
+        n_clusters=n_clusters,
+        period_duration=period_duration,
+        timestep_duration=timestep_duration,
         cluster=cluster,
         segments=segments,
         extremes=extremes,
-        rescale=rescale,
+        preserve_column_means=preserve_column_means,
         round_decimals=round_decimals,
         numerical_tolerance=numerical_tolerance,
     )
 
     # Run aggregation using old implementation
     agg = TimeSeriesAggregation(**old_params)
-    typical_periods = agg.createTypicalPeriods()
+    cluster_representatives = agg.createTypicalPeriods()
+
+    # Rename index levels for consistency with new API terminology
+    cluster_representatives = cluster_representatives.rename_axis(
+        index={"PeriodNum": "cluster", "TimeStep": "timestep"}
+    )
 
     # Build accuracy metrics
     accuracy_df = agg.accuracyIndicators()
@@ -251,16 +290,30 @@ def aggregate(
         cluster_config=cluster,
         segment_config=segments,
         extremes_config=extremes,
-        rescale=rescale,
-        resolution=resolution,
+        preserve_column_means=preserve_column_means,
+        timestep_duration=timestep_duration,
     )
+
+    # Compute segment_durations as tuple of tuples
+    segment_durations_tuple = None
+    if segments and hasattr(agg, "segmentedNormalizedTypicalPeriods"):
+        segmented_df = agg.segmentedNormalizedTypicalPeriods
+        segment_durations_tuple = tuple(
+            tuple(
+                int(seg_dur)
+                for _seg_step, seg_dur, _orig_start in segmented_df.loc[
+                    period_idx
+                ].index
+            )
+            for period_idx in segmented_df.index.get_level_values(0).unique()
+        )
 
     # Build result object
     return AggregationResult(
-        typical_periods=typical_periods,
+        cluster_representatives=cluster_representatives,
         cluster_weights=dict(agg.clusterPeriodNoOccur),
         n_timesteps_per_period=agg.timeStepsPerPeriod,
-        segment_durations=agg.segmentDurationDict if segments else None,
+        segment_durations=segment_durations_tuple,
         accuracy=accuracy,
         clustering_duration=getattr(agg, "clusteringDuration", 0.0),
         clustering=clustering_result,
@@ -274,8 +327,8 @@ def _build_clustering_result(
     cluster_config: ClusterConfig,
     segment_config: SegmentConfig | None,
     extremes_config: ExtremeConfig | None,
-    rescale: bool,
-    resolution: float | None,
+    preserve_column_means: bool,
+    timestep_duration: float | None,
 ) -> ClusteringResult:
     """Build ClusteringResult from a TimeSeriesAggregation object."""
     # Get cluster centers (convert to Python ints for JSON serialization)
@@ -284,13 +337,13 @@ def _build_clustering_result(
         cluster_centers = tuple(int(x) for x in agg.clusterCenterIndices)
 
     # Compute segment data if segmentation was used
-    segment_order: tuple[tuple[int, ...], ...] | None = None
+    segment_assignments: tuple[tuple[int, ...], ...] | None = None
     segment_durations: tuple[tuple[int, ...], ...] | None = None
     segment_centers: tuple[tuple[int, ...], ...] | None = None
 
     if n_segments is not None and hasattr(agg, "segmentedNormalizedTypicalPeriods"):
         segmented_df = agg.segmentedNormalizedTypicalPeriods
-        segment_order_list = []
+        segment_assignments_list = []
         segment_durations_list = []
 
         for period_idx in segmented_df.index.get_level_values(0).unique():
@@ -301,10 +354,10 @@ def _build_clustering_result(
             for seg_step, seg_dur, _orig_start in period_data.index:
                 assignments.extend([int(seg_step)] * int(seg_dur))
                 durations.append(int(seg_dur))
-            segment_order_list.append(tuple(assignments))
+            segment_assignments_list.append(tuple(assignments))
             segment_durations_list.append(tuple(durations))
 
-        segment_order = tuple(segment_order_list)
+        segment_assignments = tuple(segment_assignments_list)
         segment_durations = tuple(segment_durations_list)
 
         # Extract segment center indices (only available for medoid/maxoid representations)
@@ -324,16 +377,16 @@ def _build_clustering_result(
     segment_representation = segment_config.representation if segment_config else None
 
     return ClusteringResult(
-        period_hours=agg.hoursPerPeriod,
-        cluster_order=tuple(int(x) for x in agg.clusterOrder),
+        period_duration=agg.hoursPerPeriod,
+        cluster_assignments=tuple(int(x) for x in agg.clusterOrder),
         cluster_centers=cluster_centers,
-        segment_order=segment_order,
+        segment_assignments=segment_assignments,
         segment_durations=segment_durations,
         segment_centers=segment_centers,
-        rescale=rescale,
+        preserve_column_means=preserve_column_means,
         representation=representation,
         segment_representation=segment_representation,
-        resolution=resolution,
+        timestep_duration=timestep_duration,
         cluster_config=cluster_config,
         segment_config=segment_config,
         extremes_config=extremes_config,
@@ -342,34 +395,34 @@ def _build_clustering_result(
 
 def _build_old_params(
     data: pd.DataFrame,
-    n_periods: int,
-    period_hours: int,
-    resolution: float | None,
+    n_clusters: int,
+    period_duration: float,
+    timestep_duration: float | None,
     cluster: ClusterConfig,
     segments: SegmentConfig | None,
     extremes: ExtremeConfig | None,
-    rescale: bool,
+    preserve_column_means: bool,
     round_decimals: int | None,
     numerical_tolerance: float,
     *,
     # Predefined parameters (used internally by ClusteringResult.apply())
-    predef_cluster_order: tuple[int, ...] | None = None,
+    predef_cluster_assignments: tuple[int, ...] | None = None,
     predef_cluster_centers: tuple[int, ...] | None = None,
-    predef_segment_order: tuple[tuple[int, ...], ...] | None = None,
+    predef_segment_assignments: tuple[tuple[int, ...], ...] | None = None,
     predef_segment_durations: tuple[tuple[int, ...], ...] | None = None,
     predef_segment_centers: tuple[tuple[int, ...], ...] | None = None,
 ) -> dict:
     """Build parameters for the old TimeSeriesAggregation API."""
     params: dict = {
         "timeSeries": data,
-        "noTypicalPeriods": n_periods,
-        "hoursPerPeriod": period_hours,
-        "rescaleClusterPeriods": rescale,
+        "noTypicalPeriods": n_clusters,
+        "hoursPerPeriod": period_duration,
+        "rescaleClusterPeriods": preserve_column_means,
         "numericalTolerance": numerical_tolerance,
     }
 
-    if resolution is not None:
-        params["resolution"] = resolution
+    if timestep_duration is not None:
+        params["resolution"] = timestep_duration
 
     if round_decimals is not None:
         params["roundOutput"] = round_decimals
@@ -392,16 +445,15 @@ def _build_old_params(
         )
     params["representationMethod"] = rep_mapped
     params["sortValues"] = cluster.use_duration_curves
-    params["sameMean"] = cluster.normalize_means
+    params["sameMean"] = cluster.normalize_column_means
     params["evalSumPeriods"] = cluster.include_period_sums
     params["solver"] = cluster.solver
 
     if cluster.weights is not None:
         params["weightDict"] = cluster.weights
 
-    # Predefined cluster parameters (from ClusteringResult)
-    if predef_cluster_order is not None:
-        params["predefClusterOrder"] = list(predef_cluster_order)
+    if predef_cluster_assignments is not None:
+        params["predefClusterOrder"] = list(predef_cluster_assignments)
 
     if predef_cluster_centers is not None:
         params["predefClusterCenterIndices"] = list(predef_cluster_centers)
@@ -415,8 +467,8 @@ def _build_old_params(
         )
 
         # Predefined segment parameters (from ClusteringResult)
-        if predef_segment_order is not None:
-            params["predefSegmentOrder"] = [list(s) for s in predef_segment_order]
+        if predef_segment_assignments is not None:
+            params["predefSegmentOrder"] = [list(s) for s in predef_segment_assignments]
         if predef_segment_durations is not None:
             params["predefSegmentDurations"] = [
                 list(s) for s in predef_segment_durations

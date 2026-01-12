@@ -93,8 +93,8 @@ from tsam import aggregate, ClusterConfig, SegmentConfig
 
 result = tsam.aggregate(
     raw,
-    n_periods=8,
-    period_hours=24,
+    n_clusters=8,
+    period_duration='24h',  # or 24, '1d'
     cluster=ClusterConfig(
         method='hierarchical',
         representation='distribution_minmax',
@@ -106,7 +106,7 @@ result = tsam.aggregate(
 Access the results:
 ```python
 # Get the typical periods DataFrame
-typical_periods = result.typical_periods
+cluster_representatives = result.cluster_representatives
 
 # Check accuracy metrics
 print(f"RMSE: {result.accuracy.rmse.mean():.4f}")
@@ -115,7 +115,7 @@ print(f"RMSE: {result.accuracy.rmse.mean():.4f}")
 reconstructed = result.reconstruct()
 
 # Save results
-typical_periods.to_csv('typical_periods.csv')
+cluster_representatives.to_csv('cluster_representatives.csv')
 ```
 
 ### Legacy API
@@ -133,7 +133,7 @@ aggregation = tsam_legacy.TimeSeriesAggregation(
     representationMethod="distributionAndMinMaxRepresentation",
     clusterMethod='hierarchical'
 )
-typical_periods = aggregation.createTypicalPeriods()
+cluster_representatives = aggregation.createTypicalPeriods()
 ```
 
 ### Detailed examples

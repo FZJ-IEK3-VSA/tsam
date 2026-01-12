@@ -65,21 +65,21 @@ class AggregationResult:
 
     Attributes
     ----------
-    typical_periods : pd.DataFrame
-        The aggregated typical periods with MultiIndex (period, timestep).
-        Each row represents one timestep in one typical period.
+    cluster_representatives : pd.DataFrame
+        The aggregated typical periods with MultiIndex (cluster, timestep).
+        Each row represents one timestep in one cluster representative.
 
     cluster_assignments : np.ndarray
         Which cluster each original period belongs to.
         Length equals the number of original periods.
-        Values are cluster indices (0 to n_periods-1).
+        Values are cluster indices (0 to n_clusters-1).
 
     cluster_weights : dict[int, int]
         How many original periods each cluster represents.
         Keys are cluster indices, values are occurrence counts.
 
-    n_periods : int
-        Number of typical periods (clusters).
+    n_clusters : int
+        Number of clusters (typical periods).
 
     n_timesteps_per_period : int
         Number of timesteps in each period.
@@ -87,9 +87,10 @@ class AggregationResult:
     n_segments : int | None
         Number of segments per period if segmentation was used, else None.
 
-    segment_durations : dict[int, float] | None
-        Duration of each segment if segmentation was used.
-        Keys are segment indices, values are durations in hours.
+    segment_durations : tuple[tuple[int, ...], ...] | None
+        Duration (in timesteps) for each segment in each typical period.
+        Outer tuple has one entry per typical period, inner tuple has
+        duration for each segment. Use for transferring to another aggregation.
 
     accuracy : AccuracyMetrics
         Accuracy metrics comparing reconstructed to original data.
@@ -99,12 +100,12 @@ class AggregationResult:
 
     Examples
     --------
-    >>> result = tsam.aggregate(df, n_periods=8)
-    >>> result.typical_periods
+    >>> result = tsam.aggregate(df, n_clusters=8)
+    >>> result.cluster_representatives
                         solar  wind  demand
-    period timestep
-    0      0           0.12   0.45   0.78
-           1           0.15   0.42   0.82
+    cluster timestep
+    0       0           0.12   0.45   0.78
+            1           0.15   0.42   0.82
     ...
 
     >>> result.cluster_weights
@@ -117,19 +118,19 @@ class AggregationResult:
     dtype: float64
     """
 
-    typical_periods: pd.DataFrame
+    cluster_representatives: pd.DataFrame
     cluster_weights: dict[int, int]
     n_timesteps_per_period: int
-    segment_durations: dict[int, float] | None
+    segment_durations: tuple[tuple[int, ...], ...] | None
     accuracy: AccuracyMetrics
     clustering_duration: float
     clustering: ClusteringResult
     _aggregation: TimeSeriesAggregation = field(repr=False, compare=False)
 
     @cached_property
-    def n_periods(self) -> int:
-        """Number of typical periods (clusters)."""
-        return self.clustering.n_periods
+    def n_clusters(self) -> int:
+        """Number of clusters (typical periods)."""
+        return self.clustering.n_clusters
 
     @cached_property
     def n_segments(self) -> int | None:
@@ -141,15 +142,15 @@ class AggregationResult:
         """Which cluster each original period belongs to.
 
         Length equals the number of original periods.
-        Values are cluster indices (0 to n_periods-1).
+        Values are cluster indices (0 to n_clusters-1).
         """
-        return np.array(self.clustering.cluster_order)
+        return np.array(self.clustering.cluster_assignments)
 
     def __repr__(self) -> str:
         seg_info = f", n_segments={self.n_segments}" if self.n_segments else ""
         return (
             f"AggregationResult(\n"
-            f"  n_periods={self.n_periods},\n"
+            f"  n_clusters={self.n_clusters},\n"
             f"  n_timesteps_per_period={self.n_timesteps_per_period}{seg_info},\n"
             f"  accuracy={self.accuracy}\n"
             f")"
@@ -168,7 +169,7 @@ class AggregationResult:
 
         Examples
         --------
-        >>> result = tsam.aggregate(df, n_periods=8)
+        >>> result = tsam.aggregate(df, n_clusters=8)
         >>> reconstructed = result.reconstruct()
         >>> reconstructed.shape == df.shape
         True
@@ -184,10 +185,10 @@ class AggregationResult:
             Dictionary containing all result data in serializable format.
         """
         return {
-            "typical_periods": self.typical_periods.to_dict(),
+            "cluster_representatives": self.cluster_representatives.to_dict(),
             "cluster_assignments": self.cluster_assignments.tolist(),
             "cluster_weights": self.cluster_weights,
-            "n_periods": self.n_periods,
+            "n_clusters": self.n_clusters,
             "n_timesteps_per_period": self.n_timesteps_per_period,
             "n_segments": self.n_segments,
             "segment_durations": self.segment_durations,
@@ -221,9 +222,9 @@ class AggregationResult:
         Returns
         -------
         list[int]
-            List of indices [0, 1, ..., n_periods-1].
+            List of indices [0, 1, ..., n_clusters-1].
         """
-        return list(range(self.n_periods))
+        return list(range(self.n_clusters))
 
     @property
     def assignments(self) -> pd.DataFrame:
@@ -239,7 +240,7 @@ class AggregationResult:
         timestep_idx : int
             Timestep index within the period (0 to n_timesteps_per_period-1).
         cluster_idx : int
-            Which cluster this period is assigned to (0 to n_periods-1).
+            Which cluster this period is assigned to (0 to n_clusters-1).
         segment_idx : int (only if segmentation was used)
             Which segment this timestep belongs to within its period.
 
@@ -250,7 +251,7 @@ class AggregationResult:
 
         Examples
         --------
-        >>> result = tsam.aggregate(df, n_periods=8)
+        >>> result = tsam.aggregate(df, n_clusters=8)
         >>> result.assignments.head()
                              period_idx  timestep_idx  cluster_idx
         2010-01-01 00:00:00          0             0            3
@@ -314,10 +315,10 @@ class AggregationResult:
 
         Examples
         --------
-        >>> result = tsam.aggregate(df, n_periods=8)
+        >>> result = tsam.aggregate(df, n_clusters=8)
         >>> result.plot.heatmap(column="Load")
         >>> result.plot.duration_curve()
-        >>> result.plot.typical_periods()
+        >>> result.plot.cluster_representatives()
         >>> result.plot.cluster_weights()
         >>> result.plot.accuracy()
         """

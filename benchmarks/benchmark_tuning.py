@@ -71,7 +71,7 @@ def main() -> None:
     time_sequential = time.perf_counter() - start
     print(f"  Time: {time_sequential:.2f}s")
     print(
-        f"  Optimal: {result_seq.optimal_n_periods} periods, "
+        f"  Optimal: {result_seq.optimal_n_clusters} periods, "
         f"{result_seq.optimal_n_segments} segments"
     )
     print(f"  RMSE: {result_seq.optimal_rmse:.4f}")
@@ -101,8 +101,8 @@ def main() -> None:
         result_par.optimal_rmse, result_seq.optimal_rmse, rel_tol=1e-6
     ), "Parallel and sequential results differ (RMSE mismatch)"
 
-    assert result_par.optimal_n_periods == result_seq.optimal_n_periods, (
-        "Parallel and sequential results differ (n_periods mismatch)"
+    assert result_par.optimal_n_clusters == result_seq.optimal_n_clusters, (
+        "Parallel and sequential results differ (n_clusters mismatch)"
     )
 
     assert result_par.optimal_n_segments == result_seq.optimal_n_segments, (
@@ -114,7 +114,7 @@ def main() -> None:
     print("SUMMARY")
     print("=" * 60)
     print(
-        f"  Optimal: {result_seq.optimal_n_periods} periods, "
+        f"  Optimal: {result_seq.optimal_n_clusters} periods, "
         f"{result_seq.optimal_n_segments} segments, "
         f"RMSE: {result_seq.optimal_rmse:.4f}"
     )

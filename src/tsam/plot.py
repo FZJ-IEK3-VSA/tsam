@@ -12,7 +12,7 @@ Two usage patterns are supported:
    >>> tsam.plot.compare({"Original": df, "Aggregated": result.reconstruct()}, column="Load")
 
 2. Accessor pattern on results:
-   >>> result = tsam.aggregate(df, n_periods=8)
+   >>> result = tsam.aggregate(df, n_clusters=8)
    >>> result.plot.heatmap(column="Load")
    >>> result.plot.duration_curve()
 
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 def heatmap(
     data: pd.DataFrame,
     column: str | None = None,
-    period_hours: int = 24,
+    period_duration: int | float | str = 24,
     title: str | None = None,
     color_continuous_scale: str = "Viridis",
 ) -> go.Figure:
@@ -54,8 +54,10 @@ def heatmap(
         Time series data to plot.
     column : str, optional
         Column to plot. If None, uses the first column.
-    period_hours : int, default 24
-        Number of hours per period.
+    period_duration : int, float, or str, default 24
+        Length of each period. Accepts:
+        - int/float: hours (e.g., 24 for daily, 168 for weekly)
+        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
     title : str, optional
         Plot title.
     color_continuous_scale : str, default "Viridis"
@@ -69,14 +71,16 @@ def heatmap(
     Examples
     --------
     >>> import tsam
-    >>> tsam.plot.heatmap(df, column="Temperature", period_hours=24)
+    >>> tsam.plot.heatmap(df, column="Temperature", period_duration=24)
     """
+    from tsam.api import _parse_duration_hours
     from tsam.timeseriesaggregation import unstackToPeriods
 
     if column is None:
         column = data.columns[0]
 
-    stacked, _ = unstackToPeriods(data[[column]].copy(), period_hours)
+    period_duration = int(_parse_duration_hours(period_duration, "period_duration"))
+    stacked, _ = unstackToPeriods(data[[column]].copy(), period_duration)
 
     fig = px.imshow(
         stacked[column].values.T,
@@ -92,7 +96,7 @@ def heatmap(
 def heatmaps(
     data: pd.DataFrame,
     columns: list[str] | None = None,
-    period_hours: int = 24,
+    period_duration: int | float | str = 24,
     title: str | None = None,
     color_continuous_scale: str = "Viridis",
     reference_data: pd.DataFrame | None = None,
@@ -109,8 +113,10 @@ def heatmaps(
         Time series data to plot.
     columns : list[str], optional
         Columns to plot. If None, plots all columns.
-    period_hours : int, default 24
-        Number of hours per period.
+    period_duration : int, float, or str, default 24
+        Length of each period. Accepts:
+        - int/float: hours (e.g., 24 for daily, 168 for weekly)
+        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
     title : str, optional
         Overall figure title.
     color_continuous_scale : str, default "Viridis"
@@ -128,15 +134,17 @@ def heatmaps(
     Examples
     --------
     >>> import tsam
-    >>> result = tsam.aggregate(df, n_periods=8)
+    >>> result = tsam.aggregate(df, n_clusters=8)
     >>> # Plot all columns from reconstructed data, scaled to original
     >>> tsam.plot.heatmaps(result.reconstruct(), reference_data=df)
     """
+    from tsam.api import _parse_duration_hours
     from tsam.timeseriesaggregation import unstackToPeriods
 
     if columns is None:
         columns = list(data.columns)
 
+    period_duration = int(_parse_duration_hours(period_duration, "period_duration"))
     n_cols = len(columns)
     ref = reference_data if reference_data is not None else data
 
@@ -149,7 +157,7 @@ def heatmaps(
     )
 
     for i, col in enumerate(columns, 1):
-        stacked, _ = unstackToPeriods(data[[col]].copy(), period_hours)
+        stacked, _ = unstackToPeriods(data[[col]].copy(), period_duration)
 
         fig.add_trace(
             go.Heatmap(
@@ -321,8 +329,8 @@ def compare(
     Examples
     --------
     >>> import tsam
-    >>> result1 = tsam.aggregate(df, n_periods=8, cluster=ClusterConfig(method="kmeans"))
-    >>> result2 = tsam.aggregate(df, n_periods=8, cluster=ClusterConfig(method="hierarchical"))
+    >>> result1 = tsam.aggregate(df, n_clusters=8, cluster=ClusterConfig(method="kmeans"))
+    >>> result2 = tsam.aggregate(df, n_clusters=8, cluster=ClusterConfig(method="hierarchical"))
     >>> fig = tsam.plot.compare(
     ...     {"Original": df, "K-means": result1.reconstruct(), "Hierarchical": result2.reconstruct()},
     ...     column="Load",
@@ -385,10 +393,10 @@ class ResultPlotAccessor:
 
     Examples
     --------
-    >>> result = tsam.aggregate(df, n_periods=8)
+    >>> result = tsam.aggregate(df, n_clusters=8)
     >>> result.plot.heatmap(column="Load")
     >>> result.plot.duration_curve()
-    >>> result.plot.typical_periods()
+    >>> result.plot.cluster_representatives()
     >>> result.plot.cluster_weights()
     """
 
@@ -430,7 +438,7 @@ class ResultPlotAccessor:
         return heatmap(
             data,
             column=column,
-            period_hours=self._result.n_timesteps_per_period,
+            period_duration=self._result.n_timesteps_per_period,
             title=title,
             color_continuous_scale=color_continuous_scale,
         )
@@ -470,7 +478,7 @@ class ResultPlotAccessor:
         return heatmaps(
             data,
             columns=columns,
-            period_hours=self._result.n_timesteps_per_period,
+            period_duration=self._result.n_timesteps_per_period,
             title=title,
             color_continuous_scale=color_continuous_scale,
             reference_data=ref,
@@ -520,29 +528,29 @@ class ResultPlotAccessor:
                 title=title or "Duration Curve",
             )
 
-    def typical_periods(
+    def cluster_representatives(
         self,
         columns: list[str] | None = None,
-        title: str = "Typical Periods",
+        title: str = "Cluster Representatives",
     ) -> go.Figure:
-        """Plot all typical periods.
+        """Plot all cluster representatives (typical periods).
 
         Parameters
         ----------
         columns : list[str], optional
             Columns to plot.
-        title : str, default "Typical Periods"
+        title : str, default "Cluster Representatives"
             Plot title.
 
         Returns
         -------
         go.Figure
         """
-        typ = self._result.typical_periods
+        typ = self._result.cluster_representatives
         weights = self._result.cluster_weights
 
         # Get column names (excluding index levels if they're columns)
-        all_columns = [c for c in typ.columns if c not in ["period", "timestep"]]
+        all_columns = [c for c in typ.columns if c not in ["cluster", "timestep"]]
         if columns is None:
             columns = all_columns
         else:
@@ -651,7 +659,7 @@ class ResultPlotAccessor:
 
         Examples
         --------
-        >>> result = tsam.aggregate(df, n_periods=8)
+        >>> result = tsam.aggregate(df, n_clusters=8)
         >>> result.plot.cluster_assignments()
         """
         assignments = self._result.cluster_assignments
@@ -730,11 +738,19 @@ class ResultPlotAccessor:
         if self._result.segment_durations is None:
             raise ValueError("No segmentation was used in this aggregation")
 
+        # segment_durations is tuple[tuple[int, ...], ...] - one tuple per period
+        # Average durations across all typical periods for the bar chart
         durations = self._result.segment_durations
+        n_segments = len(durations[0])
+        avg_durations = [
+            sum(period[s] for period in durations) / len(durations)
+            for s in range(n_segments)
+        ]
+
         df = pd.DataFrame(
             {
-                "Segment": [f"Segment {s}" for s in durations],
-                "Duration": list(durations.values()),
+                "Segment": [f"Segment {s}" for s in range(n_segments)],
+                "Duration": avg_durations,
             }
         )
 
@@ -747,8 +763,8 @@ class ResultPlotAccessor:
             color="Duration",
             color_continuous_scale="Viridis",
         )
-        fig.update_traces(texttemplate="%{text:.1f}h", textposition="auto")
-        fig.update_layout(showlegend=False, yaxis_title="Duration (hours)")
+        fig.update_traces(texttemplate="%{text:.1f}", textposition="auto")
+        fig.update_layout(showlegend=False, yaxis_title="Duration (timesteps)")
 
         return fig
 

@@ -63,27 +63,27 @@ def segmentation(
 
     # Get unique period indices
     period_indices = normalizedTypicalPeriods.index.get_level_values(0).unique()
-    n_periods = len(period_indices)
+    n_clusters = len(period_indices)
 
     # Validate predefined segment array lengths
     if predefSegmentOrder is not None:
-        if len(predefSegmentOrder) != n_periods:
+        if len(predefSegmentOrder) != n_clusters:
             raise ValueError(
                 f"predefSegmentOrder has {len(predefSegmentOrder)} entries "
-                f"but data has {n_periods} periods"
+                f"but data has {n_clusters} periods"
             )
         if (
             predefSegmentDurations is not None
-            and len(predefSegmentDurations) != n_periods
+            and len(predefSegmentDurations) != n_clusters
         ):
             raise ValueError(
                 f"predefSegmentDurations has {len(predefSegmentDurations)} entries "
-                f"but data has {n_periods} periods"
+                f"but data has {n_clusters} periods"
             )
-        if predefSegmentCenters is not None and len(predefSegmentCenters) != n_periods:
+        if predefSegmentCenters is not None and len(predefSegmentCenters) != n_clusters:
             raise ValueError(
                 f"predefSegmentCenters has {len(predefSegmentCenters)} entries "
-                f"but data has {n_periods} periods"
+                f"but data has {n_clusters} periods"
             )
 
         # Validate segment durations sum to timesteps per period
