@@ -13,55 +13,86 @@ from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
 import pandas as pd
 import tqdm
 
 from tsam.api import _parse_duration_hours, aggregate
-from tsam.config import ClusterConfig, SegmentConfig
+from tsam.config import (
+    ClusterConfig,
+    ExtremeConfig,
+    RepresentationMethod,
+    SegmentConfig,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
     from tsam.result import AggregationResult
 
+
+class _AggregateOpts(TypedDict):
+    """Internal TypedDict for aggregate options passed through tuning functions."""
+
+    period_duration: float
+    timestep_duration: float
+    cluster: ClusterConfig
+    segment_representation: RepresentationMethod
+    extremes: ExtremeConfig | None
+    preserve_column_means: bool
+    round_decimals: int | None
+    numerical_tolerance: float
+
+
 logger = logging.getLogger(__name__)
 
 
 def _test_single_config_file(
-    args: tuple[int, int, int, float, str, dict],
+    args: dict,
 ) -> tuple[int, int, float, AggregationResult | None]:
     """Test a single configuration for parallel execution.
 
     Loads data from file - no DataFrame pickling.
-    Args contains (n_clusters, n_segments, period_duration, timestep_duration, data_path, cluster_dict).
+    Args contains n_clusters, n_segments, data_path, and serialized aggregate options.
 
     Returns (n_clusters, n_segments, rmse, result).
     """
-    (
-        n_clusters,
-        n_segments,
-        period_duration,
-        timestep_duration,
-        data_path,
-        cluster_dict,
-    ) = args
+    n_clusters = args["n_clusters"]
+    n_segments = args["n_segments"]
+    data_path = args["data_path"]
+    opts = args["opts"]
+
     try:
         # Load data fresh from file - no pickling
         data = pd.read_csv(
             data_path, index_col=0, parse_dates=True, sep=",", decimal="."
         )
-        cluster = ClusterConfig(**cluster_dict)
+
+        # Reconstruct configs from serialized dicts
+        cluster = ClusterConfig(**opts["cluster_dict"])
+        extremes = (
+            ExtremeConfig(**opts["extremes_dict"])
+            if opts["extremes_dict"] is not None
+            else None
+        )
+        segments = SegmentConfig(
+            n_segments=n_segments,
+            representation=opts["segment_representation"],
+        )
 
         result = aggregate(
             data,
             n_clusters=n_clusters,
-            period_duration=period_duration,
-            timestep_duration=timestep_duration,
+            period_duration=opts["period_duration"],
+            timestep_duration=opts["timestep_duration"],
             cluster=cluster,
-            segments=SegmentConfig(n_segments=n_segments),
+            segments=segments,
+            extremes=extremes,
+            preserve_column_means=opts["preserve_column_means"],
+            round_decimals=opts["round_decimals"],
+            numerical_tolerance=opts["numerical_tolerance"],
         )
         rmse = float(result.accuracy.rmse.mean())
         return (n_clusters, n_segments, rmse, result)
@@ -97,20 +128,36 @@ def _infer_timestep_duration(data: pd.DataFrame) -> float:
 @contextmanager
 def _parallel_context(
     data: pd.DataFrame,
-    cluster: ClusterConfig,
+    aggregate_opts: _AggregateOpts,
     prefix: str = "tsam_",
 ) -> Iterator[tuple[str, dict]]:
     """Context manager for parallel execution setup.
 
-    Saves data to temp file and yields (data_path, cluster_dict).
+    Saves data to temp file and yields (data_path, serialized_opts).
     Cleans up temp files on exit.
     """
     temp_dir = tempfile.mkdtemp(prefix=prefix)
     data_path = str(Path(temp_dir) / "data.csv")
     data.to_csv(data_path, sep=",", decimal=".")
-    cluster_dict = asdict(cluster)
+
+    # Serialize configs to dicts for pickling
+    serialized_opts = {
+        "period_duration": aggregate_opts["period_duration"],
+        "timestep_duration": aggregate_opts["timestep_duration"],
+        "cluster_dict": asdict(aggregate_opts["cluster"]),
+        "segment_representation": aggregate_opts["segment_representation"],
+        "extremes_dict": (
+            asdict(aggregate_opts["extremes"])
+            if aggregate_opts["extremes"] is not None
+            else None
+        ),
+        "preserve_column_means": aggregate_opts["preserve_column_means"],
+        "round_decimals": aggregate_opts["round_decimals"],
+        "numerical_tolerance": aggregate_opts["numerical_tolerance"],
+    }
+
     try:
-        yield data_path, cluster_dict
+        yield data_path, serialized_opts
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -118,9 +165,7 @@ def _parallel_context(
 def _test_configs(
     configs: list[tuple[int, int]],
     data: pd.DataFrame,
-    period_duration: float,
-    timestep_duration: float,
-    cluster: ClusterConfig,
+    aggregate_opts: _AggregateOpts,
     n_workers: int,
     show_progress: bool = False,
     progress_desc: str = "Testing configurations",
@@ -130,9 +175,9 @@ def _test_configs(
     Args:
         configs: List of (n_clusters, n_segments) tuples to test.
         data: Input time series data.
-        period_duration: Hours per period.
-        timestep_duration: Time timestep_duration in hours.
-        cluster: Clustering configuration.
+        aggregate_opts: Dict with fixed aggregate parameters (period_duration,
+            timestep_duration, cluster, segment_representation, extremes,
+            preserve_column_means, round_decimals, numerical_tolerance).
         n_workers: Number of parallel workers (1 for sequential).
         show_progress: Whether to show progress bar.
         progress_desc: Description for progress bar.
@@ -146,16 +191,14 @@ def _test_configs(
     results: list[tuple[int, int, float, AggregationResult | None]] = []
 
     if n_workers > 1:
-        with _parallel_context(data, cluster) as (data_path, cluster_dict):
+        with _parallel_context(data, aggregate_opts) as (data_path, serialized_opts):
             full_configs = [
-                (
-                    n_per,
-                    n_seg,
-                    period_duration,
-                    timestep_duration,
-                    data_path,
-                    cluster_dict,
-                )
+                {
+                    "n_clusters": n_per,
+                    "n_segments": n_seg,
+                    "data_path": data_path,
+                    "opts": serialized_opts,
+                }
                 for n_per, n_seg in configs
             ]
             with ProcessPoolExecutor(max_workers=n_workers) as executor:
@@ -175,13 +218,21 @@ def _test_configs(
 
         for n_per, n_seg in iterator:
             try:
+                segments = SegmentConfig(
+                    n_segments=n_seg,
+                    representation=aggregate_opts["segment_representation"],
+                )
                 result = aggregate(
                     data,
                     n_clusters=n_per,
-                    period_duration=period_duration,
-                    timestep_duration=timestep_duration,
-                    cluster=cluster,
-                    segments=SegmentConfig(n_segments=n_seg),
+                    period_duration=aggregate_opts["period_duration"],
+                    timestep_duration=aggregate_opts["timestep_duration"],
+                    cluster=aggregate_opts["cluster"],
+                    segments=segments,
+                    extremes=aggregate_opts["extremes"],
+                    preserve_column_means=aggregate_opts["preserve_column_means"],
+                    round_decimals=aggregate_opts["round_decimals"],
+                    numerical_tolerance=aggregate_opts["numerical_tolerance"],
                 )
                 rmse = float(result.accuracy.rmse.mean())
                 results.append((n_per, n_seg, rmse, result))
@@ -321,6 +372,11 @@ def find_optimal_combination(
     period_duration: int | float | str = 24,
     timestep_duration: float | str | None = None,
     cluster: ClusterConfig | None = None,
+    segment_representation: RepresentationMethod = "mean",
+    extremes: ExtremeConfig | None = None,
+    preserve_column_means: bool = True,
+    round_decimals: int | None = None,
+    numerical_tolerance: float = 1e-13,
     show_progress: bool = True,
     save_all_results: bool = False,
     n_jobs: int | None = None,
@@ -348,6 +404,16 @@ def find_optimal_combination(
         If not provided, inferred from the datetime index.
     cluster : ClusterConfig, optional
         Clustering configuration.
+    segment_representation : str, default "mean"
+        How to represent each segment: "mean" or "medoid".
+    extremes : ExtremeConfig, optional
+        Configuration for preserving extreme periods.
+    preserve_column_means : bool, default True
+        Whether to rescale results to preserve original column means.
+    round_decimals : int, optional
+        Round results to this many decimal places.
+    numerical_tolerance : float, default 1e-13
+        Numerical tolerance for floating-point comparisons.
     show_progress : bool, default True
         Show progress bar during search.
     save_all_results : bool, default False
@@ -378,18 +444,20 @@ def find_optimal_combination(
         cluster = ClusterConfig()
 
     # Parse duration parameters to hours
-    period_duration = _parse_duration_hours(period_duration, "period_duration")
-    timestep_duration = (
+    period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
+    timestep_duration_hours = (
         _parse_duration_hours(timestep_duration, "timestep_duration")
         if timestep_duration is not None
         else _infer_timestep_duration(data)
     )
 
-    if timestep_duration <= 0:
-        raise ValueError(f"timestep_duration must be positive, got {timestep_duration}")
+    if timestep_duration_hours <= 0:
+        raise ValueError(
+            f"timestep_duration must be positive, got {timestep_duration_hours}"
+        )
 
     n_timesteps = len(data)
-    timesteps_per_period = int(period_duration / timestep_duration)
+    timesteps_per_period = int(period_duration_hours / timestep_duration_hours)
 
     max_periods = n_timesteps // timesteps_per_period
     max_segments = timesteps_per_period
@@ -422,13 +490,23 @@ def find_optimal_combination(
         for seg_idx, per_idx in zip(pareto_points[0], pareto_points[1])
     ]
 
+    # Bundle fixed aggregate parameters
+    aggregate_opts: _AggregateOpts = {
+        "period_duration": period_duration_hours,
+        "timestep_duration": timestep_duration_hours,
+        "cluster": cluster,
+        "segment_representation": segment_representation,
+        "extremes": extremes,
+        "preserve_column_means": preserve_column_means,
+        "round_decimals": round_decimals,
+        "numerical_tolerance": numerical_tolerance,
+    }
+
     n_workers = _get_n_workers(n_jobs)
     results = _test_configs(
         configs_to_test,
         data,
-        period_duration,
-        timestep_duration,
-        cluster,
+        aggregate_opts,
         n_workers,
         show_progress=show_progress,
         progress_desc="Searching configurations",
@@ -475,6 +553,11 @@ def find_pareto_front(
     max_timesteps: int | None = None,
     timesteps: Sequence[int] | None = None,
     cluster: ClusterConfig | None = None,
+    segment_representation: RepresentationMethod = "mean",
+    extremes: ExtremeConfig | None = None,
+    preserve_column_means: bool = True,
+    round_decimals: int | None = None,
+    numerical_tolerance: float = 1e-13,
     show_progress: bool = True,
     n_jobs: int | None = None,
 ) -> list[TuningResult]:
@@ -507,6 +590,16 @@ def find_pareto_front(
         Examples: range(10, 500, 10), [10, 50, 100, 200, 500]
     cluster : ClusterConfig, optional
         Clustering configuration.
+    segment_representation : str, default "mean"
+        How to represent each segment: "mean" or "medoid".
+    extremes : ExtremeConfig, optional
+        Configuration for preserving extreme periods.
+    preserve_column_means : bool, default True
+        Whether to rescale results to preserve original column means.
+    round_decimals : int, optional
+        Round results to this many decimal places.
+    numerical_tolerance : float, default 1e-13
+        Numerical tolerance for floating-point comparisons.
     show_progress : bool, default True
         Show progress bar.
     n_jobs : int, optional
@@ -540,24 +633,38 @@ def find_pareto_front(
         cluster = ClusterConfig()
 
     # Parse duration parameters to hours
-    period_duration = _parse_duration_hours(period_duration, "period_duration")
-    timestep_duration = (
+    period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
+    timestep_duration_hours = (
         _parse_duration_hours(timestep_duration, "timestep_duration")
         if timestep_duration is not None
         else _infer_timestep_duration(data)
     )
 
-    if timestep_duration <= 0:
-        raise ValueError(f"timestep_duration must be positive, got {timestep_duration}")
+    if timestep_duration_hours <= 0:
+        raise ValueError(
+            f"timestep_duration must be positive, got {timestep_duration_hours}"
+        )
 
     n_timesteps = len(data)
-    timesteps_per_period = int(period_duration / timestep_duration)
+    timesteps_per_period = int(period_duration_hours / timestep_duration_hours)
 
     max_periods = n_timesteps // timesteps_per_period
     max_segments = timesteps_per_period
 
     if max_timesteps is None:
         max_timesteps = n_timesteps
+
+    # Bundle fixed aggregate parameters
+    aggregate_opts: _AggregateOpts = {
+        "period_duration": period_duration_hours,
+        "timestep_duration": timestep_duration_hours,
+        "cluster": cluster,
+        "segment_representation": segment_representation,
+        "extremes": extremes,
+        "preserve_column_means": preserve_column_means,
+        "round_decimals": round_decimals,
+        "numerical_tolerance": numerical_tolerance,
+    }
 
     n_workers = _get_n_workers(n_jobs)
 
@@ -566,11 +673,9 @@ def find_pareto_front(
         return _find_pareto_front_targeted(
             data=data,
             timesteps=timesteps,
-            period_duration=period_duration,
-            timestep_duration=timestep_duration,
             max_periods=max_periods,
             max_segments=max_segments,
-            cluster=cluster,
+            aggregate_opts=aggregate_opts,
             show_progress=show_progress,
             n_workers=n_workers,
         )
@@ -578,12 +683,10 @@ def find_pareto_front(
     # Steepest descent exploration
     return _find_pareto_front_steepest(
         data=data,
-        period_duration=period_duration,
-        timestep_duration=timestep_duration,
         max_periods=max_periods,
         max_segments=max_segments,
         max_timesteps=max_timesteps,
-        cluster=cluster,
+        aggregate_opts=aggregate_opts,
         show_progress=show_progress,
         n_workers=n_workers,
     )
@@ -592,11 +695,9 @@ def find_pareto_front(
 def _find_pareto_front_targeted(
     data: pd.DataFrame,
     timesteps: Sequence[int],
-    period_duration: float,
-    timestep_duration: float,
     max_periods: int,
     max_segments: int,
-    cluster: ClusterConfig,
+    aggregate_opts: _AggregateOpts,
     show_progress: bool,
     n_workers: int,
 ) -> list[TuningResult]:
@@ -621,9 +722,7 @@ def _find_pareto_front_targeted(
     results = _test_configs(
         configs,
         data,
-        period_duration,
-        timestep_duration,
-        cluster,
+        aggregate_opts,
         n_workers,
         show_progress=show_progress,
         progress_desc="Testing configurations",
@@ -663,12 +762,10 @@ def _find_pareto_front_targeted(
 
 def _find_pareto_front_steepest(
     data: pd.DataFrame,
-    period_duration: float,
-    timestep_duration: float,
     max_periods: int,
     max_segments: int,
     max_timesteps: int,
-    cluster: ClusterConfig,
+    aggregate_opts: _AggregateOpts,
     show_progress: bool,
     n_workers: int,
 ) -> list[TuningResult]:
@@ -689,9 +786,7 @@ def _find_pareto_front_steepest(
     results = _test_configs(
         [(n_clusters, n_segments)],
         data,
-        period_duration,
-        timestep_duration,
-        cluster,
+        aggregate_opts,
         n_workers=1,  # Single config, no parallelization needed
     )
     if results:
@@ -716,9 +811,7 @@ def _find_pareto_front_steepest(
         results = _test_configs(
             candidates,
             data,
-            period_duration,
-            timestep_duration,
-            cluster,
+            aggregate_opts,
             n_workers=min(n_workers, 2),
         )
         _, _, rmse_seg, result_seg = results[0]
@@ -761,9 +854,7 @@ def _find_pareto_front_steepest(
         results = _test_configs(
             remaining_periods,
             data,
-            period_duration,
-            timestep_duration,
-            cluster,
+            aggregate_opts,
             n_workers,
         )
         for n_per, n_seg, rmse, result in results:
@@ -782,9 +873,7 @@ def _find_pareto_front_steepest(
         results = _test_configs(
             remaining_segments,
             data,
-            period_duration,
-            timestep_duration,
-            cluster,
+            aggregate_opts,
             n_workers,
         )
         for n_per, n_seg, rmse, result in results:
