@@ -98,6 +98,10 @@ class AggregationResult:
     clustering_duration : float
         Time taken for clustering in seconds.
 
+    is_transferred : bool
+        Whether this result was created by applying a transferred clustering
+        (via ``ClusteringResult.apply()``) rather than by clustering this data directly.
+
     Examples
     --------
     >>> result = tsam.aggregate(df, n_clusters=8)
@@ -125,6 +129,7 @@ class AggregationResult:
     accuracy: AccuracyMetrics
     clustering_duration: float
     clustering: ClusteringResult
+    is_transferred: bool
     _aggregation: TimeSeriesAggregation = field(repr=False, compare=False)
 
     @cached_property
@@ -148,10 +153,11 @@ class AggregationResult:
 
     def __repr__(self) -> str:
         seg_info = f", n_segments={self.n_segments}" if self.n_segments else ""
+        transferred_info = ", is_transferred=True" if self.is_transferred else ""
         return (
             f"AggregationResult(\n"
             f"  n_clusters={self.n_clusters},\n"
-            f"  n_timesteps_per_period={self.n_timesteps_per_period}{seg_info},\n"
+            f"  n_timesteps_per_period={self.n_timesteps_per_period}{seg_info}{transferred_info},\n"
             f"  accuracy={self.accuracy}\n"
             f")"
         )

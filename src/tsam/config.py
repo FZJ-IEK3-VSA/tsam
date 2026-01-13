@@ -575,10 +575,20 @@ class ClusteringResult:
                 f"but clustering expects {self.n_timesteps_per_period} timesteps per period"
             )
 
-        # Use stored config if available, otherwise build minimal one from transfer fields
-        cluster = self.cluster_config or ClusterConfig(
-            representation=self.representation
-        )
+        # Validate number of periods matches
+        n_periods_in_data = len(data) // self.n_timesteps_per_period
+        if n_periods_in_data != self.n_original_periods:
+            raise ValueError(
+                f"Data has {n_periods_in_data} periods, "
+                f"but clustering expects {self.n_original_periods} periods"
+            )
+
+        # Build minimal ClusterConfig with just the representation.
+        # We intentionally ignore stored cluster_config.weights since:
+        # 1. Weights were only used to compute the original assignments
+        # 2. Assignments are now fixed, so weights are irrelevant
+        # 3. New data may have different columns than the original
+        cluster = ClusterConfig(representation=self.representation)
 
         # Use stored segment config if available, otherwise build from transfer fields
         segments: SegmentConfig | None = None
@@ -663,6 +673,7 @@ class ClusteringResult:
             accuracy=accuracy,
             clustering_duration=getattr(agg, "clusteringDuration", 0.0),
             clustering=clustering_result,
+            is_transferred=True,
             _aggregation=agg,
         )
 

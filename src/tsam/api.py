@@ -317,6 +317,7 @@ def aggregate(
         accuracy=accuracy,
         clustering_duration=getattr(agg, "clusteringDuration", 0.0),
         clustering=clustering_result,
+        is_transferred=False,
         _aggregation=agg,
     )
 
