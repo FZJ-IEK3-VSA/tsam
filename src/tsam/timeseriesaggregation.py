@@ -1316,9 +1316,9 @@ class TimeSeriesAggregation:
             index=self.timeSeries.index,
             columns=self.timeSeries.columns,
         )
-        # normalize again if sameMean = True to avoid doubled unnormalization when using _postProcessTimeSeries after
-        # createTypicalPeriods has been called
-        if self.sameMean:
+        # Normalize again if sameMean=True to undo in-place modification from createTypicalPeriods.
+        # But NOT for segmentation - predictedSegmentedNormalizedTypicalPeriods wasn't modified in-place.
+        if self.sameMean and not self.segmentation:
             self.normalizedPredictedData /= self._normalizedMean
         self.predictedData = self._postProcessTimeSeries(
             self.normalizedPredictedData, applyWeighting=False
