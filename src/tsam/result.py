@@ -40,6 +40,27 @@ class AccuracyMetrics:
     rmse_duration: pd.Series
     rescale_deviations: pd.DataFrame
 
+    @property
+    def summary(self) -> pd.DataFrame:
+        """Summary DataFrame with all metrics per column.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with columns: rmse, mae, rmse_duration, and deviation_pct
+            (if rescaling was enabled). Index is the original column names.
+        """
+        df = pd.DataFrame(
+            {
+                "rmse": self.rmse,
+                "mae": self.mae,
+                "rmse_duration": self.rmse_duration,
+            }
+        )
+        if not self.rescale_deviations.empty:
+            df["deviation_pct"] = self.rescale_deviations["deviation_pct"]
+        return df
+
     def __repr__(self) -> str:
         rescale_info = ""
         if not self.rescale_deviations.empty:
