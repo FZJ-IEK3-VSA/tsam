@@ -397,9 +397,9 @@ class TestTuningEquivalence:
         )
 
         # Results should match
-        assert new_result.optimal_n_clusters == old_periods
-        assert new_result.optimal_n_segments == old_segments
-        np.testing.assert_allclose(new_result.optimal_rmse, old_rmse, rtol=1e-5)
+        assert new_result.n_clusters == old_periods
+        assert new_result.n_segments == old_segments
+        np.testing.assert_allclose(new_result.rmse, old_rmse, rtol=1e-5)
 
     def test_find_pareto_front(self, small_data):
         """Test find_pareto_front produces decreasing RMSE like old API."""
@@ -426,8 +426,8 @@ class TestTuningEquivalence:
             show_progress=False,
         )
 
-        # Both should have decreasing RMSE
-        new_rmse_history = [r.optimal_rmse for r in new_results]
+        # Get RMSE history from summary
+        new_rmse_history = new_results.summary["rmse"].tolist()
 
         # RMSE should be monotonically decreasing (or equal)
         for i in range(1, len(new_rmse_history)):
@@ -515,10 +515,10 @@ class TestSubhourlyResolution:
             show_progress=False,
         )
 
-        assert result.optimal_n_clusters > 0
-        assert result.optimal_n_segments > 0
+        assert result.n_clusters > 0
+        assert result.n_segments > 0
         # With 96 timesteps per period, we can have up to 96 segments
-        assert result.optimal_n_segments <= 96
+        assert result.n_segments <= 96
 
 
 class TestReconstructionEquivalence:

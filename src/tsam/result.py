@@ -183,8 +183,67 @@ class AggregationResult:
             f")"
         )
 
+    @cached_property
+    def original(self) -> pd.DataFrame:
+        """Original time series data.
+
+        Returns
+        -------
+        pd.DataFrame
+            The original input time series with datetime index.
+
+        Examples
+        --------
+        >>> result = tsam.aggregate(df, n_clusters=8)
+        >>> result.original.shape == df.shape
+        True
+        """
+        return cast("pd.DataFrame", self._aggregation.timeSeries)
+
+    @cached_property
+    def reconstructed(self) -> pd.DataFrame:
+        """Reconstructed time series from typical periods.
+
+        Each original period is replaced by its assigned cluster representative.
+        This is cached for performance since reconstruction can be expensive.
+
+        Returns
+        -------
+        pd.DataFrame
+            Reconstructed time series with same shape as original.
+
+        Examples
+        --------
+        >>> result = tsam.aggregate(df, n_clusters=8)
+        >>> result.reconstructed.shape == df.shape
+        True
+        """
+        return cast("pd.DataFrame", self._aggregation.predictOriginalData())
+
+    @cached_property
+    def residuals(self) -> pd.DataFrame:
+        """Residuals (original - reconstructed).
+
+        Positive values indicate the original exceeded the reconstruction.
+
+        Returns
+        -------
+        pd.DataFrame
+            Residual time series with same shape as original.
+
+        Examples
+        --------
+        >>> result = tsam.aggregate(df, n_clusters=8)
+        >>> result.residuals.mean()  # Should be close to zero
+        """
+        return self.original - self.reconstructed
+
     def reconstruct(self) -> pd.DataFrame:
         """Reconstruct the original time series from typical periods.
+
+        .. note::
+            Consider using the cached ``reconstructed`` property instead
+            for repeated access.
 
         Returns a DataFrame with the same shape as the original input,
         where each period is replaced by its assigned typical period.
@@ -343,14 +402,12 @@ class AggregationResult:
         Examples
         --------
         >>> result = tsam.aggregate(df, n_clusters=8)
-        >>> result.plot.heatmap(column="Load")
-        >>> result.plot.duration_curve()
+        >>> result.plot.compare()  # Compare original vs reconstructed
+        >>> result.plot.residuals()  # View reconstruction errors
         >>> result.plot.cluster_representatives()
         >>> result.plot.cluster_weights()
         >>> result.plot.accuracy()
         """
         from tsam.plot import ResultPlotAccessor
 
-        # Get original data from the internal aggregation object
-        original_data = getattr(self._aggregation, "timeSeries", None)
-        return ResultPlotAccessor(self, original_data=original_data)
+        return ResultPlotAccessor(self)

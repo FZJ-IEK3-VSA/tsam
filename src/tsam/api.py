@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pandas as pd
 
 from tsam.config import (
@@ -14,7 +16,7 @@ from tsam.config import (
     SegmentConfig,
 )
 from tsam.result import AccuracyMetrics, AggregationResult
-from tsam.timeseriesaggregation import TimeSeriesAggregation
+from tsam.timeseriesaggregation import TimeSeriesAggregation, unstackToPeriods
 
 
 def _parse_duration_hours(value: int | float | str, param_name: str) -> float:
@@ -491,3 +493,61 @@ def _build_old_params(
         params["extremePeriodMethod"] = "None"
 
     return params
+
+
+def unstack_to_periods(
+    data: pd.DataFrame,
+    period_duration: int | float | str = 24,
+) -> pd.DataFrame:
+    """Reshape time series data into period structure for visualization.
+
+    Transforms a flat time series into a DataFrame with periods as rows and
+    timesteps as a MultiIndex level, suitable for creating heatmaps with plotly.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Time series data with datetime index.
+    period_duration : int, float, or str, default 24
+        Length of each period. Accepts:
+        - int/float: hours (e.g., 24 for daily, 168 for weekly)
+        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
+
+    Returns
+    -------
+    pd.DataFrame
+        Reshaped data with shape (n_periods, n_timesteps_per_period) for each column.
+        Suitable for ``px.imshow(result["column"].values.T)`` to create heatmaps.
+
+    Examples
+    --------
+    >>> import tsam
+    >>> import plotly.express as px
+    >>>
+    >>> # Reshape data for heatmap visualization
+    >>> unstacked = tsam.unstack_to_periods(df, period_duration=24)
+    >>>
+    >>> # Create heatmap with plotly
+    >>> px.imshow(
+    ...     unstacked["Load"].values.T,
+    ...     labels={"x": "Day", "y": "Hour", "color": "Load"},
+    ...     title="Load Heatmap"
+    ... )
+    """
+    period_hours = _parse_duration_hours(period_duration, "period_duration")
+
+    # Infer timestep resolution from data index
+    timestep_hours = 1.0  # Default to hourly
+    if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
+        timestep_hours = (data.index[1] - data.index[0]).total_seconds() / 3600
+
+    # Calculate timesteps per period
+    timesteps_per_period = round(period_hours / timestep_hours)
+    if timesteps_per_period < 1:
+        raise ValueError(
+            f"period_duration ({period_hours}h) is smaller than "
+            f"data timestep resolution ({timestep_hours}h)"
+        )
+
+    unstacked, _ = unstackToPeriods(data.copy(), timesteps_per_period)
+    return cast("pd.DataFrame", unstacked)

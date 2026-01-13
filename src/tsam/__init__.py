@@ -38,7 +38,7 @@ The original class-based API is still available:
 >>> typical = agg.createTypicalPeriods()
 """
 
-from tsam.api import aggregate
+from tsam.api import aggregate, unstack_to_periods
 
 # Optional modules loaded on-demand to avoid importing heavy dependencies (e.g., plotly)
 _LAZY_MODULES = ("plot", "tuning")
@@ -72,5 +72,6 @@ __all__ = [
     "aggregate",
     "plot",
     "tuning",
-    "unstackToPeriods",
+    "unstackToPeriods",  # Legacy alias
+    "unstack_to_periods",
 ]

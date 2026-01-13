@@ -243,22 +243,6 @@ def _test_configs(
     return results
 
 
-def _make_tuning_result(
-    n_clusters: int,
-    n_segments: int,
-    rmse: float,
-    result: AggregationResult,
-) -> TuningResult:
-    """Create a TuningResult from aggregation output."""
-    return TuningResult(
-        optimal_n_clusters=n_clusters,
-        optimal_n_segments=n_segments,
-        optimal_rmse=rmse,
-        history=[{"n_clusters": n_clusters, "n_segments": n_segments, "rmse": rmse}],
-        best_result=result,
-    )
-
-
 def _get_n_workers(n_jobs: int | None) -> int:
     """Convert n_jobs parameter to actual worker count.
 
@@ -285,26 +269,144 @@ class TuningResult:
 
     Attributes
     ----------
-    optimal_n_clusters : int
+    n_clusters : int
         Optimal number of typical periods.
-    optimal_n_segments : int
+    n_segments : int
         Optimal number of segments per period.
-    optimal_rmse : float
+    rmse : float
         RMSE of the optimal configuration.
     history : list[dict]
         History of all tested configurations with their RMSE values.
     best_result : AggregationResult
         The AggregationResult for the optimal configuration.
     all_results : list[AggregationResult]
-        All AggregationResults from tuning (only populated if save_all_results=True).
+        All AggregationResults from tuning.
+
+    Examples
+    --------
+    >>> result = find_optimal_combination(df, data_reduction=0.01)
+    >>> result.summary  # DataFrame of all tested configs
+    >>> result.plot()   # Visualize results
+
+    >>> pareto = find_pareto_front(df, max_timesteps=500)
+    >>> pareto.find_by_timesteps(100)  # Find config closest to 100 timesteps
+    >>> for agg_result in pareto:      # Iterate over AggregationResults
+    ...     print(agg_result.accuracy.rmse.mean())
     """
 
-    optimal_n_clusters: int
-    optimal_n_segments: int
-    optimal_rmse: float
+    n_clusters: int
+    n_segments: int
+    rmse: float
     history: list[dict]
     best_result: AggregationResult
     all_results: list[AggregationResult] = field(default_factory=list)
+
+    @property
+    def summary(self) -> pd.DataFrame:
+        """Summary DataFrame of all tested configurations."""
+        df = pd.DataFrame(self.history)
+        if "timesteps" not in df.columns and len(df) > 0:
+            df["timesteps"] = df["n_clusters"] * df["n_segments"]
+        return df
+
+    def find_by_timesteps(self, target: int) -> AggregationResult:
+        """Find the result closest to a target timestep count."""
+        if not self.all_results:
+            raise ValueError(
+                "No results available. Use save_all_results=True in "
+                "find_optimal_combination() or use find_pareto_front() instead."
+            )
+
+        if len(self.all_results) != len(self.history):
+            raise ValueError(
+                f"Results/history mismatch: {len(self.all_results)} results vs "
+                f"{len(self.history)} history entries. This may indicate "
+                "save_all_results was not enabled."
+            )
+
+        best_idx = 0
+        best_diff = float("inf")
+
+        for i, h in enumerate(self.history):
+            diff = abs(h["n_clusters"] * h["n_segments"] - target)
+            if diff < best_diff:
+                best_diff = diff
+                best_idx = i
+
+        return self.all_results[best_idx]
+
+    def find_by_rmse(self, threshold: float) -> AggregationResult:
+        """Find the smallest configuration that achieves a target RMSE."""
+        if not self.all_results:
+            raise ValueError(
+                "No results available. Use save_all_results=True in "
+                "find_optimal_combination() or use find_pareto_front() instead."
+            )
+
+        if len(self.all_results) != len(self.history):
+            raise ValueError(
+                f"Results/history mismatch: {len(self.all_results)} results vs "
+                f"{len(self.history)} history entries. This may indicate "
+                "save_all_results was not enabled."
+            )
+
+        # Find all configurations meeting the threshold
+        candidates: list[tuple[int, int]] = []  # (timesteps, index)
+        for i, h in enumerate(self.history):
+            if h["rmse"] <= threshold:
+                timesteps = h.get("timesteps", h["n_clusters"] * h["n_segments"])
+                candidates.append((timesteps, i))
+
+        if not candidates:
+            raise ValueError(
+                f"No configuration achieves RMSE <= {threshold}. "
+                f"Best available: {min(h['rmse'] for h in self.history):.4f}"
+            )
+
+        # Return the smallest configuration (by timesteps)
+        candidates.sort(key=lambda x: x[0])
+        return self.all_results[candidates[0][1]]
+
+    def plot(self, show_labels: bool = True, **kwargs: object) -> object:
+        """Plot results (RMSE vs timesteps)."""
+        import plotly.graph_objects as go
+
+        summary = self.summary
+        hover_text = [
+            f"{row['n_clusters']}x{row['n_segments']}<br>"
+            f"Timesteps: {row['timesteps']}<br>"
+            f"RMSE: {row['rmse']:.4f}"
+            for _, row in summary.iterrows()
+        ]
+
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=summary["timesteps"],
+                y=summary["rmse"],
+                mode="lines+markers" if len(summary) > 1 else "markers",
+                marker={"size": 10},
+                hovertext=hover_text if show_labels else None,
+                hoverinfo="text" if show_labels else "x+y",
+                **kwargs,
+            )
+        )
+        fig.update_layout(
+            title="Tuning Results: Complexity vs Accuracy",
+            xaxis_title="Timesteps (n_clusters x n_segments)",
+            yaxis_title="RMSE",
+            hovermode="closest",
+        )
+        return fig
+
+    def __len__(self) -> int:
+        return len(self.all_results)
+
+    def __getitem__(self, index: int) -> AggregationResult:
+        return self.all_results[index]
+
+    def __iter__(self):
+        return iter(self.all_results)
 
 
 def find_clusters_for_reduction(
@@ -434,8 +536,8 @@ def find_optimal_combination(
     Examples
     --------
     >>> result = find_optimal_combination(df, data_reduction=0.01)
-    >>> print(f"Optimal: {result.optimal_n_clusters} periods, "
-    ...       f"{result.optimal_n_segments} segments")
+    >>> print(f"Optimal: {result.n_clusters} periods, "
+    ...       f"{result.n_segments} segments")
 
     >>> # Use all CPUs for faster search (file-based, no DataFrame pickling)
     >>> result = find_optimal_combination(df, data_reduction=0.01, n_jobs=-1)
@@ -536,9 +638,9 @@ def find_optimal_combination(
         raise ValueError("No valid configuration found")
 
     return TuningResult(
-        optimal_n_clusters=best_periods,
-        optimal_n_segments=best_segments,
-        optimal_rmse=best_rmse,
+        n_clusters=best_periods,
+        n_segments=best_segments,
+        rmse=best_rmse,
         history=history,
         best_result=best_result,
         all_results=all_results,
@@ -560,7 +662,7 @@ def find_pareto_front(
     numerical_tolerance: float = 1e-13,
     show_progress: bool = True,
     n_jobs: int | None = None,
-) -> list[TuningResult]:
+) -> TuningResult:
     """Find all Pareto-optimal aggregations from 1 period to full resolution.
 
     Uses a steepest-descent approach to efficiently explore the
@@ -609,16 +711,21 @@ def find_pareto_front(
 
     Returns
     -------
-    list[TuningResult]
-        List of Pareto-optimal configurations, ordered by increasing
-        complexity (timesteps).
+    TuningResult
+        Result object containing Pareto-optimal configurations with
+        convenience methods for analysis and visualization.
 
     Examples
     --------
     >>> pareto = find_pareto_front(df, max_timesteps=500)
-    >>> for result in pareto:
-    ...     print(f"{result.optimal_n_clusters}x{result.optimal_n_segments}: "
-    ...           f"RMSE={result.optimal_rmse:.4f}")
+    >>> pareto.summary  # DataFrame of all Pareto-optimal points
+    >>> pareto.plot()   # Visualize the Pareto front
+    >>> pareto.find_by_timesteps(100)  # Find config closest to 100 timesteps
+    >>> pareto.find_by_rmse(0.05)      # Find smallest config with RMSE <= 0.05
+
+    >>> # Iterate over AggregationResults
+    >>> for agg_result in pareto:
+    ...     print(f"RMSE: {agg_result.accuracy.rmse.mean():.4f}")
 
     >>> # Use parallel execution for faster search
     >>> pareto = find_pareto_front(df, max_timesteps=500, n_jobs=-1)
@@ -700,7 +807,7 @@ def _find_pareto_front_targeted(
     aggregate_opts: _AggregateOpts,
     show_progress: bool,
     n_workers: int,
-) -> list[TuningResult]:
+) -> TuningResult:
     """Find Pareto front for specific target timestep counts."""
     # Build all configurations to test
     configs_with_target: list[tuple[int, int, int]] = []  # (target, n_per, n_seg)
@@ -715,7 +822,7 @@ def _find_pareto_front_targeted(
                     configs_with_target.append((target, n_per, n_seg))
 
     if not configs_with_target:
-        return []
+        raise ValueError("No valid configurations found for given timesteps")
 
     # Test all configurations
     configs = [(n_per, n_seg) for _, n_per, n_seg in configs_with_target]
@@ -738,26 +845,53 @@ def _find_pareto_front_targeted(
         results_by_target[target].append(result)
 
     # For each target, pick the best configuration (lowest RMSE)
-    pareto_results: list[TuningResult] = []
+    history: list[dict] = []
+    all_results: list[AggregationResult] = []
+    best_rmse = float("inf")
+    best_result: AggregationResult | None = None
+    best_n_clusters = 0
+    best_n_segments = 0
+
     for target in sorted(results_by_target.keys()):
-        best_rmse = float("inf")
-        best_result: AggregationResult | None = None
-        best_n_per = 0
-        best_n_seg = 0
+        target_best_rmse = float("inf")
+        target_best_result: AggregationResult | None = None
+        target_best_n_per = 0
+        target_best_n_seg = 0
 
         for n_per, n_seg, rmse, agg_result in results_by_target[target]:
-            if agg_result is not None and rmse < best_rmse:
-                best_rmse = rmse
-                best_result = agg_result
-                best_n_per = n_per
-                best_n_seg = n_seg
+            if agg_result is not None and rmse < target_best_rmse:
+                target_best_rmse = rmse
+                target_best_result = agg_result
+                target_best_n_per = n_per
+                target_best_n_seg = n_seg
 
-        if best_result is not None:
-            pareto_results.append(
-                _make_tuning_result(best_n_per, best_n_seg, best_rmse, best_result)
+        if target_best_result is not None:
+            history.append(
+                {
+                    "n_clusters": target_best_n_per,
+                    "n_segments": target_best_n_seg,
+                    "rmse": target_best_rmse,
+                }
             )
+            all_results.append(target_best_result)
 
-    return pareto_results
+            if target_best_rmse < best_rmse:
+                best_rmse = target_best_rmse
+                best_result = target_best_result
+                best_n_clusters = target_best_n_per
+                best_n_segments = target_best_n_seg
+
+    if best_result is None:
+        raise ValueError("No valid configuration found")
+
+    return TuningResult(
+        n_clusters=best_n_clusters,
+        n_segments=best_n_segments,
+        rmse=best_rmse,
+        history=history,
+        best_result=best_result,
+        all_results=all_results,
+    )
 
 
 def _find_pareto_front_steepest(
@@ -768,15 +902,33 @@ def _find_pareto_front_steepest(
     aggregate_opts: _AggregateOpts,
     show_progress: bool,
     n_workers: int,
-) -> list[TuningResult]:
+) -> TuningResult:
     """Find Pareto front using steepest descent exploration."""
-    pareto_results: list[TuningResult] = []
+    history: list[dict] = []
+    all_results: list[AggregationResult] = []
+    best_rmse = float("inf")
+    best_result: AggregationResult | None = None
+    best_n_clusters = 1
+    best_n_segments = 1
+    current_rmse = float("inf")
+
     n_clusters = 1
     n_segments = 1
 
     pbar = None
     if show_progress:
         pbar = tqdm.tqdm(total=max_timesteps, desc="Building Pareto front")
+
+    def add_result(n_c: int, n_s: int, rmse: float, result: AggregationResult) -> None:
+        nonlocal best_rmse, best_result, best_n_clusters, best_n_segments, current_rmse
+        history.append({"n_clusters": n_c, "n_segments": n_s, "rmse": rmse})
+        all_results.append(result)
+        current_rmse = rmse
+        if rmse < best_rmse:
+            best_rmse = rmse
+            best_result = result
+            best_n_clusters = n_c
+            best_n_segments = n_s
 
     def update_progress() -> None:
         if pbar is not None:
@@ -787,14 +939,12 @@ def _find_pareto_front_steepest(
         [(n_clusters, n_segments)],
         data,
         aggregate_opts,
-        n_workers=1,  # Single config, no parallelization needed
+        n_workers=1,
     )
     if results:
         _, _, rmse, agg_result = results[0]
         if agg_result is not None:
-            pareto_results.append(
-                _make_tuning_result(n_clusters, n_segments, rmse, agg_result)
-            )
+            add_result(n_clusters, n_segments, rmse, agg_result)
 
     # Steepest descent phase
     while (
@@ -803,7 +953,6 @@ def _find_pareto_front_steepest(
         and (n_segments + 1) * n_clusters <= max_timesteps
         and n_segments * (n_clusters + 1) <= max_timesteps
     ):
-        # Test both directions
         candidates = [
             (n_clusters, n_segments + 1),
             (n_clusters + 1, n_segments),
@@ -817,10 +966,6 @@ def _find_pareto_front_steepest(
         _, _, rmse_seg, result_seg = results[0]
         _, _, rmse_per, result_per = results[1]
 
-        # Calculate gradients
-        current_rmse = (
-            pareto_results[-1].optimal_rmse if pareto_results else float("inf")
-        )
         gradient_seg = (
             (current_rmse - rmse_seg) / n_clusters if rmse_seg < float("inf") else 0
         )
@@ -828,17 +973,12 @@ def _find_pareto_front_steepest(
             (current_rmse - rmse_per) / n_segments if rmse_per < float("inf") else 0
         )
 
-        # Follow steeper gradient
         if gradient_per > gradient_seg and result_per:
             n_clusters += 1
-            pareto_results.append(
-                _make_tuning_result(n_clusters, n_segments, rmse_per, result_per)
-            )
+            add_result(n_clusters, n_segments, rmse_per, result_per)
         elif result_seg:
             n_segments += 1
-            pareto_results.append(
-                _make_tuning_result(n_clusters, n_segments, rmse_seg, result_seg)
-            )
+            add_result(n_clusters, n_segments, rmse_seg, result_seg)
         else:
             break
 
@@ -857,11 +997,11 @@ def _find_pareto_front_steepest(
             aggregate_opts,
             n_workers,
         )
-        for n_per, n_seg, rmse, result in results:
+        for n_c, n_s, rmse, result in results:
             if result is not None:
-                pareto_results.append(_make_tuning_result(n_per, n_seg, rmse, result))
+                add_result(n_c, n_s, rmse, result)
             if pbar is not None:
-                pbar.update(n_seg * n_per - pbar.n)
+                pbar.update(n_s * n_c - pbar.n)
 
     # Continue with segments only
     remaining_segments = []
@@ -876,13 +1016,23 @@ def _find_pareto_front_steepest(
             aggregate_opts,
             n_workers,
         )
-        for n_per, n_seg, rmse, result in results:
+        for n_c, n_s, rmse, result in results:
             if result is not None:
-                pareto_results.append(_make_tuning_result(n_per, n_seg, rmse, result))
+                add_result(n_c, n_s, rmse, result)
             if pbar is not None:
-                pbar.update(n_seg * n_per - pbar.n)
+                pbar.update(n_s * n_c - pbar.n)
 
     if pbar is not None:
         pbar.close()
 
-    return pareto_results
+    if best_result is None:
+        raise ValueError("No valid configuration found")
+
+    return TuningResult(
+        n_clusters=best_n_clusters,
+        n_segments=best_n_segments,
+        rmse=best_rmse,
+        history=history,
+        best_result=best_result,
+        all_results=all_results,
+    )

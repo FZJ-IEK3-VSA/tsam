@@ -8,6 +8,7 @@ This section contains Jupyter notebook examples demonstrating various features o
    :maxdepth: 1
    :caption: Notebook Examples
 
+   examples_notebooks/aggregation_analysis
    examples_notebooks/aggregation_example
    examples_notebooks/aggregation_method_showcase
    examples_notebooks/aggregation_representation

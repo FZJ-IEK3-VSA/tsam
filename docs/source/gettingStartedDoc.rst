@@ -75,9 +75,9 @@ In case you do not know which number of segments or typical periods to choose, y
        ),
    )
 
-   print(f"Optimal configuration: {result.optimal_n_clusters} clusters, "
-         f"{result.optimal_n_segments} segments")
-   print(f"RMSE: {result.optimal_rmse:.4f}")
+   print(f"Optimal configuration: {result.n_clusters} clusters, "
+         f"{result.n_segments} segments")
+   print(f"RMSE: {result.rmse:.4f}")
 
    # Access the best aggregation result directly
    cluster_representatives = result.best_result.cluster_representatives
@@ -91,8 +91,8 @@ For exploring the full Pareto front of period/segment combinations:
    from tsam.tuning import find_pareto_front
 
    pareto = find_pareto_front(raw, max_timesteps=500)
-   for p in pareto:
-       print(f"{p.optimal_n_clusters}x{p.optimal_n_segments}: RMSE={p.optimal_rmse:.4f}")
+   for row in pareto.summary.itertuples():
+       print(f"{row.n_clusters}x{row.n_segments}: RMSE={row.rmse:.4f}")
 
 The scientific documentation of the methodology can be found here:
 `The Pareto-Optimal Temporal Aggregation of Energy System Models <https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342>`_
