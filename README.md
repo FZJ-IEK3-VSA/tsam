@@ -112,7 +112,7 @@ cluster_representatives = result.cluster_representatives
 print(f"RMSE: {result.accuracy.rmse.mean():.4f}")
 
 # Reconstruct the original time series from typical periods
-reconstructed = result.reconstruct()
+reconstructed = result.reconstructed
 
 # Save results
 cluster_representatives.to_csv('cluster_representatives.csv')
