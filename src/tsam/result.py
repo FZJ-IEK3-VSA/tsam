@@ -155,8 +155,13 @@ class AggregationResult:
 
     @cached_property
     def n_clusters(self) -> int:
-        """Number of clusters (typical periods)."""
-        return self.clustering.n_clusters
+        """Number of clusters (typical periods).
+
+        Derived from the cluster_representatives DataFrame index,
+        which is the authoritative source. Note: cluster_weights may
+        have more entries than actual cluster IDs due to tsam quirks.
+        """
+        return self.cluster_representatives.index.get_level_values(0).nunique()
 
     @cached_property
     def n_segments(self) -> int | None:
@@ -281,12 +286,15 @@ class AggregationResult:
     def period_index(self) -> list[int]:
         """Get the period (cluster) indices.
 
+        Returns the actual cluster IDs from the cluster_representatives
+        DataFrame, which is the authoritative source.
+
         Returns
         -------
         list[int]
-            List of indices [0, 1, ..., n_clusters-1].
+            Sorted list of cluster indices present in cluster_representatives.
         """
-        return list(range(self.n_clusters))
+        return sorted(self.cluster_representatives.index.get_level_values(0).unique())
 
     @property
     def assignments(self) -> pd.DataFrame:
