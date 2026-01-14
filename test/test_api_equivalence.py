@@ -525,7 +525,7 @@ class TestReconstructionEquivalence:
     """Test that reconstruction produces identical results."""
 
     def test_reconstruct_matches_old_predict(self, sample_data):
-        """Test that reconstruct() matches predictOriginalData()."""
+        """Test that reconstructed() matches predictOriginalData()."""
         # Old API
         old_agg = old_tsam.TimeSeriesAggregation(
             sample_data,
@@ -543,7 +543,7 @@ class TestReconstructionEquivalence:
             period_duration=24,
             cluster=ClusterConfig(method="hierarchical"),
         )
-        new_reconstructed = new_result.reconstruct()
+        new_reconstructed = new_result.reconstructed
 
         pd.testing.assert_frame_equal(
             old_reconstructed.reset_index(drop=True),

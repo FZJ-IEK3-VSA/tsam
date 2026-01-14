@@ -120,7 +120,7 @@ def aggregate(
         - cluster_assignments: Which cluster each original period belongs to
         - cluster_weights: Occurrence count per cluster
         - accuracy: RMSE, MAE metrics
-        - Methods: reconstruct(), to_dict()
+        - Methods: to_dict()
 
     Raises
     ------

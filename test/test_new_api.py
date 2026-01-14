@@ -68,10 +68,10 @@ class TestAggregate:
         # With append, we should have more periods
         assert result.n_clusters >= 8
 
-    def test_result_reconstruct(self, sample_data):
+    def test_result_reconstructed(self, sample_data):
         """Test that reconstruction works."""
         result = aggregate(sample_data, n_clusters=8)
-        reconstructed = result.reconstruct()
+        reconstructed = result.reconstructed
 
         assert reconstructed.shape == sample_data.shape
 

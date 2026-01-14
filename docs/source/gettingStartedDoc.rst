@@ -23,7 +23,7 @@ Run the aggregation using the new function-based API. Specify the number of typi
 
 .. code-block:: python
 
-   from tsam import aggregate, ClusterConfig, SegmentConfig
+   from tsam import ClusterConfig, SegmentConfig
 
    result = tsam.aggregate(
        raw,
@@ -47,7 +47,7 @@ Access the results:
    print(f"RMSE: {result.accuracy.rmse.mean():.4f}")
 
    # Reconstruct the original time series
-   reconstructed = result.reconstruct()
+   reconstructed = result.reconstructed
 
 Store the results as .csv file
 

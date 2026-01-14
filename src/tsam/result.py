@@ -238,30 +238,6 @@ class AggregationResult:
         """
         return self.original - self.reconstructed
 
-    def reconstruct(self) -> pd.DataFrame:
-        """Reconstruct the original time series from typical periods.
-
-        .. note::
-            Consider using the cached ``reconstructed`` property instead
-            for repeated access.
-
-        Returns a DataFrame with the same shape as the original input,
-        where each period is replaced by its assigned typical period.
-
-        Returns
-        -------
-        pd.DataFrame
-            Reconstructed time series.
-
-        Examples
-        --------
-        >>> result = tsam.aggregate(df, n_clusters=8)
-        >>> reconstructed = result.reconstruct()
-        >>> reconstructed.shape == df.shape
-        True
-        """
-        return cast("pd.DataFrame", self._aggregation.predictOriginalData())
-
     def to_dict(self) -> dict:
         """Export results as a dictionary for serialization.
 
