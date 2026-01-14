@@ -53,6 +53,7 @@ def aggregate(
     segments: SegmentConfig | None = None,
     extremes: ExtremeConfig | None = None,
     preserve_column_means: bool = True,
+    rescale_exclude_columns: list[str] | None = None,
     round_decimals: int | None = None,
     numerical_tolerance: float = 1e-13,
 ) -> AggregationResult:
@@ -101,6 +102,11 @@ def aggregate(
         Rescale typical periods so each column's weighted mean matches
         the original data's mean. Ensures total energy/load is preserved
         when weights represent occurrence counts.
+
+    rescale_exclude_columns : list[str], optional
+        Column names to exclude from rescaling when preserve_column_means=True.
+        Useful for binary/indicator columns (0/1 values) that should not be
+        rescaled. If None (default), all columns are rescaled.
 
     round_decimals : int, optional
         Round output values to this many decimal places.
@@ -250,6 +256,7 @@ def aggregate(
         segments=segments,
         extremes=extremes,
         preserve_column_means=preserve_column_means,
+        rescale_exclude_columns=rescale_exclude_columns,
         round_decimals=round_decimals,
         numerical_tolerance=numerical_tolerance,
     )
@@ -293,6 +300,7 @@ def aggregate(
         segment_config=segments,
         extremes_config=extremes,
         preserve_column_means=preserve_column_means,
+        rescale_exclude_columns=rescale_exclude_columns,
         timestep_duration=timestep_duration,
     )
 
@@ -331,6 +339,7 @@ def _build_clustering_result(
     segment_config: SegmentConfig | None,
     extremes_config: ExtremeConfig | None,
     preserve_column_means: bool,
+    rescale_exclude_columns: list[str] | None,
     timestep_duration: float | None,
 ) -> ClusteringResult:
     """Build ClusteringResult from a TimeSeriesAggregation object."""
@@ -387,6 +396,9 @@ def _build_clustering_result(
         segment_durations=segment_durations,
         segment_centers=segment_centers,
         preserve_column_means=preserve_column_means,
+        rescale_exclude_columns=tuple(rescale_exclude_columns)
+        if rescale_exclude_columns
+        else None,
         representation=representation,
         segment_representation=segment_representation,
         timestep_duration=timestep_duration,
@@ -406,6 +418,7 @@ def _build_old_params(
     segments: SegmentConfig | None,
     extremes: ExtremeConfig | None,
     preserve_column_means: bool,
+    rescale_exclude_columns: list[str] | None,
     round_decimals: int | None,
     numerical_tolerance: float,
     *,
@@ -422,6 +435,7 @@ def _build_old_params(
         "noTypicalPeriods": n_clusters,
         "hoursPerPeriod": period_duration,
         "rescaleClusterPeriods": preserve_column_means,
+        "rescaleExcludeColumns": rescale_exclude_columns,
         "numericalTolerance": numerical_tolerance,
     }
 

@@ -235,6 +235,9 @@ class ClusteringResult:
     preserve_column_means : bool, default True
         Whether to rescale typical periods to match original data means.
 
+    rescale_exclude_columns : tuple[str, ...], optional
+        Column names to exclude from rescaling. Useful for binary columns.
+
     representation : str, default "medoid"
         How to compute typical periods from cluster members.
 
@@ -280,6 +283,7 @@ class ClusteringResult:
     segment_durations: tuple[tuple[int, ...], ...] | None = None
     segment_centers: tuple[tuple[int, ...], ...] | None = None
     preserve_column_means: bool = True
+    rescale_exclude_columns: tuple[str, ...] | None = None
     representation: RepresentationMethod = "medoid"
     segment_representation: RepresentationMethod | None = None
     timestep_duration: float | None = None
@@ -411,6 +415,8 @@ class ClusteringResult:
             result["segment_durations"] = [list(s) for s in self.segment_durations]
         if self.segment_centers is not None:
             result["segment_centers"] = [list(s) for s in self.segment_centers]
+        if self.rescale_exclude_columns is not None:
+            result["rescale_exclude_columns"] = list(self.rescale_exclude_columns)
         if self.segment_representation is not None:
             result["segment_representation"] = self.segment_representation
         if self.timestep_duration is not None:
@@ -447,6 +453,8 @@ class ClusteringResult:
             )
         if "segment_centers" in data:
             kwargs["segment_centers"] = tuple(tuple(s) for s in data["segment_centers"])
+        if "rescale_exclude_columns" in data:
+            kwargs["rescale_exclude_columns"] = tuple(data["rescale_exclude_columns"])
         if "segment_representation" in data:
             kwargs["segment_representation"] = data["segment_representation"]
         if "timestep_duration" in data:
@@ -610,6 +618,9 @@ class ClusteringResult:
             segments=segments,
             extremes=None,
             preserve_column_means=self.preserve_column_means,
+            rescale_exclude_columns=list(self.rescale_exclude_columns)
+            if self.rescale_exclude_columns
+            else None,
             round_decimals=round_decimals,
             numerical_tolerance=numerical_tolerance,
             # Predefined values from this ClusteringResult
@@ -661,6 +672,9 @@ class ClusteringResult:
             segment_config=segments,
             extremes_config=self.extremes_config,
             preserve_column_means=self.preserve_column_means,
+            rescale_exclude_columns=list(self.rescale_exclude_columns)
+            if self.rescale_exclude_columns
+            else None,
             timestep_duration=effective_timestep_duration,
         )
 

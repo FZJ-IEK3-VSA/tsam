@@ -119,6 +119,7 @@ class TimeSeriesAggregation:
         sortValues=False,
         sameMean=False,
         rescaleClusterPeriods=True,
+        rescaleExcludeColumns=None,
         weightDict=None,
         segmentation=False,
         extremePeriodMethod="None",
@@ -308,6 +309,8 @@ class TimeSeriesAggregation:
         self.sameMean = sameMean
 
         self.rescaleClusterPeriods = rescaleClusterPeriods
+
+        self.rescaleExcludeColumns = rescaleExcludeColumns or []
 
         self.weightDict = weightDict
 
@@ -880,6 +883,9 @@ class TimeSeriesAggregation:
         ).T
         idx_wo_peak = np.delete(typicalPeriods.index, extremeClusterIdx)
         for column in self.timeSeries.columns:
+            # Skip columns excluded from rescaling
+            if column in self.rescaleExcludeColumns:
+                continue
             diff = 1
             sum_raw = self.normalizedPeriodlyProfiles[column].sum().sum()
             sum_peak = np.sum(
