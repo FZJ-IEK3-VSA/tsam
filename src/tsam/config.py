@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -555,6 +556,7 @@ class ClusteringResult:
         """
         # Import here to avoid circular imports
         from tsam.api import _build_old_params
+        from tsam.exceptions import LegacyAPIWarning
         from tsam.result import AccuracyMetrics, AggregationResult
         from tsam.timeseriesaggregation import TimeSeriesAggregation
 
@@ -631,9 +633,11 @@ class ClusteringResult:
             predef_segment_centers=self.segment_centers,
         )
 
-        # Run aggregation using old implementation
-        agg = TimeSeriesAggregation(**old_params)
-        cluster_representatives = agg.createTypicalPeriods()
+        # Run aggregation using old implementation (suppress deprecation warning)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", LegacyAPIWarning)
+            agg = TimeSeriesAggregation(**old_params)
+            cluster_representatives = agg.createTypicalPeriods()
 
         # Rename index levels for consistency with new API terminology
         cluster_representatives = cluster_representatives.rename_axis(
