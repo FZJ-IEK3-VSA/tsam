@@ -1,8 +1,10 @@
 import copy
+import warnings
 
 import numpy as np
 import tqdm
 
+from tsam.exceptions import LegacyAPIWarning
 from tsam.timeseriesaggregation import TimeSeriesAggregation
 
 
@@ -20,7 +22,15 @@ def getNoPeriodsForDataReduction(noRawTimeSteps, segmentsPerPeriod, dataReductio
     :type dataReduction: float
 
     :returns: **noTypicalPeriods** --  Number of typical periods that can be set.
+
+    .. deprecated::
+        This function is deprecated along with the HyperTunedAggregations class.
     """
+    warnings.warn(
+        "getNoPeriodsForDataReduction is deprecated along with HyperTunedAggregations.",
+        LegacyAPIWarning,
+        stacklevel=2,
+    )
     return int(np.floor(dataReduction * float(noRawTimeSteps) / segmentsPerPeriod))
 
 
@@ -38,7 +48,15 @@ def getNoSegmentsForDataReduction(noRawTimeSteps, typicalPeriods, dataReduction)
     :type dataReduction: float
 
     :returns: **segmentsPerPeriod** --  Number of segments per period that can be set.
+
+    .. deprecated::
+        This function is deprecated along with the HyperTunedAggregations class.
     """
+    warnings.warn(
+        "getNoSegmentsForDataReduction is deprecated along with HyperTunedAggregations.",
+        LegacyAPIWarning,
+        stacklevel=2,
+    )
     return int(np.floor(dataReduction * float(noRawTimeSteps) / typicalPeriods))
 
 
@@ -52,7 +70,17 @@ class HyperTunedAggregations:
 
         :param saveAggregationHistory: Defines if all aggregations that are created during the tuning and iterations shall be saved under self.aggregationHistory.
         :type saveAggregationHistory: boolean
+
+        .. deprecated::
+            Use :func:`tsam.tuning.find_optimal_combination` or
+            :func:`tsam.tuning.find_pareto_front` instead.
         """
+        warnings.warn(
+            "HyperTunedAggregations is deprecated. "
+            "Use tsam.tuning.find_optimal_combination() or tsam.tuning.find_pareto_front() instead.",
+            LegacyAPIWarning,
+            stacklevel=2,
+        )
         self.base_aggregation = base_aggregation
 
         if not isinstance(self.base_aggregation, TimeSeriesAggregation):

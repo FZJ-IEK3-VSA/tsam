@@ -7,6 +7,7 @@ import pandas as pd
 from sklearn import preprocessing
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
+from tsam.exceptions import LegacyAPIWarning
 from tsam.periodAggregation import aggregatePeriods
 from tsam.representations import representations
 
@@ -38,7 +39,15 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
                 candidate period
               - **timeIndex** (pandas Series index) -- is the modification of the original
                 timeseriesindex in case an integer multiple was created
+
+    .. deprecated::
+        Use :func:`tsam.unstack_to_periods` instead.
     """
+    warnings.warn(
+        "unstackToPeriods is deprecated. Use tsam.unstack_to_periods() instead.",
+        LegacyAPIWarning,
+        stacklevel=2,
+    )
     # init new grouped timeindex
     unstackedTimeSeries = timeSeries.copy()
 
@@ -278,6 +287,12 @@ class TimeSeriesAggregation:
             shall be added to the typical periods. optional, default: []
         :type addMeanMax: list
         """
+        warnings.warn(
+            "TimeSeriesAggregation is deprecated and will be removed in a future version. "
+            "Use tsam.aggregate() instead. See the migration guide in the documentation.",
+            LegacyAPIWarning,
+            stacklevel=2,
+        )
         if addMeanMin is None:
             addMeanMin = []
         if addMeanMax is None:
@@ -632,9 +647,11 @@ class TimeSeriesAggregation:
                 self.normalizedTimeSeries[column] * self.weightDict[column]
             )
 
-        self.normalizedPeriodlyProfiles, self.timeIndex = unstackToPeriods(
-            self.normalizedTimeSeries, self.timeStepsPerPeriod
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", LegacyAPIWarning)
+            self.normalizedPeriodlyProfiles, self.timeIndex = unstackToPeriods(
+                self.normalizedTimeSeries, self.timeStepsPerPeriod
+            )
 
         # check if no NaN is in the resulting profiles
         if self.normalizedPeriodlyProfiles.isnull().values.any():

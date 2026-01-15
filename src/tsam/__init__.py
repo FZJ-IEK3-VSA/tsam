@@ -54,6 +54,7 @@ def __getattr__(name: str):
 
 
 from tsam.config import ClusterConfig, ClusteringResult, ExtremeConfig, SegmentConfig
+from tsam.exceptions import LegacyAPIWarning
 from tsam.result import AccuracyMetrics, AggregationResult
 
 # Legacy imports for backward compatibility
@@ -67,6 +68,7 @@ __all__ = [
     "ClusterConfig",
     "ClusteringResult",
     "ExtremeConfig",
+    "LegacyAPIWarning",
     "SegmentConfig",
     "TimeSeriesAggregation",
     "aggregate",
