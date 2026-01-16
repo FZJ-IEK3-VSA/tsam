@@ -985,20 +985,15 @@ class TimeSeriesAggregation:
         Runs the clustering algorithms for the sorted profiles within the period
         instead of the original profiles. (Duration curve clustering)
         """
-        # initialize
-        normalizedSortedPeriodlyProfiles = copy.deepcopy(
-            self.normalizedPeriodlyProfiles
-        )
-        for column in self.timeSeries.columns:
-            # sort each period individually
-            df = normalizedSortedPeriodlyProfiles[column]
-            values = df.values
-            values.sort(axis=1)
-            values = values[:, ::-1]
-            normalizedSortedPeriodlyProfiles[column] = pd.DataFrame(
-                values, df.index, df.columns
-            )
-        sortedClusterValues = normalizedSortedPeriodlyProfiles.values
+        # Vectorized sort: reshape to 3D (periods x columns x timesteps), sort, reshape back
+        values = self.normalizedPeriodlyProfiles.values.copy()
+        n_periods, n_total = values.shape
+        n_cols = len(self.timeSeries.columns)
+        n_timesteps = n_total // n_cols
+
+        # Sort each period's timesteps descending for all columns at once
+        values_3d = values.reshape(n_periods, n_cols, n_timesteps)
+        sortedClusterValues = (-np.sort(-values_3d, axis=2)).reshape(n_periods, -1)
 
         (
             _altClusterCenters,
