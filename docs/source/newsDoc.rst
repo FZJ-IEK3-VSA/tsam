@@ -81,6 +81,17 @@ Improvements
 * Fixed ``predictOriginalData()`` denormalization when using ``sameMean=True`` with segmentation
 * Lazy loading of optional modules (``plot``, ``tuning``) to reduce import time
 
+Performance
+===========
+
+* **35x faster workflow**: Vectorized ``predictOriginalData()`` by replacing a per-period loop with batch pandas operations.
+
+  ==================================  ==========  ==========  =========
+  Benchmark (8760 hours, 4 columns)   Before      After       Speedup
+  ==================================  ==========  ==========  =========
+  Full workflow with accuracy         1223 ms     35 ms       **35x**
+  ==================================  ==========  ==========  =========
+
 Deprecations
 ============
 

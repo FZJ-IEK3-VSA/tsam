@@ -1308,26 +1308,19 @@ class TimeSeriesAggregation:
         if not hasattr(self, "_clusterOrder"):
             self.createTypicalPeriods()
 
-        # list up typical periods according to their order of occurrence using the _clusterOrder.
-        new_data = []
-        for label in self._clusterOrder:
-            # if segmentation is used, use the segmented typical periods with predicted time steps with the same number
-            # of time steps as unsegmented typical periods
-            if self.segmentation:
-                new_data.append(
-                    self.predictedSegmentedNormalizedTypicalPeriods.loc[label, :]
-                    .unstack()
-                    .values
-                )
-            else:
-                # new_data.append(self.clusterPeriods[label])
-                new_data.append(
-                    self.normalizedTypicalPeriods.loc[label, :].unstack().values
-                )
+        # Select typical periods source based on segmentation
+        if self.segmentation:
+            typical = self.predictedSegmentedNormalizedTypicalPeriods
+        else:
+            typical = self.normalizedTypicalPeriods
 
-        # back in matrix
+        # Unstack once, then use vectorized indexing to select periods by cluster order
+        typical_unstacked = typical.unstack()
+        reconstructed = typical_unstacked.loc[list(self._clusterOrder)].values
+
+        # Back in matrix form
         clustered_data_df = pd.DataFrame(
-            new_data,
+            reconstructed,
             columns=self.normalizedPeriodlyProfiles.columns,
             index=self.normalizedPeriodlyProfiles.index,
         )
