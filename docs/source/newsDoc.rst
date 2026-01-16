@@ -84,13 +84,34 @@ Improvements
 Performance
 ===========
 
-* **35x faster workflow**: Vectorized ``predictOriginalData()`` by replacing a per-period loop with batch pandas operations.
+Multiple vectorization optimizations replace pandas loops with numpy array operations, significantly improving performance for datasets with many columns.
 
-  ==================================  ==========  ==========  =========
-  Benchmark (8760 hours, 4 columns)   Before      After       Speedup
-  ==================================  ==========  ==========  =========
-  Full workflow with accuracy         1223 ms     35 ms       **35x**
-  ==================================  ==========  ==========  =========
+**Function-level optimizations:**
+
+* **``predictOriginalData()``** (reconstruction step, always used):
+  Replaced per-period ``.unstack()`` loop with single vectorized indexing.
+  Function speedup: ~650ms → ~2ms (**290x**).
+
+* **``_rescaleClusterPeriods()``** (only when ``preserve_column_means=True``):
+  Replaced pandas MultiIndex operations with numpy 3D array operations.
+  Function speedup: ~400ms → ~36ms (**11x**).
+
+* **``_clusterSortedPeriods()``** (only when ``use_duration_curves=True``):
+  Replaced per-column DataFrame sorting loop with numpy 3D reshape + sort.
+  Sorting step speedup: ~291ms → ~25ms (**12x**).
+
+* **``durationRepresentation()``** (only when ``representation='distribution'``):
+  Replaced nested loops with pandas MultiIndex indexing with numpy 3D operations.
+  Function speedup: ~220ms → ~26ms (**8x**).
+
+**Combined workflow benchmarks** (8760 hours, 4 columns):
+
+  =============================================  ==========  ==========  =========
+  Workflow                                       Before      After       Speedup
+  =============================================  ==========  ==========  =========
+  Basic (cluster + reconstruct)                  1244 ms     20 ms       **64x**
+  All options combined                           1268 ms     29 ms       **45x**
+  =============================================  ==========  ==========  =========
 
 Deprecations
 ============
