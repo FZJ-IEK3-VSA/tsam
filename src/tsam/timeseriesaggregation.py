@@ -891,27 +891,37 @@ class TimeSeriesAggregation:
         self._rescaleDeviations = {}
 
         weightingVec = pd.Series(self._clusterPeriodNoOccur).values
-        typicalPeriods = pd.concat(
-            [
-                pd.Series(s, index=self.normalizedPeriodlyProfiles.columns)
-                for s in self.clusterPeriods
-            ],
-            axis=1,
-        ).T
-        idx_wo_peak = np.delete(typicalPeriods.index, extremeClusterIdx)
-        for column in self.timeSeries.columns:
+        columns = list(self.timeSeries.columns)
+        n_clusters = len(self.clusterPeriods)
+        n_cols = len(columns)
+        n_timesteps = self.timeStepsPerPeriod
+
+        # Convert to 3D numpy array for fast operations: (n_clusters, n_cols, n_timesteps)
+        arr = np.array(self.clusterPeriods).reshape(n_clusters, n_cols, n_timesteps)
+
+        # Indices for non-extreme clusters
+        idx_wo_peak = np.delete(np.arange(n_clusters), extremeClusterIdx)
+        extremeClusterIdx_arr = np.array(extremeClusterIdx, dtype=int)
+
+        for ci, column in enumerate(columns):
             # Skip columns excluded from rescaling
             if column in self.rescaleExcludeColumns:
                 continue
-            diff = 1
+
+            col_data = arr[:, ci, :]  # (n_clusters, n_timesteps)
             sum_raw = self.normalizedPeriodlyProfiles[column].sum().sum()
-            sum_peak = np.sum(
-                weightingVec[extremeClusterIdx]
-                * typicalPeriods[column].loc[extremeClusterIdx, :].sum(axis=1)
-            )
+
+            # Sum of extreme periods (weighted)
+            if len(extremeClusterIdx_arr) > 0:
+                sum_peak = np.sum(
+                    weightingVec[extremeClusterIdx_arr]
+                    * col_data[extremeClusterIdx_arr, :].sum(axis=1)
+                )
+            else:
+                sum_peak = 0.0
+
             sum_clu_wo_peak = np.sum(
-                weightingVec[idx_wo_peak]
-                * typicalPeriods[column].loc[idx_wo_peak, :].sum(axis=1)
+                weightingVec[idx_wo_peak] * col_data[idx_wo_peak, :].sum(axis=1)
             )
 
             # define the upper scale dependent on the weighting of the series
@@ -931,27 +941,23 @@ class TimeSeriesAggregation:
             # use while loop to rescale cluster periods
             a = 0
             while diff > sum_raw * TOLERANCE and a < MAX_ITERATOR:
-                # rescale values
-                typicalPeriods.loc[idx_wo_peak, column] = (
-                    typicalPeriods[column].loc[idx_wo_peak, :].values
-                    * (sum_raw - sum_peak)
-                    / sum_clu_wo_peak
-                )
+                # rescale values (only non-extreme clusters)
+                arr[idx_wo_peak, ci, :] *= (sum_raw - sum_peak) / sum_clu_wo_peak
 
-                # reset values higher than the upper sacle or less than zero
-                typicalPeriods[column] = typicalPeriods[column].clip(
-                    lower=0, upper=scale_ub
-                )
+                # reset values higher than the upper scale or less than zero
+                arr[:, ci, :] = np.clip(arr[:, ci, :], 0, scale_ub)
 
-                typicalPeriods[column] = typicalPeriods[column].fillna(0.0)
+                # Handle NaN (replace with 0)
+                np.nan_to_num(arr[:, ci, :], copy=False, nan=0.0)
 
                 # calc new sum and new diff to orig data
+                col_data = arr[:, ci, :]
                 sum_clu_wo_peak = np.sum(
-                    weightingVec[idx_wo_peak]
-                    * typicalPeriods[column].loc[idx_wo_peak, :].sum(axis=1)
+                    weightingVec[idx_wo_peak] * col_data[idx_wo_peak, :].sum(axis=1)
                 )
                 diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
                 a += 1
+
             # Calculate and store final deviation
             deviation_pct = (diff / sum_raw) * 100 if sum_raw != 0 else 0.0
             converged = a < MAX_ITERATOR
@@ -970,7 +976,9 @@ class TimeSeriesAggregation:
                     + str(round(deviation_pct, 2))
                     + "%"
                 )
-        return typicalPeriods.values
+
+        # Reshape back to 2D: (n_clusters, n_cols * n_timesteps)
+        return arr.reshape(n_clusters, -1)
 
     def _clusterSortedPeriods(self, candidates, n_init=20):
         """
