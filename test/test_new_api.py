@@ -659,14 +659,14 @@ class TestDurationParsing:
             result_float.cluster_representatives,
         )
 
-    def test_timestep_duration_string(self, sample_data):
-        """Test that timestep_duration accepts pandas Timedelta strings."""
+    def test_temporal_resolution_string(self, sample_data):
+        """Test that temporal_resolution accepts pandas Timedelta strings."""
         # Should be equivalent: 1.0 hours and '1h'
         result_float = aggregate(
-            sample_data, n_clusters=8, period_duration=24, timestep_duration=1.0
+            sample_data, n_clusters=8, period_duration=24, temporal_resolution=1.0
         )
         result_str = aggregate(
-            sample_data, n_clusters=8, period_duration="24h", timestep_duration="1h"
+            sample_data, n_clusters=8, period_duration="24h", temporal_resolution="1h"
         )
 
         pd.testing.assert_frame_equal(

@@ -37,7 +37,7 @@ class _AggregateOpts(TypedDict):
     """Internal TypedDict for aggregate options passed through tuning functions."""
 
     period_duration: float
-    timestep_duration: float
+    temporal_resolution: float
     cluster: ClusterConfig
     segment_representation: RepresentationMethod
     extremes: ExtremeConfig | None
@@ -86,7 +86,7 @@ def _test_single_config_file(
             data,
             n_clusters=n_clusters,
             period_duration=opts["period_duration"],
-            timestep_duration=opts["timestep_duration"],
+            temporal_resolution=opts["temporal_resolution"],
             cluster=cluster,
             segments=segments,
             extremes=extremes,
@@ -107,8 +107,8 @@ def _test_single_config_file(
         return (n_clusters, n_segments, float("inf"), None)
 
 
-def _infer_timestep_duration(data: pd.DataFrame) -> float:
-    """Infer time timestep_duration in hours from DataFrame datetime index."""
+def _infer_temporal_resolution(data: pd.DataFrame) -> float:
+    """Infer time temporal_resolution in hours from DataFrame datetime index."""
     if len(data) < 2:
         return 1.0  # Default to hourly
     try:
@@ -143,7 +143,7 @@ def _parallel_context(
     # Serialize configs to dicts for pickling
     serialized_opts = {
         "period_duration": aggregate_opts["period_duration"],
-        "timestep_duration": aggregate_opts["timestep_duration"],
+        "temporal_resolution": aggregate_opts["temporal_resolution"],
         "cluster_dict": asdict(aggregate_opts["cluster"]),
         "segment_representation": aggregate_opts["segment_representation"],
         "extremes_dict": (
@@ -176,7 +176,7 @@ def _test_configs(
         configs: List of (n_clusters, n_segments) tuples to test.
         data: Input time series data.
         aggregate_opts: Dict with fixed aggregate parameters (period_duration,
-            timestep_duration, cluster, segment_representation, extremes,
+            temporal_resolution, cluster, segment_representation, extremes,
             preserve_column_means, round_decimals, numerical_tolerance).
         n_workers: Number of parallel workers (1 for sequential).
         show_progress: Whether to show progress bar.
@@ -226,7 +226,7 @@ def _test_configs(
                     data,
                     n_clusters=n_per,
                     period_duration=aggregate_opts["period_duration"],
-                    timestep_duration=aggregate_opts["timestep_duration"],
+                    temporal_resolution=aggregate_opts["temporal_resolution"],
                     cluster=aggregate_opts["cluster"],
                     segments=segments,
                     extremes=aggregate_opts["extremes"],
@@ -472,7 +472,7 @@ def find_optimal_combination(
     data_reduction: float,
     *,
     period_duration: int | float | str = 24,
-    timestep_duration: float | str | None = None,
+    temporal_resolution: float | str | None = None,
     cluster: ClusterConfig | None = None,
     segment_representation: RepresentationMethod = "mean",
     extremes: ExtremeConfig | None = None,
@@ -499,7 +499,7 @@ def find_optimal_combination(
         Length of each period. Accepts:
         - int/float: hours (e.g., 24 for daily, 168 for weekly)
         - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
-    timestep_duration : float or str, optional
+    temporal_resolution : float or str, optional
         Time resolution of input data. Accepts:
         - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
         - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
@@ -547,19 +547,19 @@ def find_optimal_combination(
 
     # Parse duration parameters to hours
     period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
-    timestep_duration_hours = (
-        _parse_duration_hours(timestep_duration, "timestep_duration")
-        if timestep_duration is not None
-        else _infer_timestep_duration(data)
+    temporal_resolution_hours = (
+        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        if temporal_resolution is not None
+        else _infer_temporal_resolution(data)
     )
 
-    if timestep_duration_hours <= 0:
+    if temporal_resolution_hours <= 0:
         raise ValueError(
-            f"timestep_duration must be positive, got {timestep_duration_hours}"
+            f"temporal_resolution must be positive, got {temporal_resolution_hours}"
         )
 
     n_timesteps = len(data)
-    timesteps_per_period = int(period_duration_hours / timestep_duration_hours)
+    timesteps_per_period = int(period_duration_hours / temporal_resolution_hours)
 
     max_periods = n_timesteps // timesteps_per_period
     max_segments = timesteps_per_period
@@ -595,7 +595,7 @@ def find_optimal_combination(
     # Bundle fixed aggregate parameters
     aggregate_opts: _AggregateOpts = {
         "period_duration": period_duration_hours,
-        "timestep_duration": timestep_duration_hours,
+        "temporal_resolution": temporal_resolution_hours,
         "cluster": cluster,
         "segment_representation": segment_representation,
         "extremes": extremes,
@@ -651,7 +651,7 @@ def find_pareto_front(
     data: pd.DataFrame,
     *,
     period_duration: int | float | str = 24,
-    timestep_duration: float | str | None = None,
+    temporal_resolution: float | str | None = None,
     max_timesteps: int | None = None,
     timesteps: Sequence[int] | None = None,
     cluster: ClusterConfig | None = None,
@@ -677,7 +677,7 @@ def find_pareto_front(
         Length of each period. Accepts:
         - int/float: hours (e.g., 24 for daily, 168 for weekly)
         - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
-    timestep_duration : float or str, optional
+    temporal_resolution : float or str, optional
         Time resolution of input data. Accepts:
         - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
         - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
@@ -741,19 +741,19 @@ def find_pareto_front(
 
     # Parse duration parameters to hours
     period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
-    timestep_duration_hours = (
-        _parse_duration_hours(timestep_duration, "timestep_duration")
-        if timestep_duration is not None
-        else _infer_timestep_duration(data)
+    temporal_resolution_hours = (
+        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        if temporal_resolution is not None
+        else _infer_temporal_resolution(data)
     )
 
-    if timestep_duration_hours <= 0:
+    if temporal_resolution_hours <= 0:
         raise ValueError(
-            f"timestep_duration must be positive, got {timestep_duration_hours}"
+            f"temporal_resolution must be positive, got {temporal_resolution_hours}"
         )
 
     n_timesteps = len(data)
-    timesteps_per_period = int(period_duration_hours / timestep_duration_hours)
+    timesteps_per_period = int(period_duration_hours / temporal_resolution_hours)
 
     max_periods = n_timesteps // timesteps_per_period
     max_segments = timesteps_per_period
@@ -764,7 +764,7 @@ def find_pareto_front(
     # Bundle fixed aggregate parameters
     aggregate_opts: _AggregateOpts = {
         "period_duration": period_duration_hours,
-        "timestep_duration": timestep_duration_hours,
+        "temporal_resolution": temporal_resolution_hours,
         "cluster": cluster,
         "segment_representation": segment_representation,
         "extremes": extremes,

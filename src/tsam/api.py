@@ -50,7 +50,7 @@ def aggregate(
     n_clusters: int,
     *,
     period_duration: int | float | str = 24,
-    timestep_duration: float | str | None = None,
+    temporal_resolution: float | str | None = None,
     cluster: ClusterConfig | None = None,
     segments: SegmentConfig | None = None,
     extremes: ExtremeConfig | None = None,
@@ -81,7 +81,7 @@ def aggregate(
         - int/float: hours (e.g., 24 for daily, 168 for weekly)
         - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
 
-    timestep_duration : float or str, optional
+    temporal_resolution : float or str, optional
         Time resolution of input data. Accepts:
         - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
         - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
@@ -196,13 +196,15 @@ def aggregate(
     if period_duration <= 0:
         raise ValueError(f"period_duration must be positive, got {period_duration}")
 
-    timestep_duration = (
-        _parse_duration_hours(timestep_duration, "timestep_duration")
-        if timestep_duration is not None
+    temporal_resolution = (
+        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        if temporal_resolution is not None
         else None
     )
-    if timestep_duration is not None and timestep_duration <= 0:
-        raise ValueError(f"timestep_duration must be positive, got {timestep_duration}")
+    if temporal_resolution is not None and temporal_resolution <= 0:
+        raise ValueError(
+            f"temporal_resolution must be positive, got {temporal_resolution}"
+        )
 
     # Apply defaults
     if cluster is None:
@@ -211,8 +213,8 @@ def aggregate(
     # Validate segments against data
     if segments is not None:
         # Calculate timesteps per period
-        if timestep_duration is not None:
-            timesteps_per_period = int(period_duration / timestep_duration)
+        if temporal_resolution is not None:
+            timesteps_per_period = int(period_duration / temporal_resolution)
         else:
             # Infer resolution from data index
             if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
@@ -253,7 +255,7 @@ def aggregate(
         data=data,
         n_clusters=n_clusters,
         period_duration=period_duration,
-        timestep_duration=timestep_duration,
+        temporal_resolution=temporal_resolution,
         cluster=cluster,
         segments=segments,
         extremes=extremes,
@@ -305,7 +307,7 @@ def aggregate(
         extremes_config=extremes,
         preserve_column_means=preserve_column_means,
         rescale_exclude_columns=rescale_exclude_columns,
-        timestep_duration=timestep_duration,
+        temporal_resolution=temporal_resolution,
     )
 
     # Compute segment_durations as tuple of tuples
@@ -344,7 +346,7 @@ def _build_clustering_result(
     extremes_config: ExtremeConfig | None,
     preserve_column_means: bool,
     rescale_exclude_columns: list[str] | None,
-    timestep_duration: float | None,
+    temporal_resolution: float | None,
 ) -> ClusteringResult:
     """Build ClusteringResult from a TimeSeriesAggregation object."""
     # Get cluster centers (convert to Python ints for JSON serialization)
@@ -405,7 +407,7 @@ def _build_clustering_result(
         else None,
         representation=representation,
         segment_representation=segment_representation,
-        timestep_duration=timestep_duration,
+        temporal_resolution=temporal_resolution,
         n_timesteps_per_period=agg.timeStepsPerPeriod,
         cluster_config=cluster_config,
         segment_config=segment_config,
@@ -417,7 +419,7 @@ def _build_old_params(
     data: pd.DataFrame,
     n_clusters: int,
     period_duration: float,
-    timestep_duration: float | None,
+    temporal_resolution: float | None,
     cluster: ClusterConfig,
     segments: SegmentConfig | None,
     extremes: ExtremeConfig | None,
@@ -443,8 +445,8 @@ def _build_old_params(
         "numericalTolerance": numerical_tolerance,
     }
 
-    if timestep_duration is not None:
-        params["resolution"] = timestep_duration
+    if temporal_resolution is not None:
+        params["resolution"] = temporal_resolution
 
     if round_decimals is not None:
         params["roundOutput"] = round_decimals

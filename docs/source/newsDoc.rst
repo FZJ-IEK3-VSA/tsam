@@ -21,7 +21,7 @@ Breaking Changes
   ==================================  ======================================================
   ``noTypicalPeriods``                ``n_clusters``
   ``hoursPerPeriod``                  ``period_duration``
-  ``resolution``                      ``timestep_duration``
+  ``resolution``                      ``temporal_resolution``
   ``clusterMethod``                   ``cluster=ClusterConfig(method=...)``
   ``representationMethod``            ``cluster=ClusterConfig(representation=...)``
   ``segmentation`` + ``noSegments``   ``segments=SegmentConfig(n_segments=...)``

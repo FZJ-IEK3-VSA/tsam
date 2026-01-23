@@ -151,7 +151,7 @@ Key concepts used in the tsam API:
      - Number of segments per period. If not specified, equals timesteps per period (no segmentation).
    * - ``period_duration``
      - Length of each period. Accepts int/float (hours) or pandas Timedelta strings (e.g., ``24``, ``'24h'``, ``'1d'``).
-   * - ``timestep_duration``
+   * - ``temporal_resolution``
      - Time resolution of input data. Accepts float (hours) or pandas Timedelta strings (e.g., ``1.0``, ``'1h'``, ``'15min'``). If not provided, inferred from the datetime index.
    * - ``cluster_assignments``
      - Array mapping each original period to its cluster index (0 to n_clusters-1).
