@@ -1,0 +1,38 @@
+{
+  "config": {
+    "method": "hierarchical",
+    "representation": "medoid",
+    "n_clusters": 8,
+    "n_segments": 12,
+    "extreme_method": "append",
+    "extreme_columns": [
+      "Load"
+    ]
+  },
+  "cluster_weights": {
+    "0": 48,
+    "1": 58,
+    "2": 52,
+    "3": 63,
+    "4": 45,
+    "5": 28,
+    "6": 31,
+    "7": 39,
+    "8": 1
+  },
+  "accuracy": {
+    "rmse": {
+      "GHI": 0.0971368567110407,
+      "Load": 0.1023598286189656,
+      "T": 0.08917038915344941,
+      "Wind": 0.14287123454817457
+    },
+    "mae": {
+      "GHI": 0.05278889216742946,
+      "Load": 0.07369932246558429,
+      "T": 0.06965775578754382,
+      "Wind": 0.11189397083180914
+    }
+  },
+  "n_original_periods": 365
+}

@@ -350,9 +350,26 @@ def _build_clustering_result(
 ) -> ClusteringResult:
     """Build ClusteringResult from a TimeSeriesAggregation object."""
     # Get cluster centers (convert to Python ints for JSON serialization)
+    # Handle extreme periods based on method:
+    # - new_cluster/append: append extreme period indices (creates additional clusters)
+    # - replace: keep original cluster centers
+    #   Note: replace creates a hybrid representation (some columns from medoid, some
+    #   from extreme period) that cannot be perfectly reproduced during transfer
     cluster_centers: tuple[int, ...] | None = None
     if agg.clusterCenterIndices is not None:
-        cluster_centers = tuple(int(x) for x in agg.clusterCenterIndices)
+        center_indices = [int(x) for x in agg.clusterCenterIndices]
+
+        if (
+            hasattr(agg, "extremePeriods")
+            and agg.extremePeriods
+            and extremes_config is not None
+            and extremes_config.method in ("new_cluster", "append")
+        ):
+            # Add extreme period indices as new cluster centers
+            for period_type in agg.extremePeriods:
+                center_indices.append(int(agg.extremePeriods[period_type]["stepNo"]))
+
+        cluster_centers = tuple(center_indices)
 
     # Compute segment data if segmentation was used
     segment_assignments: tuple[tuple[int, ...], ...] | None = None
@@ -394,6 +411,11 @@ def _build_clustering_result(
     representation = cluster_config.get_representation()
     segment_representation = segment_config.representation if segment_config else None
 
+    # Extract extreme cluster indices if extremes were used
+    extreme_cluster_indices: tuple[int, ...] | None = None
+    if hasattr(agg, "extremeClusterIdx") and agg.extremeClusterIdx:
+        extreme_cluster_indices = tuple(int(x) for x in agg.extremeClusterIdx)
+
     return ClusteringResult(
         period_duration=agg.hoursPerPeriod,
         cluster_assignments=tuple(int(x) for x in agg.clusterOrder),
@@ -409,6 +431,7 @@ def _build_clustering_result(
         segment_representation=segment_representation,
         temporal_resolution=temporal_resolution,
         n_timesteps_per_period=agg.timeStepsPerPeriod,
+        extreme_cluster_indices=extreme_cluster_indices,
         cluster_config=cluster_config,
         segment_config=segment_config,
         extremes_config=extremes_config,
@@ -431,6 +454,7 @@ def _build_old_params(
     # Predefined parameters (used internally by ClusteringResult.apply())
     predef_cluster_assignments: tuple[int, ...] | None = None,
     predef_cluster_centers: tuple[int, ...] | None = None,
+    predef_extreme_cluster_indices: tuple[int, ...] | None = None,
     predef_segment_assignments: tuple[tuple[int, ...], ...] | None = None,
     predef_segment_durations: tuple[tuple[int, ...], ...] | None = None,
     predef_segment_centers: tuple[tuple[int, ...], ...] | None = None,
@@ -481,6 +505,9 @@ def _build_old_params(
 
     if predef_cluster_centers is not None:
         params["predefClusterCenterIndices"] = list(predef_cluster_centers)
+
+    if predef_extreme_cluster_indices is not None:
+        params["predefExtremeClusterIdx"] = list(predef_extreme_cluster_indices)
 
     # Segmentation config
     if segments is not None:

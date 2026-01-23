@@ -79,7 +79,18 @@ Improvements
 * Better handling of extreme periods with ``n_clusters`` edge cases
 * Fixed rescaling with segmentation (was applying rescaling twice)
 * Fixed ``predictOriginalData()`` denormalization when using ``sameMean=True`` with segmentation
+* Fixed non-deterministic sorting in duration representation by using stable sort, ensuring reproducible results across environments
 * Lazy loading of optional modules (``plot``, ``tuning``) to reduce import time
+
+Known Limitations
+=================
+
+* **Clustering transfer with 'replace' extreme method**: The 'replace' extreme method
+  creates a hybrid cluster representation where some columns use the medoid values
+  and others use the extreme period values. This hybrid representation cannot be
+  perfectly reproduced during transfer via ``ClusteringResult.apply()``. Warnings
+  are issued when saving (``to_json()``) or applying such a clustering. For exact
+  transfer with extreme periods, use 'append' or 'new_cluster' extreme methods instead.
 
 Performance
 ===========

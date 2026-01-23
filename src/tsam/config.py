@@ -288,6 +288,7 @@ class ClusteringResult:
     representation: RepresentationMethod = "medoid"
     segment_representation: RepresentationMethod | None = None
     temporal_resolution: float | None = None
+    extreme_cluster_indices: tuple[int, ...] | None = None
 
     # === Reference fields (for documentation, not used by apply()) ===
     cluster_config: ClusterConfig | None = None
@@ -422,6 +423,8 @@ class ClusteringResult:
             result["segment_representation"] = self.segment_representation
         if self.temporal_resolution is not None:
             result["temporal_resolution"] = self.temporal_resolution
+        if self.extreme_cluster_indices is not None:
+            result["extreme_cluster_indices"] = list(self.extreme_cluster_indices)
         # Reference fields (optional, for documentation)
         if self.cluster_config is not None:
             result["cluster_config"] = self.cluster_config.to_dict()
@@ -460,6 +463,8 @@ class ClusteringResult:
             kwargs["segment_representation"] = data["segment_representation"]
         if "temporal_resolution" in data:
             kwargs["temporal_resolution"] = data["temporal_resolution"]
+        if "extreme_cluster_indices" in data:
+            kwargs["extreme_cluster_indices"] = tuple(data["extreme_cluster_indices"])
         # Reference fields
         if "cluster_config" in data:
             kwargs["cluster_config"] = ClusterConfig.from_dict(data["cluster_config"])
@@ -477,11 +482,32 @@ class ClusteringResult:
         path : str
             File path to save to.
 
+        Notes
+        -----
+        If the clustering used the 'replace' extreme method, a warning will be
+        issued because the saved clustering cannot be perfectly reproduced when
+        loaded and applied later. See :meth:`apply` for details.
+
         Examples
         --------
         >>> result.clustering.to_json("clustering.json")
         """
         import json
+
+        # Warn if using replace extreme method (transfer is not exact)
+        if (
+            self.extremes_config is not None
+            and self.extremes_config.method == "replace"
+        ):
+            warnings.warn(
+                "Saving a clustering that used the 'replace' extreme method. "
+                "The 'replace' method creates a hybrid cluster representation "
+                "(some columns from the medoid, some from the extreme period) that "
+                "cannot be perfectly reproduced when loaded and applied later. "
+                "For exact transfer, use 'append' or 'new_cluster' extreme methods.",
+                UserWarning,
+                stacklevel=2,
+            )
 
         with open(path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
@@ -544,6 +570,19 @@ class ClusteringResult:
         AggregationResult
             Aggregation result using this clustering.
 
+        Notes
+        -----
+        **Extreme period transfer limitations:**
+
+        The 'replace' extreme method creates a hybrid cluster representation where
+        some columns use the medoid values and others use the extreme period values.
+        This hybrid representation cannot be perfectly reproduced during transfer.
+        When applying a clustering that used 'replace', a warning will be issued
+        and the transferred result will use the medoid representation for all columns.
+
+        For exact transfer with extreme periods, use 'append' or 'new_cluster'
+        extreme methods instead.
+
         Examples
         --------
         >>> # Cluster on wind data, apply to full dataset
@@ -559,6 +598,21 @@ class ClusteringResult:
         from tsam.exceptions import LegacyAPIWarning
         from tsam.result import AccuracyMetrics, AggregationResult
         from tsam.timeseriesaggregation import TimeSeriesAggregation
+
+        # Warn if using replace extreme method (transfer is not exact)
+        if (
+            self.extremes_config is not None
+            and self.extremes_config.method == "replace"
+        ):
+            warnings.warn(
+                "The 'replace' extreme method creates a hybrid cluster representation "
+                "(some columns from the medoid, some from the extreme period) that cannot "
+                "be perfectly reproduced during transfer. The transferred result will use "
+                "the medoid representation for all columns instead of the hybrid values. "
+                "For exact transfer, use 'append' or 'new_cluster' extreme methods.",
+                UserWarning,
+                stacklevel=2,
+            )
 
         # Use stored temporal_resolution if not provided
         effective_temporal_resolution = (
@@ -611,6 +665,9 @@ class ClusteringResult:
             )
 
         # Build old API parameters, passing predefined values directly
+        # Note: Don't pass extremes config - extreme clusters are handled via
+        # extreme_cluster_indices and representations are computed from
+        # the periods assigned to those clusters in cluster_assignments
         old_params = _build_old_params(
             data=data,
             n_clusters=self.n_clusters,
@@ -628,6 +685,7 @@ class ClusteringResult:
             # Predefined values from this ClusteringResult
             predef_cluster_assignments=self.cluster_assignments,
             predef_cluster_centers=self.cluster_centers,
+            predef_extreme_cluster_indices=self.extreme_cluster_indices,
             predef_segment_assignments=self.segment_assignments,
             predef_segment_durations=self.segment_durations,
             predef_segment_centers=self.segment_centers,
