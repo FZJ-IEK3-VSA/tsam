@@ -244,10 +244,10 @@ def aggregate(
         if missing:
             raise ValueError(f"Extreme period columns not found in data: {missing}")
 
-        # Warn if include_in_count is used with replace method (it has no effect)
-        if extremes.include_in_count and extremes.method == "replace":
+        # Warn if preserve_n_clusters is used with replace method (it has no effect)
+        if extremes.preserve_n_clusters and extremes.method == "replace":
             warnings.warn(
-                "include_in_count=True has no effect with method='replace' "
+                "preserve_n_clusters=True has no effect with method='replace' "
                 "(replace method doesn't add new clusters). "
                 "Use 'append' or 'new_cluster' if you want extremes to count toward n_clusters.",
                 UserWarning,
@@ -546,7 +546,7 @@ def _build_old_params(
         params["addPeakMin"] = extremes.min_value
         params["addMeanMax"] = extremes.max_period
         params["addMeanMin"] = extremes.min_period
-        params["extremeIncludeInCount"] = extremes.include_in_count
+        params["extremePreserveNumClusters"] = extremes.preserve_n_clusters
     else:
         params["extremePeriodMethod"] = "None"
 

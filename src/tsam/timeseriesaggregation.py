@@ -132,7 +132,7 @@ class TimeSeriesAggregation:
         weightDict=None,
         segmentation=False,
         extremePeriodMethod="None",
-        extremeIncludeInCount=False,
+        extremePreserveNumClusters=False,
         representationMethod=None,
         representationDict=None,
         distributionPeriodWise=True,
@@ -319,7 +319,7 @@ class TimeSeriesAggregation:
 
         self.extremePeriodMethod = extremePeriodMethod
 
-        self.extremeIncludeInCount = extremeIncludeInCount
+        self.extremePreserveNumClusters = extremePreserveNumClusters
 
         self.evalSumPeriods = evalSumPeriods
 
@@ -519,11 +519,11 @@ class TimeSeriesAggregation:
                 + f"{self.EXTREME_PERIOD_METHODS}"
             )
 
-        # warn if extremeIncludeInCount is used with replace (it has no effect)
-        if self.extremeIncludeInCount:
+        # warn if extremePreserveNumClusters is used with replace (it has no effect)
+        if self.extremePreserveNumClusters:
             if self.extremePeriodMethod == "replace_cluster_center":
                 warnings.warn(
-                    "extremeIncludeInCount=True has no effect with "
+                    "extremePreserveNumClusters=True has no effect with "
                     "extremePeriodMethod='replace_cluster_center' "
                     "(replace method doesn't add new clusters). "
                     "Use 'append' or 'new_cluster_center' if you want extremes "
@@ -703,7 +703,7 @@ class TimeSeriesAggregation:
         """
         Count unique extreme periods without modifying any state.
 
-        Used by extremeIncludeInCount to determine how many clusters
+        Used by extremePreserveNumClusters to determine how many clusters
         to reserve for extreme periods before clustering.
         """
         extremePeriodIndices = set()
@@ -1107,7 +1107,7 @@ class TimeSeriesAggregation:
         # Note: replace_cluster_center doesn't add new clusters, so skip
         n_extremes = 0
         if (
-            self.extremeIncludeInCount
+            self.extremePreserveNumClusters
             and self.extremePeriodMethod not in ("None", "replace_cluster_center")
             and self.predefClusterOrder is None  # Don't count for predefined
         ):

@@ -86,8 +86,8 @@ def test_extremePeriods():
     )
 
 
-def test_include_in_count_exact_clusters_append():
-    """Final n_clusters equals requested when include_in_count=True with append method."""
+def test_preserve_n_clusters_exact_clusters_append():
+    """Final n_clusters equals requested when preserve_n_clusters=True with append method."""
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     n_clusters = 10
@@ -98,16 +98,16 @@ def test_include_in_count_exact_clusters_append():
             method="append",
             max_value=["GHI"],
             min_value=["T"],
-            include_in_count=True,
+            preserve_n_clusters=True,
         ),
     )
 
-    # With include_in_count=True, final cluster count should equal n_clusters
+    # With preserve_n_clusters=True, final cluster count should equal n_clusters
     assert len(result.cluster_weights) == n_clusters
 
 
-def test_include_in_count_exact_clusters_new_cluster():
-    """Final n_clusters equals requested when include_in_count=True with new_cluster method."""
+def test_preserve_n_clusters_exact_clusters_new_cluster():
+    """Final n_clusters equals requested when preserve_n_clusters=True with new_cluster method."""
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     n_clusters = 10
@@ -117,15 +117,15 @@ def test_include_in_count_exact_clusters_new_cluster():
         extremes=ExtremeConfig(
             method="new_cluster",
             max_value=["GHI"],
-            include_in_count=True,
+            preserve_n_clusters=True,
         ),
     )
 
-    # With include_in_count=True, final cluster count should equal n_clusters
+    # With preserve_n_clusters=True, final cluster count should equal n_clusters
     assert len(result.cluster_weights) == n_clusters
 
 
-def test_include_in_count_false_adds_extra_clusters():
+def test_preserve_n_clusters_false_adds_extra_clusters():
     """Default behavior: extremes are added on top of n_clusters."""
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
@@ -137,17 +137,17 @@ def test_include_in_count_false_adds_extra_clusters():
             method="append",
             max_value=["GHI"],
             min_value=["T"],
-            include_in_count=False,  # Default
+            preserve_n_clusters=False,  # Default
         ),
     )
 
-    # With include_in_count=False (default), extremes are added on top
+    # With preserve_n_clusters=False (default), extremes are added on top
     # So final count should be > n_clusters (n_clusters + n_extremes)
     assert len(result.cluster_weights) > n_clusters
 
 
-def test_include_in_count_validation_error():
-    """Error if n_clusters <= n_extremes when include_in_count=True."""
+def test_preserve_n_clusters_validation_error():
+    """Error if n_clusters <= n_extremes when preserve_n_clusters=True."""
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     with pytest.raises(ValueError, match="must be greater than"):
@@ -156,13 +156,13 @@ def test_include_in_count_validation_error():
             n_clusters=2,
             extremes=ExtremeConfig(
                 max_value=["GHI", "T", "Wind"],  # 3 extremes
-                include_in_count=True,
+                preserve_n_clusters=True,
             ),
         )
 
 
-def test_include_in_count_warns_with_replace():
-    """include_in_count=True with replace method emits a warning."""
+def test_preserve_n_clusters_warns_with_replace():
+    """preserve_n_clusters=True with replace method emits a warning."""
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     with pytest.warns(UserWarning, match="has no effect"):
@@ -172,13 +172,13 @@ def test_include_in_count_warns_with_replace():
             extremes=ExtremeConfig(
                 method="replace",
                 max_value=["GHI"],
-                include_in_count=True,
+                preserve_n_clusters=True,
             ),
         )
 
 
-def test_include_in_count_preserves_extremes():
-    """Extreme values are still preserved with include_in_count=True."""
+def test_preserve_n_clusters_preserves_extremes():
+    """Extreme values are still preserved with preserve_n_clusters=True."""
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     result = tsam.aggregate(
@@ -187,7 +187,7 @@ def test_include_in_count_preserves_extremes():
         extremes=ExtremeConfig(
             method="append",
             max_value=["GHI"],
-            include_in_count=True,
+            preserve_n_clusters=True,
         ),
         preserve_column_means=False,  # Don't rescale to check raw extreme preservation
     )
@@ -199,29 +199,29 @@ def test_include_in_count_preserves_extremes():
     np.testing.assert_almost_equal(orig_max, typical_max, decimal=5)
 
 
-def test_include_in_count_serialization():
-    """ExtremeConfig with include_in_count serializes correctly."""
+def test_preserve_n_clusters_serialization():
+    """ExtremeConfig with preserve_n_clusters serializes correctly."""
     config = ExtremeConfig(
         method="append",
         max_value=["Load"],
-        include_in_count=True,
+        preserve_n_clusters=True,
     )
 
     d = config.to_dict()
-    assert d["include_in_count"] is True
+    assert d["preserve_n_clusters"] is True
 
     config2 = ExtremeConfig.from_dict(d)
-    assert config2.include_in_count is True
+    assert config2.preserve_n_clusters is True
 
 
-def test_include_in_count_default_false():
-    """Default value of include_in_count is False."""
+def test_preserve_n_clusters_default_false():
+    """Default value of preserve_n_clusters is False."""
     config = ExtremeConfig(max_value=["Load"])
-    assert config.include_in_count is False
+    assert config.preserve_n_clusters is False
 
     # to_dict should not include it when False
     d = config.to_dict()
-    assert "include_in_count" not in d
+    assert "preserve_n_clusters" not in d
 
 
 if __name__ == "__main__":
