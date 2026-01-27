@@ -606,9 +606,10 @@ class ClusteringResult:
         ):
             warnings.warn(
                 "The 'replace' extreme method creates a hybrid cluster representation "
-                "(some columns from the medoid, some from the extreme period) that cannot "
-                "be perfectly reproduced during transfer. The transferred result will use "
-                "the medoid representation for all columns instead of the hybrid values. "
+                "(some columns from the cluster representative, some from the extreme period) "
+                "that cannot be perfectly reproduced during transfer. The transferred result "
+                f"will use the '{self.representation}' representation for all columns instead "
+                "of the hybrid values. "
                 "For exact transfer, use 'append' or 'new_cluster' extreme methods.",
                 UserWarning,
                 stacklevel=2,
