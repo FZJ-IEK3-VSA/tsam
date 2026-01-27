@@ -519,13 +519,17 @@ class TimeSeriesAggregation:
                 + f"{self.EXTREME_PERIOD_METHODS}"
             )
 
-        # check extremeIncludeInCount
+        # warn if extremeIncludeInCount is used with replace (it has no effect)
         if self.extremeIncludeInCount:
             if self.extremePeriodMethod == "replace_cluster_center":
-                raise ValueError(
-                    "extremeIncludeInCount=True is not compatible with "
-                    "extremePeriodMethod='replace_cluster_center'. "
-                    "Use 'append' or 'new_cluster_center' instead."
+                warnings.warn(
+                    "extremeIncludeInCount=True has no effect with "
+                    "extremePeriodMethod='replace_cluster_center' "
+                    "(replace method doesn't add new clusters). "
+                    "Use 'append' or 'new_cluster_center' if you want extremes "
+                    "to count toward noTypicalPeriods.",
+                    UserWarning,
+                    stacklevel=2,
                 )
 
         # check evalSumPeriods
@@ -1275,10 +1279,11 @@ class TimeSeriesAggregation:
         self._preProcessTimeSeries()
 
         # Early extreme period detection if include_in_count is True
+        # Note: replace_cluster_center doesn't add new clusters, so skip early detection
         n_extremes = 0
         if (
             self.extremeIncludeInCount
-            and self.extremePeriodMethod != "None"
+            and self.extremePeriodMethod not in ("None", "replace_cluster_center")
             and self.predefClusterOrder is None  # Don't detect early for predefined
         ):
             n_extremes = self._identifyExtremePeriods(

@@ -244,11 +244,14 @@ def aggregate(
         if missing:
             raise ValueError(f"Extreme period columns not found in data: {missing}")
 
-        # Validate include_in_count is not used with replace method
+        # Warn if include_in_count is used with replace method (it has no effect)
         if extremes.include_in_count and extremes.method == "replace":
-            raise ValueError(
-                "include_in_count=True is not compatible with method='replace'. "
-                "Use 'append' or 'new_cluster' instead."
+            warnings.warn(
+                "include_in_count=True has no effect with method='replace' "
+                "(replace method doesn't add new clusters). "
+                "Use 'append' or 'new_cluster' if you want extremes to count toward n_clusters.",
+                UserWarning,
+                stacklevel=2,
             )
 
     # Validate weight columns exist

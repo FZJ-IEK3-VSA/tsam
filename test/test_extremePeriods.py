@@ -161,11 +161,11 @@ def test_include_in_count_validation_error():
         )
 
 
-def test_include_in_count_not_compatible_with_replace():
-    """include_in_count=True is not compatible with replace method."""
+def test_include_in_count_warns_with_replace():
+    """include_in_count=True with replace method emits a warning."""
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
-    with pytest.raises(ValueError, match="not compatible with"):
+    with pytest.warns(UserWarning, match="has no effect"):
         tsam.aggregate(
             raw,
             n_clusters=10,
