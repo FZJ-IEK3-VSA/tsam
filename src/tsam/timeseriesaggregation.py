@@ -708,15 +708,29 @@ class TimeSeriesAggregation:
         """
         extremePeriodIndices = set()
 
-        for column in self.timeSeries.columns:
+        # Only iterate over columns that are actually in extreme lists
+        extreme_columns = (
+            set(self.addPeakMax)
+            | set(self.addPeakMin)
+            | set(self.addMeanMax)
+            | set(self.addMeanMin)
+        )
+
+        for column in extreme_columns:
+            col_data = groupedSeries[column]
+
             if column in self.addPeakMax:
-                extremePeriodIndices.add(groupedSeries[column].max(axis=1).idxmax())
+                extremePeriodIndices.add(col_data.max(axis=1).idxmax())
             if column in self.addPeakMin:
-                extremePeriodIndices.add(groupedSeries[column].min(axis=1).idxmin())
-            if column in self.addMeanMax:
-                extremePeriodIndices.add(groupedSeries[column].mean(axis=1).idxmax())
-            if column in self.addMeanMin:
-                extremePeriodIndices.add(groupedSeries[column].mean(axis=1).idxmin())
+                extremePeriodIndices.add(col_data.min(axis=1).idxmin())
+
+            # Compute mean only once if needed for either addMeanMax or addMeanMin
+            if column in self.addMeanMax or column in self.addMeanMin:
+                mean_series = col_data.mean(axis=1)
+                if column in self.addMeanMax:
+                    extremePeriodIndices.add(mean_series.idxmax())
+                if column in self.addMeanMin:
+                    extremePeriodIndices.add(mean_series.idxmin())
 
         return len(extremePeriodIndices)
 
