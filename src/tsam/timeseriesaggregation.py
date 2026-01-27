@@ -1103,6 +1103,21 @@ class TimeSeriesAggregation:
         """
         self._preProcessTimeSeries()
 
+        # Warn if extremePreserveNumClusters is ignored due to predefined cluster order
+        if (
+            self.predefClusterOrder is not None
+            and self.extremePreserveNumClusters
+            and self.extremePeriodMethod not in ("None", "replace_cluster_center")
+        ):
+            warnings.warn(
+                "extremePreserveNumClusters=True is ignored when predefClusterOrder "
+                "is set. Extreme periods will be appended via _addExtremePeriods "
+                "without reserving clusters upfront. To avoid this warning, set "
+                "extremePreserveNumClusters=False or remove predefClusterOrder.",
+                UserWarning,
+                stacklevel=2,
+            )
+
         # Count extreme periods upfront if include_in_count is True
         # Note: replace_cluster_center doesn't add new clusters, so skip
         n_extremes = 0

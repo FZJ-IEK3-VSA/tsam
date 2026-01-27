@@ -103,7 +103,7 @@ def test_preserve_n_clusters_exact_clusters_append():
     )
 
     # With preserve_n_clusters=True, final cluster count should equal n_clusters
-    assert len(result.cluster_weights) == n_clusters
+    assert result.n_clusters == n_clusters
 
 
 def test_preserve_n_clusters_exact_clusters_new_cluster():
@@ -122,7 +122,7 @@ def test_preserve_n_clusters_exact_clusters_new_cluster():
     )
 
     # With preserve_n_clusters=True, final cluster count should equal n_clusters
-    assert len(result.cluster_weights) == n_clusters
+    assert result.n_clusters == n_clusters
 
 
 def test_preserve_n_clusters_false_adds_extra_clusters():
@@ -143,7 +143,7 @@ def test_preserve_n_clusters_false_adds_extra_clusters():
 
     # With preserve_n_clusters=False (default), extremes are added on top
     # So final count should be > n_clusters (n_clusters + n_extremes)
-    assert len(result.cluster_weights) > n_clusters
+    assert result.n_clusters > n_clusters
 
 
 def test_preserve_n_clusters_validation_error():
