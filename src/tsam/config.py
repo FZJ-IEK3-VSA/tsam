@@ -608,8 +608,8 @@ class ClusteringResult:
                 "The 'replace' extreme method creates a hybrid cluster representation "
                 "(some columns from the cluster representative, some from the extreme period) "
                 "that cannot be perfectly reproduced during transfer. The transferred result "
-                f"will use the '{self.representation}' representation for all columns instead "
-                "of the hybrid values. "
+                "will use the stored cluster center periods directly, without the extreme "
+                "value injection that was applied during the original aggregation. "
                 "For exact transfer, use 'append' or 'new_cluster' extreme methods.",
                 UserWarning,
                 stacklevel=2,
