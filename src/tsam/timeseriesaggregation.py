@@ -132,6 +132,7 @@ class TimeSeriesAggregation:
         weightDict=None,
         segmentation=False,
         extremePeriodMethod="None",
+        extremeIncludeInCount=False,
         representationMethod=None,
         representationDict=None,
         distributionPeriodWise=True,
@@ -317,6 +318,8 @@ class TimeSeriesAggregation:
         self.clusterMethod = clusterMethod
 
         self.extremePeriodMethod = extremePeriodMethod
+
+        self.extremeIncludeInCount = extremeIncludeInCount
 
         self.evalSumPeriods = evalSumPeriods
 
@@ -516,6 +519,15 @@ class TimeSeriesAggregation:
                 + f"{self.EXTREME_PERIOD_METHODS}"
             )
 
+        # check extremeIncludeInCount
+        if self.extremeIncludeInCount:
+            if self.extremePeriodMethod == "replace_cluster_center":
+                raise ValueError(
+                    "extremeIncludeInCount=True is not compatible with "
+                    "extremePeriodMethod='replace_cluster_center'. "
+                    "Use 'append' or 'new_cluster_center' instead."
+                )
+
         # check evalSumPeriods
         if not isinstance(self.evalSumPeriods, bool):
             raise ValueError("evalSumPeriods has to be boolean")
@@ -682,6 +694,216 @@ class TimeSeriesAggregation:
             )
 
         return unnormalizedTimeSeries
+
+    def _identifyExtremePeriods(
+        self,
+        groupedSeries,
+        addPeakMin=None,
+        addPeakMax=None,
+        addMeanMin=None,
+        addMeanMax=None,
+        clusterCenters=None,
+    ):
+        """
+        Identify extreme periods without integrating them into clusters.
+
+        This method identifies periods containing extreme values (max/min of
+        individual timesteps or max/min of period totals) but does not modify
+        cluster assignments. Used when extremeIncludeInCount=True to count
+        extremes before clustering.
+
+        :param groupedSeries: periodly grouped series on which basis it should be decided
+            which period is an extreme period. required
+        :type groupedSeries: pandas.DataFrame()
+
+        :param addPeakMin: List of column names for minimum value extremes.
+        :type addPeakMin: list
+
+        :param addPeakMax: List of column names for maximum value extremes.
+        :type addPeakMax: list
+
+        :param addMeanMin: List of column names for minimum period total extremes.
+        :type addMeanMin: list
+
+        :param addMeanMax: List of column names for maximum period total extremes.
+        :type addMeanMax: list
+
+        :param clusterCenters: Optional cluster centers to check against. If provided,
+            periods that are already cluster centers will be excluded.
+        :type clusterCenters: list or None
+
+        :returns: Number of unique extreme periods identified.
+        """
+        if addPeakMin is None:
+            addPeakMin = []
+        if addPeakMax is None:
+            addPeakMax = []
+        if addMeanMin is None:
+            addMeanMin = []
+        if addMeanMax is None:
+            addMeanMax = []
+
+        self.extremePeriods = {}
+        extremePeriodNo = []
+
+        # Build list of cluster center profiles if provided
+        ccList = []
+        if clusterCenters is not None:
+            ccList = [center.tolist() for center in clusterCenters]
+
+        for column in self.timeSeries.columns:
+            if column in addPeakMax:
+                stepNo = groupedSeries[column].max(axis=1).idxmax()
+                if stepNo not in extremePeriodNo:
+                    # Skip if already a cluster center (when clusterCenters provided)
+                    if (
+                        ccList
+                        and groupedSeries.loc[stepNo, :].values.tolist() in ccList
+                    ):
+                        continue
+                    max_col = self._append_col_with(column, " max.")
+                    self.extremePeriods[max_col] = {
+                        "stepNo": stepNo,
+                        "profile": groupedSeries.loc[stepNo, :].values,
+                        "column": column,
+                    }
+                    extremePeriodNo.append(stepNo)
+
+            if column in addPeakMin:
+                stepNo = groupedSeries[column].min(axis=1).idxmin()
+                if stepNo not in extremePeriodNo:
+                    if (
+                        ccList
+                        and groupedSeries.loc[stepNo, :].values.tolist() in ccList
+                    ):
+                        continue
+                    min_col = self._append_col_with(column, " min.")
+                    self.extremePeriods[min_col] = {
+                        "stepNo": stepNo,
+                        "profile": groupedSeries.loc[stepNo, :].values,
+                        "column": column,
+                    }
+                    extremePeriodNo.append(stepNo)
+
+            if column in addMeanMax:
+                stepNo = groupedSeries[column].mean(axis=1).idxmax()
+                if stepNo not in extremePeriodNo:
+                    if (
+                        ccList
+                        and groupedSeries.loc[stepNo, :].values.tolist() in ccList
+                    ):
+                        continue
+                    mean_max_col = self._append_col_with(column, " daily max.")
+                    self.extremePeriods[mean_max_col] = {
+                        "stepNo": stepNo,
+                        "profile": groupedSeries.loc[stepNo, :].values,
+                        "column": column,
+                    }
+                    extremePeriodNo.append(stepNo)
+
+            if column in addMeanMin:
+                stepNo = groupedSeries[column].mean(axis=1).idxmin()
+                if stepNo not in extremePeriodNo:
+                    if (
+                        ccList
+                        and groupedSeries.loc[stepNo, :].values.tolist() in ccList
+                    ):
+                        continue
+                    mean_min_col = self._append_col_with(column, " daily min.")
+                    self.extremePeriods[mean_min_col] = {
+                        "stepNo": stepNo,
+                        "profile": groupedSeries.loc[stepNo, :].values,
+                        "column": column,
+                    }
+                    extremePeriodNo.append(stepNo)
+
+        return len(self.extremePeriods)
+
+    def _integrateExtremePeriods(
+        self,
+        groupedSeries,
+        clusterCenters,
+        clusterOrder,
+        extremePeriodMethod="new_cluster_center",
+    ):
+        """
+        Integrate already-identified extreme periods into cluster structure.
+
+        This method assumes self.extremePeriods has already been populated
+        by _identifyExtremePeriods(). It adds the extreme periods to the
+        cluster centers and updates cluster assignments.
+
+        :param groupedSeries: periodly grouped series. required
+        :type groupedSeries: pandas.DataFrame()
+
+        :param clusterCenters: Current cluster centers. required
+        :type clusterCenters: list
+
+        :param clusterOrder: Current cluster assignments. required
+        :type clusterOrder: list or array
+
+        :param extremePeriodMethod: Method for integration ('append' or 'new_cluster_center').
+        :type extremePeriodMethod: string
+
+        :returns: - **newClusterCenters** -- The new cluster centers extended with extreme periods.
+                  - **newClusterOrder** -- The new cluster order including extreme periods.
+                  - **extremeClusterIdx** -- Indices of extreme period clusters in newClusterCenters.
+        """
+        # Get current cluster assignment for each extreme period
+        for periodType in self.extremePeriods:
+            self.extremePeriods[periodType]["clusterNo"] = clusterOrder[
+                self.extremePeriods[periodType]["stepNo"]
+            ]
+
+        newClusterCenters = []
+        newClusterOrder = clusterOrder
+        extremeClusterIdx = []
+
+        if extremePeriodMethod == "append":
+            for cluster_center in clusterCenters:
+                newClusterCenters.append(cluster_center)
+            for i, periodType in enumerate(self.extremePeriods):
+                extremeClusterIdx.append(len(newClusterCenters))
+                newClusterCenters.append(self.extremePeriods[periodType]["profile"])
+                newClusterOrder[self.extremePeriods[periodType]["stepNo"]] = i + len(
+                    clusterCenters
+                )
+
+        elif extremePeriodMethod == "new_cluster_center":
+            for cluster_center in clusterCenters:
+                newClusterCenters.append(cluster_center)
+            for i, periodType in enumerate(self.extremePeriods):
+                extremeClusterIdx.append(len(newClusterCenters))
+                newClusterCenters.append(self.extremePeriods[periodType]["profile"])
+                self.extremePeriods[periodType]["newClusterNo"] = i + len(
+                    clusterCenters
+                )
+
+            for i, cPeriod in enumerate(newClusterOrder):
+                cluster_dist = sum(
+                    (groupedSeries.iloc[i].values - clusterCenters[cPeriod]) ** 2
+                )
+                for extremPeriodType in self.extremePeriods:
+                    isOtherExtreme = False
+                    for otherExPeriod in self.extremePeriods:
+                        if (
+                            i == self.extremePeriods[otherExPeriod]["stepNo"]
+                            and otherExPeriod != extremPeriodType
+                        ):
+                            isOtherExtreme = True
+                    extperiod_dist = sum(
+                        (
+                            groupedSeries.iloc[i].values
+                            - self.extremePeriods[extremPeriodType]["profile"]
+                        )
+                        ** 2
+                    )
+                    if extperiod_dist < cluster_dist and not isOtherExtreme:
+                        newClusterOrder[i] = self.extremePeriods[extremPeriodType][
+                            "newClusterNo"
+                        ]
+
+        return newClusterCenters, newClusterOrder, extremeClusterIdx
 
     def _addExtremePeriods(
         self,
@@ -1052,6 +1274,33 @@ class TimeSeriesAggregation:
         """
         self._preProcessTimeSeries()
 
+        # Early extreme period detection if include_in_count is True
+        n_extremes = 0
+        if (
+            self.extremeIncludeInCount
+            and self.extremePeriodMethod != "None"
+            and self.predefClusterOrder is None  # Don't detect early for predefined
+        ):
+            n_extremes = self._identifyExtremePeriods(
+                self.normalizedPeriodlyProfiles,
+                addPeakMin=self.addPeakMin,
+                addPeakMax=self.addPeakMax,
+                addMeanMin=self.addMeanMin,
+                addMeanMax=self.addMeanMax,
+                clusterCenters=None,  # No cluster centers yet
+            )
+
+            # Validate that we have enough clusters
+            if self.noTypicalPeriods <= n_extremes:
+                raise ValueError(
+                    f"n_clusters ({self.noTypicalPeriods}) must be greater than "
+                    f"the number of extreme periods ({n_extremes}) when "
+                    "include_in_count=True"
+                )
+
+        # Compute effective number of clusters for the clustering algorithm
+        effective_n_clusters = self.noTypicalPeriods - n_extremes
+
         # check for additional cluster parameters
         if self.evalSumPeriods:
             evaluationValues = (
@@ -1096,7 +1345,7 @@ class TimeSeriesAggregation:
                     self._clusterOrder,
                 ) = aggregatePeriods(
                     candidates,
-                    n_clusters=self.noTypicalPeriods,
+                    n_clusters=effective_n_clusters,
                     n_iter=100,
                     solver=self.solver,
                     clusterMethod=self.clusterMethod,
@@ -1106,9 +1355,13 @@ class TimeSeriesAggregation:
                     timeStepsPerPeriod=self.timeStepsPerPeriod,
                 )
             else:
+                # Store original value, temporarily set effective value for _clusterSortedPeriods
+                original_noTypicalPeriods = self.noTypicalPeriods
+                self.noTypicalPeriods = effective_n_clusters
                 self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
                     candidates
                 )
+                self.noTypicalPeriods = original_noTypicalPeriods
             self.clusteringDuration = time.time() - cluster_duration
 
         # get cluster centers without additional evaluation values
@@ -1117,21 +1370,34 @@ class TimeSeriesAggregation:
             self.clusterPeriods.append(cluster_center[:delClusterParams])
 
         if not self.extremePeriodMethod == "None":
-            # overwrite clusterPeriods and clusterOrder
-            (
-                self.clusterPeriods,
-                self._clusterOrder,
-                self.extremeClusterIdx,
-            ) = self._addExtremePeriods(
-                self.normalizedPeriodlyProfiles,
-                self.clusterPeriods,
-                self._clusterOrder,
-                extremePeriodMethod=self.extremePeriodMethod,
-                addPeakMin=self.addPeakMin,
-                addPeakMax=self.addPeakMax,
-                addMeanMin=self.addMeanMin,
-                addMeanMax=self.addMeanMax,
-            )
+            if self.extremeIncludeInCount and n_extremes > 0:
+                # Extremes already identified, just integrate them
+                (
+                    self.clusterPeriods,
+                    self._clusterOrder,
+                    self.extremeClusterIdx,
+                ) = self._integrateExtremePeriods(
+                    self.normalizedPeriodlyProfiles,
+                    self.clusterPeriods,
+                    self._clusterOrder,
+                    extremePeriodMethod=self.extremePeriodMethod,
+                )
+            else:
+                # Original behavior: identify and integrate together
+                (
+                    self.clusterPeriods,
+                    self._clusterOrder,
+                    self.extremeClusterIdx,
+                ) = self._addExtremePeriods(
+                    self.normalizedPeriodlyProfiles,
+                    self.clusterPeriods,
+                    self._clusterOrder,
+                    extremePeriodMethod=self.extremePeriodMethod,
+                    addPeakMin=self.addPeakMin,
+                    addPeakMax=self.addPeakMax,
+                    addMeanMin=self.addMeanMin,
+                    addMeanMax=self.addMeanMax,
+                )
         else:
             # Use predefined extreme cluster indices if provided (for transfer/apply)
             if self.predefExtremeClusterIdx is not None:

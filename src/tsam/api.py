@@ -244,6 +244,13 @@ def aggregate(
         if missing:
             raise ValueError(f"Extreme period columns not found in data: {missing}")
 
+        # Validate include_in_count is not used with replace method
+        if extremes.include_in_count and extremes.method == "replace":
+            raise ValueError(
+                "include_in_count=True is not compatible with method='replace'. "
+                "Use 'append' or 'new_cluster' instead."
+            )
+
     # Validate weight columns exist
     if cluster.weights is not None:
         missing = set(cluster.weights.keys()) - set(data.columns)
@@ -536,6 +543,7 @@ def _build_old_params(
         params["addPeakMin"] = extremes.min_value
         params["addMeanMax"] = extremes.max_period
         params["addMeanMin"] = extremes.min_period
+        params["extremeIncludeInCount"] = extremes.include_in_count
     else:
         params["extremePeriodMethod"] = "None"
 

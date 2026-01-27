@@ -785,6 +785,14 @@ class ExtremeConfig:
     min_period : list[str], optional
         Column names where the period with minimum total should be preserved.
         Example: ["wind_generation"] to preserve lowest wind day.
+
+    include_in_count : bool, default False
+        Whether extreme periods count toward n_clusters.
+        - False (default): Extremes are added on top of n_clusters
+          (e.g., n_clusters=10 + 2 extremes = 12 final clusters)
+        - True: Extremes are included in n_clusters
+          (e.g., n_clusters=10 with 2 extremes = 8 from clustering + 2 extremes)
+        Only valid with "append" or "new_cluster" methods (not "replace").
     """
 
     method: ExtremeMethod = "append"
@@ -792,6 +800,7 @@ class ExtremeConfig:
     min_value: list[str] = field(default_factory=list)
     max_period: list[str] = field(default_factory=list)
     min_period: list[str] = field(default_factory=list)
+    include_in_count: bool = False
 
     def has_extremes(self) -> bool:
         """Check if any extreme periods are configured."""
@@ -812,6 +821,8 @@ class ExtremeConfig:
             result["max_period"] = self.max_period
         if self.min_period:
             result["min_period"] = self.min_period
+        if self.include_in_count:
+            result["include_in_count"] = self.include_in_count
         return result
 
     @classmethod
@@ -823,6 +834,7 @@ class ExtremeConfig:
             min_value=data.get("min_value", []),
             max_period=data.get("max_period", []),
             min_period=data.get("min_period", []),
+            include_in_count=data.get("include_in_count", False),
         )
 
 
