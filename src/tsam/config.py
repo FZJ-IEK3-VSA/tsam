@@ -289,6 +289,8 @@ class ClusteringResult:
     segment_representation: RepresentationMethod | None = None
     temporal_resolution: float | None = None
     extreme_cluster_indices: tuple[int, ...] | None = None
+    # For "replace" extreme method: (cluster_idx, column_name, source_period_idx)
+    extreme_replacements: tuple[tuple[int, str, int], ...] | None = None
 
     # === Reference fields (for documentation, not used by apply()) ===
     cluster_config: ClusterConfig | None = None
@@ -425,6 +427,10 @@ class ClusteringResult:
             result["temporal_resolution"] = self.temporal_resolution
         if self.extreme_cluster_indices is not None:
             result["extreme_cluster_indices"] = list(self.extreme_cluster_indices)
+        if self.extreme_replacements is not None:
+            result["extreme_replacements"] = [
+                list(r) for r in self.extreme_replacements
+            ]
         # Reference fields (optional, for documentation)
         if self.cluster_config is not None:
             result["cluster_config"] = self.cluster_config.to_dict()
@@ -465,6 +471,10 @@ class ClusteringResult:
             kwargs["temporal_resolution"] = data["temporal_resolution"]
         if "extreme_cluster_indices" in data:
             kwargs["extreme_cluster_indices"] = tuple(data["extreme_cluster_indices"])
+        if "extreme_replacements" in data:
+            kwargs["extreme_replacements"] = tuple(
+                (int(r[0]), str(r[1]), int(r[2])) for r in data["extreme_replacements"]
+            )
         # Reference fields
         if "cluster_config" in data:
             kwargs["cluster_config"] = ClusterConfig.from_dict(data["cluster_config"])
@@ -482,32 +492,11 @@ class ClusteringResult:
         path : str
             File path to save to.
 
-        Notes
-        -----
-        If the clustering used the 'replace' extreme method, a warning will be
-        issued because the saved clustering cannot be perfectly reproduced when
-        loaded and applied later. See :meth:`apply` for details.
-
         Examples
         --------
         >>> result.clustering.to_json("clustering.json")
         """
         import json
-
-        # Warn if using replace extreme method (transfer is not exact)
-        if (
-            self.extremes_config is not None
-            and self.extremes_config.method == "replace"
-        ):
-            warnings.warn(
-                "Saving a clustering that used the 'replace' extreme method. "
-                "The 'replace' method creates a hybrid cluster representation "
-                "(some columns from the medoid, some from the extreme period) that "
-                "cannot be perfectly reproduced when loaded and applied later. "
-                "For exact transfer, use 'append' or 'new_cluster' extreme methods.",
-                UserWarning,
-                stacklevel=2,
-            )
 
         with open(path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
@@ -572,16 +561,15 @@ class ClusteringResult:
 
         Notes
         -----
-        **Extreme period transfer limitations:**
+        **Extreme period handling during transfer:**
 
-        The 'replace' extreme method creates a hybrid cluster representation where
-        some columns use the medoid values and others use the extreme period values.
-        This hybrid representation cannot be perfectly reproduced during transfer.
-        When applying a clustering that used 'replace', a warning will be issued
-        and the transferred result will use the medoid representation for all columns.
+        All extreme period methods ('append', 'new_cluster', 'replace') are fully
+        supported during transfer. For 'replace', the stored extreme_replacements
+        are applied to inject the extreme period values from the new data into
+        the corresponding cluster representatives.
 
-        For exact transfer with extreme periods, use 'append' or 'new_cluster'
-        extreme methods instead.
+        If a column referenced in extreme_replacements is not present in the new
+        data, a warning is issued and that replacement is skipped.
 
         Examples
         --------
@@ -598,21 +586,6 @@ class ClusteringResult:
         from tsam.exceptions import LegacyAPIWarning
         from tsam.result import AccuracyMetrics, AggregationResult
         from tsam.timeseriesaggregation import TimeSeriesAggregation
-
-        # Warn if using replace extreme method (transfer is not exact)
-        if (
-            self.extremes_config is not None
-            and self.extremes_config.method == "replace"
-        ):
-            warnings.warn(
-                "The 'replace' extreme method creates a hybrid cluster representation "
-                "(some columns from the medoid, some from the extreme period) that cannot "
-                "be perfectly reproduced during transfer. The transferred result will use "
-                "the medoid representation for all columns instead of the hybrid values. "
-                "For exact transfer, use 'append' or 'new_cluster' extreme methods.",
-                UserWarning,
-                stacklevel=2,
-            )
 
         # Use stored temporal_resolution if not provided
         effective_temporal_resolution = (
@@ -701,6 +674,48 @@ class ClusteringResult:
         cluster_representatives = cluster_representatives.rename_axis(
             index={"PeriodNum": "cluster", "TimeStep": "timestep"}
         )
+
+        # Apply extreme replacements for "replace" method
+        if self.extreme_replacements:
+            from sklearn import preprocessing
+
+            # Fit scaler once for denormalization
+            scaler = preprocessing.MinMaxScaler()
+            scaler.fit(agg.timeSeries)
+            col_names = list(agg.timeSeries.columns)
+
+            for (
+                cluster_idx,
+                column_name,
+                source_period_idx,
+            ) in self.extreme_replacements:
+                # Skip columns not present in the new data
+                if column_name not in cluster_representatives.columns:
+                    warnings.warn(
+                        f"Column '{column_name}' not found in data during transfer. "
+                        f"Skipping extreme replacement for cluster {cluster_idx}.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                    continue
+
+                # Get the extreme period's values from the grouped normalized data
+                period_data = agg.normalizedPeriodlyProfiles.loc[source_period_idx]
+
+                # Extract just this column's values
+                col_idx = col_names.index(column_name)
+                n_timesteps = self.n_timesteps_per_period
+                start_idx = col_idx * n_timesteps
+                end_idx = start_idx + n_timesteps
+                normalized_values = period_data.values[start_idx:end_idx]
+
+                # Denormalize
+                col_min = scaler.data_min_[col_idx]
+                col_max = scaler.data_max_[col_idx]
+                source_values = normalized_values * (col_max - col_min) + col_min
+
+                # Replace the column values in the target cluster
+                cluster_representatives.loc[cluster_idx, column_name] = source_values
 
         # Build accuracy metrics
         accuracy_df = agg.accuracyIndicators()
