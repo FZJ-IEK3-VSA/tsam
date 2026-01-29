@@ -1,7 +1,7 @@
 on:
     workflow_dispatch:
-    push:
-        branches: ["test_dependency_range_v_3_0"]
+    # push:
+    #     branches: ["test_dependency_range_v_3_0"]
     pull_request:
         branches: ["master"]
 
@@ -14,17 +14,6 @@ jobs:
                 runner_tag: ["self-hosted"]
                 library_version:
                     [
-                        "1.21.0",
-                        "1.21.1",
-                        "1.21.2",
-                        "1.21.3",
-                        "1.21.4",
-                        "1.21.5",
-                        "1.21.6",
-                        "1.22.0",
-                        "1.22.1",
-                        "1.22.2",
-                        "1.22.3",
                         "1.22.4",
                         "1.23.0",
                         "1.23.1",

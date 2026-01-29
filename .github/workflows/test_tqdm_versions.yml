@@ -137,5 +137,5 @@ jobs:
             multiprocessing_example_string: "-n auto"
             library_version: ${{ matrix.library_version }}
             dependency_position_env_file: "7"
-            library_name: "tdqm"
+            library_name: "tqdm"
             multiprocessing_pytest_string: "-n auto"

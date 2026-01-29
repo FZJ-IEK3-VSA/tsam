@@ -1,7 +1,7 @@
 on:
     workflow_dispatch:
-    push:
-        branches: ["test_dependency_range_v_3_0"]
+    # push:
+    #     branches: ["test_dependency_range_v_3_0"]
     pull_request:
         branches: ["master"]
 
