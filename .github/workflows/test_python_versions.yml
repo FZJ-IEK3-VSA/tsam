@@ -30,6 +30,7 @@ jobs:
             multiprocessing_example_string: "-n auto"
             library_version: ${{ matrix.python_version }}
             dependency_position_env_file: "0"
+            library_name: "python"
 
     TestPushPyPIDev:
         name: Test PyPi development version on ${{ matrix.runner_tag }}
