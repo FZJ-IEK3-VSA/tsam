@@ -324,44 +324,35 @@ class TestClusteringResult:
             result2.cluster_representatives,
         )
 
-    def test_clustering_from_dict(self, sample_data):
-        """Test clustering transfer via dict (for JSON serialization)."""
+    def test_clustering_from_dict_and_json(self, sample_data, tmp_path):
+        """Test clustering transfer via dict and JSON file roundtrip."""
         from tsam import ClusteringResult
 
         result1 = aggregate(sample_data, n_clusters=8)
 
-        # Convert to dict and back (simulates JSON save/load)
+        # Via dict
         clustering_dict = result1.clustering.to_dict()
         clustering = ClusteringResult.from_dict(clustering_dict)
-
         result2 = clustering.apply(sample_data)
-
         pd.testing.assert_frame_equal(
             result1.cluster_representatives,
             result2.cluster_representatives,
         )
 
-    def test_clustering_json_roundtrip(self, sample_data, tmp_path):
-        """Test saving and loading clustering to/from JSON file."""
-        from tsam import ClusteringResult
-
-        result1 = aggregate(sample_data, n_clusters=8)
-
-        # Save to file
+        # Via JSON file
         json_path = tmp_path / "clustering.json"
         result1.clustering.to_json(str(json_path))
-
-        # Load and apply
         clustering = ClusteringResult.from_json(str(json_path))
-        result2 = clustering.apply(sample_data)
-
+        result3 = clustering.apply(sample_data)
         pd.testing.assert_frame_equal(
             result1.cluster_representatives,
-            result2.cluster_representatives,
+            result3.cluster_representatives,
         )
 
-    def test_clustering_includes_period_duration(self, sample_data):
-        """Test that clustering includes period_duration."""
+    def test_clustering_includes_period_duration(self, sample_data, tmp_path):
+        """Test that clustering includes period_duration and preserves it in JSON."""
+        from tsam import ClusteringResult
+
         result = aggregate(sample_data, n_clusters=8, period_duration=24)
         clustering = result.clustering
 
@@ -369,18 +360,11 @@ class TestClusteringResult:
         assert clustering.n_clusters == 8
         assert clustering.n_original_periods == len(result.cluster_assignments)
 
-    def test_clustering_period_duration_preserved_in_json(self, sample_data, tmp_path):
-        """Test that period_duration is preserved through JSON serialization."""
-        from tsam import ClusteringResult
-
-        result = aggregate(sample_data, n_clusters=8, period_duration=24)
-
-        # Save and load
+        # Preserved through JSON roundtrip
         json_path = tmp_path / "clustering.json"
-        result.clustering.to_json(str(json_path))
-        clustering = ClusteringResult.from_json(str(json_path))
-
-        assert clustering.period_duration == 24
+        clustering.to_json(str(json_path))
+        loaded = ClusteringResult.from_json(str(json_path))
+        assert loaded.period_duration == 24
 
 
 class TestDeterministicPreservation:
