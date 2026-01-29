@@ -97,6 +97,11 @@ class TestAggregateEquivalence:
         )
 
         # With same seed, results should be identical
+        pd.testing.assert_frame_equal(
+            old_result.reset_index(drop=True),
+            new_result.cluster_representatives.reset_index(drop=True),
+        )
+
         old_accuracy = old_agg.accuracyIndicators()
         np.testing.assert_allclose(
             old_accuracy["RMSE"].values,
