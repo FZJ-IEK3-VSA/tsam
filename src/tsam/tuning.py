@@ -1,0 +1,1038 @@
+"""Hyperparameter tuning for tsam aggregation.
+
+This module provides functions for finding optimal aggregation parameters.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import shutil
+import tempfile
+from concurrent.futures import ProcessPoolExecutor
+from contextlib import contextmanager
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import TYPE_CHECKING, TypedDict
+
+import numpy as np
+import pandas as pd
+import tqdm
+
+from tsam.api import _parse_duration_hours, aggregate
+from tsam.config import (
+    ClusterConfig,
+    ExtremeConfig,
+    RepresentationMethod,
+    SegmentConfig,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
+
+    from tsam.result import AggregationResult
+
+
+class _AggregateOpts(TypedDict):
+    """Internal TypedDict for aggregate options passed through tuning functions."""
+
+    period_duration: float
+    temporal_resolution: float
+    cluster: ClusterConfig
+    segment_representation: RepresentationMethod
+    extremes: ExtremeConfig | None
+    preserve_column_means: bool
+    round_decimals: int | None
+    numerical_tolerance: float
+
+
+logger = logging.getLogger(__name__)
+
+
+def _test_single_config_file(
+    args: dict,
+) -> tuple[int, int, float, AggregationResult | None]:
+    """Test a single configuration for parallel execution.
+
+    Loads data from file - no DataFrame pickling.
+    Args contains n_clusters, n_segments, data_path, and serialized aggregate options.
+
+    Returns (n_clusters, n_segments, rmse, result).
+    """
+    n_clusters = args["n_clusters"]
+    n_segments = args["n_segments"]
+    data_path = args["data_path"]
+    opts = args["opts"]
+
+    try:
+        # Load data fresh from file - no pickling
+        data = pd.read_csv(
+            data_path, index_col=0, parse_dates=True, sep=",", decimal="."
+        )
+
+        # Reconstruct configs from serialized dicts
+        cluster = ClusterConfig(**opts["cluster_dict"])
+        extremes = (
+            ExtremeConfig(**opts["extremes_dict"])
+            if opts["extremes_dict"] is not None
+            else None
+        )
+        segments = SegmentConfig(
+            n_segments=n_segments,
+            representation=opts["segment_representation"],
+        )
+
+        result = aggregate(
+            data,
+            n_clusters=n_clusters,
+            period_duration=opts["period_duration"],
+            temporal_resolution=opts["temporal_resolution"],
+            cluster=cluster,
+            segments=segments,
+            extremes=extremes,
+            preserve_column_means=opts["preserve_column_means"],
+            round_decimals=opts["round_decimals"],
+            numerical_tolerance=opts["numerical_tolerance"],
+        )
+        rmse = float(np.sqrt((result.accuracy.rmse**2).mean()))
+        return (n_clusters, n_segments, rmse, result)
+    except Exception as e:
+        logger.warning(
+            "Config (n_clusters=%d, n_segments=%d) failed: %s: %s",
+            n_clusters,
+            n_segments,
+            type(e).__name__,
+            e,
+        )
+        return (n_clusters, n_segments, float("inf"), None)
+
+
+def _infer_temporal_resolution(data: pd.DataFrame) -> float:
+    """Infer time temporal_resolution in hours from DataFrame datetime index."""
+    if len(data) < 2:
+        return 1.0  # Default to hourly
+    try:
+        timedelta = data.index[1] - data.index[0]
+        return float(timedelta.total_seconds()) / 3600
+    except (AttributeError, TypeError):
+        # Try converting to datetime
+        try:
+            index = pd.to_datetime(data.index)
+            timedelta = index[1] - index[0]
+            return float(timedelta.total_seconds()) / 3600
+        except (ValueError, TypeError, AttributeError):
+            # Default to hourly if can't infer
+            return 1.0
+
+
+@contextmanager
+def _parallel_context(
+    data: pd.DataFrame,
+    aggregate_opts: _AggregateOpts,
+    prefix: str = "tsam_",
+) -> Iterator[tuple[str, dict]]:
+    """Context manager for parallel execution setup.
+
+    Saves data to temp file and yields (data_path, serialized_opts).
+    Cleans up temp files on exit.
+    """
+    temp_dir = tempfile.mkdtemp(prefix=prefix)
+    data_path = str(Path(temp_dir) / "data.csv")
+    data.to_csv(data_path, sep=",", decimal=".")
+
+    # Serialize configs to dicts for pickling
+    serialized_opts = {
+        "period_duration": aggregate_opts["period_duration"],
+        "temporal_resolution": aggregate_opts["temporal_resolution"],
+        "cluster_dict": asdict(aggregate_opts["cluster"]),
+        "segment_representation": aggregate_opts["segment_representation"],
+        "extremes_dict": (
+            asdict(aggregate_opts["extremes"])
+            if aggregate_opts["extremes"] is not None
+            else None
+        ),
+        "preserve_column_means": aggregate_opts["preserve_column_means"],
+        "round_decimals": aggregate_opts["round_decimals"],
+        "numerical_tolerance": aggregate_opts["numerical_tolerance"],
+    }
+
+    try:
+        yield data_path, serialized_opts
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def _test_configs(
+    configs: list[tuple[int, int]],
+    data: pd.DataFrame,
+    aggregate_opts: _AggregateOpts,
+    n_workers: int,
+    show_progress: bool = False,
+    progress_desc: str = "Testing configurations",
+) -> list[tuple[int, int, float, AggregationResult | None]]:
+    """Test a batch of configurations, either sequentially or in parallel.
+
+    Args:
+        configs: List of (n_clusters, n_segments) tuples to test.
+        data: Input time series data.
+        aggregate_opts: Dict with fixed aggregate parameters (period_duration,
+            temporal_resolution, cluster, segment_representation, extremes,
+            preserve_column_means, round_decimals, numerical_tolerance).
+        n_workers: Number of parallel workers (1 for sequential).
+        show_progress: Whether to show progress bar.
+        progress_desc: Description for progress bar.
+
+    Returns:
+        List of (n_clusters, n_segments, rmse, result) tuples.
+    """
+    if not configs:
+        return []
+
+    results: list[tuple[int, int, float, AggregationResult | None]] = []
+
+    if n_workers > 1:
+        with _parallel_context(data, aggregate_opts) as (data_path, serialized_opts):
+            full_configs = [
+                {
+                    "n_clusters": n_per,
+                    "n_segments": n_seg,
+                    "data_path": data_path,
+                    "opts": serialized_opts,
+                }
+                for n_per, n_seg in configs
+            ]
+            with ProcessPoolExecutor(max_workers=n_workers) as executor:
+                if show_progress:
+                    results_iter = tqdm.tqdm(
+                        executor.map(_test_single_config_file, full_configs),
+                        total=len(full_configs),
+                        desc=f"{progress_desc} ({n_workers} workers)",
+                    )
+                else:
+                    results_iter = executor.map(_test_single_config_file, full_configs)
+                results = list(results_iter)
+    else:
+        iterator: list[tuple[int, int]] | tqdm.tqdm[tuple[int, int]] = configs
+        if show_progress:
+            iterator = tqdm.tqdm(configs, desc=progress_desc)
+
+        for n_per, n_seg in iterator:
+            try:
+                segments = SegmentConfig(
+                    n_segments=n_seg,
+                    representation=aggregate_opts["segment_representation"],
+                )
+                result = aggregate(
+                    data,
+                    n_clusters=n_per,
+                    period_duration=aggregate_opts["period_duration"],
+                    temporal_resolution=aggregate_opts["temporal_resolution"],
+                    cluster=aggregate_opts["cluster"],
+                    segments=segments,
+                    extremes=aggregate_opts["extremes"],
+                    preserve_column_means=aggregate_opts["preserve_column_means"],
+                    round_decimals=aggregate_opts["round_decimals"],
+                    numerical_tolerance=aggregate_opts["numerical_tolerance"],
+                )
+                rmse = float(np.sqrt((result.accuracy.rmse**2).mean()))
+                results.append((n_per, n_seg, rmse, result))
+            except Exception as e:
+                logger.debug("Config (%d, %d) failed: %s", n_per, n_seg, e)
+                results.append((n_per, n_seg, float("inf"), None))
+
+    return results
+
+
+def _get_n_workers(n_jobs: int | None) -> int:
+    """Convert n_jobs parameter to actual worker count.
+
+    Follows joblib convention for negative values:
+    - n_jobs=None or 1: single worker (no parallelization)
+    - n_jobs=-1: all CPUs
+    - n_jobs=-2: all CPUs minus 1
+    - n_jobs=-N: all CPUs minus (N-1)
+    - n_jobs>1: exactly that many workers
+    """
+    if n_jobs is None or n_jobs == 1:
+        return 1
+    elif n_jobs < 0:
+        # Negative values: all CPUs + n_jobs + 1 (e.g., -1 = all, -2 = all-1)
+        cpu_count = os.cpu_count() or 1
+        return max(1, cpu_count + n_jobs + 1)
+    else:
+        return max(1, n_jobs)
+
+
+@dataclass
+class TuningResult:
+    """Result of hyperparameter tuning.
+
+    Attributes
+    ----------
+    n_clusters : int
+        Optimal number of typical periods.
+    n_segments : int
+        Optimal number of segments per period.
+    rmse : float
+        RMSE of the optimal configuration.
+    history : list[dict]
+        History of all tested configurations with their RMSE values.
+    best_result : AggregationResult
+        The AggregationResult for the optimal configuration.
+    all_results : list[AggregationResult]
+        All AggregationResults from tuning.
+
+    Examples
+    --------
+    >>> result = find_optimal_combination(df, data_reduction=0.01)
+    >>> result.summary  # DataFrame of all tested configs
+    >>> result.plot()   # Visualize results
+
+    >>> pareto = find_pareto_front(df, max_timesteps=500)
+    >>> pareto.find_by_timesteps(100)  # Find config closest to 100 timesteps
+    >>> for agg_result in pareto:      # Iterate over AggregationResults
+    ...     print(agg_result.accuracy.rmse.mean())
+    """
+
+    n_clusters: int
+    n_segments: int
+    rmse: float
+    history: list[dict]
+    best_result: AggregationResult
+    all_results: list[AggregationResult] = field(default_factory=list)
+
+    @property
+    def summary(self) -> pd.DataFrame:
+        """Summary DataFrame of all tested configurations."""
+        df = pd.DataFrame(self.history)
+        if "timesteps" not in df.columns and len(df) > 0:
+            df["timesteps"] = df["n_clusters"] * df["n_segments"]
+        return df
+
+    def find_by_timesteps(self, target: int) -> AggregationResult:
+        """Find the result closest to a target timestep count."""
+        if not self.all_results:
+            raise ValueError(
+                "No results available. Use save_all_results=True in "
+                "find_optimal_combination() or use find_pareto_front() instead."
+            )
+
+        if len(self.all_results) != len(self.history):
+            raise ValueError(
+                f"Results/history mismatch: {len(self.all_results)} results vs "
+                f"{len(self.history)} history entries. This may indicate "
+                "save_all_results was not enabled."
+            )
+
+        best_idx = 0
+        best_diff = float("inf")
+
+        for i, h in enumerate(self.history):
+            diff = abs(h["n_clusters"] * h["n_segments"] - target)
+            if diff < best_diff:
+                best_diff = diff
+                best_idx = i
+
+        return self.all_results[best_idx]
+
+    def find_by_rmse(self, threshold: float) -> AggregationResult:
+        """Find the smallest configuration that achieves a target RMSE."""
+        if not self.all_results:
+            raise ValueError(
+                "No results available. Use save_all_results=True in "
+                "find_optimal_combination() or use find_pareto_front() instead."
+            )
+
+        if len(self.all_results) != len(self.history):
+            raise ValueError(
+                f"Results/history mismatch: {len(self.all_results)} results vs "
+                f"{len(self.history)} history entries. This may indicate "
+                "save_all_results was not enabled."
+            )
+
+        # Find all configurations meeting the threshold
+        candidates: list[tuple[int, int]] = []  # (timesteps, index)
+        for i, h in enumerate(self.history):
+            if h["rmse"] <= threshold:
+                timesteps = h.get("timesteps", h["n_clusters"] * h["n_segments"])
+                candidates.append((timesteps, i))
+
+        if not candidates:
+            raise ValueError(
+                f"No configuration achieves RMSE <= {threshold}. "
+                f"Best available: {min(h['rmse'] for h in self.history):.4f}"
+            )
+
+        # Return the smallest configuration (by timesteps)
+        candidates.sort(key=lambda x: x[0])
+        return self.all_results[candidates[0][1]]
+
+    def plot(self, show_labels: bool = True, **kwargs: object) -> object:
+        """Plot results (RMSE vs timesteps)."""
+        import plotly.graph_objects as go
+
+        summary = self.summary
+        hover_text = [
+            f"{row['n_clusters']}x{row['n_segments']}<br>"
+            f"Timesteps: {row['timesteps']}<br>"
+            f"RMSE: {row['rmse']:.4f}"
+            for _, row in summary.iterrows()
+        ]
+
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=summary["timesteps"],
+                y=summary["rmse"],
+                mode="lines+markers" if len(summary) > 1 else "markers",
+                marker={"size": 10},
+                hovertext=hover_text if show_labels else None,
+                hoverinfo="text" if show_labels else "x+y",
+                **kwargs,
+            )
+        )
+        fig.update_layout(
+            title="Tuning Results: Complexity vs Accuracy",
+            xaxis_title="Timesteps (n_clusters x n_segments)",
+            yaxis_title="RMSE",
+            hovermode="closest",
+        )
+        return fig
+
+    def __len__(self) -> int:
+        return len(self.all_results)
+
+    def __getitem__(self, index: int) -> AggregationResult:
+        return self.all_results[index]
+
+    def __iter__(self):
+        return iter(self.all_results)
+
+
+def find_clusters_for_reduction(
+    n_timesteps: int,
+    n_segments: int,
+    data_reduction: float,
+) -> int:
+    """Calculate max clusters for a target data reduction.
+
+    Parameters
+    ----------
+    n_timesteps : int
+        Number of original timesteps.
+    n_segments : int
+        Number of segments per period.
+    data_reduction : float
+        Target reduction factor (e.g., 0.1 for 10% of original size).
+
+    Returns
+    -------
+    int
+        Maximum number of clusters that achieves the reduction.
+
+    Examples
+    --------
+    >>> find_clusters_for_reduction(8760, 24, 0.01)  # 1% of hourly year
+    3
+    """
+    return int(np.floor(data_reduction * float(n_timesteps) / n_segments))
+
+
+def find_segments_for_reduction(
+    n_timesteps: int,
+    n_clusters: int,
+    data_reduction: float,
+) -> int:
+    """Calculate max segments for a target data reduction.
+
+    Parameters
+    ----------
+    n_timesteps : int
+        Number of original timesteps.
+    n_clusters : int
+        Number of typical periods.
+    data_reduction : float
+        Target reduction factor (e.g., 0.1 for 10% of original size).
+
+    Returns
+    -------
+    int
+        Maximum number of segments that achieves the reduction.
+
+    Examples
+    --------
+    >>> find_segments_for_reduction(8760, 8, 0.01)  # 1% with 8 periods
+    10
+    """
+    return int(np.floor(data_reduction * float(n_timesteps) / n_clusters))
+
+
+def find_optimal_combination(
+    data: pd.DataFrame,
+    data_reduction: float,
+    *,
+    period_duration: int | float | str = 24,
+    temporal_resolution: float | str | None = None,
+    cluster: ClusterConfig | None = None,
+    segment_representation: RepresentationMethod = "mean",
+    extremes: ExtremeConfig | None = None,
+    preserve_column_means: bool = True,
+    round_decimals: int | None = None,
+    numerical_tolerance: float = 1e-13,
+    show_progress: bool = True,
+    save_all_results: bool = False,
+    n_jobs: int | None = None,
+) -> TuningResult:
+    """Find optimal period/segment combination for a target data reduction.
+
+    Searches the Pareto-optimal frontier of period/segment combinations
+    that achieve the specified data reduction, returning the one with
+    minimum RMSE.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Input time series data.
+    data_reduction : float
+        Target reduction factor (e.g., 0.01 for 1% of original size).
+    period_duration : int, float, or str, default 24
+        Length of each period. Accepts:
+        - int/float: hours (e.g., 24 for daily, 168 for weekly)
+        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
+    temporal_resolution : float or str, optional
+        Time resolution of input data. Accepts:
+        - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
+        - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
+        If not provided, inferred from the datetime index.
+    cluster : ClusterConfig, optional
+        Clustering configuration.
+    segment_representation : str, default "mean"
+        How to represent each segment: "mean" or "medoid".
+    extremes : ExtremeConfig, optional
+        Configuration for preserving extreme periods.
+    preserve_column_means : bool, default True
+        Whether to rescale results to preserve original column means.
+    round_decimals : int, optional
+        Round results to this many decimal places.
+    numerical_tolerance : float, default 1e-13
+        Numerical tolerance for floating-point comparisons.
+    show_progress : bool, default True
+        Show progress bar during search.
+    save_all_results : bool, default False
+        If True, save all AggregationResults in all_results attribute.
+        Useful for detailed analysis but increases memory usage.
+    n_jobs : int, optional
+        Number of parallel jobs. If None or 1, runs sequentially.
+        Use -1 for all available CPUs, or a positive integer for
+        a specific number of workers. Parallel execution uses a file-based
+        approach where data is saved to a temp file and workers load from
+        disk - no DataFrame pickling, safe for sensitive data.
+
+    Returns
+    -------
+    TuningResult
+        Result containing optimal parameters and history.
+
+    Examples
+    --------
+    >>> result = find_optimal_combination(df, data_reduction=0.01)
+    >>> print(f"Optimal: {result.n_clusters} periods, "
+    ...       f"{result.n_segments} segments")
+
+    >>> # Use all CPUs for faster search (file-based, no DataFrame pickling)
+    >>> result = find_optimal_combination(df, data_reduction=0.01, n_jobs=-1)
+    """
+    if cluster is None:
+        cluster = ClusterConfig()
+
+    # Parse duration parameters to hours
+    period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
+    temporal_resolution_hours = (
+        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        if temporal_resolution is not None
+        else _infer_temporal_resolution(data)
+    )
+
+    if temporal_resolution_hours <= 0:
+        raise ValueError(
+            f"temporal_resolution must be positive, got {temporal_resolution_hours}"
+        )
+
+    n_timesteps = len(data)
+    timesteps_per_period = int(period_duration_hours / temporal_resolution_hours)
+
+    max_periods = n_timesteps // timesteps_per_period
+    max_segments = timesteps_per_period
+
+    # Find valid combinations on the Pareto frontier
+    possible_segments = np.arange(1, max_segments + 1)
+    possible_periods = np.arange(1, max_periods + 1)
+
+    combined_timesteps = np.outer(possible_segments, possible_periods)
+    valid_mask = combined_timesteps <= n_timesteps * data_reduction
+    valid_timesteps = combined_timesteps * valid_mask
+
+    optimal_periods_idx = np.zeros_like(valid_timesteps, dtype=bool)
+    optimal_periods_idx[
+        np.arange(valid_timesteps.shape[0]),
+        valid_timesteps.argmax(axis=1),
+    ] = True
+
+    optimal_segments_idx = np.zeros_like(valid_timesteps, dtype=bool)
+    optimal_segments_idx[
+        valid_timesteps.argmax(axis=0),
+        np.arange(valid_timesteps.shape[1]),
+    ] = True
+
+    pareto_mask = optimal_periods_idx & optimal_segments_idx
+    pareto_points = np.nonzero(pareto_mask)
+
+    configs_to_test = [
+        (int(possible_periods[per_idx]), int(possible_segments[seg_idx]))
+        for seg_idx, per_idx in zip(pareto_points[0], pareto_points[1])
+    ]
+
+    # Bundle fixed aggregate parameters
+    aggregate_opts: _AggregateOpts = {
+        "period_duration": period_duration_hours,
+        "temporal_resolution": temporal_resolution_hours,
+        "cluster": cluster,
+        "segment_representation": segment_representation,
+        "extremes": extremes,
+        "preserve_column_means": preserve_column_means,
+        "round_decimals": round_decimals,
+        "numerical_tolerance": numerical_tolerance,
+    }
+
+    n_workers = _get_n_workers(n_jobs)
+    results = _test_configs(
+        configs_to_test,
+        data,
+        aggregate_opts,
+        n_workers,
+        show_progress=show_progress,
+        progress_desc="Searching configurations",
+    )
+
+    history: list[dict] = []
+    all_results: list[AggregationResult] = []
+    best_rmse = float("inf")
+    best_result = None
+    best_periods = 1
+    best_segments = 1
+
+    for n_clusters, n_segments, rmse, result in results:
+        if result is not None:
+            history.append(
+                {"n_clusters": n_clusters, "n_segments": n_segments, "rmse": rmse}
+            )
+            if save_all_results:
+                all_results.append(result)
+            if rmse < best_rmse:
+                best_rmse = rmse
+                best_result = result
+                best_periods = n_clusters
+                best_segments = n_segments
+
+    if best_result is None:
+        raise ValueError("No valid configuration found")
+
+    return TuningResult(
+        n_clusters=best_periods,
+        n_segments=best_segments,
+        rmse=best_rmse,
+        history=history,
+        best_result=best_result,
+        all_results=all_results,
+    )
+
+
+def find_pareto_front(
+    data: pd.DataFrame,
+    *,
+    period_duration: int | float | str = 24,
+    temporal_resolution: float | str | None = None,
+    max_timesteps: int | None = None,
+    timesteps: Sequence[int] | None = None,
+    cluster: ClusterConfig | None = None,
+    segment_representation: RepresentationMethod = "mean",
+    extremes: ExtremeConfig | None = None,
+    preserve_column_means: bool = True,
+    round_decimals: int | None = None,
+    numerical_tolerance: float = 1e-13,
+    show_progress: bool = True,
+    n_jobs: int | None = None,
+) -> TuningResult:
+    """Find all Pareto-optimal aggregations from 1 period to full resolution.
+
+    Uses a steepest-descent approach to efficiently explore the
+    period/segment space, finding configurations that are optimal
+    for their complexity level.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Input time series data.
+    period_duration : int, float, or str, default 24
+        Length of each period. Accepts:
+        - int/float: hours (e.g., 24 for daily, 168 for weekly)
+        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
+    temporal_resolution : float or str, optional
+        Time resolution of input data. Accepts:
+        - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
+        - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
+        If not provided, inferred from the datetime index.
+    max_timesteps : int, optional
+        Stop when reaching this many timesteps. If None, explores
+        up to full resolution. Ignored if `timesteps` is provided.
+    timesteps : Sequence[int], optional
+        Specific timestep counts to explore. If provided, only evaluates
+        configurations that produce approximately these timestep counts.
+        Useful for faster exploration with large steps or specific ranges.
+        Examples: range(10, 500, 10), [10, 50, 100, 200, 500]
+    cluster : ClusterConfig, optional
+        Clustering configuration.
+    segment_representation : str, default "mean"
+        How to represent each segment: "mean" or "medoid".
+    extremes : ExtremeConfig, optional
+        Configuration for preserving extreme periods.
+    preserve_column_means : bool, default True
+        Whether to rescale results to preserve original column means.
+    round_decimals : int, optional
+        Round results to this many decimal places.
+    numerical_tolerance : float, default 1e-13
+        Numerical tolerance for floating-point comparisons.
+    show_progress : bool, default True
+        Show progress bar.
+    n_jobs : int, optional
+        Number of parallel jobs for testing configurations.
+        If None or 1, runs sequentially. Use -1 for all available CPUs.
+        During steepest-descent phase, tests both directions in parallel.
+
+    Returns
+    -------
+    TuningResult
+        Result object containing Pareto-optimal configurations with
+        convenience methods for analysis and visualization.
+
+    Examples
+    --------
+    >>> pareto = find_pareto_front(df, max_timesteps=500)
+    >>> pareto.summary  # DataFrame of all Pareto-optimal points
+    >>> pareto.plot()   # Visualize the Pareto front
+    >>> pareto.find_by_timesteps(100)  # Find config closest to 100 timesteps
+    >>> pareto.find_by_rmse(0.05)      # Find smallest config with RMSE <= 0.05
+
+    >>> # Iterate over AggregationResults
+    >>> for agg_result in pareto:
+    ...     print(f"RMSE: {agg_result.accuracy.rmse.mean():.4f}")
+
+    >>> # Use parallel execution for faster search
+    >>> pareto = find_pareto_front(df, max_timesteps=500, n_jobs=-1)
+
+    >>> # Explore only specific timestep counts (faster)
+    >>> pareto = find_pareto_front(df, timesteps=range(10, 500, 50))
+
+    >>> # Explore a specific list of timestep targets
+    >>> pareto = find_pareto_front(df, timesteps=[10, 50, 100, 200, 500])
+    """
+    if cluster is None:
+        cluster = ClusterConfig()
+
+    # Parse duration parameters to hours
+    period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
+    temporal_resolution_hours = (
+        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        if temporal_resolution is not None
+        else _infer_temporal_resolution(data)
+    )
+
+    if temporal_resolution_hours <= 0:
+        raise ValueError(
+            f"temporal_resolution must be positive, got {temporal_resolution_hours}"
+        )
+
+    n_timesteps = len(data)
+    timesteps_per_period = int(period_duration_hours / temporal_resolution_hours)
+
+    max_periods = n_timesteps // timesteps_per_period
+    max_segments = timesteps_per_period
+
+    if max_timesteps is None:
+        max_timesteps = n_timesteps
+
+    # Bundle fixed aggregate parameters
+    aggregate_opts: _AggregateOpts = {
+        "period_duration": period_duration_hours,
+        "temporal_resolution": temporal_resolution_hours,
+        "cluster": cluster,
+        "segment_representation": segment_representation,
+        "extremes": extremes,
+        "preserve_column_means": preserve_column_means,
+        "round_decimals": round_decimals,
+        "numerical_tolerance": numerical_tolerance,
+    }
+
+    n_workers = _get_n_workers(n_jobs)
+
+    # If specific timesteps are provided, use targeted exploration
+    if timesteps is not None:
+        return _find_pareto_front_targeted(
+            data=data,
+            timesteps=timesteps,
+            max_periods=max_periods,
+            max_segments=max_segments,
+            aggregate_opts=aggregate_opts,
+            show_progress=show_progress,
+            n_workers=n_workers,
+        )
+
+    # Steepest descent exploration
+    return _find_pareto_front_steepest(
+        data=data,
+        max_periods=max_periods,
+        max_segments=max_segments,
+        max_timesteps=max_timesteps,
+        aggregate_opts=aggregate_opts,
+        show_progress=show_progress,
+        n_workers=n_workers,
+    )
+
+
+def _find_pareto_front_targeted(
+    data: pd.DataFrame,
+    timesteps: Sequence[int],
+    max_periods: int,
+    max_segments: int,
+    aggregate_opts: _AggregateOpts,
+    show_progress: bool,
+    n_workers: int,
+) -> TuningResult:
+    """Find Pareto front for specific target timestep counts."""
+    # Build all configurations to test
+    configs_with_target: list[tuple[int, int, int]] = []  # (target, n_per, n_seg)
+
+    for target in sorted(set(timesteps)):
+        if target < 1:
+            continue
+        for n_seg in range(1, min(target, max_segments) + 1):
+            if target % n_seg == 0:
+                n_per = target // n_seg
+                if 1 <= n_per <= max_periods:
+                    configs_with_target.append((target, n_per, n_seg))
+
+    if not configs_with_target:
+        raise ValueError("No valid configurations found for given timesteps")
+
+    # Test all configurations
+    configs = [(n_per, n_seg) for _, n_per, n_seg in configs_with_target]
+    results = _test_configs(
+        configs,
+        data,
+        aggregate_opts,
+        n_workers,
+        show_progress=show_progress,
+        progress_desc="Testing configurations",
+    )
+
+    # Group results by target timestep
+    results_by_target: dict[
+        int, list[tuple[int, int, float, AggregationResult | None]]
+    ] = {}
+    for (target, _, _), result in zip(configs_with_target, results):
+        if target not in results_by_target:
+            results_by_target[target] = []
+        results_by_target[target].append(result)
+
+    # For each target, pick the best configuration (lowest RMSE)
+    history: list[dict] = []
+    all_results: list[AggregationResult] = []
+    best_rmse = float("inf")
+    best_result: AggregationResult | None = None
+    best_n_clusters = 0
+    best_n_segments = 0
+
+    for target in sorted(results_by_target.keys()):
+        target_best_rmse = float("inf")
+        target_best_result: AggregationResult | None = None
+        target_best_n_per = 0
+        target_best_n_seg = 0
+
+        for n_per, n_seg, rmse, agg_result in results_by_target[target]:
+            if agg_result is not None and rmse < target_best_rmse:
+                target_best_rmse = rmse
+                target_best_result = agg_result
+                target_best_n_per = n_per
+                target_best_n_seg = n_seg
+
+        if target_best_result is not None:
+            history.append(
+                {
+                    "n_clusters": target_best_n_per,
+                    "n_segments": target_best_n_seg,
+                    "rmse": target_best_rmse,
+                }
+            )
+            all_results.append(target_best_result)
+
+            if target_best_rmse < best_rmse:
+                best_rmse = target_best_rmse
+                best_result = target_best_result
+                best_n_clusters = target_best_n_per
+                best_n_segments = target_best_n_seg
+
+    if best_result is None:
+        raise ValueError("No valid configuration found")
+
+    return TuningResult(
+        n_clusters=best_n_clusters,
+        n_segments=best_n_segments,
+        rmse=best_rmse,
+        history=history,
+        best_result=best_result,
+        all_results=all_results,
+    )
+
+
+def _find_pareto_front_steepest(
+    data: pd.DataFrame,
+    max_periods: int,
+    max_segments: int,
+    max_timesteps: int,
+    aggregate_opts: _AggregateOpts,
+    show_progress: bool,
+    n_workers: int,
+) -> TuningResult:
+    """Find Pareto front using steepest descent exploration."""
+    history: list[dict] = []
+    all_results: list[AggregationResult] = []
+    best_rmse = float("inf")
+    best_result: AggregationResult | None = None
+    best_n_clusters = 1
+    best_n_segments = 1
+    current_rmse = float("inf")
+
+    n_clusters = 1
+    n_segments = 1
+
+    pbar = None
+    if show_progress:
+        pbar = tqdm.tqdm(total=max_timesteps, desc="Building Pareto front")
+
+    def add_result(n_c: int, n_s: int, rmse: float, result: AggregationResult) -> None:
+        nonlocal best_rmse, best_result, best_n_clusters, best_n_segments, current_rmse
+        history.append({"n_clusters": n_c, "n_segments": n_s, "rmse": rmse})
+        all_results.append(result)
+        current_rmse = rmse
+        if rmse < best_rmse:
+            best_rmse = rmse
+            best_result = result
+            best_n_clusters = n_c
+            best_n_segments = n_s
+
+    def update_progress() -> None:
+        if pbar is not None:
+            pbar.update(n_segments * n_clusters - pbar.n)
+
+    # Start with (1, 1)
+    results = _test_configs(
+        [(n_clusters, n_segments)],
+        data,
+        aggregate_opts,
+        n_workers=1,
+    )
+    if results:
+        _, _, rmse, agg_result = results[0]
+        if agg_result is not None:
+            add_result(n_clusters, n_segments, rmse, agg_result)
+
+    # Steepest descent phase
+    while (
+        n_clusters < max_periods
+        and n_segments < max_segments
+        and (n_segments + 1) * n_clusters <= max_timesteps
+        and n_segments * (n_clusters + 1) <= max_timesteps
+    ):
+        candidates = [
+            (n_clusters, n_segments + 1),
+            (n_clusters + 1, n_segments),
+        ]
+        results = _test_configs(
+            candidates,
+            data,
+            aggregate_opts,
+            n_workers=min(n_workers, 2),
+        )
+        _, _, rmse_seg, result_seg = results[0]
+        _, _, rmse_per, result_per = results[1]
+
+        gradient_seg = (
+            (current_rmse - rmse_seg) / n_clusters if rmse_seg < float("inf") else 0
+        )
+        gradient_per = (
+            (current_rmse - rmse_per) / n_segments if rmse_per < float("inf") else 0
+        )
+
+        if gradient_per > gradient_seg and result_per:
+            n_clusters += 1
+            add_result(n_clusters, n_segments, rmse_per, result_per)
+        elif result_seg:
+            n_segments += 1
+            add_result(n_clusters, n_segments, rmse_seg, result_seg)
+        else:
+            break
+
+        update_progress()
+
+    # Continue with periods only
+    remaining_periods = []
+    while n_clusters < max_periods and n_segments * (n_clusters + 1) <= max_timesteps:
+        n_clusters += 1
+        remaining_periods.append((n_clusters, n_segments))
+
+    if remaining_periods:
+        results = _test_configs(
+            remaining_periods,
+            data,
+            aggregate_opts,
+            n_workers,
+        )
+        for n_c, n_s, rmse, result in results:
+            if result is not None:
+                add_result(n_c, n_s, rmse, result)
+            if pbar is not None:
+                pbar.update(n_s * n_c - pbar.n)
+
+    # Continue with segments only
+    remaining_segments = []
+    while n_segments < max_segments and (n_segments + 1) * n_clusters <= max_timesteps:
+        n_segments += 1
+        remaining_segments.append((n_clusters, n_segments))
+
+    if remaining_segments:
+        results = _test_configs(
+            remaining_segments,
+            data,
+            aggregate_opts,
+            n_workers,
+        )
+        for n_c, n_s, rmse, result in results:
+            if result is not None:
+                add_result(n_c, n_s, rmse, result)
+            if pbar is not None:
+                pbar.update(n_s * n_c - pbar.n)
+
+    if pbar is not None:
+        pbar.close()
+
+    if best_result is None:
+        raise ValueError("No valid configuration found")
+
+    return TuningResult(
+        n_clusters=best_n_clusters,
+        n_segments=best_n_segments,
+        rmse=best_rmse,
+        history=history,
+        best_result=best_result,
+        all_results=all_results,
+    )

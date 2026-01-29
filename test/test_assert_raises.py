@@ -1,19 +1,16 @@
 import copy
-import os
 
 import numpy as np
 import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
+from conftest import TESTDATA_CSV
 
 
 def test_assert_raises():
     # important: special signs such as brackets must be marked with '\' when matching error message
 
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     # check error message for wrong time series
     np.testing.assert_raises_regex(

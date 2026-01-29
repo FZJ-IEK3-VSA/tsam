@@ -5,18 +5,19 @@ import numpy as np
 import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
+from conftest import TESTDATA_CSV
 
 
 def test_durationRepresentation():
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     starttime = time.time()
 
     # Silence warning on machines that cannot detect their physical cpu cores
     os.environ["OMP_NUM_THREADS"] = "1"
+
+    # Set seed for deterministic k-means results
+    np.random.seed(42)
 
     aggregation1 = tsam.TimeSeriesAggregation(
         raw,
@@ -60,7 +61,7 @@ def test_durationRepresentation():
         rescaleClusterPeriods=False,
     )
 
-    predictedPeriods3 = aggregation2.predictOriginalData()
+    predictedPeriods3 = aggregation3.predictOriginalData()
 
     print("Clustering took " + str(time.time() - starttime))
 
@@ -82,10 +83,7 @@ def test_durationRepresentation():
 
 
 def test_distributionMinMaxRepresentation():
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
@@ -117,10 +115,7 @@ def test_distributionMinMaxRepresentation():
 
 
 def test_distributionRepresentation_keeps_mean():
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,

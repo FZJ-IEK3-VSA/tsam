@@ -65,3 +65,6 @@ Thumbs.db
 *.glp
 *.mp4
 trash/
+
+# Notebook output artifacts (regenerated when notebooks run)
+docs/source/examples_notebooks/results/

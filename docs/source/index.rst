@@ -33,6 +33,7 @@ In case you use tsam in a scientific publication, we kindly request you to cite 
     self
     installationDoc
     gettingStartedDoc
+    examples
     structureOfTsamDoc
     mathematicalBackgroundDoc
     newsDoc

@@ -10,7 +10,7 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "PyPI dependencies"
- 
+
   # Conda-forge dependencies
   - package-ecosystem: "conda"
     directory: "/"

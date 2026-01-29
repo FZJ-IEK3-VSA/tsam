@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tsam"
-version = "2.4.0"
+version = "3.0.0"
 description = "Time series aggregation module (tsam) to create typical periods"
 authors = [
   { name = "Leander Kotzur", email = "leander.kotzur@googlemail.com" },
@@ -39,12 +39,19 @@ dependencies = [
   "networkx",
   "tqdm",
   "highspy",
-  "matplotlib",
 ]
 
 requires-python = ">=3.10,<3.14"
 
 [project.optional-dependencies]
+plot = [
+  "plotly>=5.0.0",
+]
+notebooks = [
+  "notebook>=7.5.0",
+  "plotly>=5.0.0",
+  "matplotlib",
+]
 develop = [
   "pytest",
   "pytest-cov",
@@ -59,6 +66,9 @@ develop = [
   "mypy",
   "pandas-stubs",
   "pre-commit",
+  "plotly>=5.0.0",
+  "notebook>=7.5.0",
+  "matplotlib",
 ]
 
 [tool.setuptools.packages.find]
@@ -117,6 +127,7 @@ known-first-party = ["tsam"]
 
 [tool.ruff.lint.per-file-ignores]
 "test/*" = ["B", "SIM", "F841", "E402", "C416"] # Relax rules for tests
+"src/tsam/result.py" = ["TCH002"]  # pandas/numpy needed at runtime for dataclass fields
 
 [tool.mypy]
 python_version = "3.10"

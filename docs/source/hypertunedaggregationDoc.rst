@@ -1,6 +1,6 @@
-######################
+##########################################
 Hypertuning segment and period selection
-######################
+##########################################
 
 .. |br| raw:: html
 
@@ -10,7 +10,7 @@ Descriptions of the basic functions are given below.
 
 **Function descriptions:**
 
-.. automodule:: hyperparametertuning
+.. automodule:: tsam.hyperparametertuning
    :member-order: bysource
 
    .. autoclass:: HyperTunedAggregations

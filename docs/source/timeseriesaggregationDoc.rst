@@ -1,16 +1,54 @@
-######################
-Time Series Aggregation Class
-######################
+###########################
+API Reference
+###########################
 
 .. |br| raw:: html
 
    <br />
 
-Descriptions of the basic functions are given below.
+This page documents the tsam API including the new function-based API and the legacy class-based API.
 
-**Function descriptions:**
+*****************************
+Function-based API (v3.0+)
+*****************************
 
-.. automodule:: timeseriesaggregation
+The new API provides a simpler, more intuitive interface for time series aggregation.
+
+Main Function
+=============
+
+.. automodule:: tsam.api
+   :members: aggregate
+   :member-order: bysource
+
+Configuration Classes
+=====================
+
+.. automodule:: tsam.config
+   :members: ClusterConfig, SegmentConfig, ExtremeConfig
+   :member-order: bysource
+
+Result Classes
+==============
+
+.. automodule:: tsam.result
+   :members: AggregationResult, AccuracyMetrics
+   :member-order: bysource
+
+Tuning Functions
+================
+
+.. automodule:: tsam.tuning
+   :members: find_optimal_combination, find_pareto_front, find_clusters_for_reduction, find_segments_for_reduction, TuningResult
+   :member-order: bysource
+
+*****************************
+Legacy Class-based API
+*****************************
+
+The class-based API is still available for backward compatibility.
+
+.. automodule:: tsam.timeseriesaggregation
    :members: unstackToPeriods
    :member-order: bysource
 
