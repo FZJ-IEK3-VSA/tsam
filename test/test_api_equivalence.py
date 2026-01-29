@@ -53,10 +53,10 @@ class TestAggregateEquivalence:
             cluster=ClusterConfig(method="hierarchical"),
         )
 
-        # Compare typical periods
+        # Compare typical periods (check_names=False: old uses 'TimeStep', new uses 'timestep')
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -98,8 +98,9 @@ class TestAggregateEquivalence:
 
         # With same seed, results should be identical
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
+            check_names=False,
         )
 
         old_accuracy = old_agg.accuracyIndicators()
@@ -130,8 +131,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -158,8 +159,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -186,8 +187,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -212,8 +213,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -240,8 +241,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -265,8 +266,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -292,8 +293,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -320,8 +321,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -495,8 +496,8 @@ class TestSubhourlyResolution:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -551,8 +552,8 @@ class TestReconstructionEquivalence:
         new_reconstructed = new_result.reconstructed
 
         pd.testing.assert_frame_equal(
-            old_reconstructed.reset_index(drop=True),
-            new_reconstructed.reset_index(drop=True),
+            old_reconstructed,
+            new_reconstructed,
             check_names=False,
         )
 
