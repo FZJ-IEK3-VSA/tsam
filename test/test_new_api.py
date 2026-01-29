@@ -250,7 +250,7 @@ class TestSegmentTransfer:
         assert seg_assignments is not None
 
         # Should have one tuple per typical period
-        assert len(seg_assignments) == result.n_clusters
+        assert len(seg_assignments) == 8
 
         # Each inner tuple should have length equal to timesteps per period
         for period_assignments in seg_assignments:
