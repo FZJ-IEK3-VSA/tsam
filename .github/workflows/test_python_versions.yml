@@ -50,9 +50,9 @@ jobs:
                 python_version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_pypi_test.yml@main
         with:
-            runner_tag: ${{ matrix.python_version }}
+            runner_tag: ${{ matrix.runner_tag }}
             # ipynb_example_folder: "examples"
-            python_version: ${{ matrix.runner_tag }}
+            python_version: ${{ matrix.python_version }}
             optional_dependency_PyPI_tag: "[develop]"
             examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
             multiprocessing_example_string: "-n auto"
