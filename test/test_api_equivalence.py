@@ -442,8 +442,8 @@ class TestTuningEquivalence:
         # Last RMSE should be 0 (full resolution)
         assert new_rmse_history[-1] < 1e-10
 
-    def test_save_all_results(self, small_data):
-        """Test that save_all_results stores all AggregationResults."""
+    def test_find_optimal_combination_save_all_results(self, small_data):
+        """Test that find_optimal_combination with save_all_results stores all AggregationResults."""
         result = find_optimal_combination(
             small_data,
             data_reduction=0.1,
