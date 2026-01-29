@@ -616,6 +616,24 @@ class TestDurationParsing:
             result_float.cluster_representatives,
         )
 
+    def test_non_hour_period_duration(self):
+        """Test period_duration that doesn't align to whole hours (e.g. 45 minutes)."""
+        import numpy as np
+
+        np.random.seed(42)
+        # Create 15-min data for 3 days (288 timesteps)
+        dates = pd.date_range("2020-01-01", periods=3 * 96, freq="15min")
+        data = pd.DataFrame(
+            {"x": np.sin(np.linspace(0, 6 * np.pi, len(dates)))},
+            index=dates,
+        )
+
+        # 45 minutes = 3 timesteps at 15-min resolution
+        result = aggregate(data, n_clusters=2, period_duration="45min")
+
+        assert result.n_timesteps_per_period == 3
+        assert result.cluster_representatives is not None
+
     def test_temporal_resolution_string(self, sample_data):
         """Test that temporal_resolution accepts pandas Timedelta strings."""
         # Should be equivalent: 1.0 hours and '1h'
