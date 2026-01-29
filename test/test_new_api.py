@@ -236,48 +236,27 @@ class TestAssignments:
 class TestSegmentTransfer:
     """Tests for predefined segment transfer."""
 
-    def test_segment_assignments_in_clustering(self, sample_data):
-        """Test that segment_assignments is available via clustering property."""
+    def test_segment_assignments_and_durations_in_clustering(self, sample_data):
+        """Test that segment_assignments and segment_durations are available via clustering."""
         result = aggregate(
             sample_data,
             n_clusters=8,
             segments=SegmentConfig(n_segments=6),
         )
 
+        # Segment assignments
         seg_assignments = result.clustering.segment_assignments
-
-        # Should not be None when segmentation is used
         assert seg_assignments is not None
-
-        # Should have one tuple per typical period
         assert len(seg_assignments) == 8
-
-        # Each inner tuple should have length equal to timesteps per period
         for period_assignments in seg_assignments:
             assert len(period_assignments) == result.n_timesteps_per_period
 
-    def test_segment_durations_in_clustering(self, sample_data):
-        """Test that segment_durations is available via clustering property."""
-        result = aggregate(
-            sample_data,
-            n_clusters=8,
-            segments=SegmentConfig(n_segments=6),
-        )
-
+        # Segment durations
         seg_durations = result.clustering.segment_durations
-
-        # Should not be None when segmentation is used
         assert seg_durations is not None
-
-        # Should have one tuple per typical period
-        assert len(seg_durations) == result.n_clusters
-
-        # Each inner tuple should have n_segments elements
+        assert len(seg_durations) == 8
         for period_durations in seg_durations:
             assert len(period_durations) == 6
-
-        # Durations should sum to timesteps per period
-        for period_durations in seg_durations:
             assert sum(period_durations) == result.n_timesteps_per_period
 
     def test_segment_transfer(self, sample_data):
