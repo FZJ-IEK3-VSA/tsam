@@ -11,16 +11,8 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                runner_tag:
-                    ["self-hosted"]
-                    # [
-                    #     "ubuntu-latest",
-                    #     "ubuntu-22.04",
-                    #     "macos-latest",
-                    #     "macos-15-intel",
-                    #     "windows-latest",
-                    #     "windows-2022",
-                    # ]
+                runner_tag: ["self-hosted"]
+
                 python_version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
         with:
@@ -28,6 +20,7 @@ jobs:
             requirements_file_name: environment.yml
             examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
             multiprocessing_example_string: "-n auto"
+            multiprocessing_pytest_string: "-n auto"
             library_version: ${{ matrix.python_version }}
             dependency_position_env_file: "0"
             library_name: "python"
@@ -38,15 +31,14 @@ jobs:
             fail-fast: false
             matrix:
                 runner_tag:
-                    ["self-hosted"]
-                    # [
-                    #     "ubuntu-latest",
-                    #     "ubuntu-22.04",
-                    #     "macos-latest",
-                    #     "macos-15-intel",
-                    #     "windows-latest",
-                    #     "windows-2022",
-                    # ]
+                    [
+                        "ubuntu-latest",
+                        "ubuntu-22.04",
+                        "macos-latest",
+                        "macos-15-intel",
+                        "windows-latest",
+                        "windows-2022",
+                    ]
                 python_version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_pypi_test.yml@main
         with:

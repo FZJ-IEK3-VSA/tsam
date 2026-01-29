@@ -1,0 +1,55 @@
+on:
+    workflow_dispatch:
+    push:
+        branches: ["test_dependency_range_v_3_0"]
+    pull_request:
+        branches: ["master"]
+
+jobs:
+    TestPushCondaForgeDev:
+        name: Test conda-forge development version on ${{ matrix.runner_tag }}
+        strategy:
+            fail-fast: false
+            matrix:
+                runner_tag: ["self-hosted"]
+                library_version:
+                    [
+                        "6.0",
+                        "6.0.1",
+                        "6.1.1",
+                        "6.1.2",
+                        "6.2",
+                        "6.3.0",
+                        "6.4.0",
+                        "6.4.1",
+                        "6.4.2",
+                        "6.4.3",
+                        "6.4.4",
+                        "6.5.0",
+                        "6.6.0",
+                        "6.6.1",
+                        "6.6.2",
+                        "6.7.0",
+                        "6.7.1",
+                        "6.7.2",
+                        "6.7.3",
+                        "6.8.0",
+                        "6.8.1",
+                        "6.8.2",
+                        "6.9.0",
+                        "6.9.1",
+                        "6.9.2",
+                        "6.9.3",
+                        "6.9.4",
+                        "6.9.5",
+                    ]
+        uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+        with:
+            runner_tag: ${{ matrix.runner_tag }}
+            requirements_file_name: environment.yml
+            examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
+            multiprocessing_example_string: "-n auto"
+            library_version: ${{ matrix.library_version }}
+            dependency_position_env_file: "5"
+            library_name: "pyomo"
+            multiprocessing_pytest_string: "-n auto"
