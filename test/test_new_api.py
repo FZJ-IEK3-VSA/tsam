@@ -288,8 +288,8 @@ class TestSegmentTransfer:
 class TestClusteringResult:
     """Tests for ClusteringResult and apply()."""
 
-    def test_clustering_property(self, sample_data):
-        """Test that clustering property returns ClusteringResult."""
+    def test_clustering_property_and_apply(self, sample_data):
+        """Test that clustering property returns ClusteringResult and can be applied."""
         from tsam import ClusteringResult
 
         result = aggregate(sample_data, n_clusters=8)
@@ -299,16 +299,10 @@ class TestClusteringResult:
         assert len(clustering.cluster_assignments) == len(result.cluster_assignments)
         assert clustering.n_clusters == result.n_clusters
 
-    def test_clustering_apply(self, sample_data):
-        """Test applying clustering to same data."""
-        result1 = aggregate(sample_data, n_clusters=8)
-
         # Apply clustering to same data
-        result2 = result1.clustering.apply(sample_data)
-
-        # Results should match
+        result2 = clustering.apply(sample_data)
         pd.testing.assert_frame_equal(
-            result1.cluster_representatives,
+            result.cluster_representatives,
             result2.cluster_representatives,
         )
 
