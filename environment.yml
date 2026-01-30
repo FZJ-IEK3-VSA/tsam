@@ -10,10 +10,10 @@ dependencies:
   - numpy >=1.22.4,<=2.4.1
   - pyomo >=6.4.8,<=6.95
   - networkx >=2.5,<=3.6.1
-  - tqdm
+  - tqdm >=4.21.0,<=4.67.1
   - highspy >=1.7.2,<=1.12.0
   - matplotlib
-  - plotly>=5.0.0
+  - plotly >=5.0.0
   # Testing
   - pytest
   - pytest-cov
