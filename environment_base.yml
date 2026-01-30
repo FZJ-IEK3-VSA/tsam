@@ -8,7 +8,7 @@ dependencies:
   - scikit-learn >=1.3.0,<=1.8.0
   - pandas >=2.2.0,<=3.0.0
   - numpy >=1.22.4,<=2.4.1
-  - pyomo >=6.4.8,<=6.95
+  - pyomo >=6.4.3,<=6.95
   - networkx >=2.5,<=3.6.1
   - tqdm >=4.21.0,<=4.67.1
   - highspy >=1.7.2,<=1.12.0
