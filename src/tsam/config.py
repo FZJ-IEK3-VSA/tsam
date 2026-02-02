@@ -492,11 +492,32 @@ class ClusteringResult:
         path : str
             File path to save to.
 
+        Notes
+        -----
+        If the clustering used the 'replace' extreme method, a warning will be
+        issued because the saved clustering cannot be perfectly reproduced when
+        loaded and applied later. See :meth:`apply` for details.
+
         Examples
         --------
         >>> result.clustering.to_json("clustering.json")
         """
         import json
+
+        # Warn if using replace extreme method (transfer is not exact)
+        if (
+            self.extremes_config is not None
+            and self.extremes_config.method == "replace"
+        ):
+            warnings.warn(
+                "Saving a clustering that used the 'replace' extreme method. "
+                "The 'replace' method creates a hybrid cluster representation "
+                "(some columns from the medoid, some from the extreme period) that "
+                "cannot be perfectly reproduced when loaded and applied later. "
+                "For exact transfer, use 'append' or 'new_cluster' extreme methods.",
+                UserWarning,
+                stacklevel=2,
+            )
 
         with open(path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
@@ -586,6 +607,21 @@ class ClusteringResult:
         from tsam.exceptions import LegacyAPIWarning
         from tsam.result import AccuracyMetrics, AggregationResult
         from tsam.timeseriesaggregation import TimeSeriesAggregation
+
+        # Warn if using replace extreme method (transfer is not exact)
+        if (
+            self.extremes_config is not None
+            and self.extremes_config.method == "replace"
+        ):
+            warnings.warn(
+                "The 'replace' extreme method creates a hybrid cluster representation "
+                "(some columns from the medoid, some from the extreme period) that cannot "
+                "be perfectly reproduced during transfer. The transferred result will use "
+                "the medoid representation for all columns instead of the hybrid values. "
+                "For exact transfer, use 'append' or 'new_cluster' extreme methods.",
+                UserWarning,
+                stacklevel=2,
+            )
 
         # Use stored temporal_resolution if not provided
         effective_temporal_resolution = (

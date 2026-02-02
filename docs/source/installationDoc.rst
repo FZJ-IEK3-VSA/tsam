@@ -70,7 +70,7 @@ Clone the repository:
 
 .. code-block:: bash
 
-    conda env create --file=requirements_dev.yml
+    conda env create --file=environment.yml
     conda activate tsam_dev
     pip install -e ".[develop]"
 

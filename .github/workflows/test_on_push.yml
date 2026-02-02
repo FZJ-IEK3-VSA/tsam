@@ -6,7 +6,7 @@ on:
 jobs:
   Lint:
     name: Lint with ruff
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/ruff-action@v3
@@ -20,12 +20,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner_tag: ["ubuntu-latest"]
+        runner_tag: ["self-hosted"]
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
     with:
       runner_tag: ${{ matrix.runner_tag }}
-      requirements_file_name: requirements_dev.yml
-      # ipynb_example_folder: "examples"
+      requirements_file_name: environment.yml
       examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
       multiprocessing_example_string: "-n auto"
   TestPushPyPIDev:
@@ -33,11 +32,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner_tag: ["ubuntu-latest"]
+        runner_tag: ["self-hosted"]
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_pypi_test.yml@main
     with:
       runner_tag: ${{ matrix.runner_tag }}
-      # ipynb_example_folder: "examples"
       python_version: "3.13"
       optional_dependency_PyPI_tag: "[develop]"
       examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"

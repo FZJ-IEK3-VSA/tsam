@@ -15,6 +15,7 @@ import pytest
 
 import tsam
 from tsam import ClusterConfig, SegmentConfig
+from tsam.result import AggregationResult
 
 
 @pytest.fixture
@@ -35,7 +36,9 @@ def test_data():
 class TestReconstructSameMeanSegmentation:
     """Test reconstruction with normalize_column_means + segmentation."""
 
-    def _check_reconstruction_bounds(self, result, max_ratio=1.5):
+    def _check_reconstruction_bounds(
+        self, result: AggregationResult, max_ratio: float = 1.5
+    ):
         """Check that reconstructed values are within reasonable bounds."""
         original = result._aggregation.timeSeries
         reconstructed = result.reconstructed

@@ -11,7 +11,7 @@ build:
 
 # Use conda environment
 conda:
-  environment: requirements_dev.yml
+  environment: environment.yml
 
 # Build documentation with Sphinx
 sphinx:
