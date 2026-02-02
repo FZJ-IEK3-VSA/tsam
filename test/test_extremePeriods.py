@@ -87,10 +87,12 @@ def test_extremePeriods():
 
 
 def test_replace_method_transfer():
-    """Test that 'replace' extreme method transfers correctly with apply()."""
+    """Test that 'replace' extreme method transfers correctly with apply().
+
+    Applying to the same data must reproduce the original aggregation exactly.
+    """
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
-    # Aggregate with replace method
     result = tsam.aggregate(
         raw,
         n_clusters=8,
@@ -101,11 +103,9 @@ def test_replace_method_transfer():
         preserve_column_means=False,
     )
 
-    # Check that extreme_replacements is stored
+    # Check that extreme_replacements is stored with correct structure
     assert result.clustering.extreme_replacements is not None
     assert len(result.clustering.extreme_replacements) > 0
-
-    # Verify the replacement tuple structure: (cluster_idx, column_name, period_idx)
     for replacement in result.clustering.extreme_replacements:
         assert len(replacement) == 3
         cluster_idx, column_name, period_idx = replacement
@@ -114,20 +114,18 @@ def test_replace_method_transfer():
         assert isinstance(period_idx, int)
         assert column_name == "GHI"
 
-    # Apply to the same data - should get identical results
+    # Apply to same data — must reproduce original cluster_representatives entirely
     transferred = result.clustering.apply(raw)
-
-    # The extreme values should be preserved
-    orig_max = raw["GHI"].max()
-    typical_max = transferred.cluster_representatives["GHI"].max()
-    np.testing.assert_almost_equal(orig_max, typical_max, decimal=5)
+    pd.testing.assert_frame_equal(
+        result.cluster_representatives,
+        transferred.cluster_representatives,
+    )
 
 
 def test_replace_method_transfer_to_new_data():
     """Test that 'replace' method correctly transfers to different data."""
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
-    # Aggregate with replace method
     result = tsam.aggregate(
         raw,
         n_clusters=8,
@@ -142,14 +140,16 @@ def test_replace_method_transfer_to_new_data():
     raw_modified = raw.copy()
     raw_modified["GHI"] = raw_modified["GHI"] * 1.5
 
-    # Apply to modified data
     transferred = result.clustering.apply(raw_modified)
 
-    # The extreme values should come from the modified data
-    # (the extreme period's GHI values should be 1.5x the original)
-    orig_max = raw_modified["GHI"].max()
-    typical_max = transferred.cluster_representatives["GHI"].max()
-    np.testing.assert_almost_equal(orig_max, typical_max, decimal=5)
+    # For each replacement, the full profile must match the source period from raw_modified
+    hours_per_period = 24
+    for cluster_idx, col, period_idx in result.clustering.extreme_replacements:
+        start = period_idx * hours_per_period
+        end = start + hours_per_period
+        expected = raw_modified[col].iloc[start:end].values
+        actual = transferred.cluster_representatives.loc[cluster_idx, col].values
+        np.testing.assert_array_almost_equal(actual, expected, decimal=5)
 
 
 def test_replace_method_missing_column_warning():
@@ -220,25 +220,80 @@ def test_replace_multiple_columns():
         preserve_column_means=False,
     )
 
-    # Should have replacements for each extreme
     assert result.clustering.extreme_replacements is not None
 
+    # All requested extreme columns must appear in replacements
     columns_replaced = {r[1] for r in result.clustering.extreme_replacements}
-    assert (
-        "GHI" in columns_replaced
-        or "T" in columns_replaced
-        or "Wind" in columns_replaced
-    )
+    assert "GHI" in columns_replaced
+    assert "T" in columns_replaced
+    assert "Wind" in columns_replaced
 
-    # Apply and verify extremes are preserved
+    # Apply and verify each extreme is preserved
     transferred = result.clustering.apply(raw)
 
-    # Check that max GHI is preserved
     np.testing.assert_almost_equal(
         raw["GHI"].max(),
         transferred.cluster_representatives["GHI"].max(),
         decimal=5,
     )
+    np.testing.assert_almost_equal(
+        raw["T"].max(),
+        transferred.cluster_representatives["T"].max(),
+        decimal=5,
+    )
+    np.testing.assert_almost_equal(
+        raw["Wind"].min(),
+        transferred.cluster_representatives["Wind"].min(),
+        decimal=5,
+    )
+
+
+def test_replace_with_weights():
+    """Test replace method with non-default weights exercises the weight fix."""
+    from tsam.config import ClusterConfig
+
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+
+    result = tsam.aggregate(
+        raw,
+        n_clusters=8,
+        cluster=ClusterConfig(weights={"GHI": 5.0, "T": 0.5, "Wind": 1.0, "Load": 1.0}),
+        extremes=ExtremeConfig(
+            method="replace",
+            max_value=["GHI"],
+        ),
+        preserve_column_means=False,
+    )
+
+    # Apply to same data — must reproduce original cluster_representatives
+    transferred = result.clustering.apply(raw)
+    pd.testing.assert_frame_equal(
+        result.cluster_representatives,
+        transferred.cluster_representatives,
+    )
+
+
+def test_replace_preserves_full_extreme_profile():
+    """Verify the entire extreme period profile matches raw input values."""
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+
+    result = tsam.aggregate(
+        raw,
+        n_clusters=8,
+        extremes=ExtremeConfig(
+            method="replace",
+            max_value=["GHI"],
+        ),
+        preserve_column_means=False,
+    )
+
+    hours_per_period = 24
+    for cluster_idx, col, period_idx in result.clustering.extreme_replacements:
+        start = period_idx * hours_per_period
+        end = start + hours_per_period
+        expected = raw[col].iloc[start:end].values
+        actual = result.cluster_representatives.loc[cluster_idx, col].values
+        np.testing.assert_array_almost_equal(actual, expected, decimal=5)
 
 
 if __name__ == "__main__":
