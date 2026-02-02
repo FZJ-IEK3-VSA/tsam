@@ -3,6 +3,12 @@ tsam's Change Log
 ##################
 
 *********************
+Release version 3.0.1
+*********************
+
+* Removed ``matplotlib`` dependency; all plotting and notebooks now use ``plotly``
+
+*********************
 Release version 3.0.0
 *********************
 
