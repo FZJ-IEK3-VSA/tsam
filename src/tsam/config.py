@@ -735,17 +735,17 @@ class ClusteringResult:
                     )
                     continue
 
-                # Get the extreme period's values from the grouped normalized data
-                period_data = agg.normalizedPeriodlyProfiles.loc[source_period_idx]
+                # Extract via DataFrame indexing (clear, layout-independent)
+                normalized_values = agg.normalizedPeriodlyProfiles.loc[
+                    source_period_idx, column_name
+                ].values
 
-                # Extract just this column's values
-                col_idx = col_names.index(column_name)
-                n_timesteps = self.n_timesteps_per_period
-                start_idx = col_idx * n_timesteps
-                end_idx = start_idx + n_timesteps
-                normalized_values = period_data.values[start_idx:end_idx]
+                # Reverse weighting
+                weight = agg.weightDict.get(column_name, 1.0)
+                normalized_values = normalized_values / weight
 
                 # Denormalize
+                col_idx = col_names.index(column_name)
                 col_min = scaler.data_min_[col_idx]
                 col_max = scaler.data_max_[col_idx]
                 source_values = normalized_values * (col_max - col_min) + col_min
