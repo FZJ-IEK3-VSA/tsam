@@ -94,7 +94,7 @@ def _test_single_config_file(
             round_decimals=opts["round_decimals"],
             numerical_tolerance=opts["numerical_tolerance"],
         )
-        rmse = float(result.accuracy.rmse.mean())
+        rmse = float(np.sqrt((result.accuracy.rmse**2).mean()))
         return (n_clusters, n_segments, rmse, result)
     except Exception as e:
         logger.warning(
@@ -234,7 +234,7 @@ def _test_configs(
                     round_decimals=aggregate_opts["round_decimals"],
                     numerical_tolerance=aggregate_opts["numerical_tolerance"],
                 )
-                rmse = float(result.accuracy.rmse.mean())
+                rmse = float(np.sqrt((result.accuracy.rmse**2).mean()))
                 results.append((n_per, n_seg, rmse, result))
             except Exception as e:
                 logger.debug("Config (%d, %d) failed: %s", n_per, n_seg, e)

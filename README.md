@@ -54,7 +54,7 @@ uv pip install -e ".[develop]"
 # Using conda-forge
 
 ```bash
-conda env create -n tsam_env --file=requirements_dev.yml
+conda env create -n tsam_env --file=environment.yml
 conda activate tsam_env
 pip install -e . --no-deps
 ```

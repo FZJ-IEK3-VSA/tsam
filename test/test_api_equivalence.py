@@ -53,10 +53,10 @@ class TestAggregateEquivalence:
             cluster=ClusterConfig(method="hierarchical"),
         )
 
-        # Compare typical periods
+        # Compare typical periods (check_names=False: old uses 'TimeStep', new uses 'timestep')
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -97,6 +97,12 @@ class TestAggregateEquivalence:
         )
 
         # With same seed, results should be identical
+        pd.testing.assert_frame_equal(
+            old_result,
+            new_result.cluster_representatives,
+            check_names=False,
+        )
+
         old_accuracy = old_agg.accuracyIndicators()
         np.testing.assert_allclose(
             old_accuracy["RMSE"].values,
@@ -125,8 +131,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -153,8 +159,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -181,8 +187,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -207,8 +213,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -235,8 +241,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -260,8 +266,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -287,8 +293,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -315,8 +321,8 @@ class TestAggregateEquivalence:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -429,6 +435,9 @@ class TestTuningEquivalence:
         # Get RMSE history from summary
         new_rmse_history = new_results.summary["rmse"].tolist()
 
+        # RMSE histories should match between old and new API
+        np.testing.assert_allclose(new_rmse_history, old_rmse_history, rtol=1e-10)
+
         # RMSE should be monotonically decreasing (or equal)
         for i in range(1, len(new_rmse_history)):
             assert new_rmse_history[i] <= new_rmse_history[i - 1] + 1e-10
@@ -436,8 +445,8 @@ class TestTuningEquivalence:
         # Last RMSE should be 0 (full resolution)
         assert new_rmse_history[-1] < 1e-10
 
-    def test_save_all_results(self, small_data):
-        """Test that save_all_results stores all AggregationResults."""
+    def test_find_optimal_combination_save_all_results(self, small_data):
+        """Test that find_optimal_combination with save_all_results stores all AggregationResults."""
         result = find_optimal_combination(
             small_data,
             data_reduction=0.1,
@@ -490,8 +499,8 @@ class TestSubhourlyResolution:
         )
 
         pd.testing.assert_frame_equal(
-            old_result.reset_index(drop=True),
-            new_result.cluster_representatives.reset_index(drop=True),
+            old_result,
+            new_result.cluster_representatives,
             check_names=False,
         )
 
@@ -546,8 +555,8 @@ class TestReconstructionEquivalence:
         new_reconstructed = new_result.reconstructed
 
         pd.testing.assert_frame_equal(
-            old_reconstructed.reset_index(drop=True),
-            new_reconstructed.reset_index(drop=True),
+            old_reconstructed,
+            new_reconstructed,
             check_names=False,
         )
 
