@@ -246,8 +246,6 @@ class TestSegmentTransfer:
 
         # Segment assignments
         seg_assignments = result.clustering.segment_assignments
-
-        # Should not be None when segmentation is used
         assert seg_assignments is not None
         assert len(seg_assignments) == 8
         for period_assignments in seg_assignments:
@@ -255,15 +253,10 @@ class TestSegmentTransfer:
 
         # Segment durations
         seg_durations = result.clustering.segment_durations
-
-        # Should not be None when segmentation is used
         assert seg_durations is not None
         assert len(seg_durations) == 8
         for period_durations in seg_durations:
             assert len(period_durations) == 6
-
-        # Durations should sum to timesteps per period
-        for period_durations in seg_durations:
             assert sum(period_durations) == result.n_timesteps_per_period
 
     def test_segment_transfer(self, sample_data):
@@ -306,14 +299,10 @@ class TestClusteringResult:
         assert len(clustering.cluster_assignments) == len(result.cluster_assignments)
         assert clustering.n_clusters == result.n_clusters
 
-    def test_clustering_apply(self, sample_data):
-        """Test applying clustering to same data."""
-        result1 = aggregate(sample_data, n_clusters=8)
-
         # Apply clustering to same data
-        result2 = result1.clustering.apply(sample_data)
+        result2 = clustering.apply(sample_data)
         pd.testing.assert_frame_equal(
-            result1.cluster_representatives,
+            result.cluster_representatives,
             result2.cluster_representatives,
         )
 
@@ -344,9 +333,7 @@ class TestClusteringResult:
         # Via dict
         clustering_dict = result1.clustering.to_dict()
         clustering = ClusteringResult.from_dict(clustering_dict)
-
         result2 = clustering.apply(sample_data)
-
         pd.testing.assert_frame_equal(
             result1.cluster_representatives,
             result2.cluster_representatives,
@@ -355,8 +342,6 @@ class TestClusteringResult:
         # Via JSON file
         json_path = tmp_path / "clustering.json"
         result1.clustering.to_json(str(json_path))
-
-        # Load and apply
         clustering = ClusteringResult.from_json(str(json_path))
         result3 = clustering.apply(sample_data)
         pd.testing.assert_frame_equal(
