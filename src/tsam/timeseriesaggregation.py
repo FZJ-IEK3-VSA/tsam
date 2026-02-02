@@ -705,6 +705,11 @@ class TimeSeriesAggregation:
 
         Used by extremePreserveNumClusters to determine how many clusters
         to reserve for extreme periods before clustering.
+
+        Note: The extreme-finding logic (idxmax/idxmin on peak/mean) must
+        stay in sync with _addExtremePeriods. This is intentionally separate
+        because _addExtremePeriods also filters out periods that are already
+        cluster centers (not known at count time).
         """
         extremePeriodIndices = set()
 
@@ -1034,7 +1039,7 @@ class TimeSeriesAggregation:
         # Reshape back to 2D: (n_clusters, n_cols * n_timesteps)
         return arr.reshape(n_clusters, -1)
 
-    def _clusterSortedPeriods(self, candidates, n_init=20):
+    def _clusterSortedPeriods(self, candidates, n_init=20, n_clusters=None):
         """
         Runs the clustering algorithms for the sorted profiles within the period
         instead of the original profiles. (Duration curve clustering)
@@ -1052,13 +1057,16 @@ class TimeSeriesAggregation:
             n_periods, -1
         )
 
+        if n_clusters is None:
+            n_clusters = self.noTypicalPeriods
+
         (
             _altClusterCenters,
             self.clusterCenterIndices,
             clusterOrders_C,
         ) = aggregatePeriods(
             sortedClusterValues,
-            n_clusters=self.noTypicalPeriods,
+            n_clusters=n_clusters,
             n_iter=30,
             solver=self.solver,
             clusterMethod=self.clusterMethod,
@@ -1132,7 +1140,7 @@ class TimeSeriesAggregation:
                 raise ValueError(
                     f"n_clusters ({self.noTypicalPeriods}) must be greater than "
                     f"the number of extreme periods ({n_extremes}) when "
-                    "include_in_count=True"
+                    "preserve_n_clusters=True"
                 )
 
         # Compute effective number of clusters for the clustering algorithm
@@ -1192,13 +1200,9 @@ class TimeSeriesAggregation:
                     timeStepsPerPeriod=self.timeStepsPerPeriod,
                 )
             else:
-                # Store original value, temporarily set effective value for _clusterSortedPeriods
-                original_noTypicalPeriods = self.noTypicalPeriods
-                self.noTypicalPeriods = effective_n_clusters
                 self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
-                    candidates
+                    candidates, n_clusters=effective_n_clusters
                 )
-                self.noTypicalPeriods = original_noTypicalPeriods
             self.clusteringDuration = time.time() - cluster_duration
 
         # get cluster centers without additional evaluation values

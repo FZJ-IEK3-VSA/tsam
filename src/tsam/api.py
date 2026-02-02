@@ -244,16 +244,6 @@ def aggregate(
         if missing:
             raise ValueError(f"Extreme period columns not found in data: {missing}")
 
-        # Warn if preserve_n_clusters is used with replace method (it has no effect)
-        if extremes.preserve_n_clusters and extremes.method == "replace":
-            warnings.warn(
-                "preserve_n_clusters=True has no effect with method='replace' "
-                "(replace method doesn't add new clusters). "
-                "Use 'append' or 'new_cluster' if you want extremes to count toward n_clusters.",
-                UserWarning,
-                stacklevel=2,
-            )
-
     # Validate weight columns exist
     if cluster.weights is not None:
         missing = set(cluster.weights.keys()) - set(data.columns)
