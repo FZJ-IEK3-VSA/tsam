@@ -44,8 +44,6 @@ dependencies = [
 requires-python = ">=3.10,<3.15"
 
 [project.optional-dependencies]
-plot = ["plotly>=5.0.0"]
-notebooks = ["notebook>=7.5.0", "plotly>=5.0.0", "matplotlib"]
 develop = [
   "pytest",
   "pytest-cov",
@@ -54,6 +52,7 @@ develop = [
   "sphinx",
   "sphinx-autobuild",
   "sphinx_book_theme",
+  "nbsphinx",
   "twine",
   "nbval",
   "ruff",
@@ -64,6 +63,8 @@ develop = [
   "notebook>=7.5.0",
   "matplotlib",
 ]
+plot = ["plotly>=5.0.0"]
+notebooks = ["notebook>=7.5.0", "plotly>=5.0.0", "matplotlib"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
