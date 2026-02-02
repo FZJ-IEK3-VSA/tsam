@@ -61,10 +61,9 @@ develop = [
   "pre-commit",
   "plotly>=5.0.0",
   "notebook>=7.5.0",
-  "matplotlib",
 ]
 plot = ["plotly>=5.0.0"]
-notebooks = ["notebook>=7.5.0", "plotly>=5.0.0", "matplotlib"]
+notebooks = ["notebook>=7.5.0", "plotly>=5.0.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
