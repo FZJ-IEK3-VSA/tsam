@@ -1,14 +1,12 @@
-import os
 import time
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
 
 
 def test_subhourly_periods():
-
     # Create linearly growing test data for two hours.
     testData = pd.DataFrame(np.arange(1, 121), columns=["testdata"])
     testData.index = pd.date_range(

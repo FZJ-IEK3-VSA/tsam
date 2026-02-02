@@ -1,7 +1,7 @@
-﻿[![daily pytest](https://github.com/FZJ-IEK3-VSA/tsam/actions/workflows/daily_tests.yml/badge.svg?branch=master)](https://github.com/FZJ-IEK3-VSA/tsam/actions) [![Version](https://img.shields.io/pypi/v/tsam.svg)](https://pypi.python.org/pypi/tsam) [![Conda Version](https://img.shields.io/conda/vn/conda-forge/tsam.svg)](https://anaconda.org/conda-forge/tsam) [![Documentation Status](https://readthedocs.org/projects/tsam/badge/?version=latest)](https://tsam.readthedocs.io/en/latest/) [![PyPI - License](https://img.shields.io/pypi/l/tsam)]((https://github.com/FZJ-IEK3-VSA/tsam/blob/master/LICENSE.txt)) [![codecov](https://codecov.io/gh/FZJ-IEK3-VSA/tsam/branch/master/graph/badge.svg)](https://codecov.io/gh/FZJ-IEK3-VSA/tsam)
+﻿[![Version](https://img.shields.io/pypi/v/tsam.svg)](https://pypi.python.org/pypi/tsam) [![Conda Version](https://img.shields.io/conda/vn/conda-forge/tsam.svg)](https://anaconda.org/conda-forge/tsam) [![Documentation Status](https://readthedocs.org/projects/tsam/badge/?version=latest)](https://tsam.readthedocs.io/en/latest/) [![PyPI - License](https://img.shields.io/pypi/l/tsam)]((https://github.com/FZJ-IEK3-VSA/tsam/blob/master/LICENSE.txt)) [![codecov](https://codecov.io/gh/FZJ-IEK3-VSA/tsam/branch/master/graph/badge.svg)](https://codecov.io/gh/FZJ-IEK3-VSA/tsam)
 [![badge](https://img.shields.io/badge/launch-binder-579aca.svg?logo=data:image/png;base64,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)](https://mybinder.org/v2/gh/FZJ-IEK3-VSA/voila-tsam/HEAD?urlpath=voila/render/Time-Series-Aggregation-Module.ipynb)
 
-<a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="https://www.fz-juelich.de/static/media/Logo.2ceb35fc.svg" alt="Forschungszentrum Juelich Logo" width="230px"></a> 
+<a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="https://www.fz-juelich.de/static/media/Logo.2ceb35fc.svg" alt="Forschungszentrum Juelich Logo" width="230px"></a>
 
 # tsam - Time Series Aggregation Module
 tsam is a python package which uses different machine learning algorithms for the aggregation of time series. The data aggregation can be performed in two freely combinable dimensions: By representing the time series by a user-defined number of typical periods or by decreasing the temporal resolution.
@@ -13,109 +13,135 @@ The documentation of the tsam code can be found [**here**](https://tsam.readthed
 * flexible handling of multidimensional time-series via the pandas module
 * different aggregation methods implemented (averaging, k-means, exact k-medoids, hierarchical, k-maxoids, k-medoids with contiguity), which are based on scikit-learn, or self-programmed with pyomo
 * hypertuning of aggregation parameters to find the optimal combination of the number of segments inside a period and the number of typical periods
-* novel representation methods, keeping statistical attributes, such as the distribution 
+* novel representation methods, keeping statistical attributes, such as the distribution
 * flexible integration of extreme periods as own cluster centers
 * weighting for the case of multidimensional time-series to represent their relevance
 
 
 ## Installation
-It is recommended to install tsam within its own environment. If you are no familiar with python environments, plaese consider to read some [external documentation](https://realpython.com/python-virtual-environments-a-primer/). In the following we assume you have a [mamba](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html) or [conda](https://www.anaconda.com/) installation.  All conda and mamba command are interchangeable.
 
-### Direct Installations from Package Manager Repositories
+To avoid dependency conflicts, it is recommended that you install Tsam in its own environment. You can use either [uv](https://docs.astral.sh/uv/)  or [conda/mamba](https://conda-forge.org/download/) ) to manage environments and installations. Before proceeding, you must install either UV or Conda/Mamba, or both.
 
-If you want to prevent any possible dependency conflicts create a new environment using the following command:
+**Quick Install with uv**
 
-	mamba create -n tsam_env python pip
+```bash
+uv venv tsam_env
+uv pip install tsam
+```
 
-Activate an existing or the newly create environment afterward
+Or from conda-forge:
 
-	mamba activate tsam_env
+```bash
+conda create -n tsam_env -c conda-forge tsam
+```
 
-Directly install via pip from pypi as follows:
+conda and mamba can be used interchangeably
 
-	pip install tsam
+### Development Installation
 
-or install from conda forge with the following command:
+```bash
+git clone https://github.com/FZJ-IEK3-VSA/tsam.git
+cd tsam
+```
 
-	conda install tsam -c conda-forge
+# Using uv (recommended)
+```bash
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -e ".[develop]"
+```
 
-### Local Installation for Development
-Alternatively, clone a local copy of the repository to your computer
+# Using conda-forge
 
-	git clone https://github.com/FZJ-IEK3-VSA/tsam.git
+```bash
+conda env create -n tsam_env --file=environment.yml
+conda activate tsam_env
+pip install -e . --no-deps
+```
 
-Change the directory of your shell into the root folder of the repository
+# Set up pre-commit hooks
+```bash
+pre-commit install
+```
 
-	cd tsam
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 
-For development, it is recommended to install tsam into its own environment using conda e.g.
+### MILP Solver for k-medoids
 
-	conda env create --file=requirement.yml
+[HiGHS](https://github.com/ERGO-Code/HiGHS) is installed by default. For better performance on large problems, commercial solvers (Gurobi, CPLEX) are recommended if you have a license
 
-Afterward activate the environment
 
-	conda activate tsam_env
-
-Then install tsam via pip as follows
-	
-	
-	pip install -e .[dev]
-	
-### Installation of MILP Solver for k-medoids	
-In order to use the k-medoids clustering, make sure that you have installed a MILP solver. As default [HiGHS](https://github.com/ERGO-Code/HiGHS) is installed and used. Nevertheless, in case you have access to a license we recommend commercial solvers (e.g. Gurobi or CPLEX) since they have a better performance.
-
-### Developer installation
-
-In order to setup a virtual environment in Linux, correct the python name in the Makefile and call
-
-	make setup_venv
-	
-	
 ## Examples
 
 ### Basic workflow
 
-A small example how tsam can be used is decribed as follows
+A small example how tsam can be used is described as follows:
 ```python
-	import pandas as pd
-	import tsam.timeseriesaggregation as tsam
+import pandas as pd
+import tsam
 ```
 
 
 Read in the time series data set with pandas
 ```python
-	raw = pd.read_csv('testdata.csv', index_col = 0)
+raw = pd.read_csv('testdata.csv', index_col=0, parse_dates=True)
 ```
 
-Initialize an aggregation object and define the length of a single period, the number of typical periods, the number of segments in each period, the aggregation method and the representation method - here duration/distribution representation which contains the minimum and maximum value of the original time series 
+Run the aggregation - specify the number of typical periods and configure clustering/segmentation options:
 ```python
-	aggregation = tsam.TimeSeriesAggregation(raw, 
-						noTypicalPeriods = 8, 
-						hoursPerPeriod = 24, 
-						segmentation = True,
-						noSegments = 8,
-						representationMethod = "distributionAndMinMaxRepresentation",
-						distributionPeriodWise = False
-						clusterMethod = 'hierarchical'
-						)
+from tsam import aggregate, ClusterConfig, SegmentConfig
+
+result = tsam.aggregate(
+    raw,
+    n_clusters=8,
+    period_duration='24h',  # or 24, '1d'
+    cluster=ClusterConfig(
+        method='hierarchical',
+        representation='distribution_minmax',
+    ),
+    segments=SegmentConfig(n_segments=8),
+)
 ```
 
-Run the aggregation to typical periods
+Access the results:
 ```python
-	typPeriods = aggregation.createTypicalPeriods()
+# Get the typical periods DataFrame
+cluster_representatives = result.cluster_representatives
+
+# Check accuracy metrics
+print(f"RMSE: {result.accuracy.rmse.mean():.4f}")
+
+# Reconstruct the original time series from typical periods
+reconstructed = result.reconstructed
+
+# Save results
+cluster_representatives.to_csv('cluster_representatives.csv')
 ```
 
-Store the results as .csv file
-	
+### Legacy API
+
+For backward compatibility, the class-based API of TSAM Version 2 is still available.
 ```python
-	typPeriods.to_csv('typperiods.csv')
+import tsam.timeseriesaggregation as tsam_legacy
+
+aggregation = tsam_legacy.TimeSeriesAggregation(
+    raw,
+    noTypicalPeriods=8,
+    hoursPerPeriod=24,
+    segmentation=True,
+    noSegments=8,
+    representationMethod="distributionAndMinMaxRepresentation",
+    clusterMethod='hierarchical'
+)
+cluster_representatives = aggregation.createTypicalPeriods()
 ```
 
 ### Detailed examples
+Detailed examples can be found at:/docs/source/examples_notebooks/
 
-A [**first example**](/examples/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook. 
+A [**first example**](/docs/source/examples_notebooks/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook.
 
-A [**second example**](/examples/aggregation_optiinput.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
+A [**second example**](/docs/source/examples_notebooks/aggregation_optiinput.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
 
 The example time series are based on a department [publication](https://www.mdpi.com/1996-1073/10/3/361) and the [test reference years of the DWD](https://www.dwd.de/DE/leistungen/testreferenzjahre/testreferenzjahre.html).
 
@@ -123,7 +149,7 @@ The example time series are based on a department [publication](https://www.mdpi
 
 MIT License
 
-Copyright (C) 2016-2022 Leander Kotzur (FZJ IEK-3), Maximilian Hoffmann (FZJ IEK-3), Peter Markewitz (FZJ IEK-3), Martin Robinius (FZJ IEK-3), Detlef Stolten (FZJ IEK-3)
+Copyright (C) 2017-2025 Leander Kotzur (FZJ IEK-3), Maximilian Hoffmann (FZJ IEK-3), Peter Markewitz (FZJ IEK-3), Martin Robinius (FZJ IEK-3), Detlef Stolten (FZJ IEK-3)
 
 You should have received a copy of the MIT License along with this program.
 If not, see https://opensource.org/licenses/MIT
@@ -163,5 +189,3 @@ The publications about time series aggregation for energy system optimization mo
 This work is supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050   A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/) and the program ["Energy System Design"](https://www.esd.kit.edu/index.php) and within the [BMWi/BMWk](https://www.bmwk.de/Navigation/DE/Home/home.html) funded project [**METIS**](http://www.metis-platform.net/).
 
 <a href="https://www.helmholtz.de/en/"><img src="https://www.helmholtz.de/fileadmin/user_upload/05_aktuelles/Marke_Design/logos/HG_LOGO_S_ENG_RGB.jpg" alt="Helmholtz Logo" width="200px" style="float:right"></a>
-
-

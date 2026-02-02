@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
-
 import copy
 import time
 import warnings
 
-import pandas as pd
 import numpy as np
-
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+import pandas as pd
 from sklearn import preprocessing
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 
+from tsam.exceptions import LegacyAPIWarning
 from tsam.periodAggregation import aggregatePeriods
 from tsam.representations import representations
 
@@ -24,9 +22,6 @@ TOLERANCE = 1e-6
 
 # minimal weight that overwrites a weighting of zero in order to carry the profile through the aggregation process
 MIN_WEIGHT = 1e-6
-
-
-
 
 
 def unstackToPeriods(timeSeries, timeStepsPerPeriod):
@@ -44,7 +39,15 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
                 candidate period
               - **timeIndex** (pandas Series index) -- is the modification of the original
                 timeseriesindex in case an integer multiple was created
+
+    .. deprecated::
+        Use :func:`tsam.unstack_to_periods` instead.
     """
+    warnings.warn(
+        "unstackToPeriods is deprecated. Use tsam.unstack_to_periods() instead.",
+        LegacyAPIWarning,
+        stacklevel=2,
+    )
     # init new grouped timeindex
     unstackedTimeSeries = timeSeries.copy()
 
@@ -82,8 +85,7 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
     return unstackedTimeSeries, timeIndex
 
 
-
-class TimeSeriesAggregation(object):
+class TimeSeriesAggregation:
     """
     Clusters time series data to typical periods.
     """
@@ -126,6 +128,7 @@ class TimeSeriesAggregation(object):
         sortValues=False,
         sameMean=False,
         rescaleClusterPeriods=True,
+        rescaleExcludeColumns=None,
         weightDict=None,
         segmentation=False,
         extremePeriodMethod="None",
@@ -135,6 +138,10 @@ class TimeSeriesAggregation(object):
         segmentRepresentationMethod=None,
         predefClusterOrder=None,
         predefClusterCenterIndices=None,
+        predefExtremeClusterIdx=None,
+        predefSegmentOrder=None,
+        predefSegmentDurations=None,
+        predefSegmentCenters=None,
         solver="highs",
         numericalTolerance=1e-13,
         roundOutput=None,
@@ -281,6 +288,12 @@ class TimeSeriesAggregation(object):
             shall be added to the typical periods. optional, default: []
         :type addMeanMax: list
         """
+        warnings.warn(
+            "TimeSeriesAggregation is deprecated and will be removed in a future version. "
+            "Use tsam.aggregate() instead. See the migration guide in the documentation.",
+            LegacyAPIWarning,
+            stacklevel=2,
+        )
         if addMeanMin is None:
             addMeanMin = []
         if addMeanMax is None:
@@ -313,6 +326,8 @@ class TimeSeriesAggregation(object):
 
         self.rescaleClusterPeriods = rescaleClusterPeriods
 
+        self.rescaleExcludeColumns = rescaleExcludeColumns or []
+
         self.weightDict = weightDict
 
         self.representationMethod = representationMethod
@@ -326,6 +341,14 @@ class TimeSeriesAggregation(object):
         self.predefClusterOrder = predefClusterOrder
 
         self.predefClusterCenterIndices = predefClusterCenterIndices
+
+        self.predefExtremeClusterIdx = predefExtremeClusterIdx
+
+        self.predefSegmentOrder = predefSegmentOrder
+
+        self.predefSegmentDurations = predefSegmentDurations
+
+        self.predefSegmentCenters = predefSegmentCenters
 
         self.solver = solver
 
@@ -351,12 +374,11 @@ class TimeSeriesAggregation(object):
         return
 
     def _check_init_args(self):
-
         # check timeSeries and set it as pandas DataFrame
         if not isinstance(self.timeSeries, pd.DataFrame):
-            if isinstance(self.timeSeries, dict):
-                self.timeSeries = pd.DataFrame(self.timeSeries)
-            elif isinstance(self.timeSeries, np.ndarray):
+            if isinstance(self.timeSeries, dict) or isinstance(
+                self.timeSeries, np.ndarray
+            ):
                 self.timeSeries = pd.DataFrame(self.timeSeries)
             else:
                 raise ValueError(
@@ -450,7 +472,7 @@ class TimeSeriesAggregation(object):
             raise ValueError(
                 "clusterMethod needs to be one of "
                 + "the following: "
-                + "{}".format(self.CLUSTER_METHODS)
+                + f"{self.CLUSTER_METHODS}"
             )
 
         # check representationMethod
@@ -461,9 +483,9 @@ class TimeSeriesAggregation(object):
             raise ValueError(
                 "If specified, representationMethod needs to be one of "
                 + "the following: "
-                + "{}".format(self.REPRESENTATION_METHODS)
+                + f"{self.REPRESENTATION_METHODS}"
             )
-        
+
         # check representationMethod
         if self.segmentRepresentationMethod is None:
             self.segmentRepresentationMethod = self.representationMethod
@@ -472,12 +494,14 @@ class TimeSeriesAggregation(object):
                 raise ValueError(
                     "If specified, segmentRepresentationMethod needs to be one of "
                     + "the following: "
-                    + "{}".format(self.REPRESENTATION_METHODS)
+                    + f"{self.REPRESENTATION_METHODS}"
                 )
 
         # if representationDict None, represent by maximum time steps in each cluster
         if self.representationDict is None:
-            self.representationDict = {i: "mean" for i in list(self.timeSeries.columns)}
+            self.representationDict = dict.fromkeys(
+                list(self.timeSeries.columns), "mean"
+            )
         # sort representationDict alphabetically to make sure that the min, max or mean function is applied to the right
         # column
         self.representationDict = (
@@ -489,7 +513,7 @@ class TimeSeriesAggregation(object):
             raise ValueError(
                 "extremePeriodMethod needs to be one of "
                 + "the following: "
-                + "{}".format(self.EXTREME_PERIOD_METHODS)
+                + f"{self.EXTREME_PERIOD_METHODS}"
             )
 
         # check evalSumPeriods
@@ -519,6 +543,32 @@ class TimeSeriesAggregation(object):
             raise ValueError(
                 'If "predefClusterCenterIndices" is defined, "predefClusterOrder" needs to be defined as well'
             )
+
+        # check predefSegmentOrder
+        if self.predefSegmentOrder is not None:
+            if not isinstance(self.predefSegmentOrder, (list, tuple)):
+                raise ValueError("predefSegmentOrder has to be a list or tuple")
+            if self.predefSegmentDurations is None:
+                raise ValueError(
+                    'If "predefSegmentOrder" is defined, "predefSegmentDurations" '
+                    "needs to be defined as well"
+                )
+            if not isinstance(self.predefSegmentDurations, (list, tuple)):
+                raise ValueError("predefSegmentDurations has to be a list or tuple")
+        elif self.predefSegmentDurations is not None:
+            raise ValueError(
+                'If "predefSegmentDurations" is defined, "predefSegmentOrder" '
+                "needs to be defined as well"
+            )
+
+        if self.predefSegmentCenters is not None:
+            if self.predefSegmentOrder is None:
+                raise ValueError(
+                    'If "predefSegmentCenters" is defined, "predefSegmentOrder" '
+                    "needs to be defined as well"
+                )
+            if not isinstance(self.predefSegmentCenters, (list, tuple)):
+                raise ValueError("predefSegmentCenters has to be a list or tuple")
 
         return
 
@@ -600,9 +650,11 @@ class TimeSeriesAggregation(object):
                 self.normalizedTimeSeries[column] * self.weightDict[column]
             )
 
-        self.normalizedPeriodlyProfiles, self.timeIndex = unstackToPeriods(
-            self.normalizedTimeSeries, self.timeStepsPerPeriod
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", LegacyAPIWarning)
+            self.normalizedPeriodlyProfiles, self.timeIndex = unstackToPeriods(
+                self.normalizedTimeSeries, self.timeStepsPerPeriod
+            )
 
         # check if no NaN is in the resulting profiles
         if self.normalizedPeriodlyProfiles.isnull().values.any():
@@ -674,7 +726,6 @@ class TimeSeriesAggregation(object):
         # check which extreme periods exist in the profile and add them to
         # self.extremePeriods dict
         for column in self.timeSeries.columns:
-
             if column in addPeakMax:
                 stepNo = groupedSeries[column].max(axis=1).idxmax()
                 # add only if stepNo is not already in extremePeriods
@@ -814,8 +865,8 @@ class TimeSeriesAggregation(object):
                     index
                 ] = self.extremePeriods[periodType]["profile"][index]
                 if (
-                    not self.extremePeriods[periodType]["clusterNo"]
-                    in extremeClusterIdx
+                    self.extremePeriods[periodType]["clusterNo"]
+                    not in extremeClusterIdx
                 ):
                     extremeClusterIdx.append(
                         self.extremePeriods[periodType]["clusterNo"]
@@ -839,22 +890,41 @@ class TimeSeriesAggregation(object):
         series in the typical Periods fits the mean value of the original time
         series, without changing the values of the extremePeriods.
         """
+        # Initialize dict to store rescaling deviations per column
+        self._rescaleDeviations = {}
+
         weightingVec = pd.Series(self._clusterPeriodNoOccur).values
-        typicalPeriods = pd.concat([
-            pd.Series(s, index=self.normalizedPeriodlyProfiles.columns)
-            for s in self.clusterPeriods
-        ], axis=1).T
-        idx_wo_peak = np.delete(typicalPeriods.index, extremeClusterIdx)
-        for column in self.timeSeries.columns:
-            diff = 1
+        columns = list(self.timeSeries.columns)
+        n_clusters = len(self.clusterPeriods)
+        n_cols = len(columns)
+        n_timesteps = self.timeStepsPerPeriod
+
+        # Convert to 3D numpy array for fast operations: (n_clusters, n_cols, n_timesteps)
+        arr = np.array(self.clusterPeriods).reshape(n_clusters, n_cols, n_timesteps)
+
+        # Indices for non-extreme clusters
+        idx_wo_peak = np.delete(np.arange(n_clusters), extremeClusterIdx)
+        extremeClusterIdx_arr = np.array(extremeClusterIdx, dtype=int)
+
+        for ci, column in enumerate(columns):
+            # Skip columns excluded from rescaling
+            if column in self.rescaleExcludeColumns:
+                continue
+
+            col_data = arr[:, ci, :]  # (n_clusters, n_timesteps)
             sum_raw = self.normalizedPeriodlyProfiles[column].sum().sum()
-            sum_peak = np.sum(
-                weightingVec[extremeClusterIdx]
-                * typicalPeriods[column].loc[extremeClusterIdx, :].sum(axis=1)
-            )
+
+            # Sum of extreme periods (weighted)
+            if len(extremeClusterIdx_arr) > 0:
+                sum_peak = np.sum(
+                    weightingVec[extremeClusterIdx_arr]
+                    * col_data[extremeClusterIdx_arr, :].sum(axis=1)
+                )
+            else:
+                sum_peak = 0.0
+
             sum_clu_wo_peak = np.sum(
-                weightingVec[idx_wo_peak]
-                * typicalPeriods[column].loc[idx_wo_peak, :].sum(axis=1)
+                weightingVec[idx_wo_peak] * col_data[idx_wo_peak, :].sum(axis=1)
             )
 
             # define the upper scale dependent on the weighting of the series
@@ -874,59 +944,65 @@ class TimeSeriesAggregation(object):
             # use while loop to rescale cluster periods
             a = 0
             while diff > sum_raw * TOLERANCE and a < MAX_ITERATOR:
-                # rescale values
-                typicalPeriods.loc[idx_wo_peak, column] = (
-                    typicalPeriods[column].loc[idx_wo_peak, :].values
-                    * (sum_raw - sum_peak)
-                    / sum_clu_wo_peak
-                )
+                # rescale values (only non-extreme clusters)
+                arr[idx_wo_peak, ci, :] *= (sum_raw - sum_peak) / sum_clu_wo_peak
 
-                # reset values higher than the upper sacle or less than zero
-                typicalPeriods[column] = typicalPeriods[column].clip(lower=0, upper=scale_ub)
+                # reset values higher than the upper scale or less than zero
+                arr[:, ci, :] = np.clip(arr[:, ci, :], 0, scale_ub)
 
-                typicalPeriods[column] = typicalPeriods[column].fillna(0.0)
+                # Handle NaN (replace with 0)
+                np.nan_to_num(arr[:, ci, :], copy=False, nan=0.0)
 
                 # calc new sum and new diff to orig data
+                col_data = arr[:, ci, :]
                 sum_clu_wo_peak = np.sum(
-                    weightingVec[idx_wo_peak]
-                    * typicalPeriods[column].loc[idx_wo_peak, :].sum(axis=1)
+                    weightingVec[idx_wo_peak] * col_data[idx_wo_peak, :].sum(axis=1)
                 )
                 diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
                 a += 1
-            if a == MAX_ITERATOR:
-                deviation = str(round((diff / sum_raw) * 100, 2))
+
+            # Calculate and store final deviation
+            deviation_pct = (diff / sum_raw) * 100 if sum_raw != 0 else 0.0
+            converged = a < MAX_ITERATOR
+            self._rescaleDeviations[column] = {
+                "deviation_pct": deviation_pct,
+                "converged": converged,
+                "iterations": a,
+            }
+
+            if not converged and deviation_pct > 0.01:
                 warnings.warn(
                     'Max iteration number reached for "'
                     + str(column)
                     + '" while rescaling the cluster periods.'
                     + " The integral of the aggregated time series deviates by: "
-                    + deviation
+                    + str(round(deviation_pct, 2))
                     + "%"
                 )
-        return typicalPeriods.values
+
+        # Reshape back to 2D: (n_clusters, n_cols * n_timesteps)
+        return arr.reshape(n_clusters, -1)
 
     def _clusterSortedPeriods(self, candidates, n_init=20):
         """
         Runs the clustering algorithms for the sorted profiles within the period
         instead of the original profiles. (Duration curve clustering)
         """
-        # initialize
-        normalizedSortedPeriodlyProfiles = copy.deepcopy(
-            self.normalizedPeriodlyProfiles
+        # Vectorized sort: reshape to 3D (periods x columns x timesteps), sort, reshape back
+        values = self.normalizedPeriodlyProfiles.values.copy()
+        n_periods, n_total = values.shape
+        n_cols = len(self.timeSeries.columns)
+        n_timesteps = n_total // n_cols
+
+        # Sort each period's timesteps descending for all columns at once
+        # Use stable sort for deterministic tie-breaking across environments
+        values_3d = values.reshape(n_periods, n_cols, n_timesteps)
+        sortedClusterValues = (-np.sort(-values_3d, axis=2, kind="stable")).reshape(
+            n_periods, -1
         )
-        for column in self.timeSeries.columns:
-            # sort each period individually
-            df = normalizedSortedPeriodlyProfiles[column]
-            values = df.values
-            values.sort(axis=1)
-            values = values[:, ::-1]
-            normalizedSortedPeriodlyProfiles[column] = pd.DataFrame(
-                values, df.index, df.columns
-            )
-        sortedClusterValues = normalizedSortedPeriodlyProfiles.values
 
         (
-            altClusterCenters,
+            _altClusterCenters,
             self.clusterCenterIndices,
             clusterOrders_C,
         ) = aggregatePeriods(
@@ -979,7 +1055,7 @@ class TimeSeriesAggregation(object):
         # check for additional cluster parameters
         if self.evalSumPeriods:
             evaluationValues = (
-                self.normalizedPeriodlyProfiles.stack(future_stack=True,level=0)
+                self.normalizedPeriodlyProfiles.stack(future_stack=True, level=0)
                 .sum(axis=1)
                 .unstack(level=1)
             )
@@ -994,10 +1070,10 @@ class TimeSeriesAggregation(object):
             candidates = self.normalizedPeriodlyProfiles.values
 
         # skip aggregation procedure for the case of a predefined cluster sequence and get only the correct representation
-        if not self.predefClusterOrder is None:
+        if self.predefClusterOrder is not None:
             self._clusterOrder = self.predefClusterOrder
             # check if representatives are defined
-            if not self.predefClusterCenterIndices is None:
+            if self.predefClusterCenterIndices is not None:
                 self.clusterCenterIndices = self.predefClusterCenterIndices
                 self.clusterCenters = candidates[self.predefClusterCenterIndices]
             else:
@@ -1057,7 +1133,11 @@ class TimeSeriesAggregation(object):
                 addMeanMax=self.addMeanMax,
             )
         else:
-            self.extremeClusterIdx = []
+            # Use predefined extreme cluster indices if provided (for transfer/apply)
+            if self.predefExtremeClusterIdx is not None:
+                self.extremeClusterIdx = list(self.predefExtremeClusterIdx)
+            else:
+                self.extremeClusterIdx = []
 
         # get number of appearance of the the typical periods
         nums, counts = np.unique(self._clusterOrder, return_counts=True)
@@ -1078,10 +1158,17 @@ class TimeSeriesAggregation(object):
             )
 
         # put the clustered data in pandas format and scale back
-        self.normalizedTypicalPeriods = pd.concat([
-            pd.Series(s, index=self.normalizedPeriodlyProfiles.columns)
-            for s in self.clusterPeriods
-        ], axis=1).unstack("TimeStep").T
+        self.normalizedTypicalPeriods = (
+            pd.concat(
+                [
+                    pd.Series(s, index=self.normalizedPeriodlyProfiles.columns)
+                    for s in self.clusterPeriods
+                ],
+                axis=1,
+            )
+            .unstack("TimeStep")
+            .T
+        )
 
         if self.segmentation:
             from tsam.utils.segmentation import segmentation
@@ -1089,6 +1176,7 @@ class TimeSeriesAggregation(object):
             (
                 self.segmentedNormalizedTypicalPeriods,
                 self.predictedSegmentedNormalizedTypicalPeriods,
+                self.segmentCenterIndices,
             ) = segmentation(
                 self.normalizedTypicalPeriods,
                 self.noSegments,
@@ -1096,6 +1184,9 @@ class TimeSeriesAggregation(object):
                 representationMethod=self.segmentRepresentationMethod,
                 representationDict=self.representationDict,
                 distributionPeriodWise=self.distributionPeriodWise,
+                predefSegmentOrder=self.predefSegmentOrder,
+                predefSegmentDurations=self.predefSegmentDurations,
+                predefSegmentCenters=self.predefSegmentCenters,
             )
             self.normalizedTypicalPeriods = (
                 self.segmentedNormalizedTypicalPeriods.reset_index(level=3, drop=True)
@@ -1104,31 +1195,29 @@ class TimeSeriesAggregation(object):
         self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
 
         # check if original time series boundaries are not exceeded
-        if np.array(
-            self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
-        ).any():
-            warning_list = self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
+        exceeds_max = self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
+        if exceeds_max.any():
             diff = self.typicalPeriods.max(axis=0) - self.timeSeries.max(axis=0)
-            if abs(diff).max() > self.numericalTolerance:
+            exceeding_diff = diff[exceeds_max]
+            if exceeding_diff.max() > self.numericalTolerance:
                 warnings.warn(
-                    "At least one maximal value of the " + 
-                    "aggregated time series exceeds the maximal value " + 
-                    "the input time series for: " + 
-                    "{}".format(diff[warning_list[warning_list>0].index].to_dict()) +
-                    ". To silence the warning set the 'numericalTolerance' to a higher value."
+                    "At least one maximal value of the "
+                    + "aggregated time series exceeds the maximal value "
+                    + "the input time series for: "
+                    + f"{exceeding_diff.to_dict()}"
+                    + ". To silence the warning set the 'numericalTolerance' to a higher value."
                 )
-        if np.array(
-            self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
-        ).any():
-            warning_list = self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
-            diff = self.typicalPeriods.min(axis=0) - self.timeSeries.min(axis=0)
-            if abs(diff).max() > self.numericalTolerance:
+        below_min = self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
+        if below_min.any():
+            diff = self.timeSeries.min(axis=0) - self.typicalPeriods.min(axis=0)
+            exceeding_diff = diff[below_min]
+            if exceeding_diff.max() > self.numericalTolerance:
                 warnings.warn(
-                    "Something went wrong... At least one minimal value of the " + 
-                    "aggregated time series exceeds the minimal value " + 
-                    "the input time series for: " + 
-                        "{}".format(diff[warning_list[warning_list>0].index].to_dict()) +
-                        ". To silence the warning set the 'numericalTolerance' to a higher value."
+                    "Something went wrong... At least one minimal value of the "
+                    + "aggregated time series exceeds the minimal value "
+                    + "the input time series for: "
+                    + f"{exceeding_diff.to_dict()}"
+                    + ". To silence the warning set the 'numericalTolerance' to a higher value."
                 )
         return self.typicalPeriods
 
@@ -1165,7 +1254,7 @@ class TimeSeriesAggregation(object):
     @property
     def clusterOrder(self):
         """
-        The sequence/order of the typical period to represent 
+        The sequence/order of the typical period to represent
         the original time series
         """
         if not hasattr(self, "_clusterOrder"):
@@ -1232,30 +1321,23 @@ class TimeSeriesAggregation(object):
         if not hasattr(self, "_clusterOrder"):
             self.createTypicalPeriods()
 
-        # list up typical periods according to their order of occurrence using the _clusterOrder.
-        new_data = []
-        for label in self._clusterOrder:
-            # if segmentation is used, use the segmented typical periods with predicted time steps with the same number
-            # of time steps as unsegmented typical periods
-            if self.segmentation:
-                new_data.append(
-                    self.predictedSegmentedNormalizedTypicalPeriods.loc[label, :]
-                    .unstack()
-                    .values
-                )
-            else:
-                # new_data.append(self.clusterPeriods[label])
-                new_data.append(
-                    self.normalizedTypicalPeriods.loc[label, :].unstack().values
-                )
+        # Select typical periods source based on segmentation
+        if self.segmentation:
+            typical = self.predictedSegmentedNormalizedTypicalPeriods
+        else:
+            typical = self.normalizedTypicalPeriods
 
-        # back in matrix
+        # Unstack once, then use vectorized indexing to select periods by cluster order
+        typical_unstacked = typical.unstack()
+        reconstructed = typical_unstacked.loc[list(self._clusterOrder)].values
+
+        # Back in matrix form
         clustered_data_df = pd.DataFrame(
-            new_data,
+            reconstructed,
             columns=self.normalizedPeriodlyProfiles.columns,
             index=self.normalizedPeriodlyProfiles.index,
         )
-        clustered_data_df = clustered_data_df.stack(future_stack=True,level="TimeStep")
+        clustered_data_df = clustered_data_df.stack(future_stack=True, level="TimeStep")
 
         # back in form
         self.normalizedPredictedData = pd.DataFrame(
@@ -1263,9 +1345,9 @@ class TimeSeriesAggregation(object):
             index=self.timeSeries.index,
             columns=self.timeSeries.columns,
         )
-        # normalize again if sameMean = True to avoid doubled unnormalization when using _postProcessTimeSeries after
-        # createTypicalPeriods has been called
-        if self.sameMean:
+        # Normalize again if sameMean=True to undo in-place modification from createTypicalPeriods.
+        # But NOT for segmentation - predictedSegmentedNormalizedTypicalPeriods wasn't modified in-place.
+        if self.sameMean and not self.segmentation:
             self.normalizedPredictedData /= self._normalizedMean
         self.predictedData = self._postProcessTimeSeries(
             self.normalizedPredictedData, applyWeighting=False
@@ -1358,4 +1440,7 @@ class TimeSeriesAggregation(object):
         """
         Derives the accuracy indicators over all time series
         """
-        return np.sqrt(self.accuracyIndicators().pow(2).sum()/len(self.normalizedTimeSeries.columns))
+        return np.sqrt(
+            self.accuracyIndicators().pow(2).sum()
+            / len(self.normalizedTimeSeries.columns)
+        )

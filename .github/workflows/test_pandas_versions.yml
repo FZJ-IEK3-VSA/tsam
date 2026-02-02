@@ -1,0 +1,36 @@
+on:
+    workflow_dispatch:
+    # push:
+    #     branches: ["test_dependency_range_v_3_0"]
+    pull_request:
+        branches: ["master"]
+
+jobs:
+    TestPushCondaForgeDev:
+        name: Test conda-forge development version on ${{ matrix.runner_tag }}
+        strategy:
+            fail-fast: false
+            matrix:
+                runner_tag: ["self-hosted"]
+                library_version:
+                    [
+                        "2.2.0",
+                        "2.2.1",
+                        "2.2.2",
+                        "2.2.3",
+                        "2.3.0",
+                        "2.3.1",
+                        "2.3.2",
+                        "2.3.3",
+                        "3.0.0",
+                    ]
+        uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+        with:
+            runner_tag: ${{ matrix.runner_tag }}
+            requirements_file_name: environment.yml
+            examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
+            multiprocessing_example_string: "-n auto"
+            library_version: ${{ matrix.library_version }}
+            dependency_position_env_file: "3"
+            library_name: "pandas"
+            multiprocessing_pytest_string: "-n auto"

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Orders a set of representation values to fit several candidate value sets"""
 
 import warnings
@@ -43,47 +42,55 @@ def durationRepresentation(
     # (periodWise = True) or the distribution of the total time series is preserved only. In the latter case, the
     # inner-cluster variance is smaller and the variance across the typical periods' mean values is higher
     if distributionPeriodWise:
-        clusterCenters = []
+        # Vectorized implementation using numpy 3D arrays instead of pandas MultiIndex
+        n_periods = candidates.shape[0]
+        n_attrs = num_attributes
 
+        # Reshape to 3D: (periods, attributes, timesteps)
+        candidates_3d = candidates.reshape(n_periods, n_attrs, timeStepsPerPeriod)
+
+        clusterCenters = []
         for clusterNum in np.unique(clusterOrder):
             indice = np.where(clusterOrder == clusterNum)[0]
-            noCandidates = len(indice)
+            n_cands = len(indice)
 
             # Skip empty clusters
-            if len(indice) == 0:
-                continue     
-            
-            # This list will hold the representative values for each attribute
-            clusterCenter_parts = [] 
+            if n_cands == 0:
+                continue
 
-            for a in candidates_df.columns.levels[0]:
+            # Get all candidates for this cluster: (n_cands, n_attrs, timesteps)
+            cluster_data = candidates_3d[indice]
 
-                candidateValues_np = candidates_df.loc[indice, a].values
+            # Process all attributes at once using vectorized operations
+            # Reshape to (n_attrs, n_cands * timesteps) for sorting
+            flat_per_attr = cluster_data.transpose(1, 0, 2).reshape(n_attrs, -1)
 
-                # flatten the 2D array (candidates, timesteps) into a 1D array and sort it.
-                sorted_flat_values = np.sort(candidateValues_np.flatten())
+            # Sort each attribute's values (stable sort for deterministic tie-breaking)
+            sorted_flat = np.sort(flat_per_attr, axis=1, kind="stable")
 
-                # reshape the sorted values and calculate the mean for each representative time step.
-                representationValues_np = sorted_flat_values.reshape(timeStepsPerPeriod, noCandidates).mean(axis=1)
+            # Reshape and mean: (n_attrs, timesteps, n_cands) -> mean -> (n_attrs, timesteps)
+            sorted_reshaped = sorted_flat.reshape(n_attrs, timeStepsPerPeriod, n_cands)
+            repr_values = sorted_reshaped.mean(axis=2)
 
-                # respect max and min of the attributes
-                if representMinMax:
-                    representationValues_np[0] = sorted_flat_values[0]
-                    representationValues_np[-1] = sorted_flat_values[-1]
+            # Respect max and min of the attributes
+            if representMinMax:
+                repr_values[:, 0] = sorted_flat[:, 0]
+                repr_values[:, -1] = sorted_flat[:, -1]
 
-                # get the order of the representation values such that euclidean distance
-                # to the candidates' mean profile is minimized.
-                mean_profile_order = np.argsort(candidateValues_np.mean(axis=0))
-                
-                # Create an empty array to place the results in the correct order
-                final_representation_for_attr = np.empty_like(representationValues_np)
-                final_representation_for_attr[mean_profile_order] = representationValues_np
-                
-                # add to cluster center
-                clusterCenter_parts.append(final_representation_for_attr)
+            # Get mean profile order for each attribute (stable sort for deterministic tie-breaking)
+            mean_profiles = cluster_data.mean(axis=0)  # (n_attrs, timesteps)
+            orders = np.argsort(
+                mean_profiles, axis=1, kind="stable"
+            )  # (n_attrs, timesteps)
 
-            clusterCenters.append(np.concatenate(clusterCenter_parts))
-    
+            # Reorder repr_values according to orders
+            final_repr = np.empty_like(repr_values)
+            for a in range(n_attrs):
+                final_repr[a, orders[a]] = repr_values[a]
+
+            # Flatten to (n_attrs * timesteps,)
+            clusterCenters.append(final_repr.flatten())
+
     else:
         clusterCentersList = []
         for a in candidates_df.columns.levels[0]:
@@ -190,7 +197,6 @@ def _representMinMax(
         return representationValues
 
     if keepSum:
-
         # now anticipate the shift of the sum of the time series
         # due to the change of the min and max values
         # of the duration curve

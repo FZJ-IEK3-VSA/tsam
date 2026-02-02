@@ -1,0 +1,42 @@
+on:
+  workflow_dispatch:
+  push:
+    branches: ["**"]
+
+jobs:
+  Lint:
+    name: Lint with ruff
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/ruff-action@v3
+      - name: Check Linter
+        run: ruff check --output-format=github --config=pyproject.toml
+      - name: Check Format
+        run: ruff format --diff --config=pyproject.toml
+
+  TestPushCondaForgeDev:
+    name: Test conda-forge development version on ${{ matrix.runner_tag }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_tag: ["self-hosted"]
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    with:
+      runner_tag: ${{ matrix.runner_tag }}
+      requirements_file_name: environment.yml
+      examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
+      multiprocessing_example_string: "-n auto"
+  TestPushPyPIDev:
+    name: Test PyPi development version on ${{ matrix.runner_tag }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_tag: ["self-hosted"]
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_pypi_test.yml@main
+    with:
+      runner_tag: ${{ matrix.runner_tag }}
+      python_version: "3.13"
+      optional_dependency_PyPI_tag: "[develop]"
+      examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
+      multiprocessing_example_string: "-n auto"

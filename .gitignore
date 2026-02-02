@@ -1,17 +1,70 @@
-# directories
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
 .idea/
 .vscode/
-__pycache__/
-trash/
-*.pytest_cache/
-*ipynb_checkpoints/
-*.eggs/
-docs/build
+*.swp
+*.swo
+*~
 
-# file types to ignore
-*.pyc
-*.egg-info
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Linting
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# Documentation
+docs/build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
 *.log
 *.lp
 *.glp
 *.mp4
+trash/
+
+# Notebook output artifacts (regenerated when notebooks run)
+docs/source/examples_notebooks/results/

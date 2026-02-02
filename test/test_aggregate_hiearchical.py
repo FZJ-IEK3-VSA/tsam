@@ -1,27 +1,18 @@
-import os
-import time
-
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
+from conftest import RESULTS_DIR
 
 
 def test_aggregate_hiearchical():
-
     normalizedPeriodlyProfiles = pd.read_csv(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "examples",
-            "results",
-            "preprocessed_wind.csv",
-        ),
+        RESULTS_DIR / "preprocessed_wind.csv",
         index_col=[0],
         header=[0, 1],
     )
 
-    clusterCenters, clusterCenterIndices, clusterOrder = tsam.aggregatePeriods(
+    _clusterCenters, _clusterCenterIndices, clusterOrder = tsam.aggregatePeriods(
         normalizedPeriodlyProfiles.values,
         n_clusters=8,
         clusterMethod="hierarchical",

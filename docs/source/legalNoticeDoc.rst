@@ -14,7 +14,7 @@ Copyright (C) 2016-2022 Leander Kotzur, Maximilian Hoffmann, Peter Markewitz, Ma
 Acknowledgement
 ***************
 
-The development of this software is currently supported bby The authors acknowledge the financial support by the Federal Ministry 
+The development of this software is currently supported bby The authors acknowledge the financial support by the Federal Ministry
 for Economic Affairs and Energy of Germany in the project METIS (project number 03ET4064A).
 
 .. image:: https://www.bmwi.de/SiteGlobals/BMWI/StyleBundles/Bilder/bmwi_logo_en.svgz?__blob=normal&v=10

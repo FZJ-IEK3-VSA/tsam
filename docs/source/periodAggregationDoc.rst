@@ -10,6 +10,6 @@ Descriptions of the basic functions are given below.
 
 **Function descriptions:**
 
-.. automodule:: periodAggregation
+.. automodule:: tsam.periodAggregation
    :members:
    :member-order: bysource

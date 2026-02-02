@@ -1,6 +1,0 @@
-name: tsam_env
-channels:
-  - conda-forge
-dependencies:
-  - python>=3.9,<3.14
-  - pip

@@ -1,40 +1,24 @@
-import os
 import time
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
+from conftest import RESULTS_DIR, TESTDATA_CSV
 
 
 def test_cluster_order():
-
-    raw = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), "..", "examples", "testdata.csv"),
-        index_col=0,
-    )
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     raw_wind = raw.loc[:, "Wind"].to_frame()
 
     orig_raw_predefClusterOrder = pd.read_csv(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "examples",
-            "results",
-            "testperiods_predefClusterOrder.csv",
-        ),
+        RESULTS_DIR / "testperiods_predefClusterOrder.csv",
         index_col=[0, 1],
     )
 
     orig_raw_predefClusterOrderAndClusterCenters = pd.read_csv(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "examples",
-            "results",
-            "testperiods_predefClusterOrderAndClusterCenters.csv",
-        ),
+        RESULTS_DIR / "testperiods_predefClusterOrderAndClusterCenters.csv",
         index_col=[0, 1],
     )
 
@@ -88,12 +72,14 @@ def test_cluster_order():
     )
 
     sortedDaysOrig2 = (
-        orig_raw_predefClusterOrderAndClusterCenters.groupby(level=0).sum()
+        orig_raw_predefClusterOrderAndClusterCenters.groupby(level=0)
+        .sum()
         .sort_values("GHI")
         .index
     )
     sortedDaysTest2 = (
-        typPeriods_predefClusterOrderAndClusterCenters.groupby(level=0).sum()
+        typPeriods_predefClusterOrderAndClusterCenters.groupby(level=0)
+        .sum()
         .sort_values("GHI")
         .index
     )
@@ -103,21 +89,33 @@ def test_cluster_order():
         orig_raw_predefClusterOrder[typPeriods_predefClusterOrder.columns]
         .unstack()
         .loc[sortedDaysOrig1, :]
-        .stack(future_stack=True,)
+        .stack(
+            future_stack=True,
+        )
     )
-    test1 = typPeriods_predefClusterOrder.unstack().loc[sortedDaysTest1, :].stack(future_stack=True,)
+    test1 = (
+        typPeriods_predefClusterOrder.unstack()
+        .loc[sortedDaysTest1, :]
+        .stack(
+            future_stack=True,
+        )
+    )
     orig2 = (
         orig_raw_predefClusterOrderAndClusterCenters[
             typPeriods_predefClusterOrderAndClusterCenters.columns
         ]
         .unstack()
         .loc[sortedDaysOrig2, :]
-        .stack(future_stack=True,)
+        .stack(
+            future_stack=True,
+        )
     )
     test2 = (
         typPeriods_predefClusterOrderAndClusterCenters.unstack()
         .loc[sortedDaysTest2, :]
-        .stack(future_stack=True,)
+        .stack(
+            future_stack=True,
+        )
     )
 
     np.testing.assert_array_almost_equal(

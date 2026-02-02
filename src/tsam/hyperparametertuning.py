@@ -1,15 +1,15 @@
-# -*- coding: utf-8 -*-
-
 import copy
+import warnings
 
 import numpy as np
-
 import tqdm
 
+from tsam.exceptions import LegacyAPIWarning
 from tsam.timeseriesaggregation import TimeSeriesAggregation
-        
+
+
 def getNoPeriodsForDataReduction(noRawTimeSteps, segmentsPerPeriod, dataReduction):
-    """        
+    """
     Identifies the maximum number of periods which can be set to achieve the required data reduction.
 
     :param noRawTimeSteps: Number of original time steps. required
@@ -22,11 +22,20 @@ def getNoPeriodsForDataReduction(noRawTimeSteps, segmentsPerPeriod, dataReductio
     :type dataReduction: float
 
     :returns: **noTypicalPeriods** --  Number of typical periods that can be set.
+
+    .. deprecated::
+        This function is deprecated along with the HyperTunedAggregations class.
     """
-    return int(np.floor(dataReduction * float(noRawTimeSteps)/segmentsPerPeriod))
+    warnings.warn(
+        "getNoPeriodsForDataReduction is deprecated along with HyperTunedAggregations.",
+        LegacyAPIWarning,
+        stacklevel=2,
+    )
+    return int(np.floor(dataReduction * float(noRawTimeSteps) / segmentsPerPeriod))
+
 
 def getNoSegmentsForDataReduction(noRawTimeSteps, typicalPeriods, dataReduction):
-    """        
+    """
     Identifies the maximum number of segments which can be set to achieve the required data reduction.
 
     :param noRawTimeSteps: Number of original time steps. required
@@ -39,14 +48,19 @@ def getNoSegmentsForDataReduction(noRawTimeSteps, typicalPeriods, dataReduction)
     :type dataReduction: float
 
     :returns: **segmentsPerPeriod** --  Number of segments per period that can be set.
+
+    .. deprecated::
+        This function is deprecated along with the HyperTunedAggregations class.
     """
-    return int(np.floor(dataReduction * float(noRawTimeSteps)/typicalPeriods))
+    warnings.warn(
+        "getNoSegmentsForDataReduction is deprecated along with HyperTunedAggregations.",
+        LegacyAPIWarning,
+        stacklevel=2,
+    )
+    return int(np.floor(dataReduction * float(noRawTimeSteps) / typicalPeriods))
 
 
-
-
-class HyperTunedAggregations(object):
-
+class HyperTunedAggregations:
     def __init__(self, base_aggregation, saveAggregationHistory=True):
         """
         A class that does a parameter variation and tuning of the aggregation itself.
@@ -56,7 +70,17 @@ class HyperTunedAggregations(object):
 
         :param saveAggregationHistory: Defines if all aggregations that are created during the tuning and iterations shall be saved under self.aggregationHistory.
         :type saveAggregationHistory: boolean
+
+        .. deprecated::
+            Use :func:`tsam.tuning.find_optimal_combination` or
+            :func:`tsam.tuning.find_pareto_front` instead.
         """
+        warnings.warn(
+            "HyperTunedAggregations is deprecated. "
+            "Use tsam.tuning.find_optimal_combination() or tsam.tuning.find_pareto_front() instead.",
+            LegacyAPIWarning,
+            stacklevel=2,
+        )
         self.base_aggregation = base_aggregation
 
         if not isinstance(self.base_aggregation, TimeSeriesAggregation):
@@ -64,22 +88,19 @@ class HyperTunedAggregations(object):
                 "base_aggregation has to be an TimeSeriesAggregation object"
             )
 
-        self._alterableAggregation=copy.deepcopy(self.base_aggregation)
+        self._alterableAggregation = copy.deepcopy(self.base_aggregation)
 
-        self.saveAggregationHistory=saveAggregationHistory
+        self.saveAggregationHistory = saveAggregationHistory
 
-        self._segmentHistory=[]
+        self._segmentHistory = []
 
-        self._periodHistory=[]
+        self._periodHistory = []
 
-        self._RMSEHistory=[]
+        self._RMSEHistory = []
 
         if self.saveAggregationHistory:
-            self.aggregationHistory=[]
-            
+            self.aggregationHistory = []
 
-        
-        
     def _testAggregation(self, noTypicalPeriods, noSegments):
         """
         Tests the aggregation for a set of typical periods and segments and returns the RMSE
@@ -88,15 +109,15 @@ class HyperTunedAggregations(object):
 
         self._periodHistory.append(noTypicalPeriods)
 
-        self._alterableAggregation.noTypicalPeriods=noTypicalPeriods
+        self._alterableAggregation.noTypicalPeriods = noTypicalPeriods
 
-        self._alterableAggregation.noSegments=noSegments
+        self._alterableAggregation.noSegments = noSegments
 
         self._alterableAggregation.createTypicalPeriods()
 
         self._alterableAggregation.predictOriginalData()
 
-        RMSE=self._alterableAggregation.totalAccuracyIndicators()["RMSE"]
+        RMSE = self._alterableAggregation.totalAccuracyIndicators()["RMSE"]
 
         self._RMSEHistory.append(RMSE)
 
@@ -104,7 +125,7 @@ class HyperTunedAggregations(object):
             self.aggregationHistory.append(copy.copy(self._alterableAggregation))
 
         return RMSE
-	
+
     def _deleteTestHistory(self, index):
         """
         Delelets the defined index from the test history
@@ -112,13 +133,12 @@ class HyperTunedAggregations(object):
         del self._segmentHistory[index]
         del self._periodHistory[index]
         del self._RMSEHistory[index]
-        
+
         if self.saveAggregationHistory:
             del self.aggregationHistory[index]
 
-				
     def identifyOptimalSegmentPeriodCombination(self, dataReduction):
-        """        
+        """
         Identifies the optimal combination of number of typical periods and number of segments for a given data reduction set.
 
         :param dataReduction: Factor by which the resulting dataset should be reduced. required
@@ -127,20 +147,24 @@ class HyperTunedAggregations(object):
         :returns: **noSegments, noTypicalperiods** --  The optimal combination of segments and typical periods for the given optimization set.
         """
         if not self.base_aggregation.segmentation:
-            raise ValueError("This function does only make sense in combination with 'segmentation' activated.")
+            raise ValueError(
+                "This function does only make sense in combination with 'segmentation' activated."
+            )
 
-        noRawTimeSteps=len(self.base_aggregation.timeSeries.index)
-        
-        _maxPeriods = int(float(noRawTimeSteps)/self.base_aggregation.timeStepsPerPeriod)
+        noRawTimeSteps = len(self.base_aggregation.timeSeries.index)
+
+        _maxPeriods = int(
+            float(noRawTimeSteps) / self.base_aggregation.timeStepsPerPeriod
+        )
         _maxSegments = self.base_aggregation.timeStepsPerPeriod
 
         # save RMSE
         RMSE_history = []
 
         # correct 0 index of python
-        possibleSegments = np.arange(_maxSegments)+1
-        possiblePeriods = np.arange(_maxPeriods)+1
-        
+        possibleSegments = np.arange(_maxSegments) + 1
+        possiblePeriods = np.arange(_maxPeriods) + 1
+
         # number of time steps of all combinations of segments and periods
         combinedTimeSteps = np.outer(possibleSegments, possiblePeriods)
         # reduce to valid combinations for targeted data reduction
@@ -148,74 +172,88 @@ class HyperTunedAggregations(object):
 
         # number of time steps for all feasible combinations
         reductionValidTimsteps = combinedTimeSteps * reductionValidCombinations
-        
+
         # identify max segments and max period combination
         optimalPeriods = np.zeros_like(reductionValidTimsteps)
-        optimalPeriods[np.arange(reductionValidTimsteps.shape[0]), reductionValidTimsteps.argmax(axis=1)] = 1
+        optimalPeriods[
+            np.arange(reductionValidTimsteps.shape[0]),
+            reductionValidTimsteps.argmax(axis=1),
+        ] = 1
         optimalSegments = np.zeros_like(reductionValidTimsteps)
-        optimalSegments[reductionValidTimsteps.argmax(axis=0), np.arange(reductionValidTimsteps.shape[1])] = 1
-        
-        optimalIndexCombo = np.nonzero(optimalPeriods*optimalSegments)        
+        optimalSegments[
+            reductionValidTimsteps.argmax(axis=0),
+            np.arange(reductionValidTimsteps.shape[1]),
+        ] = 1
 
-        
-        for segmentIx, periodIx in tqdm.tqdm(zip(optimalIndexCombo[0],optimalIndexCombo[1])):
+        optimalIndexCombo = np.nonzero(optimalPeriods * optimalSegments)
 
+        for segmentIx, periodIx in tqdm.tqdm(
+            zip(optimalIndexCombo[0], optimalIndexCombo[1])
+        ):
             # derive new typical periods and derive rmse
-            RMSE_history.append(self._testAggregation(possiblePeriods[periodIx], possibleSegments[segmentIx]))
-                                                    
-        # take the negative backwards index with the minimal RMSE 
-        min_index = - list(reversed(RMSE_history)).index(min(RMSE_history)) - 1
+            RMSE_history.append(
+                self._testAggregation(
+                    possiblePeriods[periodIx], possibleSegments[segmentIx]
+                )
+            )
+
+        # take the negative backwards index with the minimal RMSE
+        min_index = -list(reversed(RMSE_history)).index(min(RMSE_history)) - 1
         RMSE_min = RMSE_history[min_index]
-        
-                
-        noTypicalPeriods=self._periodHistory[min_index]
-        noSegments=self._segmentHistory[min_index]
+
+        noTypicalPeriods = self._periodHistory[min_index]
+        noSegments = self._segmentHistory[min_index]
 
         # and return the segment and typical period pair
         return noSegments, noTypicalPeriods, RMSE_min
 
-
     def identifyParetoOptimalAggregation(self, untilTotalTimeSteps=None):
-        """        
+        """
         Identifies the pareto-optimal combination of number of typical periods and number of segments along with a steepest decent approach, starting from the aggregation to a single period and a single segment up to the representation of the full time series.
-        
+
         :param untilTotalTimeSteps: Number of timesteps until which the pareto-front should be determined. If None, the maximum number of timesteps is chosen.
         :type untilTotalTimeSteps: int
 
 
-        :returns: **** -- Nothing. Check aggregation history for results. All typical Periods in scaled form.
+        :returns: None. Check aggregation history for results. All typical Periods in scaled form.
         """
         if not self.base_aggregation.segmentation:
-            raise ValueError("This function does only make sense in combination with 'segmentation' activated.")
+            raise ValueError(
+                "This function does only make sense in combination with 'segmentation' activated."
+            )
 
-        noRawTimeSteps=len(self.base_aggregation.timeSeries.index)
-        
-        _maxPeriods = int(float(noRawTimeSteps)/self.base_aggregation.timeStepsPerPeriod)
+        noRawTimeSteps = len(self.base_aggregation.timeSeries.index)
+
+        _maxPeriods = int(
+            float(noRawTimeSteps) / self.base_aggregation.timeStepsPerPeriod
+        )
         _maxSegments = self.base_aggregation.timeStepsPerPeriod
-        
-        if untilTotalTimeSteps is None:
-            untilTotalTimeSteps=noRawTimeSteps
 
+        if untilTotalTimeSteps is None:
+            untilTotalTimeSteps = noRawTimeSteps
 
         progressBar = tqdm.tqdm(total=untilTotalTimeSteps)
 
         # starting point
-        noTypicalPeriods=1
-        noSegments=1
-        _RMSE_0=self._testAggregation(noTypicalPeriods, noSegments)
+        noTypicalPeriods = 1
+        noSegments = 1
+        _RMSE_0 = self._testAggregation(noTypicalPeriods, noSegments)
 
         # loop until either segments or periods have reached their maximum
-        while (noTypicalPeriods<_maxPeriods and noSegments<_maxSegments 
-            and (noSegments+1)*noTypicalPeriods<=untilTotalTimeSteps
-            and noSegments*(noTypicalPeriods+1)<=untilTotalTimeSteps):
+        while (
+            noTypicalPeriods < _maxPeriods
+            and noSegments < _maxSegments
+            and (noSegments + 1) * noTypicalPeriods <= untilTotalTimeSteps
+            and noSegments * (noTypicalPeriods + 1) <= untilTotalTimeSteps
+        ):
             # test for more segments
-            RMSE_segments = self._testAggregation(noTypicalPeriods, noSegments+1)
+            RMSE_segments = self._testAggregation(noTypicalPeriods, noSegments + 1)
             # test for more periods
-            RMSE_periods = self._testAggregation(noTypicalPeriods+1, noSegments)
-            
+            RMSE_periods = self._testAggregation(noTypicalPeriods + 1, noSegments)
+
             # RMSE old
             RMSE_old = self._RMSEHistory[-3]
-            
+
             # segment gradient (RMSE improvement per increased time step number)
             # for segments: for each period on segment added
             RMSE_segment_gradient = (RMSE_old - RMSE_segments) / noTypicalPeriods
@@ -223,23 +261,29 @@ class HyperTunedAggregations(object):
             RMSE_periods_gradient = (RMSE_old - RMSE_periods) / noSegments
 
             # go along the steeper gradient
-            if RMSE_periods_gradient>RMSE_segment_gradient:
-                noTypicalPeriods+=1
+            if RMSE_periods_gradient > RMSE_segment_gradient:
+                noTypicalPeriods += 1
                 # and delete the search direction which was not persued
                 self._deleteTestHistory(-2)
             else:
-                noSegments+=1
+                noSegments += 1
                 self._deleteTestHistory(-1)
-            progressBar.update(noSegments*noTypicalPeriods-progressBar.n)
-            
-        # afterwards loop over periods and segments exclusively until maximum is reached
-        while noTypicalPeriods<_maxPeriods and noSegments*(noTypicalPeriods+1)<=untilTotalTimeSteps:
-            noTypicalPeriods+=1
-            RMSE = self._testAggregation(noTypicalPeriods, noSegments)
-            progressBar.update(noSegments*noTypicalPeriods-progressBar.n)
+            progressBar.update(noSegments * noTypicalPeriods - progressBar.n)
 
-        while noSegments<_maxSegments and (noSegments+1)*noTypicalPeriods<=untilTotalTimeSteps:
-            noSegments+=1
-            RMSE = self._testAggregation(noTypicalPeriods, noSegments)
-            progressBar.update(noSegments*noTypicalPeriods-progressBar.n)
-        return 
+        # afterwards loop over periods and segments exclusively until maximum is reached
+        while (
+            noTypicalPeriods < _maxPeriods
+            and noSegments * (noTypicalPeriods + 1) <= untilTotalTimeSteps
+        ):
+            noTypicalPeriods += 1
+            self._testAggregation(noTypicalPeriods, noSegments)
+            progressBar.update(noSegments * noTypicalPeriods - progressBar.n)
+
+        while (
+            noSegments < _maxSegments
+            and (noSegments + 1) * noTypicalPeriods <= untilTotalTimeSteps
+        ):
+            noSegments += 1
+            self._testAggregation(noTypicalPeriods, noSegments)
+            progressBar.update(noSegments * noTypicalPeriods - progressBar.n)
+        return
