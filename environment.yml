@@ -23,6 +23,7 @@ dependencies:
   # Documentation
   - sphinx
   - sphinx-autobuild
+  - nbsphinx
   - sphinx-book-theme
   # Linting and formatting
   - ruff
