@@ -62,7 +62,8 @@ develop = [
   "plotly>=5.0.0",
   "notebook>=7.5.0",
   "matplotlib",
-]plot = ["plotly>=5.0.0"]
+]
+plot = ["plotly>=5.0.0"]
 notebooks = ["notebook>=7.5.0", "plotly>=5.0.0", "matplotlib"]
 
 [tool.setuptools.packages.find]
