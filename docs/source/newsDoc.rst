@@ -3,7 +3,7 @@ tsam's Change Log
 ##################
 
 *********************
-Release version 3.0.1
+Release version 3.1.0
 *********************
 
 * Added ``preserve_n_clusters`` option to ``ExtremeConfig``. When set to ``True``, extreme periods
