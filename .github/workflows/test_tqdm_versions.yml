@@ -101,6 +101,7 @@ jobs:
                         "4.66.6",
                         "4.67.0",
                         "4.67.1",
+                        "4.67.2",
                     ]
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
         with:
