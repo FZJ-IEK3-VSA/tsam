@@ -12,6 +12,10 @@ Release version 3.1.0
 
 * Removed ``matplotlib`` dependency; all plotting and notebooks now use ``plotly``
 
+* The tdqm test pipeline has been reduced due to the number of versions and the maturity of the library.
+
+* Renamed the examples for more clarity
+
 *********************
 Release version 3.0.0
 *********************
