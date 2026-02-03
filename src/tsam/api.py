@@ -352,9 +352,7 @@ def _build_clustering_result(
     # Get cluster centers (convert to Python ints for JSON serialization)
     # Handle extreme periods based on method:
     # - new_cluster/append: append extreme period indices (creates additional clusters)
-    # - replace: keep original cluster centers
-    #   Note: replace creates a hybrid representation (some columns from medoid, some
-    #   from extreme period) that cannot be perfectly reproduced during transfer
+    # - replace: keep original cluster centers, store replacements separately
     cluster_centers: tuple[int, ...] | None = None
     if agg.clusterCenterIndices is not None:
         center_indices = [int(x) for x in agg.clusterCenterIndices]
@@ -416,6 +414,27 @@ def _build_clustering_result(
     if hasattr(agg, "extremeClusterIdx") and agg.extremeClusterIdx:
         extreme_cluster_indices = tuple(int(x) for x in agg.extremeClusterIdx)
 
+    # Extract extreme replacements for "replace" method
+    # Each replacement: (cluster_idx, column_name, source_period_idx)
+    extreme_replacements: tuple[tuple[int, str, int], ...] | None = None
+    if (
+        hasattr(agg, "extremePeriods")
+        and agg.extremePeriods
+        and extremes_config is not None
+        and extremes_config.method == "replace"
+    ):
+        replacements = []
+        for period_type in agg.extremePeriods:
+            ep = agg.extremePeriods[period_type]
+            replacements.append(
+                (
+                    int(ep["clusterNo"]),
+                    ep["column"],
+                    int(ep["stepNo"]),
+                )
+            )
+        extreme_replacements = tuple(replacements)
+
     return ClusteringResult(
         period_duration=agg.hoursPerPeriod,
         cluster_assignments=tuple(int(x) for x in agg.clusterOrder),
@@ -432,6 +451,7 @@ def _build_clustering_result(
         temporal_resolution=temporal_resolution,
         n_timesteps_per_period=agg.timeStepsPerPeriod,
         extreme_cluster_indices=extreme_cluster_indices,
+        extreme_replacements=extreme_replacements,
         cluster_config=cluster_config,
         segment_config=segment_config,
         extremes_config=extremes_config,

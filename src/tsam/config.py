@@ -289,6 +289,8 @@ class ClusteringResult:
     segment_representation: RepresentationMethod | None = None
     temporal_resolution: float | None = None
     extreme_cluster_indices: tuple[int, ...] | None = None
+    # For "replace" extreme method: (cluster_idx, column_name, source_period_idx)
+    extreme_replacements: tuple[tuple[int, str, int], ...] | None = None
 
     # === Reference fields (for documentation, not used by apply()) ===
     cluster_config: ClusterConfig | None = None
@@ -425,6 +427,10 @@ class ClusteringResult:
             result["temporal_resolution"] = self.temporal_resolution
         if self.extreme_cluster_indices is not None:
             result["extreme_cluster_indices"] = list(self.extreme_cluster_indices)
+        if self.extreme_replacements is not None:
+            result["extreme_replacements"] = [
+                list(r) for r in self.extreme_replacements
+            ]
         # Reference fields (optional, for documentation)
         if self.cluster_config is not None:
             result["cluster_config"] = self.cluster_config.to_dict()
@@ -465,6 +471,10 @@ class ClusteringResult:
             kwargs["temporal_resolution"] = data["temporal_resolution"]
         if "extreme_cluster_indices" in data:
             kwargs["extreme_cluster_indices"] = tuple(data["extreme_cluster_indices"])
+        if "extreme_replacements" in data:
+            kwargs["extreme_replacements"] = tuple(
+                (int(r[0]), str(r[1]), int(r[2])) for r in data["extreme_replacements"]
+            )
         # Reference fields
         if "cluster_config" in data:
             kwargs["cluster_config"] = ClusterConfig.from_dict(data["cluster_config"])
@@ -572,16 +582,15 @@ class ClusteringResult:
 
         Notes
         -----
-        **Extreme period transfer limitations:**
+        **Extreme period handling during transfer:**
 
-        The 'replace' extreme method creates a hybrid cluster representation where
-        some columns use the medoid values and others use the extreme period values.
-        This hybrid representation cannot be perfectly reproduced during transfer.
-        When applying a clustering that used 'replace', a warning will be issued
-        and the transferred result will use the medoid representation for all columns.
+        All extreme period methods ('append', 'new_cluster', 'replace') are fully
+        supported during transfer. For 'replace', the stored extreme_replacements
+        are applied to inject the extreme period values from the new data into
+        the corresponding cluster representatives.
 
-        For exact transfer with extreme periods, use 'append' or 'new_cluster'
-        extreme methods instead.
+        If a column referenced in extreme_replacements is not present in the new
+        data, a warning is issued and that replacement is skipped.
 
         Examples
         --------
@@ -701,6 +710,48 @@ class ClusteringResult:
         cluster_representatives = cluster_representatives.rename_axis(
             index={"PeriodNum": "cluster", "TimeStep": "timestep"}
         )
+
+        # Apply extreme replacements for "replace" method
+        if self.extreme_replacements:
+            from sklearn import preprocessing
+
+            # Fit scaler once for denormalization
+            scaler = preprocessing.MinMaxScaler()
+            scaler.fit(agg.timeSeries)
+            col_names = list(agg.timeSeries.columns)
+
+            for (
+                cluster_idx,
+                column_name,
+                source_period_idx,
+            ) in self.extreme_replacements:
+                # Skip columns not present in the new data
+                if column_name not in cluster_representatives.columns:
+                    warnings.warn(
+                        f"Column '{column_name}' not found in data during transfer. "
+                        f"Skipping extreme replacement for cluster {cluster_idx}.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                    continue
+
+                # Extract via DataFrame indexing (clear, layout-independent)
+                normalized_values = agg.normalizedPeriodlyProfiles.loc[
+                    source_period_idx, column_name
+                ].values
+
+                # Reverse weighting
+                weight = agg.weightDict.get(column_name, 1.0)
+                normalized_values = normalized_values / weight
+
+                # Denormalize
+                col_idx = col_names.index(column_name)
+                col_min = scaler.data_min_[col_idx]
+                col_max = scaler.data_max_[col_idx]
+                source_values = normalized_values * (col_max - col_min) + col_min
+
+                # Replace the column values in the target cluster
+                cluster_representatives.loc[cluster_idx, column_name] = source_values
 
         # Build accuracy metrics
         accuracy_df = agg.accuracyIndicators()
