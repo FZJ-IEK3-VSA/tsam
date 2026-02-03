@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -161,22 +163,6 @@ def test_preserve_n_clusters_validation_error():
         )
 
 
-def test_preserve_n_clusters_warns_with_replace():
-    """preserve_n_clusters=True with replace method emits a warning."""
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
-
-    with pytest.warns(UserWarning, match="has no effect"):
-        tsam.aggregate(
-            raw,
-            n_clusters=10,
-            extremes=ExtremeConfig(
-                method="replace",
-                max_value=["GHI"],
-                preserve_n_clusters=True,
-            ),
-        )
-
-
 def test_preserve_n_clusters_preserves_extremes():
     """Extreme values are still preserved with preserve_n_clusters=True."""
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
@@ -214,14 +200,37 @@ def test_preserve_n_clusters_serialization():
     assert config2.preserve_n_clusters is True
 
 
-def test_preserve_n_clusters_default_false():
-    """Default value of preserve_n_clusters is False."""
-    config = ExtremeConfig(max_value=["Load"])
-    assert config.preserve_n_clusters is False
+def test_preserve_n_clusters_default_none_with_future_warning():
+    """Default value of preserve_n_clusters is None with FutureWarning."""
+    # Creating ExtremeConfig with extremes but without explicit preserve_n_clusters
+    # should emit a FutureWarning
+    with pytest.warns(FutureWarning, match="preserve_n_clusters currently defaults"):
+        config = ExtremeConfig(max_value=["Load"])
 
-    # to_dict should not include it when False
+    # The raw value should be None
+    assert config.preserve_n_clusters is None
+
+    # But effective value should be False (current default behavior)
+    assert config._effective_preserve_n_clusters is False
+
+    # to_dict should not include it when None
     d = config.to_dict()
     assert "preserve_n_clusters" not in d
+
+
+def test_preserve_n_clusters_explicit_false_no_warning():
+    """Setting preserve_n_clusters=False explicitly should not warn."""
+    # No warning when explicitly set
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        config = ExtremeConfig(max_value=["Load"], preserve_n_clusters=False)
+
+    assert config.preserve_n_clusters is False
+    assert config._effective_preserve_n_clusters is False
+
+    # to_dict should include it when explicitly False
+    d = config.to_dict()
+    assert d["preserve_n_clusters"] is False
 
 
 if __name__ == "__main__":
