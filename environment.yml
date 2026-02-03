@@ -12,7 +12,6 @@ dependencies:
   - networkx >=2.5,<=3.6.1
   - tqdm >=4.21.0,<=4.67.2
   - highspy >=1.7.2,<=1.12.0
-  - matplotlib
   - plotly >=5.0.0
   # Testing
   - pytest
