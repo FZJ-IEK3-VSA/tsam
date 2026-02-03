@@ -17,7 +17,7 @@ tsam - time series aggregation module
 
 tsam is a python package which uses different machine learning algorithms for the aggregation of typical periods. It is applicable
 for all type of time series, either weather data, price data, behavioral data, electrical load data or all together. The module is able to significantly reduce input
-time series for mathmatical models, and therefore the model's complexity and computational time.
+time series for mathematical models, and therefore the model's complexity and computational time.
 
 To use tsam, first :ref:`install tsam<installation>` and then :ref:`start aggregating time series <start>`.
 

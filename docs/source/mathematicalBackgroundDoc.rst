@@ -20,7 +20,7 @@ The process of clustering applied in tsam includes for different steps: Preproce
 backscaling. This is shown in the figure below.
 
 .. image:: https://www.mdpi.com/energies/energies-13-00641/article_deploy/html/images/energies-13-00641-g009.png
-    :target: ../../source/https://www.mdpi.com/energies/energies-13-00641/article_deploy/html/images/energies-13-00641-g009.png
+    :target: https://www.mdpi.com/energies/energies-13-00641/article_deploy/html/images/energies-13-00641-g009.png
     :alt: Review Figure 2
     :align: center
 

@@ -7,7 +7,7 @@ Further Reading
 tsam was originally designed for reducing the computational load for large-scale energy system optimization models. If you are interested
 in that purpose of time series aggregation, you can find a detailed review about that topic `here <https://www.mdpi.com/1996-1073/13/3/641>`_.
 If you are further interested in the impact of time series aggregation on the cost-optimal results on different energy system use cases,
-you can find a publication which validates the methods and describes their cababilites via the following `link
+you can find a publication which validates the methods and describes their capabilities via the following `link
 <https://www.sciencedirect.com/science/article/abs/pii/S0960148117309783>`_.
 A second publication introduces a method how to model model state variables (e.g. the state of charge of energy storage components) between the
 aggregated typical periods which can be found `here <https://www.sciencedirect.com/science/article/pii/S0306261918300242>`_.
