@@ -409,7 +409,7 @@ class TuningResult:
         return iter(self.all_results)
 
 
-def find_clusters_for_reduction(
+def _find_clusters_for_reduction(
     n_timesteps: int,
     n_segments: int,
     data_reduction: float,
@@ -432,13 +432,13 @@ def find_clusters_for_reduction(
 
     Examples
     --------
-    >>> find_clusters_for_reduction(8760, 24, 0.01)  # 1% of hourly year
+    >>> _find_clusters_for_reduction(8760, 24, 0.01)  # 1% of hourly year
     3
     """
     return int(np.floor(data_reduction * float(n_timesteps) / n_segments))
 
 
-def find_segments_for_reduction(
+def _find_segments_for_reduction(
     n_timesteps: int,
     n_clusters: int,
     data_reduction: float,
@@ -461,7 +461,7 @@ def find_segments_for_reduction(
 
     Examples
     --------
-    >>> find_segments_for_reduction(8760, 8, 0.01)  # 1% with 8 periods
+    >>> _find_segments_for_reduction(8760, 8, 0.01)  # 1% with 8 periods
     10
     """
     return int(np.floor(data_reduction * float(n_timesteps) / n_clusters))
