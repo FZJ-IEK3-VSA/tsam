@@ -789,11 +789,11 @@ class ExtremeConfig:
 
     preserve_n_clusters : bool, optional
         Whether extreme periods count toward n_clusters.
-        - False: Extremes are added on top of n_clusters
-          (e.g., n_clusters=10 + 2 extremes = 12 final clusters)
         - True: Extremes are included in n_clusters
           (e.g., n_clusters=10 with 2 extremes = 8 from clustering + 2 extremes)
-        Only valid with "append" or "new_cluster" methods (not "replace").
+        - False: Extremes are added on top of n_clusters (old api behaviour)
+          (e.g., n_clusters=10 + 2 extremes = 12 final clusters)
+        Only affects "append" or "new_cluster" methods ("replace" never changes n_clusters).
 
         .. deprecated::
             The default will change from False to True in a future release.
@@ -811,8 +811,8 @@ class ExtremeConfig:
         """Emit FutureWarning if preserve_n_clusters is not explicitly set."""
         if self.preserve_n_clusters is None and self.has_extremes():
             warnings.warn(
-                "preserve_n_clusters currently defaults to False, but will default "
-                "to True in a future release. Set preserve_n_clusters explicitly "
+                "preserve_n_clusters currently defaults to False to match behaviour of the old api, "
+                "but will default to True in a future release. Set preserve_n_clusters explicitly "
                 "to silence this warning.",
                 FutureWarning,
                 stacklevel=3,
