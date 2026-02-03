@@ -25,7 +25,7 @@ jobs:
         with:
             runner_tag: ${{ matrix.runner_tag }}
             requirements_file_name: environment.yml
-            examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
+            examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
             multiprocessing_example_string: "-n auto"
             multiprocessing_pytest_string: "-n auto"
     # TestMinDependencies:
@@ -57,7 +57,7 @@ jobs:
     #     with:
     #         runner_tag: ${{ matrix.runner_tag }}
     #         requirements_file_name: requirements_dev.yml
-    #         examples_to_execute: "examples/aggregation_example.ipynb examples/aggregation_method_showcase.ipynb examples/aggregation_optiinput.ipynb examples/aggregation_representation.ipynb examples/aggregation_segmentation.ipynb examples/example_k_maxoids.ipynb examples/predefined_sequence_example.ipynb"
+    #         examples_to_execute: "examples/quickstart.ipynb examples/clustering_methods.ipynb examples/optimization_input.ipynb examples/representations.ipynb examples/segmentation.ipynb examples/k_maxoids.ipynb examples/clustering_transfer.ipynb"
     #         multiprocessing_example_string: "-n auto"
     #         library_name: ${{ matrix.dependencies.library_name }}
     #         library_version: ${{ matrix.dependencies.version }}
@@ -74,5 +74,5 @@ jobs:
             runner_tag: ${{ matrix.runner_tag }}
             python_version: "3.13"
             optional_dependency_PyPI_tag: "[develop]"
-            examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
+            examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
             multiprocessing_example_string: "-n auto"

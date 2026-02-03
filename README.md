@@ -139,9 +139,9 @@ cluster_representatives = aggregation.createTypicalPeriods()
 ### Detailed examples
 Detailed examples can be found at:/docs/source/examples_notebooks/
 
-A [**first example**](/docs/source/examples_notebooks/aggregation_example.ipynb) shows the capabilites of tsam as jupyter notebook.
+A [**quickstart example**](/docs/source/examples_notebooks/quickstart.ipynb) shows the capabilities of tsam as a Jupyter notebook.
 
-A [**second example**](/docs/source/examples_notebooks/aggregation_optiinput.ipynb) shows in more detail how to access the relevant aggregation results required for paramtrizing e.g. an optimization.
+A [**second example**](/docs/source/examples_notebooks/optimization_input.ipynb) shows in more detail how to access the relevant aggregation results required for parameterizing e.g. an optimization.
 
 The example time series are based on a department [publication](https://www.mdpi.com/1996-1073/10/3/361) and the [test reference years of the DWD](https://www.dwd.de/DE/leistungen/testreferenzjahre/testreferenzjahre.html).
 

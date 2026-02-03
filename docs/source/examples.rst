@@ -4,18 +4,41 @@ Examples
 
 This section contains Jupyter notebook examples demonstrating various features of tsam.
 
+Getting Started
+===============
+
 .. toctree::
    :maxdepth: 1
-   :caption: Notebook Examples
 
-   examples_notebooks/aggregation_analysis
-   examples_notebooks/aggregation_example
-   examples_notebooks/aggregation_method_showcase
-   examples_notebooks/aggregation_representation
-   examples_notebooks/aggregation_segmentation
-   examples_notebooks/aggregation_optiinput
-   examples_notebooks/predefined_sequence_example
-   examples_notebooks/example_k_maxoids
-   examples_notebooks/tuning_example
-   examples_notebooks/aggregation_segment_period_opti
-   examples_notebooks/aggregation_segment_period_building_timeseries
+   examples_notebooks/quickstart
+   examples_notebooks/visualization
+
+Clustering Methods
+==================
+
+.. toctree::
+   :maxdepth: 1
+
+   examples_notebooks/clustering_methods
+   examples_notebooks/representations
+   examples_notebooks/k_maxoids
+
+Advanced Features
+=================
+
+.. toctree::
+   :maxdepth: 1
+
+   examples_notebooks/segmentation
+   examples_notebooks/optimization_input
+   examples_notebooks/clustering_transfer
+
+Hyperparameter Tuning
+=====================
+
+.. toctree::
+   :maxdepth: 1
+
+   examples_notebooks/tuning
+   examples_notebooks/pareto_optimization
+   examples_notebooks/building_energy_system
