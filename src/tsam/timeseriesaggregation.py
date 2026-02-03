@@ -519,19 +519,6 @@ class TimeSeriesAggregation:
                 + f"{self.EXTREME_PERIOD_METHODS}"
             )
 
-        # warn if extremePreserveNumClusters is used with replace (it has no effect)
-        if self.extremePreserveNumClusters:
-            if self.extremePeriodMethod == "replace_cluster_center":
-                warnings.warn(
-                    "extremePreserveNumClusters=True has no effect with "
-                    "extremePeriodMethod='replace_cluster_center' "
-                    "(replace method doesn't add new clusters). "
-                    "Use 'append' or 'new_cluster_center' if you want extremes "
-                    "to count toward noTypicalPeriods.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-
         # check evalSumPeriods
         if not isinstance(self.evalSumPeriods, bool):
             raise ValueError("evalSumPeriods has to be boolean")
