@@ -18,7 +18,7 @@ jobs:
         with:
             runner_tag: ${{ matrix.runner_tag }}
             requirements_file_name: environment.yml
-            examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
+            examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
             multiprocessing_example_string: "-n auto"
             multiprocessing_pytest_string: "-n auto"
             library_version: ${{ matrix.python_version }}
@@ -46,5 +46,5 @@ jobs:
             # ipynb_example_folder: "examples"
             python_version: ${{ matrix.python_version }}
             optional_dependency_PyPI_tag: "[develop]"
-            examples_to_execute: "docs/source/examples_notebooks/aggregation_example.ipynb docs/source/examples_notebooks/aggregation_method_showcase.ipynb docs/source/examples_notebooks/aggregation_optiinput.ipynb docs/source/examples_notebooks/aggregation_representation.ipynb docs/source/examples_notebooks/aggregation_segmentation.ipynb docs/source/examples_notebooks/example_k_maxoids.ipynb docs/source/examples_notebooks/predefined_sequence_example.ipynb"
+            examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
             multiprocessing_example_string: "-n auto"

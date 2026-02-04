@@ -536,6 +536,7 @@ def _build_old_params(
         params["addPeakMin"] = extremes.min_value
         params["addMeanMax"] = extremes.max_period
         params["addMeanMin"] = extremes.min_period
+        params["extremePreserveNumClusters"] = extremes._effective_preserve_n_clusters
     else:
         params["extremePeriodMethod"] = "None"
 

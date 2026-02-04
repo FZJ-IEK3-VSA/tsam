@@ -606,9 +606,10 @@ class ClusteringResult:
         ):
             warnings.warn(
                 "The 'replace' extreme method creates a hybrid cluster representation "
-                "(some columns from the medoid, some from the extreme period) that cannot "
-                "be perfectly reproduced during transfer. The transferred result will use "
-                "the medoid representation for all columns instead of the hybrid values. "
+                "(some columns from the cluster representative, some from the extreme period) "
+                "that cannot be perfectly reproduced during transfer. The transferred result "
+                "will use the stored cluster center periods directly, without the extreme "
+                "value injection that was applied during the original aggregation. "
                 "For exact transfer, use 'append' or 'new_cluster' extreme methods.",
                 UserWarning,
                 stacklevel=2,
@@ -785,6 +786,18 @@ class ExtremeConfig:
     min_period : list[str], optional
         Column names where the period with minimum total should be preserved.
         Example: ["wind_generation"] to preserve lowest wind day.
+
+    preserve_n_clusters : bool, optional
+        Whether extreme periods count toward n_clusters.
+        - True: Extremes are included in n_clusters
+          (e.g., n_clusters=10 with 2 extremes = 8 from clustering + 2 extremes)
+        - False: Extremes are added on top of n_clusters (old api behaviour)
+          (e.g., n_clusters=10 + 2 extremes = 12 final clusters)
+        Only affects "append" or "new_cluster" methods ("replace" never changes n_clusters).
+
+        .. deprecated::
+            The default will change from False to True in a future release.
+            Set explicitly to silence the FutureWarning.
     """
 
     method: ExtremeMethod = "append"
@@ -792,12 +805,35 @@ class ExtremeConfig:
     min_value: list[str] = field(default_factory=list)
     max_period: list[str] = field(default_factory=list)
     min_period: list[str] = field(default_factory=list)
+    preserve_n_clusters: bool | None = None
+
+    def __post_init__(self) -> None:
+        """Emit FutureWarning if preserve_n_clusters is not explicitly set."""
+        if self.preserve_n_clusters is None and self.has_extremes():
+            warnings.warn(
+                "preserve_n_clusters currently defaults to False to match behaviour of the old api, "
+                "but will default to True in a future release. Set preserve_n_clusters explicitly "
+                "to silence this warning.",
+                FutureWarning,
+                stacklevel=3,
+            )
 
     def has_extremes(self) -> bool:
         """Check if any extreme periods are configured."""
         return bool(
             self.max_value or self.min_value or self.max_period or self.min_period
         )
+
+    @property
+    def _effective_preserve_n_clusters(self) -> bool:
+        """Get the effective value for preserve_n_clusters.
+
+        Returns False if not explicitly set (current default behavior).
+        In a future release, the default will change to True.
+        """
+        if self.preserve_n_clusters is None:
+            return False  # Current default, will change to True in future
+        return self.preserve_n_clusters
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -812,6 +848,8 @@ class ExtremeConfig:
             result["max_period"] = self.max_period
         if self.min_period:
             result["min_period"] = self.min_period
+        if self.preserve_n_clusters is not None:
+            result["preserve_n_clusters"] = self.preserve_n_clusters
         return result
 
     @classmethod
@@ -823,6 +861,7 @@ class ExtremeConfig:
             min_value=data.get("min_value", []),
             max_period=data.get("max_period", []),
             min_period=data.get("min_period", []),
+            preserve_n_clusters=data.get("preserve_n_clusters"),
         )
 
 

@@ -3,6 +3,20 @@ tsam's Change Log
 ##################
 
 *********************
+Release version 3.1.0
+*********************
+
+* Added ``preserve_n_clusters`` option to ``ExtremeConfig``. When set to ``True``, extreme periods
+  count toward ``n_clusters`` instead of being added on top, giving exact control over the final
+  number of representative periods. Default behavior is unchanged.
+
+* Removed ``matplotlib`` dependency; all plotting and notebooks now use ``plotly``
+
+* The tdqm test pipeline has been reduced due to the number of versions and the maturity of the library.
+
+* Renamed the examples for more clarity
+
+*********************
 Release version 3.0.0
 *********************
 
