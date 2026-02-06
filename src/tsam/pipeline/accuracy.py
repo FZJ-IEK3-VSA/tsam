@@ -19,9 +19,6 @@ def reconstruct(
     cluster_order: list | np.ndarray,
     period_profiles: PeriodProfiles,
     norm_data: NormalizedData,
-    normalize_column_means: bool,
-    weights: dict[str, float] | None,
-    round_decimals: int | None,
     segmentation_active: bool,
     predicted_segmented_df: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -63,13 +60,7 @@ def reconstruct(
     # In our pipeline, there is no in-place modification, so no division is needed.
 
     # Denormalize (without applying weights - monolith line 1433 applyWeighting=False)
-    denormalized = denormalize(
-        normalized_predicted,
-        norm_data,
-        weights=None,  # applyWeighting=False
-        normalize_column_means=normalize_column_means,
-        round_decimals=round_decimals,
-    )
+    denormalized = denormalize(normalized_predicted, norm_data, apply_weights=False)
 
     return denormalized, normalized_predicted
 
@@ -77,12 +68,14 @@ def reconstruct(
 def compute_accuracy(
     normalized_original: pd.DataFrame,
     normalized_predicted: pd.DataFrame,
-    weights: dict[str, float] | None,
+    norm_data: NormalizedData,
 ) -> pd.DataFrame:
     """Compute RMSE, MAE, duration RMSE per column.
 
     Replicates accuracyIndicators (monolith lines 1485-1517).
     """
+    weights = norm_data.weights
+
     indicator_raw: dict[str, dict] = {
         "RMSE": {},
         "RMSE_duration": {},

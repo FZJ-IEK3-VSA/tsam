@@ -219,11 +219,8 @@ def run_pipeline(
             cluster_period_no_occur,
             extreme_cluster_idx,
             period_profiles.profiles_dataframe,
-            norm_data.original_data,
-            list(norm_data.original_data.columns),
+            norm_data,
             n_timesteps_per_period,
-            cluster.normalize_column_means,
-            cluster.weights,
             rescale_exclude_columns,
         )
 
@@ -281,13 +278,9 @@ def run_pipeline(
         normalized_typical_periods = segmented_df.reset_index(level=3, drop=True)
 
     # Step 13: Denormalize -> typical_periods
-    typical_periods = denormalize(
-        normalized_typical_periods,
-        norm_data,
-        cluster.weights,
-        cluster.normalize_column_means,
-        round_decimals,
-    )
+    typical_periods = denormalize(normalized_typical_periods, norm_data)
+    if round_decimals is not None:
+        typical_periods = typical_periods.round(decimals=round_decimals)
 
     # Step 14: Bounds check + warnings
     exceeds_max = typical_periods.max(axis=0) > norm_data.original_data.max(axis=0)
@@ -321,17 +314,16 @@ def run_pipeline(
         cluster_order,
         period_profiles,
         norm_data,
-        cluster.normalize_column_means,
-        cluster.weights,
-        round_decimals,
         segmentation_active=segments is not None,
         predicted_segmented_df=predicted_segmented_df,
     )
+    if round_decimals is not None:
+        reconstructed_data = reconstructed_data.round(decimals=round_decimals)
 
     accuracy_df = compute_accuracy(
         norm_data.values,
         normalized_predicted,
-        cluster.weights,
+        norm_data,
     )
 
     # Restore original column order in output DataFrames

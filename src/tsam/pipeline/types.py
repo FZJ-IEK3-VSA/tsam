@@ -33,6 +33,8 @@ class NormalizedData:
     scaler: MinMaxScaler  # fitted on original, reusable for inverse_transform
     normalized_mean: pd.Series  # mean before sameMean division
     original_data: pd.DataFrame  # for bounds check + rescale upper bound
+    weights: dict[str, float] | None  # per-column weighting factors
+    normalize_column_means: bool  # whether sameMean normalization was applied
 
 
 @dataclass(frozen=True)

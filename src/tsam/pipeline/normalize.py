@@ -54,15 +54,16 @@ def normalize(
         scaler=scaler,
         normalized_mean=normalized_mean,
         original_data=data,
+        weights=weights,
+        normalize_column_means=normalize_column_means,
     )
 
 
 def denormalize(
     df: pd.DataFrame,
     norm_data: NormalizedData,
-    weights: dict[str, float] | None,
-    normalize_column_means: bool,
-    round_decimals: int | None,
+    *,
+    apply_weights: bool = True,
 ) -> pd.DataFrame:
     """Undo weights, undo normalization using stored scaler.
 
@@ -71,12 +72,12 @@ def denormalize(
     result = df.copy()
 
     # Undo weights (monolith lines 672-676)
-    if weights:
-        for column in weights:
-            result[column] = result[column] / weights[column]
+    if apply_weights and norm_data.weights:
+        for column in norm_data.weights:
+            result[column] = result[column] / norm_data.weights[column]
 
     # Undo sameMean (monolith lines 619-620)
-    if normalize_column_means:
+    if norm_data.normalize_column_means:
         result = result * norm_data.normalized_mean
 
     # Inverse transform using stored scaler (monolith lines 622-626)
@@ -85,9 +86,5 @@ def denormalize(
         columns=result.columns,
         index=result.index,
     )
-
-    # Round if requested (monolith lines 682-685)
-    if round_decimals is not None:
-        unnormalized = unnormalized.round(decimals=round_decimals)
 
     return unnormalized

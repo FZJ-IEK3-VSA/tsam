@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import warnings
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+
+if TYPE_CHECKING:
+    from tsam.pipeline.types import NormalizedData
 
 MAX_ITERATOR = 20
 TOLERANCE = 1e-6
@@ -16,11 +20,8 @@ def rescale_representatives(
     cluster_period_no_occur: dict[int, float],
     extreme_cluster_idx: list[int],
     profiles_df: pd.DataFrame,
-    original_data: pd.DataFrame,
-    columns: list[str],
+    norm_data: NormalizedData,
     n_timesteps_per_period: int,
-    normalize_column_means: bool,
-    weights: dict[str, float] | None,
     exclude_columns: list[str],
 ) -> tuple[np.ndarray, dict]:
     """Rescale cluster periods so weighted mean matches original.
@@ -30,6 +31,11 @@ def rescale_representatives(
 
     Returns (rescaled_periods, deviations_dict).
     """
+    original_data = norm_data.original_data
+    columns = list(original_data.columns)
+    normalize_column_means = norm_data.normalize_column_means
+    weights = norm_data.weights
+
     rescale_deviations: dict = {}
 
     weighting_vec = pd.Series(cluster_period_no_occur).values
