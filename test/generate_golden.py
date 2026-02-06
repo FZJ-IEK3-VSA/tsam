@@ -30,12 +30,8 @@ SCRIPT_DIR = Path(__file__).parent
 TESTDATA_CSV = (
     SCRIPT_DIR.parent / "docs" / "source" / "examples_notebooks" / "testdata.csv"
 )
-OPSD_CSV = SCRIPT_DIR / "data" / "opsd_germany_2019.csv"
+WIDE_CSV = SCRIPT_DIR / "data" / "wide.csv"
 GOLDEN_DIR = SCRIPT_DIR / "data" / "golden"
-
-# ---------------------------------------------------------------------------
-# Datasets
-# ---------------------------------------------------------------------------
 
 
 def _make_constant() -> pd.DataFrame:
@@ -51,7 +47,7 @@ def _make_with_zero_column() -> pd.DataFrame:
 
 DATASETS: dict[str, callable] = {
     "testdata": lambda: pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True),
-    "opsd": lambda: pd.read_csv(OPSD_CSV, index_col=0, parse_dates=True),
+    "wide": lambda: pd.read_csv(WIDE_CSV, index_col=0, parse_dates=True),
     "constant": _make_constant,
     "with_zero_column": _make_with_zero_column,
 }
@@ -310,16 +306,16 @@ CONFIGS: list[dict] = [
         "only_datasets": {"testdata", "with_zero_column"},
     },
     {
-        "id": "extremes_opsd_multi",
+        "id": "extremes_wide_multi",
         "old_kwargs": {
             "noTypicalPeriods": 8,
             "hoursPerPeriod": 24,
             "clusterMethod": "hierarchical",
             "extremePeriodMethod": "append",
             "addPeakMax": ["DE_Load"],
-            "addPeakMin": ["DE_Price"],
+            "addPeakMin": ["FR_T"],
         },
-        "only_datasets": {"opsd"},
+        "only_datasets": {"wide"},
     },
     {
         "id": "extremes_constant",

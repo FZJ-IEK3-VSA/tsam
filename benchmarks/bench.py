@@ -36,10 +36,10 @@ import tsam.timeseriesaggregation as tsam
 # Paths
 # ---------------------------------------------------------------------------
 
-_TEST_DIR = Path(__file__).parent
-_EXAMPLES_DIR = _TEST_DIR.parent / "docs" / "source" / "examples_notebooks"
+_ROOT = Path(__file__).parent.parent
+_EXAMPLES_DIR = _ROOT / "docs" / "source" / "examples_notebooks"
 _TESTDATA_CSV = _EXAMPLES_DIR / "testdata.csv"
-_OPSD_CSV = _TEST_DIR / "data" / "opsd_germany_2019.csv"
+_WIDE_CSV = _ROOT / "test" / "data" / "wide.csv"
 
 # ---------------------------------------------------------------------------
 # Datasets
@@ -47,7 +47,7 @@ _OPSD_CSV = _TEST_DIR / "data" / "opsd_germany_2019.csv"
 
 _DATASETS: dict[str, Callable[[], pd.DataFrame]] = {
     "testdata": lambda: pd.read_csv(_TESTDATA_CSV, index_col=0, parse_dates=True),
-    "opsd": lambda: pd.read_csv(_OPSD_CSV, index_col=0, parse_dates=True),
+    "wide": lambda: pd.read_csv(_WIDE_CSV, index_col=0, parse_dates=True),
     "constant": lambda: pd.DataFrame(
         {"A": 42.0, "B": 7.0},
         index=pd.date_range("2020-01-01", periods=10 * 24, freq="h"),
@@ -331,16 +331,16 @@ CONFIGS: list[Case] = [
         only_datasets={"testdata", "with_zero_column"},
     ),
     Case(
-        id="extremes_opsd_multi",
+        id="extremes_wide_multi",
         kwargs={
             "noTypicalPeriods": 8,
             "hoursPerPeriod": 24,
             "clusterMethod": "hierarchical",
             "extremePeriodMethod": "append",
             "addPeakMax": ["DE_Load"],
-            "addPeakMin": ["DE_Price"],
+            "addPeakMin": ["FR_T"],
         },
-        only_datasets={"opsd"},
+        only_datasets={"wide"},
     ),
     Case(
         id="extremes_constant",

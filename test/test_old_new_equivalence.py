@@ -32,11 +32,11 @@ from tsam import (
 # Datasets — add an entry here to introduce a new dataset
 # ---------------------------------------------------------------------------
 
-OPSD_CSV = TEST_DATA_DIR / "opsd_germany_2019.csv"
+WIDE_CSV = TEST_DATA_DIR / "wide.csv"
 
 DATASETS: dict[str, callable] = {
     "testdata": lambda: pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True),
-    "opsd": lambda: pd.read_csv(OPSD_CSV, index_col=0, parse_dates=True),
+    "wide": lambda: pd.read_csv(WIDE_CSV, index_col=0, parse_dates=True),
     "constant": lambda: _make_constant(),
     "with_zero_column": lambda: _make_with_zero_column(),
 }
@@ -534,16 +534,16 @@ CONFIGS: list[Config] = [
         },
         only_datasets={"testdata", "with_zero_column"},
     ),
-    # --- Extremes on OPSD (different column names) ---
+    # --- Extremes on wide dataset (different column names) ---
     Config(
-        id="extremes_opsd_multi",
+        id="extremes_wide_multi",
         old_kwargs={
             "noTypicalPeriods": 8,
             "hoursPerPeriod": 24,
             "clusterMethod": "hierarchical",
             "extremePeriodMethod": "append",
             "addPeakMax": ["DE_Load"],
-            "addPeakMin": ["DE_Price"],
+            "addPeakMin": ["FR_T"],
         },
         new_kwargs={
             "n_clusters": 8,
@@ -552,11 +552,11 @@ CONFIGS: list[Config] = [
             "extremes": ExtremeConfig(
                 method="append",
                 max_value=["DE_Load"],
-                min_value=["DE_Price"],
+                min_value=["FR_T"],
                 preserve_n_clusters=False,
             ),
         },
-        only_datasets={"opsd"},
+        only_datasets={"wide"},
     ),
     # --- Extremes on constant data (all periods identical) ---
     Config(
