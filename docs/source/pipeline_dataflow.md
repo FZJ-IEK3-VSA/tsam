@@ -160,24 +160,9 @@ if cluster.include_period_sums:
 
 Appends per-column period sums as extra columns to bias clustering toward
 preserving totals. The extra features are trimmed off representatives in
-step 6.
+step 5.
 
-### Step 4: Count extreme periods (conditional)
-
-```
-if extremes.preserve_n_clusters and predef is None:
-    count_extreme_periods(profiles_dataframe, max_value, min_value, max_period, min_period)
-        → n_extremes
-```
-
-| Module | `pipeline/extremes.py` |
-|---|---|
-| **Gate** | `extremes._effective_preserve_n_clusters` and `predef is None` |
-| **From `ExtremeConfig`** | `max_value`, `min_value`, `max_period`, `min_period` |
-| **Input** | `period_profiles.profiles_dataframe` |
-| **Output** | `n_extremes` (subtracted from `n_clusters` to get `effective_n_clusters`) |
-
-### Step 5: Cluster
+### Step 4: Cluster
 
 Three mutually exclusive branches, all returning the same triple:
 `(cluster_centers, cluster_center_indices, cluster_order)`.
@@ -200,7 +185,7 @@ use_predefined_assignments(candidates, predef.cluster_order,
 #### Branch B: Standard clustering (`predef is None`, `use_duration_curves=False`)
 
 ```
-cluster_periods(candidates, effective_n_clusters, cluster.method,
+cluster_periods(candidates, n_clusters, cluster.method,
     cluster.solver, representation_method, representation_dict,
     n_timesteps_per_period)
 ```
@@ -209,13 +194,13 @@ cluster_periods(candidates, effective_n_clusters, cluster.method,
 |---|---|
 | **Input** | `candidates` |
 | **From `ClusterConfig`** | `method`, `solver`, `get_representation()` |
-| **Derived** | `representation_dict`, `effective_n_clusters` |
+| **Derived** | `representation_dict`, `n_clusters` |
 
 #### Branch C: Duration curve clustering (`predef is None`, `use_duration_curves=True`)
 
 ```
 cluster_sorted_periods(candidates, profiles_values, n_columns,
-    effective_n_clusters, cluster.method, cluster.solver,
+    n_clusters, cluster.method, cluster.solver,
     representation_method, representation_dict, n_timesteps_per_period)
 ```
 
@@ -227,7 +212,7 @@ cluster_sorted_periods(candidates, profiles_values, n_columns,
 All three branches delegate to `periodAggregation.aggregatePeriods()` and
 `representations.representations()` internally.
 
-### Step 6: Trim eval features
+### Step 5: Trim eval features
 
 ```python
 cluster_periods_list = [center[:del_cluster_params] for center in cluster_centers]
@@ -236,7 +221,7 @@ cluster_periods_list = [center[:del_cluster_params] for center in cluster_center
 Inline. Removes period-sum features appended in step 3 from the
 representative vectors.
 
-### Step 7: Add extreme periods (optional)
+### Step 6: Add extreme periods (optional)
 
 ```
 if extremes is not None:
@@ -260,7 +245,7 @@ Depending on `method`:
 - **new_cluster**: adds new clusters and reassigns nearby periods
 - **replace**: overwrites relevant columns of nearest existing cluster
 
-### Step 8: Compute cluster weights
+### Step 7: Compute cluster weights
 
 ```
 _count_occurrences(cluster_order) → cluster_period_no_occur
@@ -268,7 +253,7 @@ _count_occurrences(cluster_order) → cluster_period_no_occur
 
 Counts how many original periods are assigned to each cluster.
 
-### Step 9: Rescale representatives (optional)
+### Step 8: Rescale representatives (optional)
 
 ```
 if rescale_cluster_periods:
@@ -290,7 +275,7 @@ Iteratively rescales non-extreme cluster representatives so each column's
 weighted sum matches the original time series total. Extreme clusters are
 excluded from rescaling.
 
-### Step 10: Adjust for partial periods
+### Step 9: Adjust for partial periods
 
 ```python
 if len(data) % n_timesteps_per_period != 0:
@@ -300,7 +285,7 @@ if len(data) % n_timesteps_per_period != 0:
 Inline. Reduces the last cluster's weight proportionally if the time series
 does not divide evenly into periods.
 
-### Step 11: Format representatives to DataFrame
+### Step 10: Format representatives to DataFrame
 
 ```
 _representatives_to_dataframe(cluster_periods_list, period_profiles.column_index)
@@ -310,7 +295,7 @@ _representatives_to_dataframe(cluster_periods_list, period_profiles.column_index
 Reshapes the list of flat 1-D representative vectors into a DataFrame
 indexed by `(PeriodNum, TimeStep)` with the original column names.
 
-### Step 12: Segment typical periods (optional)
+### Step 11: Segment typical periods (optional)
 
 ```
 if segments is not None:
@@ -333,7 +318,7 @@ if segments is not None:
 After segmentation, `normalized_typical_periods` is replaced with the
 segmented version (dropping the `Original Start Step` index level).
 
-### Step 13: Denormalize
+### Step 12: Denormalize
 
 ```
 denormalize(normalized_typical_periods, norm_data)
@@ -356,7 +341,7 @@ Operations:
 
 Rounding is applied after denormalization as a formatting step.
 
-### Step 14: Bounds check
+### Step 13: Bounds check
 
 ```
 _warn_if_out_of_bounds(typical_periods, norm_data.original_data, numerical_tolerance)
@@ -365,7 +350,7 @@ _warn_if_out_of_bounds(typical_periods, norm_data.original_data, numerical_toler
 Warns if any column's max/min in `typical_periods` exceeds the
 original data's max/min beyond `numerical_tolerance`.
 
-### Step 15: Reconstruct and compute accuracy
+### Step 14: Reconstruct and compute accuracy
 
 ```
 reconstruct(normalized_typical_periods, cluster_order,
@@ -386,12 +371,12 @@ compute_accuracy(norm_data.values, normalized_predicted, norm_data)
 
 | Parameter | Source |
 |---|---|
-| `normalized_typical_periods` | step 11 (or step 12 if segmented) |
-| `cluster_order` | step 5 (or step 7 if extremes modified it) |
+| `normalized_typical_periods` | step 10 (or step 11 if segmented) |
+| `cluster_order` | step 4 (or step 6 if extremes modified it) |
 | `period_profiles` | step 2 (`column_index`, `profiles_dataframe.index`) |
 | `norm_data` | step 1 (`original_data` for trimming/index, `scaler`/`normalized_mean`/`normalize_column_means` via `denormalize`) |
 | `segmentation_active` | `segments is not None` |
-| `predicted_segmented_df` | step 12 (or `None`) |
+| `predicted_segmented_df` | step 11 (or `None`) |
 
 Internally calls `denormalize(normalized_predicted, norm_data, apply_weights=False)`.
 Weights are not undone during reconstruction because accuracy is measured
@@ -409,7 +394,7 @@ Computes RMSE, MAE, and duration-curve RMSE per column. If weights are
 present, divides the original normalized data by the weight to compare in
 unweighted normalized space.
 
-### Step 16: Build ClusteringResult
+### Step 15: Build ClusteringResult
 
 ```
 _build_clustering_result(cluster_center_indices, extreme_periods_info,
@@ -424,7 +409,7 @@ Assembles all clustering metadata into a serializable `ClusteringResult`
 for transfer/reuse. The three config objects (`ClusterConfig`,
 `SegmentConfig`, `ExtremeConfig`) are stashed as reference fields.
 
-### Step 17: Assemble PipelineResult
+### Step 16: Assemble PipelineResult
 
 Restores original column order on output DataFrames (the pipeline sorts
 columns alphabetically internally), then packs everything into a
@@ -438,42 +423,41 @@ columns alphabetically internally), then packs everything into a
 
 | Field | Consumed in step | By function | Via |
 |---|---|---|---|
-| `method` | 5 | `cluster_periods()` / `cluster_sorted_periods()` | direct |
-| `representation` | 5, 12 (fallback) | clustering functions, `segment_typical_periods()` | `cluster.get_representation()` |
+| `method` | 4 | `cluster_periods()` / `cluster_sorted_periods()` | direct |
+| `representation` | 4, 11 (fallback) | clustering functions, `segment_typical_periods()` | `cluster.get_representation()` |
 | `weights` | 1 | `normalize()` | direct; then stored in `norm_data.weights` |
 | `normalize_column_means` | 1 | `normalize()` | direct; then stored in `norm_data.normalize_column_means` |
-| `use_duration_curves` | 5 | branch gate in `run_pipeline()` | direct |
+| `use_duration_curves` | 4 | branch gate in `run_pipeline()` | direct |
 | `include_period_sums` | 3 | `add_period_sum_features()` | direct |
-| `solver` | 5 | `cluster_periods()` / `cluster_sorted_periods()` | direct |
+| `solver` | 4 | `cluster_periods()` / `cluster_sorted_periods()` | direct |
 
 After step 1, `weights` and `normalize_column_means` are never read from
 `ClusterConfig` again. All downstream access goes through `NormalizedData`.
 
-After step 5, `method`, `solver`, `use_duration_curves`, and
+After step 4, `method`, `solver`, `use_duration_curves`, and
 `include_period_sums` are never read again. The clustering phase is complete.
 
 ### `ExtremeConfig`
 
 | Field | Consumed in step | By function |
 |---|---|---|
-| `method` | 4 (warning gate), 7 | `add_extreme_periods()` |
-| `max_value` | 4, 7 | `count_extreme_periods()`, `add_extreme_periods()` |
-| `min_value` | 4, 7 | `count_extreme_periods()`, `add_extreme_periods()` |
-| `max_period` | 4, 7 | `count_extreme_periods()`, `add_extreme_periods()` |
-| `min_period` | 4, 7 | `count_extreme_periods()`, `add_extreme_periods()` |
-| `preserve_n_clusters` | 4 | `run_pipeline()` (effective_n_clusters calc) |
+| `method` | 6 | `add_extreme_periods()` |
+| `max_value` | 6 | `add_extreme_periods()` |
+| `min_value` | 6 | `add_extreme_periods()` |
+| `max_period` | 6 | `add_extreme_periods()` |
+| `min_period` | 6 | `add_extreme_periods()` |
 
-All fields are consumed exclusively during steps 4 and 7. Zero coupling to
+All fields are consumed exclusively during step 6. Zero coupling to
 normalization, clustering, rescaling, or reconstruction.
 
 ### `SegmentConfig`
 
 | Field | Consumed in step | By function |
 |---|---|---|
-| `n_segments` | 12 | `segment_typical_periods()` |
-| `representation` | 12 | `segment_typical_periods()` (via `segment_representation`) |
+| `n_segments` | 11 | `segment_typical_periods()` |
+| `representation` | 11 | `segment_typical_periods()` (via `segment_representation`) |
 
-Both fields are consumed exclusively in step 12.
+Both fields are consumed exclusively in step 11.
 
 ---
 
@@ -484,15 +468,15 @@ Both fields are consumed exclusively in step 12.
 ```
 Step  1  normalize()                    creates NormalizedData
 Step  2  unstack_to_periods()           reads .values
-Step  7  add_extreme_periods()          reads .original_data (for column list)
-Step  9  rescale_representatives()      reads .original_data, .weights, .normalize_column_means
-Step 13  denormalize()                  reads .weights, .normalize_column_means, .normalized_mean, .scaler
-Step 14  _warn_if_out_of_bounds()       reads .original_data
-Step 15  reconstruct()                  reads .original_data (length, index, columns)
+Step  6  add_extreme_periods()          reads .original_data (for column list)
+Step  8  rescale_representatives()      reads .original_data, .weights, .normalize_column_means
+Step 12  denormalize()                  reads .weights, .normalize_column_means, .normalized_mean, .scaler
+Step 13  _warn_if_out_of_bounds()       reads .original_data
+Step 14  reconstruct()                  reads .original_data (length, index, columns)
          └─ denormalize()              reads .normalize_column_means, .normalized_mean, .scaler
                                         (apply_weights=False, so .weights is skipped)
-Step 15  compute_accuracy()             reads .weights
-Step 17  output reindex                 reads .original_data
+Step 14  compute_accuracy()             reads .weights
+Step 16  output reindex                 reads .original_data
 ```
 
 ### `PeriodProfiles` — created once, read by clustering and reshaping
@@ -500,19 +484,19 @@ Step 17  output reindex                 reads .original_data
 ```
 Step  2  unstack_to_periods()           creates PeriodProfiles
 Step  3  add_period_sum_features()      reads .profiles_dataframe
-Step  5  clustering functions            reads .profiles_dataframe.values (= candidates), .n_columns
-Step  7  add_extreme_periods()          reads .profiles_dataframe
-Step  9  rescale_representatives()      reads .profiles_dataframe
-Step 11  _representatives_to_dataframe() reads .column_index
-Step 17  PipelineResult                  reads .time_index
+Step  4  clustering functions            reads .profiles_dataframe.values (= candidates), .n_columns
+Step  6  add_extreme_periods()          reads .profiles_dataframe
+Step  8  rescale_representatives()      reads .profiles_dataframe
+Step 10  _representatives_to_dataframe() reads .column_index
+Step 16  PipelineResult                  reads .time_index
 ```
 
 ### `PredefParams` — transfer-only, skips clustering
 
 ```
-Step  5  use_predefined_assignments()   reads .cluster_order, .cluster_center_indices
-Step  7  (fallback)                     reads .extreme_cluster_idx
-Step 12  segment_typical_periods()      reads .segment_order, .segment_durations, .segment_centers
+Step  4  use_predefined_assignments()   reads .cluster_order, .cluster_center_indices
+Step  6  (fallback)                     reads .extreme_cluster_idx
+Step 11  segment_typical_periods()      reads .segment_order, .segment_durations, .segment_centers
 ```
 
 ---

@@ -15,7 +15,7 @@ from tsam.pipeline.clustering import (
     cluster_sorted_periods,
     use_predefined_assignments,
 )
-from tsam.pipeline.extremes import add_extreme_periods, count_extreme_periods
+from tsam.pipeline.extremes import add_extreme_periods
 from tsam.pipeline.normalize import denormalize, normalize
 from tsam.pipeline.periods import add_period_sum_features, unstack_to_periods
 from tsam.pipeline.rescale import rescale_representatives
@@ -152,47 +152,6 @@ def run_pipeline(
     else:
         del_cluster_params = None
 
-    # Step 4: Warn if extremePreserveNumClusters is ignored due to predefined
-    extreme_preserve = extremes is not None and extremes._effective_preserve_n_clusters
-    if (
-        predef is not None
-        and extreme_preserve
-        and extremes is not None
-        and extremes.method not in (None, "replace")
-    ):
-        warnings.warn(
-            "extremePreserveNumClusters=True is ignored when predefClusterOrder "
-            "is set. Extreme periods will be appended via _addExtremePeriods "
-            "without reserving clusters upfront. To avoid this warning, set "
-            "extremePreserveNumClusters=False or remove predefClusterOrder.",
-            UserWarning,
-            stacklevel=2,
-        )
-
-    # Count extreme periods upfront if preserve_n_clusters is True
-    n_extremes = 0
-    if (
-        extreme_preserve
-        and extremes is not None
-        and extremes.method not in (None, "replace")
-        and predef is None
-    ):
-        n_extremes = count_extreme_periods(
-            period_profiles.profiles_dataframe,
-            extremes.max_value,
-            extremes.min_value,
-            extremes.max_period,
-            extremes.min_period,
-        )
-        if n_clusters <= n_extremes:
-            raise ValueError(
-                f"n_clusters ({n_clusters}) must be greater than "
-                f"the number of extreme periods ({n_extremes}) when "
-                "preserve_n_clusters=True"
-            )
-
-    effective_n_clusters = n_clusters - n_extremes
-
     representation_method = cluster.get_representation()
 
     # Step 5: Cluster (or predefined, or duration-curve variant)
@@ -215,7 +174,7 @@ def run_pipeline(
         if not cluster.use_duration_curves:
             cluster_centers, cluster_center_indices, cluster_order = cluster_periods(
                 candidates,
-                effective_n_clusters,
+                n_clusters,
                 cluster.method,
                 cluster.solver,
                 representation_method,
@@ -228,7 +187,7 @@ def run_pipeline(
                     candidates,
                     period_profiles.profiles_dataframe.values,
                     period_profiles.n_columns,
-                    effective_n_clusters,
+                    n_clusters,
                     cluster.method,
                     cluster.solver,
                     representation_method,

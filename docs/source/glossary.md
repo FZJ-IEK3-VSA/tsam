@@ -79,7 +79,6 @@ For a quick overview of the most common terms, see the
 | — **new_cluster** | Add as new clusters and reassign nearby periods. | `"new_cluster_center"` | `"new_cluster"` |
 | — **replace** | Overwrite relevant columns of nearest cluster's representative. Count unchanged. | `"replace_cluster_center"` | `"replace"` |
 | **Extreme Cluster Indices** | Indices (into the representatives list) that are extreme-period clusters. Excluded from rescaling. | `extremeClusterIdx` | `extreme_cluster_indices` |
-| **Preserve n_clusters** | Whether extremes count toward `n_clusters` (reducing regular clusters) or are added on top. | `extremePreserveNumClusters` | `preserve_n_clusters` |
 
 ## 7. Rescaling
 

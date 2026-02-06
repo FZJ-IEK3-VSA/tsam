@@ -19,41 +19,6 @@ def _append_col_with(column, append_with: str = " max."):
         return tuple(col)
 
 
-def count_extreme_periods(
-    profiles_df: pd.DataFrame,
-    add_peak_max: list[str],
-    add_peak_min: list[str],
-    add_mean_max: list[str],
-    add_mean_min: list[str],
-) -> int:
-    """Count unique extreme periods without modifying any state.
-
-    Replicates _countExtremePeriods (monolith lines 689-727).
-    """
-    extreme_period_indices: set = set()
-
-    extreme_columns = (
-        set(add_peak_max) | set(add_peak_min) | set(add_mean_max) | set(add_mean_min)
-    )
-
-    for column in extreme_columns:
-        col_data = profiles_df[column]
-
-        if column in add_peak_max:
-            extreme_period_indices.add(col_data.max(axis=1).idxmax())  # type: ignore[arg-type]
-        if column in add_peak_min:
-            extreme_period_indices.add(col_data.min(axis=1).idxmin())  # type: ignore[arg-type]
-
-        if column in add_mean_max or column in add_mean_min:
-            mean_series = col_data.mean(axis=1)  # type: ignore[call-overload]
-            if column in add_mean_max:
-                extreme_period_indices.add(mean_series.idxmax())
-            if column in add_mean_min:
-                extreme_period_indices.add(mean_series.idxmin())
-
-    return len(extreme_period_indices)
-
-
 def add_extreme_periods(
     profiles_df: pd.DataFrame,
     cluster_centers: list,
