@@ -3,6 +3,15 @@ tsam's Change Log
 ##################
 
 *********************
+Release version 3.1.1
+*********************
+
+* Added extensive regression test suite comparing both APIs against golden baselines from tsam v2.3.9
+
+* Added benchmark suite (``benchmarks/bench.py``) for performance comparison across versions using pytest-benchmark.
+  Current version is **50–80x faster** than v2.3.9 for hierarchical methods on real-world data.
+
+*********************
 Release version 3.1.0
 *********************
 
