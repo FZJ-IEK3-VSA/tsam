@@ -23,8 +23,12 @@ Bug Fixes
   the global distribution differently when transferring a clustering. Segment clusters are now
   relabelled to temporal order after ``fit_predict()``.
 
-* Fixed non-deterministic tie-breaking in vectorized ``durationRepresentation()`` by using
-  stable sort (``kind="stable"``), ensuring reproducible results across platforms.
+* Fixed non-deterministic tie-breaking in vectorized ``durationRepresentation()``
+  (``distributionPeriodWise=True`` path). The vectorized mean computation used C-contiguous
+  memory layout, producing ~1e-16 floating-point differences from the original pandas-based code,
+  which caused ``argsort`` to swap tied timesteps. Fixed by computing per-attribute means on
+  F-contiguous arrays to match pandas' accumulation order. Verified against tsam v2.3.9
+  golden baselines.
 
 Testing & Benchmarks
 ====================
