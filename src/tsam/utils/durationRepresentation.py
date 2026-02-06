@@ -66,7 +66,7 @@ def durationRepresentation(
             flat_per_attr = cluster_data.transpose(1, 0, 2).reshape(n_attrs, -1)
 
             # Sort each attribute's values
-            sorted_flat = np.sort(flat_per_attr, axis=1, kind="stable")
+            sorted_flat = np.sort(flat_per_attr, axis=1)
 
             # Reshape and mean: (n_attrs, timesteps, n_cands) -> mean -> (n_attrs, timesteps)
             sorted_reshaped = sorted_flat.reshape(n_attrs, timeStepsPerPeriod, n_cands)
@@ -85,7 +85,7 @@ def durationRepresentation(
             final_repr = np.empty_like(repr_values)
             for a in range(n_attrs):
                 attr_data = np.asfortranarray(cluster_data[:, a, :])
-                order = np.argsort(attr_data.mean(axis=0), kind="stable")
+                order = np.argsort(attr_data.mean(axis=0))
                 final_repr[a, order] = repr_values[a]
 
             # Flatten to (n_attrs * timesteps,)
