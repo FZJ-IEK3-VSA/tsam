@@ -65,8 +65,8 @@ def durationRepresentation(
             # Reshape to (n_attrs, n_cands * timesteps) for sorting
             flat_per_attr = cluster_data.transpose(1, 0, 2).reshape(n_attrs, -1)
 
-            # Sort each attribute's values
-            sorted_flat = np.sort(flat_per_attr, axis=1)
+            # Sort each attribute's values (stable for cross-platform determinism)
+            sorted_flat = np.sort(flat_per_attr, axis=1, kind="stable")
 
             # Reshape and mean: (n_attrs, timesteps, n_cands) -> mean -> (n_attrs, timesteps)
             sorted_reshaped = sorted_flat.reshape(n_attrs, timeStepsPerPeriod, n_cands)
@@ -77,15 +77,13 @@ def durationRepresentation(
                 repr_values[:, 0] = sorted_flat[:, 0]
                 repr_values[:, -1] = sorted_flat[:, -1]
 
-            # Get mean profile order for each attribute and reorder repr_values.
-            # The mean must be computed per-attribute using F-contiguous layout
-            # to match the accumulation order of the original pandas-based code.
-            # Different memory layouts cause np.mean to accumulate in different
-            # order, producing ~1e-16 differences that can swap argsort at ties.
+            # Reorder repr_values by the mean profile of each attribute.
+            # Use the pandas DataFrame to compute means, matching the exact
+            # accumulation order of v2.3.9 and avoiding ~1e-16 differences
+            # that can swap argsort positions at ties.
             final_repr = np.empty_like(repr_values)
-            for a in range(n_attrs):
-                attr_data = np.asfortranarray(cluster_data[:, a, :])
-                order = np.argsort(attr_data.mean(axis=0))
+            for a in candidates_df.columns.levels[0]:
+                order = np.argsort(candidates_df.loc[indice, a].values.mean(axis=0))
                 final_repr[a, order] = repr_values[a]
 
             # Flatten to (n_attrs * timesteps,)
