@@ -2,12 +2,21 @@ import numpy as np
 
 from tsam.representations import representations
 
+# Aliases: old verbose names → new short names.
+# The monolith sends old names; the pipeline sends new names.
+_METHOD_ALIASES = {
+    "k_means": "kmeans",
+    "k_medoids": "kmedoids",
+    "k_maxoids": "kmaxoids",
+    "adjacent_periods": "contiguous",
+}
+
 
 def aggregatePeriods(
     candidates,
     n_clusters=8,
     n_iter=100,
-    clusterMethod="k_means",
+    clusterMethod="kmeans",
     solver="highs",
     representationMethod=None,
     representationDict=None,
@@ -16,7 +25,7 @@ def aggregatePeriods(
 ):
     """
     Clusters the data based on one of the cluster methods:
-    'averaging', 'k_means', 'exact k_medoid' or 'hierarchical'
+    'averaging', 'kmeans', 'kmedoids' or 'hierarchical'
 
     :param candidates: Dissimilarity matrix where each row represents a candidate. required
     :type candidates: np.ndarray
@@ -28,9 +37,11 @@ def aggregatePeriods(
     :type n_iter: integer
 
     :param clusterMethod: Chosen clustering algorithm. Possible values are
-        'averaging','k_means','exact k_medoid' or 'hierarchical'. optional (default: 'k_means')
+        'averaging','kmeans','kmedoids' or 'hierarchical'. optional (default: 'kmeans')
     :type clusterMethod: string
     """
+    # Normalize old names to new names
+    clusterMethod = _METHOD_ALIASES.get(clusterMethod, clusterMethod)
 
     # cluster the data
     if clusterMethod == "averaging":
@@ -52,14 +63,14 @@ def aggregatePeriods(
         clusterCenters, clusterCenterIndices = representations(
             candidates,
             clusterOrder,
-            default="meanRepresentation",
+            default="mean",
             representationMethod=representationMethod,
             representationDict=representationDict,
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
         )
 
-    if clusterMethod == "k_means":
+    if clusterMethod == "kmeans":
         from sklearn.cluster import KMeans
 
         k_means = KMeans(n_clusters=n_clusters, max_iter=1000, n_init=n_iter, tol=1e-4)
@@ -69,14 +80,14 @@ def aggregatePeriods(
         clusterCenters, clusterCenterIndices = representations(
             candidates,
             clusterOrder,
-            default="meanRepresentation",
+            default="mean",
             representationMethod=representationMethod,
             representationDict=representationDict,
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
         )
 
-    if clusterMethod == "k_medoids":
+    if clusterMethod == "kmedoids":
         from tsam.utils.k_medoids_exact import KMedoids
 
         k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
@@ -85,14 +96,14 @@ def aggregatePeriods(
         clusterCenters, clusterCenterIndices = representations(
             candidates,
             clusterOrder,
-            default="medoidRepresentation",
+            default="medoid",
             representationMethod=representationMethod,
             representationDict=representationDict,
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
         )
 
-    if clusterMethod == "k_maxoids":
+    if clusterMethod == "kmaxoids":
         from tsam.utils.k_maxoids import KMaxoids
 
         k_maxoid = KMaxoids(n_clusters=n_clusters)
@@ -101,14 +112,14 @@ def aggregatePeriods(
         clusterCenters, clusterCenterIndices = representations(
             candidates,
             clusterOrder,
-            default="maxoidRepresentation",
+            default="maxoid",
             representationMethod=representationMethod,
             representationDict=representationDict,
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
         )
 
-    if clusterMethod == "hierarchical" or clusterMethod == "adjacent_periods":
+    if clusterMethod == "hierarchical" or clusterMethod == "contiguous":
         if n_clusters == 1:
             clusterOrder = np.asarray([0] * len(candidates))
         else:
@@ -118,7 +129,7 @@ def aggregatePeriods(
                 clustering = AgglomerativeClustering(
                     n_clusters=n_clusters, linkage="ward"
                 )
-            elif clusterMethod == "adjacent_periods":
+            elif clusterMethod == "contiguous":
                 adjacencyMatrix = np.eye(len(candidates), k=1) + np.eye(
                     len(candidates), k=-1
                 )
@@ -130,7 +141,7 @@ def aggregatePeriods(
         clusterCenters, clusterCenterIndices = representations(
             candidates,
             clusterOrder,
-            default="medoidRepresentation",
+            default="medoid",
             representationMethod=representationMethod,
             representationDict=representationDict,
             distributionPeriodWise=distributionPeriodWise,

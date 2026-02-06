@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 import warnings
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -19,7 +20,10 @@ from tsam.pipeline.normalize import denormalize, normalize
 from tsam.pipeline.periods import add_period_sum_features, unstack_to_periods
 from tsam.pipeline.rescale import rescale_representatives
 from tsam.pipeline.segment import segment_typical_periods
-from tsam.pipeline.types import PipelineResult
+from tsam.pipeline.types import PipelineResult, PredefParams
+
+if TYPE_CHECKING:
+    from tsam.config import ClusterConfig, ExtremeConfig, SegmentConfig
 
 
 def run_pipeline(
@@ -27,56 +31,57 @@ def run_pipeline(
     n_clusters: int,
     n_timesteps_per_period: int,
     *,
-    # Clustering parameters
-    cluster_method: str,
-    representation_method: str | None,
-    representation_dict: dict | None,
-    distribution_period_wise: bool = True,
-    solver: str = "highs",
-    use_duration_curves: bool = False,
-    normalize_column_means: bool = False,
-    include_period_sums: bool = False,
-    weights: dict[str, float] | None = None,
-    # Rescale parameters
+    cluster: ClusterConfig,
+    extremes: ExtremeConfig | None = None,
+    segments: SegmentConfig | None = None,
     rescale_cluster_periods: bool = True,
     rescale_exclude_columns: list[str] | None = None,
-    # Extreme parameters
-    extreme_period_method: str = "None",
-    extreme_preserve_n_clusters: bool = False,
-    add_peak_max: list[str] | None = None,
-    add_peak_min: list[str] | None = None,
-    add_mean_max: list[str] | None = None,
-    add_mean_min: list[str] | None = None,
-    # Segmentation parameters
-    segmentation: bool = False,
-    n_segments: int = 10,
-    segment_representation_method: str | None = None,
-    # Output
     round_decimals: int | None = None,
     numerical_tolerance: float = 1e-13,
     # Predefined parameters (for transfer/apply)
-    predef_cluster_order: list | np.ndarray | None = None,
-    predef_cluster_center_indices: list | np.ndarray | None = None,
-    predef_extreme_cluster_idx: list | None = None,
-    predef_segment_order: list | None = None,
-    predef_segment_durations: list | None = None,
-    predef_segment_centers: list | None = None,
+    predef: PredefParams | None = None,
 ) -> PipelineResult:
     """Run the full aggregation pipeline.
 
     This replaces createTypicalPeriods() + predictOriginalData() + accuracyIndicators().
     """
-    add_peak_max = add_peak_max or []
-    add_peak_min = add_peak_min or []
-    add_mean_max = add_mean_max or []
-    add_mean_min = add_mean_min or []
+    # Extract cluster config fields (new-API names)
+    cluster_method = cluster.method
+    representation_method = cluster.get_representation()
+    weights = cluster.weights
+    solver = cluster.solver
+    use_duration_curves = cluster.use_duration_curves
+    normalize_column_means = cluster.normalize_column_means
+    include_period_sums = cluster.include_period_sums
+
+    # Extract extreme config fields
+    extreme_period_method: str | None = None
+    extreme_preserve_n_clusters = False
+    add_peak_max: list[str] = []
+    add_peak_min: list[str] = []
+    add_mean_max: list[str] = []
+    add_mean_min: list[str] = []
+    if extremes is not None:
+        extreme_period_method = extremes.method
+        extreme_preserve_n_clusters = extremes._effective_preserve_n_clusters
+        add_peak_max = extremes.max_value
+        add_peak_min = extremes.min_value
+        add_mean_max = extremes.max_period
+        add_mean_min = extremes.min_period
+
+    # Extract segment config fields
+    segmentation = segments is not None
+    n_segments = segments.n_segments if segments else 10
+    segment_representation_method: str | None = (
+        segments.representation if segments else None
+    )
+
     rescale_exclude_columns = rescale_exclude_columns or []
 
     # Build representationDict default (monolith lines 504-512)
-    if representation_dict is None:
-        representation_dict = dict.fromkeys(list(data.columns), "mean")
+    representation_dict: dict[str, str] = dict.fromkeys(list(data.columns), "mean")
     # Sort representationDict alphabetically
-    representation_dict = pd.Series(representation_dict).sort_index(axis=0).to_dict()
+    representation_dict = dict(pd.Series(representation_dict).sort_index(axis=0))
 
     # Inherit segment representation from main if not specified
     if segment_representation_method is None:
@@ -103,9 +108,9 @@ def run_pipeline(
 
     # Step 4: Warn if extremePreserveNumClusters is ignored due to predefined
     if (
-        predef_cluster_order is not None
+        predef is not None
         and extreme_preserve_n_clusters
-        and extreme_period_method not in ("None", "replace_cluster_center")
+        and extreme_period_method not in (None, "replace")
     ):
         warnings.warn(
             "extremePreserveNumClusters=True is ignored when predefClusterOrder "
@@ -120,8 +125,8 @@ def run_pipeline(
     n_extremes = 0
     if (
         extreme_preserve_n_clusters
-        and extreme_period_method not in ("None", "replace_cluster_center")
-        and predef_cluster_order is None
+        and extreme_period_method not in (None, "replace")
+        and predef is None
     ):
         n_extremes = count_extreme_periods(
             period_profiles.profiles_dataframe,
@@ -143,15 +148,15 @@ def run_pipeline(
     clustering_duration = 0.0
     cluster_center_indices: list | None = None
 
-    if predef_cluster_order is not None:
+    if predef is not None:
         cluster_centers, cluster_center_indices, cluster_order = (
             use_predefined_assignments(
                 candidates,
-                predef_cluster_order,
-                predef_cluster_center_indices,
+                predef.cluster_order,
+                predef.cluster_center_indices,
                 representation_method,
                 representation_dict,
-                distribution_period_wise,
+                True,  # distribution_period_wise
                 n_timesteps_per_period,
             )
         )
@@ -165,7 +170,7 @@ def run_pipeline(
                 solver,
                 representation_method,
                 representation_dict,
-                distribution_period_wise,
+                True,  # distribution_period_wise
                 n_timesteps_per_period,
             )
         else:
@@ -179,7 +184,7 @@ def run_pipeline(
                     solver,
                     representation_method,
                     representation_dict,
-                    distribution_period_wise,
+                    True,  # distribution_period_wise
                     n_timesteps_per_period,
                 )
             )
@@ -194,7 +199,7 @@ def run_pipeline(
     extreme_periods_info: dict = {}
     extreme_cluster_idx: list[int] = []
 
-    if extreme_period_method != "None":
+    if extreme_period_method is not None:
         columns = list(norm_data.original_data.columns)
         (
             cluster_periods_list,
@@ -213,8 +218,8 @@ def run_pipeline(
             columns,
         )
     else:
-        if predef_extreme_cluster_idx is not None:
-            extreme_cluster_idx = list(predef_extreme_cluster_idx)
+        if predef is not None and predef.extreme_cluster_idx is not None:
+            extreme_cluster_idx = list(predef.extreme_cluster_idx)
 
     # Step 8: Compute cluster weights
     nums, counts = np.unique(cluster_order, return_counts=True)
@@ -283,16 +288,16 @@ def run_pipeline(
                 n_timesteps_per_period,
                 segment_representation_method,
                 representation_dict,
-                distribution_period_wise,
-                predef_segment_order,
-                predef_segment_durations,
-                predef_segment_centers,
+                True,  # distribution_period_wise
+                predef.segment_order if predef is not None else None,
+                predef.segment_durations if predef is not None else None,
+                predef.segment_centers if predef is not None else None,
             )
         )
         # Replace normalized_typical_periods with segmented version (drop Original Start Step level)
         normalized_typical_periods = segmented_df.reset_index(level=3, drop=True)
 
-    # Step 13: Denormalize → typical_periods
+    # Step 13: Denormalize -> typical_periods
     typical_periods = denormalize(
         normalized_typical_periods,
         norm_data,

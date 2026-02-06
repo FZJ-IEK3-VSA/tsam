@@ -7,9 +7,6 @@ from typing import cast
 import pandas as pd
 
 from tsam.config import (
-    EXTREME_METHOD_MAPPING,
-    METHOD_MAPPING,
-    REPRESENTATION_MAPPING,
     ClusterConfig,
     ClusteringResult,
     ExtremeConfig,
@@ -246,62 +243,16 @@ def aggregate(
         if missing:
             raise ValueError(f"Weight columns not found in data: {missing}")
 
-    # Map config names to old API names
-    method = METHOD_MAPPING.get(cluster.method)
-    if method is None:
-        raise ValueError(
-            f"Unknown cluster method: {cluster.method!r}. "
-            f"Valid options: {list(METHOD_MAPPING.keys())}"
-        )
-
-    representation = cluster.get_representation()
-    rep_mapped = REPRESENTATION_MAPPING.get(representation)
-    if rep_mapped is None:
-        raise ValueError(
-            f"Unknown representation method: {representation!r}. "
-            f"Valid options: {list(REPRESENTATION_MAPPING.keys())}"
-        )
-
-    # Map segment representation
-    seg_rep_mapped = None
-    if segments is not None:
-        seg_rep_mapped = REPRESENTATION_MAPPING.get(
-            segments.representation, "meanRepresentation"
-        )
-
-    # Map extreme method
-    if extremes is not None and extremes.has_extremes():
-        extreme_method = EXTREME_METHOD_MAPPING[extremes.method]
-        extreme_preserve = extremes._effective_preserve_n_clusters
-    else:
-        extreme_method = "None"
-        extreme_preserve = False
-
     # Run pipeline
     result = run_pipeline(
         data=data,
         n_clusters=n_clusters,
         n_timesteps_per_period=n_timesteps_per_period,
-        cluster_method=method,
-        representation_method=rep_mapped,
-        representation_dict=None,  # Will be built from defaults inside pipeline
-        distribution_period_wise=True,
-        solver=cluster.solver,
-        use_duration_curves=cluster.use_duration_curves,
-        normalize_column_means=cluster.normalize_column_means,
-        include_period_sums=cluster.include_period_sums,
-        weights=cluster.weights,
+        cluster=cluster,
+        extremes=extremes if extremes and extremes.has_extremes() else None,
+        segments=segments,
         rescale_cluster_periods=preserve_column_means,
         rescale_exclude_columns=rescale_exclude_columns,
-        extreme_period_method=extreme_method,
-        extreme_preserve_n_clusters=extreme_preserve,
-        add_peak_max=extremes.max_value if extremes else [],
-        add_peak_min=extremes.min_value if extremes else [],
-        add_mean_max=extremes.max_period if extremes else [],
-        add_mean_min=extremes.min_period if extremes else [],
-        segmentation=segments is not None,
-        n_segments=segments.n_segments if segments else 10,
-        segment_representation_method=seg_rep_mapped,
         round_decimals=round_decimals,
         numerical_tolerance=numerical_tolerance,
     )
@@ -339,7 +290,6 @@ def aggregate(
         preserve_column_means=preserve_column_means,
         rescale_exclude_columns=rescale_exclude_columns,
         temporal_resolution=temporal_resolution,
-        extreme_method=extreme_method,
     )
 
     # Compute segment_durations as tuple of tuples
@@ -382,7 +332,6 @@ def _build_clustering_result(
     preserve_column_means: bool,
     rescale_exclude_columns: list[str] | None,
     temporal_resolution: float | None,
-    extreme_method: str = "None",
 ) -> ClusteringResult:
     """Build ClusteringResult from a PipelineResult."""
     # Get cluster centers

@@ -154,7 +154,7 @@ def add_extreme_periods(
                 cluster_centers
             )
 
-    elif extreme_method == "new_cluster_center":
+    elif extreme_method == "new_cluster":
         for cluster_center in cluster_centers:
             new_cluster_centers.append(cluster_center)
         for i, period_type in enumerate(extreme_periods):
@@ -186,7 +186,7 @@ def add_extreme_periods(
                         "newClusterNo"
                     ]
 
-    elif extreme_method == "replace_cluster_center":
+    elif extreme_method == "replace":
         new_cluster_centers = list(cluster_centers)
         for period_type in extreme_periods:
             index = profiles_df.columns.get_loc(extreme_periods[period_type]["column"])

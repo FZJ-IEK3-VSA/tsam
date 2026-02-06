@@ -25,7 +25,7 @@ def compute_representatives(
     centers, center_indices = representations(
         candidates,
         assignments,
-        default="medoidRepresentation",
+        default="medoid",
         representationMethod=representation_method,
         representationDict=representation_dict,
         distributionPeriodWise=distribution_period_wise,

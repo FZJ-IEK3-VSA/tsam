@@ -12,6 +12,18 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
+class PredefParams:
+    """Predefined assignments for transfer/apply (skip clustering)."""
+
+    cluster_order: list | np.ndarray
+    cluster_center_indices: list | np.ndarray | None = None
+    extreme_cluster_idx: list | None = None
+    segment_order: list | None = None
+    segment_durations: list | None = None
+    segment_centers: list | None = None
+
+
+@dataclass(frozen=True)
 class NormalizedData:
     """Carries everything needed for denormalization."""
 

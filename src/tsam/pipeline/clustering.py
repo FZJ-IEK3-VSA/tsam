@@ -112,7 +112,7 @@ def use_predefined_assignments(
         centers, computed_indices = representations(
             candidates,
             cluster_order,
-            default="medoidRepresentation",
+            default="medoid",
             representationMethod=representation_method,
             representationDict=representation_dict,
             distributionPeriodWise=distribution_period_wise,

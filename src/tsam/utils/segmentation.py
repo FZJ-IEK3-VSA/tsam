@@ -139,7 +139,7 @@ def segmentation(
                 clusterCenters, segmentCenterIndices = representations(
                     segmentationCandidates,
                     clusterOrder,
-                    default="meanRepresentation",
+                    default="mean",
                     representationMethod=representationMethod,
                     representationDict=representationDict,
                     distributionPeriodWise=distributionPeriodWise,
@@ -168,7 +168,7 @@ def segmentation(
             clusterCenters, segmentCenterIndices = representations(
                 segmentationCandidates,
                 clusterOrder,
-                default="meanRepresentation",
+                default="mean",
                 representationMethod=representationMethod,
                 representationDict=representationDict,
                 distributionPeriodWise=distributionPeriodWise,

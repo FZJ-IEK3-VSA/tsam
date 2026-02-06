@@ -3,6 +3,18 @@ from sklearn.metrics.pairwise import euclidean_distances
 
 from tsam.utils.durationRepresentation import durationRepresentation
 
+# Aliases: old verbose names → new short names.
+# The monolith sends old names; the pipeline sends new names.
+_ALIASES = {
+    "meanRepresentation": "mean",
+    "medoidRepresentation": "medoid",
+    "maxoidRepresentation": "maxoid",
+    "minmaxmeanRepresentation": "minmax_mean",
+    "durationRepresentation": "distribution",
+    "distributionRepresentation": "distribution",
+    "distributionAndMinMaxRepresentation": "distribution_minmax",
+}
+
 
 def representations(
     candidates,
@@ -16,24 +28,23 @@ def representations(
     clusterCenterIndices = None
     if representationMethod is None:
         representationMethod = default
-    if representationMethod == "meanRepresentation":
+    # Normalize old names to new names
+    representationMethod = _ALIASES.get(representationMethod, representationMethod)
+    if representationMethod == "mean":
         clusterCenters = meanRepresentation(candidates, clusterOrder)
-    elif representationMethod == "medoidRepresentation":
+    elif representationMethod == "medoid":
         clusterCenters, clusterCenterIndices = medoidRepresentation(
             candidates, clusterOrder
         )
-    elif representationMethod == "maxoidRepresentation":
+    elif representationMethod == "maxoid":
         clusterCenters, clusterCenterIndices = maxoidRepresentation(
             candidates, clusterOrder
         )
-    elif representationMethod == "minmaxmeanRepresentation":
+    elif representationMethod == "minmax_mean":
         clusterCenters = minmaxmeanRepresentation(
             candidates, clusterOrder, representationDict, timeStepsPerPeriod
         )
-    elif (
-        representationMethod == "durationRepresentation"
-        or representationMethod == "distributionRepresentation"
-    ):
+    elif representationMethod == "distribution":
         clusterCenters = durationRepresentation(
             candidates,
             clusterOrder,
@@ -41,7 +52,7 @@ def representations(
             timeStepsPerPeriod,
             representMinMax=False,
         )
-    elif representationMethod == "distributionAndMinMaxRepresentation":
+    elif representationMethod == "distribution_minmax":
         clusterCenters = durationRepresentation(
             candidates,
             clusterOrder,

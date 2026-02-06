@@ -595,6 +595,7 @@ class ClusteringResult:
         """
         from tsam.api import _build_clustering_result
         from tsam.pipeline import run_pipeline
+        from tsam.pipeline.types import PredefParams
         from tsam.result import AccuracyMetrics, AggregationResult
 
         # Warn if using replace extreme method (transfer is not exact)
@@ -648,62 +649,49 @@ class ClusteringResult:
         # Build minimal ClusterConfig with just the representation.
         cluster = ClusterConfig(representation=self.representation)
 
-        # Map representation to old API name
-        rep_mapped = REPRESENTATION_MAPPING.get(
-            self.representation, "medoidRepresentation"
-        )
-
         # Use stored segment config if available, otherwise build from transfer fields
         segments: SegmentConfig | None = None
         n_segments_val: int | None = None
-        seg_rep_mapped = None
         if self.segment_assignments is not None and self.segment_durations is not None:
             n_segments_val = len(self.segment_durations[0])
             segments = self.segment_config or SegmentConfig(
                 n_segments=n_segments_val,
                 representation=self.segment_representation or "mean",
             )
-            seg_rep_mapped = REPRESENTATION_MAPPING.get(
-                segments.representation, "meanRepresentation"
-            )
 
         # Run pipeline with predefined parameters
+        predef = PredefParams(
+            cluster_order=list(self.cluster_assignments),
+            cluster_center_indices=list(self.cluster_centers)
+            if self.cluster_centers
+            else None,
+            extreme_cluster_idx=list(self.extreme_cluster_indices)
+            if self.extreme_cluster_indices
+            else None,
+            segment_order=[list(s) for s in self.segment_assignments]
+            if self.segment_assignments
+            else None,
+            segment_durations=[list(s) for s in self.segment_durations]
+            if self.segment_durations
+            else None,
+            segment_centers=[list(s) for s in self.segment_centers]
+            if self.segment_centers
+            else None,
+        )
+
         result = run_pipeline(
             data=data,
             n_clusters=self.n_clusters,
             n_timesteps_per_period=self.n_timesteps_per_period,
-            cluster_method="hierarchical",  # Doesn't matter for predefined
-            representation_method=rep_mapped,
-            representation_dict=None,
-            solver="highs",
-            normalize_column_means=False,
-            weights=None,
+            cluster=cluster,
+            segments=segments,
             rescale_cluster_periods=self.preserve_column_means,
             rescale_exclude_columns=list(self.rescale_exclude_columns)
             if self.rescale_exclude_columns
             else None,
-            extreme_period_method="None",
-            segmentation=segments is not None,
-            n_segments=n_segments_val if n_segments_val else 10,
-            segment_representation_method=seg_rep_mapped,
             round_decimals=round_decimals,
             numerical_tolerance=numerical_tolerance,
-            predef_cluster_order=list(self.cluster_assignments),
-            predef_cluster_center_indices=list(self.cluster_centers)
-            if self.cluster_centers
-            else None,
-            predef_extreme_cluster_idx=list(self.extreme_cluster_indices)
-            if self.extreme_cluster_indices
-            else None,
-            predef_segment_order=[list(s) for s in self.segment_assignments]
-            if self.segment_assignments
-            else None,
-            predef_segment_durations=[list(s) for s in self.segment_durations]
-            if self.segment_durations
-            else None,
-            predef_segment_centers=[list(s) for s in self.segment_centers]
-            if self.segment_centers
-            else None,
+            predef=predef,
         )
 
         # Rename index levels
@@ -868,29 +856,3 @@ class ExtremeConfig:
             min_period=data.get("min_period", []),
             preserve_n_clusters=data.get("preserve_n_clusters"),
         )
-
-
-# Mapping from new API names to old API names
-METHOD_MAPPING: dict[ClusterMethod, str] = {
-    "averaging": "averaging",
-    "kmeans": "k_means",
-    "kmedoids": "k_medoids",
-    "kmaxoids": "k_maxoids",
-    "hierarchical": "hierarchical",
-    "contiguous": "adjacent_periods",
-}
-
-REPRESENTATION_MAPPING: dict[RepresentationMethod, str] = {
-    "mean": "meanRepresentation",
-    "medoid": "medoidRepresentation",
-    "maxoid": "maxoidRepresentation",
-    "distribution": "distributionRepresentation",
-    "distribution_minmax": "distributionAndMinMaxRepresentation",
-    "minmax_mean": "minmaxmeanRepresentation",
-}
-
-EXTREME_METHOD_MAPPING: dict[ExtremeMethod, str] = {
-    "append": "append",
-    "replace": "replace_cluster_center",
-    "new_cluster": "new_cluster_center",
-}
