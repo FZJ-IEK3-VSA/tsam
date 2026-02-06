@@ -549,9 +549,19 @@ def _build_old_params(
     if segments is not None:
         params["segmentation"] = True
         params["noSegments"] = segments.n_segments
-        params["segmentRepresentationMethod"] = REPRESENTATION_MAPPING.get(
-            segments.representation, "meanRepresentation"
-        )
+        seg_rep = segments.representation
+        if isinstance(seg_rep, (Distribution, MinMaxMean)):
+            seg_params: dict = {}
+            _apply_representation_params(seg_params, seg_rep, data.columns.tolist())
+            params["segmentRepresentationMethod"] = seg_params["representationMethod"]
+            if "distributionPeriodWise" in seg_params:
+                params["distributionPeriodWise"] = seg_params["distributionPeriodWise"]
+            if "representationDict" in seg_params:
+                params["representationDict"] = seg_params["representationDict"]
+        else:
+            params["segmentRepresentationMethod"] = REPRESENTATION_MAPPING.get(
+                seg_rep, "meanRepresentation"
+            )
 
         # Predefined segment parameters (from ClusteringResult)
         if predef_segment_assignments is not None:

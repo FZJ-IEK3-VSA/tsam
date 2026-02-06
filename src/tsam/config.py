@@ -288,15 +288,17 @@ class SegmentConfig:
         Example: period_duration=24 with hourly data has 24 timesteps,
         so n_segments could be 1-24.
 
-    representation : str, default "mean"
+    representation : str, Distribution, or MinMaxMean, default "mean"
         How to represent each segment:
         - "mean": Average value of timesteps in segment
         - "medoid": Actual timestep closest to segment mean
         - "distribution": Preserve distribution within segment
+        - ``Distribution(...)``: Distribution with additional options
+        - ``MinMaxMean(...)``: Per-column min/max/mean
     """
 
     n_segments: int
-    representation: RepresentationMethod = "mean"
+    representation: Representation = "mean"
 
     def __post_init__(self) -> None:
         if self.n_segments < 1:
@@ -308,15 +310,16 @@ class SegmentConfig:
         """Convert to dictionary for JSON serialization."""
         result: dict[str, Any] = {"n_segments": self.n_segments}
         if self.representation != "mean":
-            result["representation"] = self.representation
+            result["representation"] = _representation_to_dict(self.representation)
         return result
 
     @classmethod
     def from_dict(cls, data: dict) -> SegmentConfig:
         """Create from dictionary (e.g., loaded from JSON)."""
+        rep_data = data.get("representation", "mean")
         return cls(
             n_segments=data["n_segments"],
-            representation=data.get("representation", "mean"),
+            representation=_representation_from_dict(rep_data),
         )
 
 
@@ -414,7 +417,7 @@ class ClusteringResult:
     preserve_column_means: bool = True
     rescale_exclude_columns: tuple[str, ...] | None = None
     representation: Representation = "medoid"
-    segment_representation: RepresentationMethod | None = None
+    segment_representation: Representation | None = None
     temporal_resolution: float | None = None
     extreme_cluster_indices: tuple[int, ...] | None = None
 
@@ -548,7 +551,9 @@ class ClusteringResult:
         if self.rescale_exclude_columns is not None:
             result["rescale_exclude_columns"] = list(self.rescale_exclude_columns)
         if self.segment_representation is not None:
-            result["segment_representation"] = self.segment_representation
+            result["segment_representation"] = _representation_to_dict(
+                self.segment_representation
+            )
         if self.temporal_resolution is not None:
             result["temporal_resolution"] = self.temporal_resolution
         if self.extreme_cluster_indices is not None:
@@ -590,7 +595,7 @@ class ClusteringResult:
         if "rescale_exclude_columns" in data:
             kwargs["rescale_exclude_columns"] = tuple(data["rescale_exclude_columns"])
         if seg_rep_data is not None:
-            kwargs["segment_representation"] = seg_rep_data
+            kwargs["segment_representation"] = _representation_from_dict(seg_rep_data)
         if "temporal_resolution" in data:
             kwargs["temporal_resolution"] = data["temporal_resolution"]
         if "extreme_cluster_indices" in data:
