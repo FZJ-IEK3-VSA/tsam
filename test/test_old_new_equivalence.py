@@ -19,7 +19,14 @@ import pytest
 
 import tsam.timeseriesaggregation as old_tsam
 from conftest import TEST_DATA_DIR, TESTDATA_CSV
-from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
+from tsam import (
+    ClusterConfig,
+    Distribution,
+    ExtremeConfig,
+    MinMaxMean,
+    SegmentConfig,
+    aggregate,
+)
 
 # ---------------------------------------------------------------------------
 # Datasets — add an entry here to introduce a new dataset
@@ -189,25 +196,163 @@ CONFIGS: list[Config] = [
             "preserve_column_means": False,
         },
     ),
-    # --- Column-specific configs (only compatible datasets) ---
+    # --- More cluster methods ---
     Config(
-        id="hierarchical_extremes_append",
+        id="contiguous",
         old_kwargs={
             "noTypicalPeriods": 8,
             "hoursPerPeriod": 24,
-            "clusterMethod": "hierarchical",
-            "extremePeriodMethod": "append",
-            "addPeakMax": ["Load"],
+            "clusterMethod": "adjacent_periods",
         },
         new_kwargs={
             "n_clusters": 8,
             "period_duration": 24,
-            "cluster": ClusterConfig(method="hierarchical"),
-            "extremes": ExtremeConfig(
-                method="append", max_value=["Load"], preserve_n_clusters=False
+            "cluster": ClusterConfig(method="contiguous"),
+        },
+    ),
+    Config(
+        id="averaging",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "averaging",
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="averaging"),
+        },
+    ),
+    Config(
+        id="kmaxoids",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_maxoids",
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="kmaxoids"),
+        },
+        seed=42,
+        rtol=1e-5,
+    ),
+    Config(
+        id="kmedoids",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_medoids",
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="kmedoids"),
+        },
+        seed=42,
+        # kmedoids is slow (~30s), only run on testdata
+        only_datasets={"testdata"},
+    ),
+    # --- More representations ---
+    Config(
+        id="hierarchical_maxoid",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "representationMethod": "maxoidRepresentation",
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical", representation="maxoid"),
+        },
+    ),
+    Config(
+        id="hierarchical_distribution_minmax",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "representationMethod": "distributionAndMinMaxRepresentation",
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(
+                method="hierarchical", representation="distribution_minmax"
             ),
         },
-        only_datasets={"testdata", "with_zero_column"},
+    ),
+    Config(
+        id="distribution_global",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "representationMethod": "distributionRepresentation",
+            "distributionPeriodWise": False,
+            "rescaleClusterPeriods": False,
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(
+                method="hierarchical",
+                representation=Distribution(scope="global"),
+            ),
+            "preserve_column_means": False,
+        },
+    ),
+    Config(
+        id="distribution_minmax_global",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "representationMethod": "distributionAndMinMaxRepresentation",
+            "distributionPeriodWise": False,
+            "rescaleClusterPeriods": False,
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(
+                method="hierarchical",
+                representation=Distribution(scope="global", preserve_minmax=True),
+            ),
+            "preserve_column_means": False,
+        },
+    ),
+    # --- Column-specific configs (only compatible datasets) ---
+    Config(
+        id="minmaxmean",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "representationMethod": "minmaxmeanRepresentation",
+            "representationDict": {
+                "GHI": "max",
+                "T": "min",
+                "Wind": "mean",
+                "Load": "min",
+            },
+            "rescaleClusterPeriods": False,
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(
+                method="hierarchical",
+                representation=MinMaxMean(
+                    max_columns=["GHI"], min_columns=["T", "Load"]
+                ),
+            ),
+            "preserve_column_means": False,
+        },
+        only_datasets={"testdata"},
     ),
     Config(
         id="hierarchical_weighted",
@@ -226,6 +371,252 @@ CONFIGS: list[Config] = [
             ),
         },
         only_datasets={"testdata"},
+    ),
+    # --- Extreme period configs ---
+    Config(
+        id="extremes_append",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["Load"],
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="append", max_value=["Load"], preserve_n_clusters=False
+            ),
+        },
+        only_datasets={"testdata", "with_zero_column"},
+    ),
+    Config(
+        id="extremes_replace",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "replace_cluster_center",
+            "addPeakMax": ["Load"],
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="replace", max_value=["Load"], preserve_n_clusters=False
+            ),
+        },
+        only_datasets={"testdata", "with_zero_column"},
+    ),
+    Config(
+        id="extremes_new_cluster",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "new_cluster_center",
+            "addPeakMax": ["Load"],
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="new_cluster", max_value=["Load"], preserve_n_clusters=False
+            ),
+        },
+        only_datasets={"testdata", "with_zero_column"},
+    ),
+    Config(
+        id="extremes_min_value",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "append",
+            "addPeakMin": ["T"],
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="append", min_value=["T"], preserve_n_clusters=False
+            ),
+        },
+        only_datasets={"testdata", "with_zero_column"},
+    ),
+    Config(
+        id="extremes_max_period",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "append",
+            "addMeanMax": ["GHI"],
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="append", max_period=["GHI"], preserve_n_clusters=False
+            ),
+        },
+        only_datasets={"testdata", "with_zero_column"},
+    ),
+    Config(
+        id="extremes_min_period",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "append",
+            "addMeanMin": ["Wind"],
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="append", min_period=["Wind"], preserve_n_clusters=False
+            ),
+        },
+        only_datasets={"testdata", "with_zero_column"},
+    ),
+    Config(
+        id="extremes_multi",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["Load"],
+            "addPeakMin": ["T"],
+            "addMeanMax": ["GHI"],
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="append",
+                max_value=["Load"],
+                min_value=["T"],
+                max_period=["GHI"],
+                preserve_n_clusters=False,
+            ),
+        },
+        only_datasets={"testdata", "with_zero_column"},
+    ),
+    Config(
+        id="extremes_preserve_n",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["Load"],
+            "extremePreserveNumClusters": True,
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="append", max_value=["Load"], preserve_n_clusters=True
+            ),
+        },
+        only_datasets={"testdata", "with_zero_column"},
+    ),
+    Config(
+        id="extremes_with_segmentation",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["Load"],
+            "segmentation": True,
+            "noSegments": 6,
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="append", max_value=["Load"], preserve_n_clusters=False
+            ),
+            "segments": SegmentConfig(n_segments=6),
+        },
+        only_datasets={"testdata", "with_zero_column"},
+    ),
+    # --- Extremes on OPSD (different column names) ---
+    Config(
+        id="extremes_opsd_multi",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["DE_Load"],
+            "addPeakMin": ["DE_Price"],
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="append",
+                max_value=["DE_Load"],
+                min_value=["DE_Price"],
+                preserve_n_clusters=False,
+            ),
+        },
+        only_datasets={"opsd"},
+    ),
+    # --- Extremes on constant data (all periods identical) ---
+    Config(
+        id="extremes_constant",
+        old_kwargs={
+            "noTypicalPeriods": 3,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["A"],
+        },
+        new_kwargs={
+            "n_clusters": 3,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="append", max_value=["A"], preserve_n_clusters=False
+            ),
+        },
+        only_datasets={"constant"},
+    ),
+    # --- Extremes on zero column ---
+    Config(
+        id="extremes_zero_column",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["Zero"],
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "extremes": ExtremeConfig(
+                method="append", max_value=["Zero"], preserve_n_clusters=False
+            ),
+        },
+        only_datasets={"with_zero_column"},
     ),
 ]
 
