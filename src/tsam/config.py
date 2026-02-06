@@ -132,6 +132,16 @@ def representation_to_pipeline_str(rep: Representation) -> str:
     return rep
 
 
+def representation_is_period_wise(rep: Representation) -> bool:
+    """Return the distribution_period_wise flag for a Representation value.
+
+    Only relevant for Distribution representations; returns True for all others.
+    """
+    if isinstance(rep, Distribution):
+        return rep.scope == "cluster"
+    return True
+
+
 def _resolve_representation(rep: Representation) -> Representation:
     """Normalize a string representation shortcut to an object when needed.
 

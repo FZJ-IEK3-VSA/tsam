@@ -16,6 +16,7 @@ def cluster_periods(
     representation_method: str | None,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
+    distribution_period_wise: bool = True,
 ) -> tuple[list, list | None, np.ndarray]:
     """Run clustering via aggregate_periods.
 
@@ -31,7 +32,7 @@ def cluster_periods(
         cluster_method=cluster_method,
         representation_method=representation_method,
         representation_dict=representation_dict,
-        distribution_period_wise=True,
+        distribution_period_wise=distribution_period_wise,
         n_timesteps_per_period=n_timesteps_per_period,
     )
     return centers, center_indices, order
@@ -47,6 +48,7 @@ def cluster_sorted_periods(
     representation_method: str | None,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
+    distribution_period_wise: bool = True,
 ) -> tuple[list, list | None, np.ndarray]:
     """Duration-curve clustering: sort descending, cluster, pick medoid from original.
 
@@ -69,7 +71,7 @@ def cluster_sorted_periods(
         cluster_method=cluster_method,
         representation_method=representation_method,
         representation_dict=representation_dict,
-        distribution_period_wise=True,
+        distribution_period_wise=distribution_period_wise,
         n_timesteps_per_period=n_timesteps_per_period,
     )
 
@@ -96,6 +98,7 @@ def use_predefined_assignments(
     representation_method: str | None,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
+    distribution_period_wise: bool = True,
 ) -> tuple[list | np.ndarray, list | None, list | np.ndarray]:
     """Skip clustering, compute representatives from predefined assignments.
 
@@ -112,7 +115,7 @@ def use_predefined_assignments(
             default="medoid",
             representation_method=representation_method,
             representation_dict=representation_dict,
-            distribution_period_wise=True,
+            distribution_period_wise=distribution_period_wise,
             n_timesteps_per_period=n_timesteps_per_period,
         )
         return centers, computed_indices, cluster_order
