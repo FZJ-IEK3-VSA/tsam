@@ -1,7 +1,12 @@
 """Parametrized equivalence tests: old TimeSeriesAggregation vs new tsam.aggregate().
 
-Each test case is an EquivalenceCase dataclass — to add a new scenario, append
-to the CASES list.  To add a new dataset, add an entry to DATA.
+Every ``Config`` is tested against every dataset (cross-product).
+To extend coverage add a Config to ``CONFIGS``, a dataset to ``DATASETS``,
+or a comparison method to ``TestOldNewEquivalence``.
+
+Configs that reference specific column names list the datasets they are
+compatible with in ``only_datasets``.  Generic configs leave it empty and
+run everywhere.
 """
 
 from __future__ import annotations
@@ -17,12 +22,12 @@ from conftest import TEST_DATA_DIR, TESTDATA_CSV
 from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
 
 # ---------------------------------------------------------------------------
-# Data loaders — add an entry here to introduce a new dataset
+# Datasets — add an entry here to introduce a new dataset
 # ---------------------------------------------------------------------------
 
 OPSD_CSV = TEST_DATA_DIR / "opsd_germany_2019.csv"
 
-DATA: dict[str, callable] = {
+DATASETS: dict[str, callable] = {
     "testdata": lambda: pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True),
     "opsd": lambda: pd.read_csv(OPSD_CSV, index_col=0, parse_dates=True),
     "constant": lambda: _make_constant(),
@@ -43,46 +48,59 @@ def _make_with_zero_column() -> pd.DataFrame:
     return df
 
 
+# Cache so each dataset is loaded at most once per process.
+_DATA_CACHE: dict[str, pd.DataFrame] = {}
+
+
+def _get_data(name: str) -> pd.DataFrame:
+    if name not in _DATA_CACHE:
+        _DATA_CACHE[name] = DATASETS[name]()
+    return _DATA_CACHE[name]
+
+
 # ---------------------------------------------------------------------------
-# Test-case definition
+# Config definition
 # ---------------------------------------------------------------------------
 
 
 @dataclass
-class EquivalenceCase:
-    """One old-vs-new equivalence scenario.
+class Config:
+    """One algorithm configuration to test across datasets.
 
     Parameters
     ----------
     id : str
-        Pytest ID shown in ``-v`` output.
+        Short label (combined with dataset name for the pytest ID).
     old_kwargs : dict
         ``TimeSeriesAggregation`` constructor kwargs (excluding ``timeSeries``).
     new_kwargs : dict
         ``aggregate()`` kwargs (excluding ``data``).
     seed : int | None
-        If set, ``np.random.seed(seed)`` is called before *each* API call
-        so stochastic methods (kmeans, kmaxoids) are reproducible.
-    dataset : str
-        Key into ``DATA``; defaults to ``"testdata"``.
+        Seed for stochastic methods.
     rtol : float
-        Relative tolerance for accuracy comparisons (RMSE/MAE).
+        Relative tolerance for accuracy comparisons.
+    only_datasets : set[str]
+        If non-empty, only run with these datasets (for column-specific configs).
+    n_clusters_override : dict[str, int]
+        Per-dataset override for ``noTypicalPeriods`` / ``n_clusters``
+        (e.g. ``{"constant": 3}`` because it only has 10 periods).
     """
 
     id: str
     old_kwargs: dict = field(default_factory=dict)
     new_kwargs: dict = field(default_factory=dict)
     seed: int | None = None
-    dataset: str = "testdata"
     rtol: float = 1e-10
+    only_datasets: set[str] = field(default_factory=set)
+    n_clusters_override: dict[str, int] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
-# Cases — append new entries to extend coverage
+# Configs — append new entries to extend coverage
 # ---------------------------------------------------------------------------
 
-CASES: list[EquivalenceCase] = [
-    EquivalenceCase(
+CONFIGS: list[Config] = [
+    Config(
         id="hierarchical_default",
         old_kwargs={
             "noTypicalPeriods": 8,
@@ -95,7 +113,7 @@ CASES: list[EquivalenceCase] = [
             "cluster": ClusterConfig(method="hierarchical"),
         },
     ),
-    EquivalenceCase(
+    Config(
         id="hierarchical_mean",
         old_kwargs={
             "noTypicalPeriods": 8,
@@ -109,7 +127,7 @@ CASES: list[EquivalenceCase] = [
             "cluster": ClusterConfig(method="hierarchical", representation="mean"),
         },
     ),
-    EquivalenceCase(
+    Config(
         id="kmeans",
         old_kwargs={
             "noTypicalPeriods": 8,
@@ -124,7 +142,7 @@ CASES: list[EquivalenceCase] = [
         seed=42,
         rtol=1e-5,
     ),
-    EquivalenceCase(
+    Config(
         id="hierarchical_distribution",
         old_kwargs={
             "noTypicalPeriods": 8,
@@ -140,7 +158,7 @@ CASES: list[EquivalenceCase] = [
             ),
         },
     ),
-    EquivalenceCase(
+    Config(
         id="hierarchical_segmentation",
         old_kwargs={
             "noTypicalPeriods": 8,
@@ -156,7 +174,23 @@ CASES: list[EquivalenceCase] = [
             "segments": SegmentConfig(n_segments=8),
         },
     ),
-    EquivalenceCase(
+    Config(
+        id="hierarchical_no_rescale",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "rescaleClusterPeriods": False,
+        },
+        new_kwargs={
+            "n_clusters": 8,
+            "period_duration": 24,
+            "cluster": ClusterConfig(method="hierarchical"),
+            "preserve_column_means": False,
+        },
+    ),
+    # --- Column-specific configs (only compatible datasets) ---
+    Config(
         id="hierarchical_extremes_append",
         old_kwargs={
             "noTypicalPeriods": 8,
@@ -173,23 +207,9 @@ CASES: list[EquivalenceCase] = [
                 method="append", max_value=["Load"], preserve_n_clusters=False
             ),
         },
+        only_datasets={"testdata", "with_zero_column"},
     ),
-    EquivalenceCase(
-        id="hierarchical_no_rescale",
-        old_kwargs={
-            "noTypicalPeriods": 8,
-            "hoursPerPeriod": 24,
-            "clusterMethod": "hierarchical",
-            "rescaleClusterPeriods": False,
-        },
-        new_kwargs={
-            "n_clusters": 8,
-            "period_duration": 24,
-            "cluster": ClusterConfig(method="hierarchical"),
-            "preserve_column_means": False,
-        },
-    ),
-    EquivalenceCase(
+    Config(
         id="hierarchical_weighted",
         old_kwargs={
             "noTypicalPeriods": 8,
@@ -205,91 +225,61 @@ CASES: list[EquivalenceCase] = [
                 weights={"Load": 2.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
             ),
         },
-    ),
-    # --- OPSD dataset (12 columns, 91 days) ---
-    EquivalenceCase(
-        id="opsd_hierarchical",
-        dataset="opsd",
-        old_kwargs={
-            "noTypicalPeriods": 8,
-            "hoursPerPeriod": 24,
-            "clusterMethod": "hierarchical",
-        },
-        new_kwargs={
-            "n_clusters": 8,
-            "period_duration": 24,
-            "cluster": ClusterConfig(method="hierarchical"),
-        },
-    ),
-    EquivalenceCase(
-        id="opsd_distribution",
-        dataset="opsd",
-        old_kwargs={
-            "noTypicalPeriods": 8,
-            "hoursPerPeriod": 24,
-            "clusterMethod": "hierarchical",
-            "representationMethod": "durationRepresentation",
-        },
-        new_kwargs={
-            "n_clusters": 8,
-            "period_duration": 24,
-            "cluster": ClusterConfig(
-                method="hierarchical", representation="distribution"
-            ),
-        },
-    ),
-    EquivalenceCase(
-        id="opsd_segmentation",
-        dataset="opsd",
-        old_kwargs={
-            "noTypicalPeriods": 8,
-            "hoursPerPeriod": 24,
-            "clusterMethod": "hierarchical",
-            "segmentation": True,
-            "noSegments": 6,
-        },
-        new_kwargs={
-            "n_clusters": 8,
-            "period_duration": 24,
-            "cluster": ClusterConfig(method="hierarchical"),
-            "segments": SegmentConfig(n_segments=6),
-        },
-    ),
-    # --- Constant data (edge case) ---
-    EquivalenceCase(
-        id="constant_no_rescale",
-        dataset="constant",
-        old_kwargs={
-            "noTypicalPeriods": 3,
-            "hoursPerPeriod": 24,
-            "clusterMethod": "hierarchical",
-            "rescaleClusterPeriods": False,
-        },
-        new_kwargs={
-            "n_clusters": 3,
-            "period_duration": 24,
-            "cluster": ClusterConfig(method="hierarchical"),
-            "preserve_column_means": False,
-        },
-    ),
-    # --- Data with a zero column (edge case) ---
-    EquivalenceCase(
-        id="zero_column_no_rescale",
-        dataset="with_zero_column",
-        old_kwargs={
-            "noTypicalPeriods": 8,
-            "hoursPerPeriod": 24,
-            "clusterMethod": "hierarchical",
-            "rescaleClusterPeriods": False,
-        },
-        new_kwargs={
-            "n_clusters": 8,
-            "period_duration": 24,
-            "cluster": ClusterConfig(method="hierarchical"),
-            "preserve_column_means": False,
-        },
+        only_datasets={"testdata"},
     ),
 ]
+
+# Default n_clusters overrides for small datasets.
+_SMALL_DATASET_CLUSTERS = {"constant": 3}
+
+# ---------------------------------------------------------------------------
+# Build cross-product: Config x Dataset → EquivalenceCase
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class EquivalenceCase:
+    """Fully resolved test case (config + dataset)."""
+
+    id: str
+    dataset: str
+    old_kwargs: dict
+    new_kwargs: dict
+    seed: int | None = None
+    rtol: float = 1e-10
+
+
+def _build_cases() -> list[EquivalenceCase]:
+    cases: list[EquivalenceCase] = []
+    for cfg in CONFIGS:
+        eligible = cfg.only_datasets or set(DATASETS)
+        for ds in eligible:
+            # Apply n_clusters override for small datasets
+            n_override = cfg.n_clusters_override.get(
+                ds, _SMALL_DATASET_CLUSTERS.get(ds)
+            )
+
+            old_kw = dict(cfg.old_kwargs)
+            new_kw = dict(cfg.new_kwargs)
+
+            if n_override is not None:
+                old_kw["noTypicalPeriods"] = n_override
+                new_kw = {**new_kw, "n_clusters": n_override}
+
+            cases.append(
+                EquivalenceCase(
+                    id=f"{cfg.id}/{ds}",
+                    dataset=ds,
+                    old_kwargs=old_kw,
+                    new_kwargs=new_kw,
+                    seed=cfg.seed,
+                    rtol=cfg.rtol,
+                )
+            )
+    return cases
+
+
+CASES = _build_cases()
 
 
 # ---------------------------------------------------------------------------
@@ -313,20 +303,6 @@ def _run_new(data: pd.DataFrame, case: EquivalenceCase):
     return aggregate(data, **case.new_kwargs)
 
 
-# ---------------------------------------------------------------------------
-# Fixtures / helpers
-# ---------------------------------------------------------------------------
-
-# Cache loaded datasets so each is read at most once per process.
-_DATA_CACHE: dict[str, pd.DataFrame] = {}
-
-
-def _get_data(name: str) -> pd.DataFrame:
-    if name not in _DATA_CACHE:
-        _DATA_CACHE[name] = DATA[name]()
-    return _DATA_CACHE[name]
-
-
 def _case_ids(cases):
     return [c.id for c in cases]
 
@@ -337,7 +313,7 @@ def _case_ids(cases):
 
 
 class TestOldNewEquivalence:
-    """Parametrized comparison of old and new API across all CASES."""
+    """Parametrized comparison of old and new API across all configs x datasets."""
 
     @pytest.mark.parametrize("case", CASES, ids=_case_ids(CASES))
     def test_cluster_representatives(self, case: EquivalenceCase):
