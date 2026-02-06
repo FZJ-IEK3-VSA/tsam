@@ -6,10 +6,35 @@ tsam's Change Log
 Release version 3.1.1
 *********************
 
-* Added extensive regression test suite comparing both APIs against golden baselines from tsam v2.3.9
+New Features
+============
 
-* Added benchmark suite (``benchmarks/bench.py``) for performance comparison across versions using pytest-benchmark.
-  Current version is **50–80x faster** than v2.3.9 for hierarchical methods on real-world data.
+* Added ``Distribution`` and ``MinMaxMean`` representation objects for ``ClusterConfig`` and
+  ``SegmentConfig``, providing a structured alternative to plain string representation names.
+
+* Added migration guide (``docs/source/migrationGuideDoc.rst``) documenting the transition
+  from the v2 class-based API to the v3 functional API.
+
+Bug Fixes
+=========
+
+* Fixed segment label ordering bug: ``AgglomerativeClustering`` produces arbitrary cluster labels,
+  which caused ``durationRepresentation()`` with ``distributionPeriodWise=False`` to allocate
+  the global distribution differently when transferring a clustering. Segment clusters are now
+  relabelled to temporal order after ``fit_predict()``.
+
+* Fixed non-deterministic tie-breaking in vectorized ``durationRepresentation()`` by using
+  stable sort (``kind="stable"``), ensuring reproducible results across platforms.
+
+Testing & Benchmarks
+====================
+
+* Added extensive regression test suite (296 equivalence tests + 148 golden-file tests) comparing
+  both APIs against golden baselines generated with tsam v2.3.9.
+
+* Added benchmark suite (``benchmarks/bench.py``) for performance comparison across versions
+  using pytest-benchmark. Current version is **50--80x faster** than v2.3.9 for hierarchical
+  methods on real-world data.
 
 *********************
 Release version 3.1.0
