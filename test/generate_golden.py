@@ -48,7 +48,7 @@ def main() -> None:
         # Save
         path = GOLDEN_DIR / f"{case.id}.csv"
         path.parent.mkdir(parents=True, exist_ok=True)
-        reconstructed.to_csv(path)
+        reconstructed.round(8).to_csv(path)
 
         total += 1
         print(f"  {case.id}  ({reconstructed.shape})")
