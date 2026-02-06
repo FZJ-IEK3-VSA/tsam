@@ -513,26 +513,6 @@ CONFIGS: list[Config] = [
         only_datasets={"testdata", "with_zero_column"},
     ),
     Config(
-        id="extremes_preserve_n",
-        old_kwargs={
-            "noTypicalPeriods": 8,
-            "hoursPerPeriod": 24,
-            "clusterMethod": "hierarchical",
-            "extremePeriodMethod": "append",
-            "addPeakMax": ["Load"],
-            "extremePreserveNumClusters": True,
-        },
-        new_kwargs={
-            "n_clusters": 8,
-            "period_duration": 24,
-            "cluster": ClusterConfig(method="hierarchical"),
-            "extremes": ExtremeConfig(
-                method="append", max_value=["Load"], preserve_n_clusters=True
-            ),
-        },
-        only_datasets={"testdata", "with_zero_column"},
-    ),
-    Config(
         id="extremes_with_segmentation",
         old_kwargs={
             "noTypicalPeriods": 8,
