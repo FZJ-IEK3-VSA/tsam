@@ -46,38 +46,45 @@ def duration_representation(
 
         for cluster_num in np.unique(cluster_order):
             indice = np.where(cluster_order == cluster_num)[0]
-            n_cands = len(indice)
+            n_candidates = len(indice)
 
             # Skip empty clusters
-            if len(indice) == 0:
+            if n_candidates == 0:
                 continue
 
+            # This list will hold the representative values for each attribute
+            cluster_center_parts = []
+
             for a in candidates_df.columns.levels[0]:
-                candidateValues_np = candidates_df.loc[indice, a].values
+                candidate_values_np = candidates_df.loc[indice, a].values
 
                 # flatten the 2D array (candidates, timesteps) into a 1D array and sort it.
-                sorted_flat = np.sort(candidateValues_np.flatten())
+                sorted_flat_values = np.sort(candidate_values_np.flatten())
 
-                # Reshape and mean: (n_attrs, timesteps, n_cands) -> mean -> (n_attrs, timesteps)
-                sorted_reshaped = sorted_flat.reshape(n_timesteps_per_period, n_cands)
+                # reshape the sorted values and calculate the mean for each representative time step.
+                representation_values_np = sorted_flat_values.reshape(
+                    n_timesteps_per_period, n_candidates
+                ).mean(axis=1)
 
-                repr_values = sorted_reshaped.mean(axis=2)
-
-                # Respect max and min of the attributes
+                # respect max and min of the attributes
                 if represent_min_max:
-                    repr_values[0] = sorted_flat[0]
-                    repr_values[-1] = sorted_flat[-1]
+                    representation_values_np[0] = sorted_flat_values[0]
+                    representation_values_np[-1] = sorted_flat_values[-1]
 
                 # get the order of the representation values such that euclidean distance
                 # to the candidates' mean profile is minimized.
-                orders = np.argsort(candidateValues_np.mean(axis=0))
+                mean_profile_order = np.argsort(candidate_values_np.mean(axis=0))
 
                 # Create an empty array to place the results in the correct order
-                final_repr = np.empty_like(repr_values)
-                final_repr[orders] = repr_values
+                final_representation_for_attr = np.empty_like(representation_values_np)
+                final_representation_for_attr[mean_profile_order] = (
+                    representation_values_np
+                )
 
-            # Flatten to (n_attrs * timesteps,)
-            cluster_centers.append(final_repr.flatten())
+                # add to cluster center
+                cluster_center_parts.append(final_representation_for_attr)
+
+            cluster_centers.append(np.concatenate(cluster_center_parts))
 
     else:
         cluster_centers_list = []
