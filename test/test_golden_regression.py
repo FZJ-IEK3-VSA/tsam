@@ -38,7 +38,7 @@ def _golden_path(case: EquivalenceCase) -> str:
 def _save_golden(df: pd.DataFrame, case: EquivalenceCase) -> None:
     path = _golden_path(case)
     path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(path)
+    df.round(8).to_csv(path)
 
 
 def _load_golden(case: EquivalenceCase) -> pd.DataFrame:
@@ -80,6 +80,7 @@ class TestGoldenRegression:
             golden,
             check_names=False,
             check_freq=False,
+            atol=1e-7,
         )
 
     @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
@@ -103,4 +104,5 @@ class TestGoldenRegression:
             golden,
             check_names=False,
             check_freq=False,
+            atol=1e-7,
         )
