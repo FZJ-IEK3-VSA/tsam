@@ -1,10 +1,10 @@
-"""Clustering wrappers around periodAggregation and representations."""
+"""Clustering wrappers around period_aggregation and representations."""
 
 from __future__ import annotations
 
 import numpy as np
 
-from tsam.periodAggregation import aggregatePeriods
+from tsam.period_aggregation import aggregate_periods
 from tsam.representations import representations
 
 
@@ -17,22 +17,22 @@ def cluster_periods(
     representation_dict: dict | None,
     n_timesteps_per_period: int,
 ) -> tuple[list, list | None, np.ndarray]:
-    """Run clustering via aggregatePeriods.
+    """Run clustering via aggregate_periods.
 
     Replicates monolith lines 1172-1188.
 
     Returns (cluster_centers, cluster_center_indices, cluster_order).
     """
-    centers, center_indices, order = aggregatePeriods(
+    centers, center_indices, order = aggregate_periods(
         candidates,
         n_clusters=n_clusters,
         n_iter=100,
         solver=solver,
-        clusterMethod=cluster_method,
-        representationMethod=representation_method,
-        representationDict=representation_dict,
-        distributionPeriodWise=True,
-        timeStepsPerPeriod=n_timesteps_per_period,
+        cluster_method=cluster_method,
+        representation_method=representation_method,
+        representation_dict=representation_dict,
+        distribution_period_wise=True,
+        n_timesteps_per_period=n_timesteps_per_period,
     )
     return centers, center_indices, order
 
@@ -50,7 +50,7 @@ def cluster_sorted_periods(
 ) -> tuple[list, list | None, np.ndarray]:
     """Duration-curve clustering: sort descending, cluster, pick medoid from original.
 
-    Replicates _clusterSortedPeriods (monolith lines 1029-1091).
+    Replicates _cluster_sorted_periods (monolith lines 1029-1091).
 
     Returns (cluster_centers, cluster_center_indices, cluster_order).
     """
@@ -61,16 +61,16 @@ def cluster_sorted_periods(
     values_3d = profiles_values.copy().reshape(n_periods, n_columns, n_timesteps)
     sorted_values = (-np.sort(-values_3d, axis=2, kind="stable")).reshape(n_periods, -1)
 
-    _alt_centers, center_indices, cluster_order = aggregatePeriods(
+    _alt_centers, center_indices, cluster_order = aggregate_periods(
         sorted_values,
         n_clusters=n_clusters,
         n_iter=30,
         solver=solver,
-        clusterMethod=cluster_method,
-        representationMethod=representation_method,
-        representationDict=representation_dict,
-        distributionPeriodWise=True,
-        timeStepsPerPeriod=n_timesteps_per_period,
+        cluster_method=cluster_method,
+        representation_method=representation_method,
+        representation_dict=representation_dict,
+        distribution_period_wise=True,
+        n_timesteps_per_period=n_timesteps_per_period,
     )
 
     # Pick medoid from original (unsorted) candidates
@@ -110,9 +110,9 @@ def use_predefined_assignments(
             candidates,
             cluster_order,
             default="medoid",
-            representationMethod=representation_method,
-            representationDict=representation_dict,
-            distributionPeriodWise=True,
-            timeStepsPerPeriod=n_timesteps_per_period,
+            representation_method=representation_method,
+            representation_dict=representation_dict,
+            distribution_period_wise=True,
+            n_timesteps_per_period=n_timesteps_per_period,
         )
         return centers, computed_indices, cluster_order

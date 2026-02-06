@@ -31,10 +31,12 @@ class NormalizedData:
 
     values: pd.DataFrame  # normalized + weighted time series
     scaler: MinMaxScaler  # fitted on original, reusable for inverse_transform
-    normalized_mean: pd.Series  # mean before sameMean division
+    normalized_mean: pd.Series  # mean before normalize_column_means division
     original_data: pd.DataFrame  # for bounds check + rescale upper bound
     weights: dict[str, float] | None  # per-column weighting factors
-    normalize_column_means: bool  # whether sameMean normalization was applied
+    normalize_column_means: (
+        bool  # whether normalize_column_means normalization was applied
+    )
 
 
 @dataclass(frozen=True)

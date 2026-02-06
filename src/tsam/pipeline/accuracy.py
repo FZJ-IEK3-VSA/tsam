@@ -24,7 +24,7 @@ def reconstruct(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Expand typical periods via assignments, denormalize.
 
-    Replicates predictOriginalData (monolith lines 1394-1436).
+    Replicates predict_original_data (monolith lines 1394-1436).
 
     Returns (denormalized_predicted, normalized_predicted).
     """
@@ -54,12 +54,12 @@ def reconstruct(
         columns=norm_data.original_data.columns,
     )
 
-    # Note: In the monolith, normalizedTypicalPeriods was modified in-place by
-    # _postProcessTimeSeries (multiplied by _normalizedMean as side effect).
-    # Then predictOriginalData divided by _normalizedMean to undo this.
+    # Note: In the monolith, normalized_typical_periods was modified in-place by
+    # _post_process_time_series (multiplied by _normalized_mean as side effect).
+    # Then predict_original_data divided by _normalized_mean to undo this.
     # In our pipeline, there is no in-place modification, so no division is needed.
 
-    # Denormalize (without applying weights - monolith line 1433 applyWeighting=False)
+    # Denormalize (without applying weights - monolith line 1433 apply_weighting=False)
     denormalized = denormalize(normalized_predicted, norm_data, apply_weights=False)
 
     return denormalized, normalized_predicted
@@ -72,7 +72,7 @@ def compute_accuracy(
 ) -> pd.DataFrame:
     """Compute RMSE, MAE, duration RMSE per column.
 
-    Replicates accuracyIndicators (monolith lines 1485-1517).
+    Replicates accuracy_indicators (monolith lines 1485-1517).
     """
     weights = norm_data.weights
 

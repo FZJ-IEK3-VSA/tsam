@@ -11,12 +11,15 @@ def test_preprocess():
     raw_wind = raw.loc[:, "Wind"].to_frame()
 
     aggregation_wind = tsam.TimeSeriesAggregation(
-        raw_wind, noTypicalPeriods=8, hoursPerPeriod=24, clusterMethod="hierarchical"
+        raw_wind,
+        no_typical_periods=8,
+        hours_per_period=24,
+        cluster_method="hierarchical",
     )
 
-    aggregation_wind._preProcessTimeSeries()
+    aggregation_wind._pre_process_time_series()
 
-    test = aggregation_wind.normalizedPeriodlyProfiles
+    test = aggregation_wind.normalized_periodly_profiles
 
     orig = pd.read_csv(
         RESULTS_DIR / "preprocessed_wind.csv",

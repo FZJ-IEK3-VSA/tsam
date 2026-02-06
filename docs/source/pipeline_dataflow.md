@@ -209,7 +209,7 @@ cluster_sorted_periods(candidates, profiles_values, n_columns,
 | **Input** | `candidates`, `period_profiles.profiles_dataframe.values`, `period_profiles.n_columns` |
 | **From `ClusterConfig`** | `method`, `solver`, `get_representation()`, `use_duration_curves` (gate) |
 
-All three branches delegate to `periodAggregation.aggregatePeriods()` and
+All three branches delegate to `period_aggregation.aggregate_periods()` and
 `representations.representations()` internally.
 
 ### Step 5: Trim eval features

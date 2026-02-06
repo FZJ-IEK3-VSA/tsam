@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
 
-from tsam.utils.durationRepresentation import durationRepresentation
+from tsam.utils.duration_representation import duration_representation
 
 # Aliases: old verbose names → new short names.
 # The monolith sends old names; the pipeline sends new names.
@@ -18,171 +18,173 @@ _ALIASES = {
 
 def representations(
     candidates,
-    clusterOrder,
+    cluster_order,
     default,
-    representationMethod=None,
-    representationDict=None,
-    distributionPeriodWise=True,
-    timeStepsPerPeriod=None,
+    representation_method=None,
+    representation_dict=None,
+    distribution_period_wise=True,
+    n_timesteps_per_period=None,
 ):
-    clusterCenterIndices = None
-    if representationMethod is None:
-        representationMethod = default
+    cluster_center_indices = None
+    if representation_method is None:
+        representation_method = default
     # Normalize old names to new names
-    representationMethod = _ALIASES.get(representationMethod, representationMethod)
-    if representationMethod == "mean":
-        clusterCenters = meanRepresentation(candidates, clusterOrder)
-    elif representationMethod == "medoid":
-        clusterCenters, clusterCenterIndices = medoidRepresentation(
-            candidates, clusterOrder
+    representation_method = _ALIASES.get(representation_method, representation_method)
+    if representation_method == "mean":
+        cluster_centers = mean_representation(candidates, cluster_order)
+    elif representation_method == "medoid":
+        cluster_centers, cluster_center_indices = medoid_representation(
+            candidates, cluster_order
         )
-    elif representationMethod == "maxoid":
-        clusterCenters, clusterCenterIndices = maxoidRepresentation(
-            candidates, clusterOrder
+    elif representation_method == "maxoid":
+        cluster_centers, cluster_center_indices = maxoid_representation(
+            candidates, cluster_order
         )
-    elif representationMethod == "minmax_mean":
-        clusterCenters = minmaxmeanRepresentation(
-            candidates, clusterOrder, representationDict, timeStepsPerPeriod
+    elif representation_method == "minmax_mean":
+        cluster_centers = minmax_mean_representation(
+            candidates, cluster_order, representation_dict, n_timesteps_per_period
         )
-    elif representationMethod == "distribution":
-        clusterCenters = durationRepresentation(
+    elif representation_method == "distribution":
+        cluster_centers = duration_representation(
             candidates,
-            clusterOrder,
-            distributionPeriodWise,
-            timeStepsPerPeriod,
-            representMinMax=False,
+            cluster_order,
+            distribution_period_wise,
+            n_timesteps_per_period,
+            represent_min_max=False,
         )
-    elif representationMethod == "distribution_minmax":
-        clusterCenters = durationRepresentation(
+    elif representation_method == "distribution_minmax":
+        cluster_centers = duration_representation(
             candidates,
-            clusterOrder,
-            distributionPeriodWise,
-            timeStepsPerPeriod,
-            representMinMax=True,
+            cluster_order,
+            distribution_period_wise,
+            n_timesteps_per_period,
+            represent_min_max=True,
         )
     else:
         raise ValueError("Chosen 'representationMethod' does not exist.")
 
-    return clusterCenters, clusterCenterIndices
+    return cluster_centers, cluster_center_indices
 
 
-def maxoidRepresentation(candidates, clusterOrder):
+def maxoid_representation(candidates, cluster_order):
     """
-    Represents the candidates of a given cluster group (clusterOrder)
+    Represents the candidates of a given cluster group (cluster_order)
     by its medoid, measured with the euclidean distance.
 
     :param candidates: Dissimilarity matrix where each row represents a candidate. required
     :type candidates: np.ndarray
 
-    :param clusterOrder: Integer array where the index refers to the candidate and the
+    :param cluster_order: Integer array where the index refers to the candidate and the
         Integer entry to the group. required
-    :type clusterOrder: np.array
+    :type cluster_order: np.array
     """
     # set cluster member that is farthest away from the points of the other clusters as maxoid
-    clusterCenters = []
-    clusterCenterIndices = []
-    for clusterNum in np.unique(clusterOrder):
-        indice = np.where(clusterOrder == clusterNum)
-        innerDistMatrix = euclidean_distances(candidates, candidates[indice])
-        mindistIdx = np.argmax(innerDistMatrix.sum(axis=0))
-        clusterCenters.append(candidates[indice][mindistIdx])
-        clusterCenterIndices.append(indice[0][mindistIdx])
+    cluster_centers = []
+    cluster_center_indices = []
+    for cluster_num in np.unique(cluster_order):
+        indice = np.where(cluster_order == cluster_num)
+        inner_dist_matrix = euclidean_distances(candidates, candidates[indice])
+        min_dist_idx = np.argmax(inner_dist_matrix.sum(axis=0))
+        cluster_centers.append(candidates[indice][min_dist_idx])
+        cluster_center_indices.append(indice[0][min_dist_idx])
 
-    return clusterCenters, clusterCenterIndices
+    return cluster_centers, cluster_center_indices
 
 
-def medoidRepresentation(candidates, clusterOrder):
+def medoid_representation(candidates, cluster_order):
     """
-    Represents the candidates of a given cluster group (clusterOrder)
+    Represents the candidates of a given cluster group (cluster_order)
     by its medoid, measured with the euclidean distance.
 
     :param candidates: Dissimilarity matrix where each row represents a candidate. required
     :type candidates: np.ndarray
 
-    :param clusterOrder: Integer array where the index refers to the candidate and the
+    :param cluster_order: Integer array where the index refers to the candidate and the
         Integer entry to the group. required
-    :type clusterOrder: np.array
+    :type cluster_order: np.array
     """
     # set cluster center as medoid
-    clusterCenters = []
-    clusterCenterIndices = []
-    for clusterNum in np.unique(clusterOrder):
-        indice = np.where(clusterOrder == clusterNum)
-        innerDistMatrix = euclidean_distances(candidates[indice])
-        mindistIdx = np.argmin(innerDistMatrix.sum(axis=0))
-        clusterCenters.append(candidates[indice][mindistIdx])
-        clusterCenterIndices.append(indice[0][mindistIdx])
+    cluster_centers = []
+    cluster_center_indices = []
+    for cluster_num in np.unique(cluster_order):
+        indice = np.where(cluster_order == cluster_num)
+        inner_dist_matrix = euclidean_distances(candidates[indice])
+        min_dist_idx = np.argmin(inner_dist_matrix.sum(axis=0))
+        cluster_centers.append(candidates[indice][min_dist_idx])
+        cluster_center_indices.append(indice[0][min_dist_idx])
 
-    return clusterCenters, clusterCenterIndices
+    return cluster_centers, cluster_center_indices
 
 
-def meanRepresentation(candidates, clusterOrder):
+def mean_representation(candidates, cluster_order):
     """
-    Represents the candidates of a given cluster group (clusterOrder)
+    Represents the candidates of a given cluster group (cluster_order)
     by its mean.
 
     :param candidates: Dissimilarity matrix where each row represents a candidate. required
     :type candidates: np.ndarray
 
-    :param clusterOrder: Integer array where the index refers to the candidate and the
+    :param cluster_order: Integer array where the index refers to the candidate and the
         Integer entry to the group. required
-    :type clusterOrder: np.array
+    :type cluster_order: np.array
     """
     # set cluster centers as means of the group candidates
-    clusterCenters = []
-    for clusterNum in np.unique(clusterOrder):
-        indice = np.where(clusterOrder == clusterNum)
-        currentMean = candidates[indice].mean(axis=0)
-        clusterCenters.append(currentMean)
-    return clusterCenters
+    cluster_centers = []
+    for cluster_num in np.unique(cluster_order):
+        indice = np.where(cluster_order == cluster_num)
+        current_mean = candidates[indice].mean(axis=0)
+        cluster_centers.append(current_mean)
+    return cluster_centers
 
 
-def minmaxmeanRepresentation(
-    candidates, clusterOrder, representationDict, timeStepsPerPeriod
+def minmax_mean_representation(
+    candidates, cluster_order, representation_dict, n_timesteps_per_period
 ):
     """
-    Represents the candidates of a given cluster group (clusterOrder)
+    Represents the candidates of a given cluster group (cluster_order)
     by either the minimum, the maximum or the mean values of each time step for
     all periods in that cluster depending on the command for each attribute.
 
     :param candidates: Dissimilarity matrix where each row represents a candidate. required
     :type candidates: np.ndarray
 
-    :param clusterOrder: Integer array where the index refers to the candidate and the
+    :param cluster_order: Integer array where the index refers to the candidate and the
         Integer entry to the group. required
-    :type clusterOrder: np.array
+    :type cluster_order: np.array
 
-    :param representationDict: A dictionary which defines for each attribute whether the typical
+    :param representation_dict: A dictionary which defines for each attribute whether the typical
         period should be represented by the minimum or maximum values within each cluster.
         optional (default: None)
-    :type representationDict: dictionary
+    :type representation_dict: dictionary
 
-    :param timeStepsPerPeriod: The number of discrete timesteps which describe one period. required
-    :type timeStepsPerPeriod: integer
+    :param n_timesteps_per_period: The number of discrete timesteps which describe one period. required
+    :type n_timesteps_per_period: integer
     """
-    # set cluster center depending of the representationDict
-    clusterCenters = []
-    for clusterNum in np.unique(clusterOrder):
-        indice = np.where(clusterOrder == clusterNum)
-        currentClusterCenter = np.zeros(len(representationDict) * timeStepsPerPeriod)
-        for attributeNum in range(len(representationDict)):
-            startIdx = attributeNum * timeStepsPerPeriod
-            endIdx = (attributeNum + 1) * timeStepsPerPeriod
-            if list(representationDict.values())[attributeNum] == "min":
-                currentClusterCenter[startIdx:endIdx] = candidates[
-                    indice, startIdx:endIdx
+    # set cluster center depending of the representation_dict
+    cluster_centers = []
+    for cluster_num in np.unique(cluster_order):
+        indice = np.where(cluster_order == cluster_num)
+        current_cluster_center = np.zeros(
+            len(representation_dict) * n_timesteps_per_period
+        )
+        for attribute_num in range(len(representation_dict)):
+            start_idx = attribute_num * n_timesteps_per_period
+            end_idx = (attribute_num + 1) * n_timesteps_per_period
+            if list(representation_dict.values())[attribute_num] == "min":
+                current_cluster_center[start_idx:end_idx] = candidates[
+                    indice, start_idx:end_idx
                 ].min(axis=1)
-            elif list(representationDict.values())[attributeNum] == "max":
-                currentClusterCenter[startIdx:endIdx] = candidates[
-                    indice, startIdx:endIdx
+            elif list(representation_dict.values())[attribute_num] == "max":
+                current_cluster_center[start_idx:end_idx] = candidates[
+                    indice, start_idx:end_idx
                 ].max(axis=1)
-            elif list(representationDict.values())[attributeNum] == "mean":
-                currentClusterCenter[startIdx:endIdx] = candidates[
-                    indice, startIdx:endIdx
+            elif list(representation_dict.values())[attribute_num] == "mean":
+                current_cluster_center[start_idx:end_idx] = candidates[
+                    indice, start_idx:end_idx
                 ].mean(axis=1)
             else:
                 raise ValueError(
                     'At least one value in the representationDict is neither "min", "max" nor "mean".'
                 )
-        clusterCenters.append(currentClusterCenter)
-    return clusterCenters
+        cluster_centers.append(current_cluster_center)
+    return cluster_centers

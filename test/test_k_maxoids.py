@@ -21,13 +21,13 @@ def test_k_maxoids():
 
     aggregation1 = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod="k_means",
-        rescaleClusterPeriods=False,
+        no_typical_periods=8,
+        hours_per_period=24,
+        cluster_method="k_means",
+        rescale_cluster_periods=False,
     )
 
-    predictedPeriods1 = aggregation1.predictOriginalData()
+    predictedPeriods1 = aggregation1.predict_original_data()
 
     print("Clustering took " + str(time.time() - starttime))
 
@@ -35,13 +35,13 @@ def test_k_maxoids():
 
     aggregation2 = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod="k_maxoids",
-        rescaleClusterPeriods=False,
+        no_typical_periods=8,
+        hours_per_period=24,
+        cluster_method="k_maxoids",
+        rescale_cluster_periods=False,
     )
 
-    predictedPeriods2 = aggregation2.predictOriginalData()
+    predictedPeriods2 = aggregation2.predict_original_data()
 
     print("Clustering took " + str(time.time() - starttime))
 

@@ -1,4 +1,4 @@
-"""Pipeline package — pure-function rewrite of createTypicalPeriods."""
+"""Pipeline package — pure-function rewrite of create_typical_periods."""
 
 from __future__ import annotations
 
@@ -86,7 +86,7 @@ def _warn_if_out_of_bounds(
                 + "aggregated time series exceeds the maximal value "
                 + "the input time series for: "
                 + f"{exceeding_diff.to_dict()}"
-                + ". To silence the warning set the 'numericalTolerance' to a higher value."
+                + ". To silence the warning set the 'numerical_tolerance' to a higher value."
             )
     below_min = typical_periods.min(axis=0) < original_data.min(axis=0)
     if below_min.any():
@@ -98,7 +98,7 @@ def _warn_if_out_of_bounds(
                 + "aggregated time series exceeds the minimal value "
                 + "the input time series for: "
                 + f"{exceeding_diff.to_dict()}"
-                + ". To silence the warning set the 'numericalTolerance' to a higher value."
+                + ". To silence the warning set the 'numerical_tolerance' to a higher value."
             )
 
 
@@ -120,11 +120,11 @@ def run_pipeline(
 ) -> PipelineResult:
     """Run the full aggregation pipeline.
 
-    This replaces createTypicalPeriods() + predictOriginalData() + accuracyIndicators().
+    This replaces create_typical_periods() + predict_original_data() + accuracy_indicators().
     """
     rescale_exclude_columns = rescale_exclude_columns or []
 
-    # Build representationDict default (monolith lines 504-512)
+    # Build representation_dict default (monolith lines 504-512)
     representation_dict: dict[str, str] = dict.fromkeys(list(data.columns), "mean")
     representation_dict = dict(pd.Series(representation_dict).sort_index(axis=0))
 
@@ -380,7 +380,7 @@ def _build_clustering_result(
             and extremes_config.method in ("new_cluster", "append")
         ):
             for period_type in extreme_periods_info:
-                center_indices.append(int(extreme_periods_info[period_type]["stepNo"]))
+                center_indices.append(int(extreme_periods_info[period_type]["step_no"]))
 
         cluster_centers = tuple(center_indices)
 

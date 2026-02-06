@@ -91,7 +91,7 @@ Improvements
 * Consistent semantic naming across the entire codebase
 * Better handling of extreme periods with ``n_clusters`` edge cases
 * Fixed rescaling with segmentation (was applying rescaling twice)
-* Fixed ``predictOriginalData()`` denormalization when using ``sameMean=True`` with segmentation
+* Fixed ``predict_original_data()`` denormalization when using ``same_mean=True`` with segmentation
 * Fixed non-deterministic sorting in duration representation by using stable sort, ensuring reproducible results across environments
 * Lazy loading of optional modules (``plot``, ``tuning``) to reduce import time
 
@@ -112,19 +112,19 @@ Multiple vectorization optimizations replace pandas loops with numpy array opera
 
 **Function-level optimizations:**
 
-* **``predictOriginalData()``** (reconstruction step, always used):
+* **``predict_original_data()``** (reconstruction step, always used):
   Replaced per-period ``.unstack()`` loop with single vectorized indexing.
   Function speedup: ~650ms → ~2ms (**290x**).
 
-* **``_rescaleClusterPeriods()``** (only when ``preserve_column_means=True``):
+* **``_rescale_cluster_periods()``** (only when ``preserve_column_means=True``):
   Replaced pandas MultiIndex operations with numpy 3D array operations.
   Function speedup: ~400ms → ~36ms (**11x**).
 
-* **``_clusterSortedPeriods()``** (only when ``use_duration_curves=True``):
+* **``_cluster_sorted_periods()``** (only when ``use_duration_curves=True``):
   Replaced per-column DataFrame sorting loop with numpy 3D reshape + sort.
   Sorting step speedup: ~291ms → ~25ms (**12x**).
 
-* **``durationRepresentation()``** (only when ``representation='distribution'``):
+* **``duration_representation()``** (only when ``representation='distribution'``):
   Replaced nested loops with pandas MultiIndex indexing with numpy 3D operations.
   Function speedup: ~220ms → ~26ms (**8x**).
 
@@ -146,7 +146,7 @@ Deprecations
 
 * **HyperTunedAggregations class**: The legacy hyperparameter tuning class in ``tsam.hyperparametertuning`` is deprecated. Use ``tsam.tuning.find_optimal_combination()`` or ``tsam.tuning.find_pareto_front()`` instead.
 
-* **getNoPeriodsForDataReduction / getNoSegmentsForDataReduction**: Helper functions deprecated along with ``HyperTunedAggregations``.
+* **get_no_periods_for_data_reduction / get_no_segments_for_data_reduction**: Helper functions deprecated along with ``HyperTunedAggregations``.
 
 * To suppress warnings during migration::
 
@@ -163,11 +163,11 @@ The class-based API remains available for backward compatibility but is deprecat
 
     aggregation = tsam_legacy.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod='hierarchical',
+        no_typical_periods=8,
+        hours_per_period=24,
+        cluster_method='hierarchical',
     )
-    typical_periods = aggregation.createTypicalPeriods()
+    typical_periods = aggregation.create_typical_periods()
 
 Quick Migration Example
 =======================

@@ -16,7 +16,7 @@ def unstack_to_periods(
 ) -> PeriodProfiles:
     """Extend to integer multiple of period length, reshape to period matrix.
 
-    Replicates unstackToPeriods (monolith lines 27-85) and the call at lines 656-660.
+    Replicates unstack_to_periods (monolith lines 27-85) and the call at lines 656-660.
     """
     unstacked = normalized_ts.copy()
 
@@ -51,7 +51,7 @@ def unstack_to_periods(
     # Check for NaN
     if unstacked.isnull().values.any():
         raise ValueError(
-            "Pre processed data includes NaN. Please check the timeSeries input data."
+            "Pre processed data includes NaN. Please check the time_series input data."
         )
 
     n_periods = len(unstacked)

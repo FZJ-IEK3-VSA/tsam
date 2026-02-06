@@ -15,7 +15,7 @@ def normalize(
     weights: dict[str, float] | None,
     normalize_column_means: bool,
 ) -> NormalizedData:
-    """Sort columns, cast float, fit MinMaxScaler, normalize, sameMean, apply weights.
+    """Sort columns, cast float, fit MinMaxScaler, normalize, normalize_column_means, apply weights.
 
     Replicates _preProcessTimeSeries lines 635-654 from the monolith.
     """
@@ -33,10 +33,10 @@ def normalize(
         index=data.index,
     )
 
-    # Store mean before sameMean division (monolith line 595)
+    # Store mean before normalize_column_means division (monolith line 595)
     normalized_mean = normalized.mean()
 
-    # Divide by mean if sameMean (monolith lines 596-597)
+    # Divide by mean if normalize_column_means (monolith lines 596-597)
     if normalize_column_means:
         normalized = normalized / normalized_mean
 
@@ -67,7 +67,7 @@ def denormalize(
 ) -> pd.DataFrame:
     """Undo weights, undo normalization using stored scaler.
 
-    Replicates _postProcessTimeSeries lines 668-687 from the monolith.
+    Replicates _post_process_time_series lines 668-687 from the monolith.
     """
     result = df.copy()
 
@@ -76,7 +76,7 @@ def denormalize(
         for column in norm_data.weights:
             result[column] = result[column] / norm_data.weights[column]
 
-    # Undo sameMean (monolith lines 619-620)
+    # Undo normalize_column_means (monolith lines 619-620)
     if norm_data.normalize_column_means:
         result = result * norm_data.normalized_mean
 

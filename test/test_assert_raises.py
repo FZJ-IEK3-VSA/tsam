@@ -15,40 +15,40 @@ def test_assert_raises():
     # check error message for wrong time series
     np.testing.assert_raises_regex(
         ValueError,
-        r"timeSeries has to be of type pandas.DataFrame\(\) or of type np.array\(\) in "
+        r"time_series has to be of type pandas.DataFrame\(\) or of type np.array\(\) in "
         "initialization of object of class TimeSeriesAggregation",
         tsam.TimeSeriesAggregation,
-        timeSeries="erroneousTimeSeries",
+        time_series="erroneousTimeSeries",
     )
 
     # check error messages for wrong attribute names added for extreme period methods
     np.testing.assert_raises_regex(
         ValueError,
-        'erroneousAttribute listed in "addPeakMin" does not occur as timeSeries column',
+        'erroneousAttribute listed in "add_peak_min" does not occur as time_series column',
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        addPeakMin=["erroneousAttribute"],
+        time_series=raw,
+        add_peak_min=["erroneousAttribute"],
     )
     np.testing.assert_raises_regex(
         ValueError,
-        'erroneousAttribute listed in "addPeakMax" does not occur as timeSeries column',
+        'erroneousAttribute listed in "add_peak_max" does not occur as time_series column',
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        addPeakMax=["erroneousAttribute"],
+        time_series=raw,
+        add_peak_max=["erroneousAttribute"],
     )
     np.testing.assert_raises_regex(
         ValueError,
-        'erroneousAttribute listed in "addMeanMin" does not occur as timeSeries column',
+        'erroneousAttribute listed in "add_mean_min" does not occur as time_series column',
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        addMeanMin=["erroneousAttribute"],
+        time_series=raw,
+        add_mean_min=["erroneousAttribute"],
     )
     np.testing.assert_raises_regex(
         ValueError,
-        'erroneousAttribute listed in "addMeanMax" does not occur as timeSeries column',
+        'erroneousAttribute listed in "add_mean_max" does not occur as time_series column',
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        addMeanMax=["erroneousAttribute"],
+        time_series=raw,
+        add_mean_max=["erroneousAttribute"],
     )
 
     # check error message for missing datetime index and missing resolution argument
@@ -57,7 +57,7 @@ def test_assert_raises():
         "'resolution' argument has to be nonnegative float or int or the given "
         "timeseries needs a datetime index",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw.reset_index(),
+        time_series=raw.reset_index(),
     )
     # overwrite one of the datetime-like string indices in the raw data to an index that cannot be converted
     rawErrInd = copy.deepcopy(raw)
@@ -71,43 +71,44 @@ def test_assert_raises():
         "'resolution' argument has to be nonnegative float or int or the given "
         "timeseries needs a datetime index",
         tsam.TimeSeriesAggregation,
-        timeSeries=rawErrInd,
+        time_series=rawErrInd,
     )
     # check erroneous resolution argument
     np.testing.assert_raises_regex(
         ValueError,
         "resolution has to be nonnegative float or int",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
+        time_series=raw,
         resolution="erroneousResolution",
     )
 
-    # check erroneous hoursPerPeriod argument
+    # check erroneous hours_per_period argument
     np.testing.assert_raises_regex(
         ValueError,
-        "hoursPerPeriod has to be nonnegative float or int",
+        "hours_per_period has to be nonnegative float or int",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        hoursPerPeriod=None,
+        time_series=raw,
+        hours_per_period=None,
     )
 
-    # check erroneous noTypicalPeriods argument
+    # check erroneous no_typical_periods argument
     np.testing.assert_raises_regex(
         ValueError,
-        "noTypicalPeriods has to be nonnegative integer",
+        "no_typical_periods has to be nonnegative integer",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        noTypicalPeriods=None,
+        time_series=raw,
+        no_typical_periods=None,
     )
 
     # check non-integer time step number per typical period
     np.testing.assert_raises_regex(
         ValueError,
-        "The combination of hoursPerPeriod and the resulution does not result in an integer "
+        "The combination of hours_per_period and the "
+        "resolution does not result in an integer "
         "number of time steps per period",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        hoursPerPeriod=23,
+        time_series=raw,
+        hours_per_period=23,
         resolution=2,
     )
 
@@ -115,115 +116,115 @@ def test_assert_raises():
     np.testing.assert_warns(
         Warning,
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
+        time_series=raw,
         segmentation=True,
-        noSegments=25,
+        no_segments=25,
     )
 
-    # check erroneous clusterMethod argument
+    # check erroneous cluster_method argument
     np.testing.assert_raises_regex(
         ValueError,
-        r"clusterMethod needs to be one of the following: \['averaging', 'k_means', "
+        r"cluster_method needs to be one of the following: \['averaging', 'k_means', "
         r"'k_medoids', 'k_maxoids', 'hierarchical', 'adjacent_periods'\]",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        clusterMethod="erroneousClusterMethod",
+        time_series=raw,
+        cluster_method="erroneousClusterMethod",
     )
 
-    # check erroneous representationMethod argument
+    # check erroneous representation_method argument
     np.testing.assert_raises(
         ValueError,
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        representationMethod="erroneousRepresentationMethod",
+        time_series=raw,
+        representation_method="erroneousRepresentationMethod",
     )
 
-    # check erroneous extremePeriodMethod argument
+    # check erroneous extreme_period_method argument
     np.testing.assert_raises_regex(
         ValueError,
-        r"extremePeriodMethod needs to be one of the following: \['None', 'append', "
+        r"extreme_period_method needs to be one of the following: \['None', 'append', "
         r"'new_cluster_center', 'replace_cluster_center'\]",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        extremePeriodMethod="erroneousExtremePeriodMethod",
+        time_series=raw,
+        extreme_period_method="erroneousExtremePeriodMethod",
     )
 
-    # check erroneous evalSumPeriods argument
+    # check erroneous eval_sum_periods argument
     np.testing.assert_raises_regex(
         ValueError,
-        "evalSumPeriods has to be boolean",
+        "eval_sum_periods has to be boolean",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        evalSumPeriods="erroneousEvalSumPeriods",
+        time_series=raw,
+        eval_sum_periods="erroneousEvalSumPeriods",
     )
 
-    # check erroneous sortValues argument
+    # check erroneous sort_values argument
     np.testing.assert_raises_regex(
         ValueError,
-        "sortValues has to be boolean",
+        "sort_values has to be boolean",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        sortValues="erroneousSortValues",
+        time_series=raw,
+        sort_values="erroneousSortValues",
     )
 
-    # check erroneous sameMean argument
+    # check erroneous same_mean argument
     np.testing.assert_raises_regex(
         ValueError,
-        "sameMean has to be boolean",
+        "same_mean has to be boolean",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        sameMean="erroneousSameMean",
+        time_series=raw,
+        same_mean="erroneousSameMean",
     )
 
-    # check erroneous rescaleClusterPeriods argument
+    # check erroneous rescale_cluster_periods argument
     np.testing.assert_raises_regex(
         ValueError,
-        "rescaleClusterPeriods has to be boolean",
+        "rescale_cluster_periods has to be boolean",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        rescaleClusterPeriods="erroneousrescaleClusterPeriods",
+        time_series=raw,
+        rescale_cluster_periods="erroneousrescaleClusterPeriods",
     )
 
-    # check erroneous predefClusterOrder argument
+    # check erroneous predef_cluster_order argument
     np.testing.assert_raises_regex(
         ValueError,
-        "predefClusterOrder has to be an array or list",
+        "predef_cluster_order has to be an array or list",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        predefClusterOrder="erroneousPredefClusterOrder",
+        time_series=raw,
+        predef_cluster_order="erroneousPredefClusterOrder",
     )
 
     # get a cluster order from a preceding clustering run
-    aggregation = tsam.TimeSeriesAggregation(timeSeries=raw)
-    periodOrder = aggregation.clusterOrder
-    # check erroneous predefClusterCenterIndices argument
+    aggregation = tsam.TimeSeriesAggregation(time_series=raw)
+    periodOrder = aggregation.cluster_order
+    # check erroneous predef_cluster_center_indices argument
     np.testing.assert_raises_regex(
         ValueError,
-        "predefClusterCenterIndices has to be an array or list",
+        "predef_cluster_center_indices has to be an array or list",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        predefClusterOrder=periodOrder,
-        predefClusterCenterIndices="erroneousPredefClusterCenterIndices",
+        time_series=raw,
+        predef_cluster_order=periodOrder,
+        predef_cluster_center_indices="erroneousPredefClusterCenterIndices",
     )
 
-    # check error, when predefClusterCenterIndices are defined but not predefClusterOrder
+    # check error, when predef_cluster_center_indices are defined but not predef_cluster_order
     np.testing.assert_raises_regex(
         ValueError,
-        'If "predefClusterCenterIndices" is defined, "predefClusterOrder" needs to be '
+        'If "predef_cluster_center_indices" is defined, "predef_cluster_order" needs to be '
         "defined as well",
         tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        predefClusterCenterIndices="erroneousPredefClusterCenterIndices",
+        time_series=raw,
+        predef_cluster_center_indices="erroneousPredefClusterCenterIndices",
     )
 
     # check erroneous dataframe containing NaN values
     rawNan = copy.deepcopy(raw)
     rawNan.iloc[10, :] = np.nan
-    aggregation = tsam.TimeSeriesAggregation(timeSeries=rawNan)
+    aggregation = tsam.TimeSeriesAggregation(time_series=rawNan)
     np.testing.assert_raises_regex(
         ValueError,
-        "Pre processed data includes NaN. Please check the timeSeries input data.",
-        aggregation.createTypicalPeriods,
+        "Pre processed data includes NaN. Please check the time_series input data.",
+        aggregation.create_typical_periods,
     )
 
 

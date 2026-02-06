@@ -34,8 +34,8 @@ Legacy API
 The original class-based API is still available:
 
 >>> from tsam.timeseriesaggregation import TimeSeriesAggregation
->>> agg = TimeSeriesAggregation(df, noTypicalPeriods=8)
->>> typical = agg.createTypicalPeriods()
+>>> agg = TimeSeriesAggregation(df, no_typical_periods=8)
+>>> typical = agg.create_typical_periods()
 """
 
 from tsam.api import aggregate, unstack_to_periods

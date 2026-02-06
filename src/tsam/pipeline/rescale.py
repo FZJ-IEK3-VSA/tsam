@@ -26,7 +26,7 @@ def rescale_representatives(
 ) -> tuple[np.ndarray, dict]:
     """Rescale cluster periods so weighted mean matches original.
 
-    Replicates _rescaleClusterPeriods (monolith lines 930-1027).
+    Replicates _rescale_cluster_periods (monolith lines 930-1027).
     Must produce identical floating-point results.
 
     Returns (rescaled_periods, deviations_dict).

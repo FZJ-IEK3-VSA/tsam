@@ -108,14 +108,14 @@ The class-based API is still available for backward compatibility:
 
    aggregation = tsam_legacy.TimeSeriesAggregation(
        raw,
-       noTypicalPeriods=8,
-       hoursPerPeriod=24,
+       no_typical_periods=8,
+       hours_per_period=24,
        segmentation=True,
-       noSegments=8,
-       representationMethod="distributionAndMinMaxRepresentation",
-       clusterMethod='hierarchical'
+       no_segments=8,
+       representation_method="distributionAndMinMaxRepresentation",
+       cluster_method='hierarchical'
    )
-   cluster_representatives = aggregation.createTypicalPeriods()
+   cluster_representatives = aggregation.create_typical_periods()
 
 
 **Additional Examples**

@@ -19,15 +19,15 @@ def test_hierarchical():
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod="hierarchical",
-        extremePeriodMethod="new_cluster_center",
-        addPeakMin=["T"],
-        addPeakMax=["Load"],
+        no_typical_periods=8,
+        hours_per_period=24,
+        cluster_method="hierarchical",
+        extreme_period_method="new_cluster_center",
+        add_peak_min=["T"],
+        add_peak_max=["Load"],
     )
 
-    typPeriods = aggregation.createTypicalPeriods()
+    typPeriods = aggregation.create_typical_periods()
 
     print("Clustering took " + str(time.time() - starttime))
 
@@ -62,15 +62,15 @@ def test_hierarchical_for_weeks():
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24 * 7,
-        clusterMethod="hierarchical",
-        extremePeriodMethod="new_cluster_center",
-        addPeakMin=["T"],
-        addPeakMax=["Load"],
+        no_typical_periods=8,
+        hours_per_period=24 * 7,
+        cluster_method="hierarchical",
+        extreme_period_method="new_cluster_center",
+        add_peak_min=["T"],
+        add_peak_max=["Load"],
     )
 
-    typPeriods = aggregation.createTypicalPeriods()
+    typPeriods = aggregation.create_typical_periods()
 
     print("Clustering took " + str(time.time() - starttime))
 

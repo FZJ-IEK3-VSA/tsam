@@ -20,23 +20,23 @@ def test_samemean():
     os.environ["OMP_NUM_THREADS"] = "1"
     aggregation = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod="k_means",
-        sameMean=True,
+        no_typical_periods=8,
+        hours_per_period=24,
+        cluster_method="k_means",
+        same_mean=True,
     )
 
-    typPeriods = aggregation.createTypicalPeriods()
+    typPeriods = aggregation.create_typical_periods()
     print("Clustering took " + str(time.time() - starttime))
 
     # test if the normalized time series all have the same mean
-    means = aggregation.normalizedTimeSeries.mean().values
+    means = aggregation.normalized_time_series.mean().values
     np.testing.assert_allclose(means, np.array([means[0]] * len(means)), rtol=1e-5)
 
     # repredict the original data
-    rearangedData = aggregation.predictOriginalData()
+    rearangedData = aggregation.predict_original_data()
 
-    # test if the mean fits the mean of the raw time series --> should always hold for k-means independent from sameMean True or False
+    # test if the mean fits the mean of the raw time series --> should always hold for k-means independent from same_mean True or False
     np.testing.assert_array_almost_equal(
         raw.mean(), rearangedData[raw.columns].mean(), decimal=4
     )

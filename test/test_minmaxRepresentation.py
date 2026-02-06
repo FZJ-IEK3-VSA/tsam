@@ -10,9 +10,9 @@ from conftest import TESTDATA_CSV
 def test_minmaxRepresentation():
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
-    noTypicalPeriods = 8
+    no_typical_periods = 8
 
-    hoursPerPeriod = 24
+    hours_per_period = 24
 
     representationDict = {"GHI": "max", "T": "min", "Wind": "mean", "Load": "min"}
 
@@ -22,38 +22,38 @@ def test_minmaxRepresentation():
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=noTypicalPeriods,
-        hoursPerPeriod=hoursPerPeriod,
-        clusterMethod="hierarchical",
-        rescaleClusterPeriods=False,
-        representationMethod="minmaxmeanRepresentation",
-        representationDict=representationDict,
+        no_typical_periods=no_typical_periods,
+        hours_per_period=hours_per_period,
+        cluster_method="hierarchical",
+        rescale_cluster_periods=False,
+        representation_method="minmaxmeanRepresentation",
+        representation_dict=representationDict,
     )
 
-    typPeriods = aggregation.createTypicalPeriods()
+    typPeriods = aggregation.create_typical_periods()
 
     print("Clustering took " + str(time.time() - starttime))
 
-    for i in range(noTypicalPeriods):
+    for i in range(no_typical_periods):
         for j in representationDict:
             if representationDict[j] == "min":
                 calculated = (
-                    tsam.unstackToPeriods(raw, hoursPerPeriod)[0]
-                    .loc[np.where(aggregation.clusterOrder == i)[0], j]
+                    tsam.unstack_to_periods(raw, hours_per_period)[0]
+                    .loc[np.where(aggregation.cluster_order == i)[0], j]
                     .min()
                     .values
                 )
             elif representationDict[j] == "max":
                 calculated = (
-                    tsam.unstackToPeriods(raw, hoursPerPeriod)[0]
-                    .loc[np.where(aggregation.clusterOrder == i)[0], j]
+                    tsam.unstack_to_periods(raw, hours_per_period)[0]
+                    .loc[np.where(aggregation.cluster_order == i)[0], j]
                     .max()
                     .values
                 )
             elif representationDict[j] == "mean":
                 calculated = (
-                    tsam.unstackToPeriods(raw, hoursPerPeriod)[0]
-                    .loc[np.where(aggregation.clusterOrder == i)[0], j]
+                    tsam.unstack_to_periods(raw, hours_per_period)[0]
+                    .loc[np.where(aggregation.cluster_order == i)[0], j]
                     .mean()
                     .values
                 )
