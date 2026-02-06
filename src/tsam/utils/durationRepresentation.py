@@ -59,7 +59,7 @@ def durationRepresentation(
                 candidateValues_np = candidates_df.loc[indice, a].values
 
                 # flatten the 2D array (candidates, timesteps) into a 1D array and sort it.
-                sorted_flat_values = np.sort(candidateValues_np.flatten())
+                sorted_flat_values = np.sort(candidateValues_np.flatten(), stable=True)
 
                 # reshape the sorted values and calculate the mean for each representative time step.
                 representationValues_np = sorted_flat_values.reshape(
