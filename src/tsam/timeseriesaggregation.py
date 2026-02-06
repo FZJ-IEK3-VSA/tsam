@@ -83,6 +83,38 @@ def unstack_to_periods(time_series, time_steps_per_period):
 unstackToPeriods = unstack_to_periods
 
 
+_PARAM_ALIASES = {
+    "timeSeries": "time_series",
+    "noTypicalPeriods": "no_typical_periods",
+    "noSegments": "no_segments",
+    "hoursPerPeriod": "hours_per_period",
+    "clusterMethod": "cluster_method",
+    "evalSumPeriods": "eval_sum_periods",
+    "sortValues": "sort_values",
+    "sameMean": "same_mean",
+    "rescaleClusterPeriods": "rescale_cluster_periods",
+    "rescaleExcludeColumns": "rescale_exclude_columns",
+    "weightDict": "weight_dict",
+    "extremePeriodMethod": "extreme_period_method",
+    "representationMethod": "representation_method",
+    "representationDict": "representation_dict",
+    "distributionPeriodWise": "distribution_period_wise",
+    "segmentRepresentationMethod": "segment_representation_method",
+    "predefClusterOrder": "predef_cluster_order",
+    "predefClusterCenterIndices": "predef_cluster_center_indices",
+    "predefExtremeClusterIdx": "predef_extreme_cluster_idx",
+    "predefSegmentOrder": "predef_segment_order",
+    "predefSegmentDurations": "predef_segment_durations",
+    "predefSegmentCenters": "predef_segment_centers",
+    "numericalTolerance": "numerical_tolerance",
+    "roundOutput": "round_output",
+    "addPeakMin": "add_peak_min",
+    "addPeakMax": "add_peak_max",
+    "addMeanMin": "add_mean_min",
+    "addMeanMax": "add_mean_max",
+}
+
+
 class TimeSeriesAggregation:
     """
     Clusters time series data to typical periods.
@@ -116,7 +148,7 @@ class TimeSeriesAggregation:
 
     def __init__(
         self,
-        time_series,
+        time_series=None,
         resolution=None,
         no_typical_periods=10,
         no_segments=10,
@@ -147,6 +179,7 @@ class TimeSeriesAggregation:
         add_peak_max=None,
         add_mean_min=None,
         add_mean_max=None,
+        **kwargs,
     ):
         """
         Initialize the periodly clusters.
@@ -226,6 +259,76 @@ class TimeSeriesAggregation:
             shall be added. optional, default: []
         :type add_mean_max: list
         """
+        # Translate deprecated camelCase kwargs to snake_case
+        for old_name, new_name in _PARAM_ALIASES.items():
+            if old_name in kwargs:
+                warnings.warn(
+                    f"'{old_name}' is deprecated, use '{new_name}'.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+                if new_name in kwargs:
+                    raise TypeError(
+                        f"Cannot specify both '{old_name}' and '{new_name}'"
+                    )
+                kwargs[new_name] = kwargs.pop(old_name)
+
+        # Apply translated kwargs as overrides
+        time_series = kwargs.pop("time_series", time_series)
+        resolution = kwargs.pop("resolution", resolution)
+        no_typical_periods = kwargs.pop("no_typical_periods", no_typical_periods)
+        no_segments = kwargs.pop("no_segments", no_segments)
+        hours_per_period = kwargs.pop("hours_per_period", hours_per_period)
+        cluster_method = kwargs.pop("cluster_method", cluster_method)
+        eval_sum_periods = kwargs.pop("eval_sum_periods", eval_sum_periods)
+        sort_values = kwargs.pop("sort_values", sort_values)
+        same_mean = kwargs.pop("same_mean", same_mean)
+        rescale_cluster_periods = kwargs.pop(
+            "rescale_cluster_periods", rescale_cluster_periods
+        )
+        rescale_exclude_columns = kwargs.pop(
+            "rescale_exclude_columns", rescale_exclude_columns
+        )
+        weight_dict = kwargs.pop("weight_dict", weight_dict)
+        segmentation = kwargs.pop("segmentation", segmentation)
+        extreme_period_method = kwargs.pop(
+            "extreme_period_method", extreme_period_method
+        )
+        representation_method = kwargs.pop(
+            "representation_method", representation_method
+        )
+        representation_dict = kwargs.pop("representation_dict", representation_dict)
+        distribution_period_wise = kwargs.pop(
+            "distribution_period_wise", distribution_period_wise
+        )
+        segment_representation_method = kwargs.pop(
+            "segment_representation_method", segment_representation_method
+        )
+        predef_cluster_order = kwargs.pop("predef_cluster_order", predef_cluster_order)
+        predef_cluster_center_indices = kwargs.pop(
+            "predef_cluster_center_indices", predef_cluster_center_indices
+        )
+        predef_extreme_cluster_idx = kwargs.pop(
+            "predef_extreme_cluster_idx", predef_extreme_cluster_idx
+        )
+        predef_segment_order = kwargs.pop("predef_segment_order", predef_segment_order)
+        predef_segment_durations = kwargs.pop(
+            "predef_segment_durations", predef_segment_durations
+        )
+        predef_segment_centers = kwargs.pop(
+            "predef_segment_centers", predef_segment_centers
+        )
+        solver = kwargs.pop("solver", solver)
+        numerical_tolerance = kwargs.pop("numerical_tolerance", numerical_tolerance)
+        round_output = kwargs.pop("round_output", round_output)
+        add_peak_min = kwargs.pop("add_peak_min", add_peak_min)
+        add_peak_max = kwargs.pop("add_peak_max", add_peak_max)
+        add_mean_min = kwargs.pop("add_mean_min", add_mean_min)
+        add_mean_max = kwargs.pop("add_mean_max", add_mean_max)
+
+        if kwargs:
+            raise TypeError(f"Unexpected keyword arguments: {set(kwargs)}")
+
         warnings.warn(
             "TimeSeriesAggregation is deprecated and will be removed in a future version. "
             "Use tsam.aggregate() instead. See the migration guide in the documentation.",
@@ -1370,3 +1473,19 @@ class TimeSeriesAggregation:
             self.accuracy_indicators().pow(2).sum()
             / len(self.normalized_time_series.columns)
         )
+
+    # Backward-compatible method aliases (deprecated)
+    createTypicalPeriods = create_typical_periods
+    predictOriginalData = predict_original_data
+    accuracyIndicators = accuracy_indicators
+    totalAccuracyIndicators = total_accuracy_indicators
+    prepareEnersysInput = prepare_enersys_input
+    indexMatching = index_matching
+
+    # Backward-compatible property aliases (deprecated)
+    stepIdx = step_idx
+    clusterPeriodIdx = cluster_period_idx
+    clusterOrder = cluster_order
+    clusterPeriodNoOccur = cluster_period_no_occur
+    clusterPeriodDict = cluster_period_dict
+    segmentDurationDict = segment_duration_dict

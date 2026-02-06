@@ -64,8 +64,13 @@ def get_no_segments_for_data_reduction(
     return int(np.floor(data_reduction * float(n_raw_timesteps) / typical_periods))
 
 
+# Backward-compatible function aliases (deprecated)
+getNoPeriodsForDataReduction = get_no_periods_for_data_reduction
+getNoSegmentsForDataReduction = get_no_segments_for_data_reduction
+
+
 class HyperTunedAggregations:
-    def __init__(self, base_aggregation, save_aggregation_history=True):
+    def __init__(self, base_aggregation, save_aggregation_history=True, **kwargs):
         """
         A class that does a parameter variation and tuning of the aggregation itself.
 
@@ -79,6 +84,21 @@ class HyperTunedAggregations:
             Use :func:`tsam.tuning.find_optimal_combination` or
             :func:`tsam.tuning.find_pareto_front` instead.
         """
+        # Translate deprecated camelCase kwargs
+        if "saveAggregationHistory" in kwargs:
+            warnings.warn(
+                "'saveAggregationHistory' is deprecated, use 'save_aggregation_history'.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            if "save_aggregation_history" in kwargs:
+                raise TypeError(
+                    "Cannot specify both 'saveAggregationHistory' and 'save_aggregation_history'"
+                )
+            save_aggregation_history = kwargs.pop("saveAggregationHistory")
+        if kwargs:
+            raise TypeError(f"Unexpected keyword arguments: {set(kwargs)}")
+
         warnings.warn(
             "HyperTunedAggregations is deprecated. "
             "Use tsam.tuning.find_optimal_combination() or tsam.tuning.find_pareto_front() instead.",
@@ -293,3 +313,26 @@ class HyperTunedAggregations:
             self._test_aggregation(no_typical_periods, no_segments)
             progress_bar.update(no_segments * no_typical_periods - progress_bar.n)
         return
+
+    # Backward-compatible method aliases (deprecated)
+    identifyOptimalSegmentPeriodCombination = (
+        identify_optimal_segment_period_combination
+    )
+    identifyParetoOptimalAggregation = identify_pareto_optimal_aggregation
+
+    # Backward-compatible property aliases (deprecated)
+    @property
+    def aggregationHistory(self):
+        return self.aggregation_history
+
+    @property
+    def _RMSEHistory(self):
+        return self._rmse_history
+
+    @property
+    def _segmentHistory(self):
+        return self._segment_history
+
+    @property
+    def _periodHistory(self):
+        return self._period_history
