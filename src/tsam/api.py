@@ -6,7 +6,15 @@ from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
-from tsam.config import ClusterConfig, ExtremeConfig, SegmentConfig
+from tsam.config import (
+    REPRESENTATION_MAPPING,
+    ClusterConfig,
+    Distribution,
+    ExtremeConfig,
+    MinMaxMean,
+    Representation,
+    SegmentConfig,
+)
 from tsam.pipeline import run_pipeline
 from tsam.result import AccuracyMetrics, AggregationResult
 
@@ -304,6 +312,45 @@ def _build_aggregation_result(
         _time_index=result.time_index,
         _segmented_df=result.segmented_df,
     )
+
+
+def _apply_representation_params(
+    params: dict, representation: Representation, columns: list[str]
+) -> None:
+    """Apply representation parameters to the old API params dict.
+
+    Handles both string shortcuts and typed representation objects
+    (Distribution, MinMaxMean).
+    """
+    if isinstance(representation, Distribution):
+        if representation.preserve_minmax:
+            params["representationMethod"] = "distributionAndMinMaxRepresentation"
+        else:
+            params["representationMethod"] = "distributionRepresentation"
+        params["distributionPeriodWise"] = representation.scope == "cluster"
+    elif isinstance(representation, MinMaxMean):
+        params["representationMethod"] = "minmaxmeanRepresentation"
+        # Build representationDict: columns not in max/min default to mean
+        rep_dict: dict[str, str] = {}
+        max_set = set(representation.max_columns)
+        min_set = set(representation.min_columns)
+        for col in columns:
+            if col in max_set:
+                rep_dict[col] = "max"
+            elif col in min_set:
+                rep_dict[col] = "min"
+            else:
+                rep_dict[col] = "mean"
+        params["representationDict"] = rep_dict
+    else:
+        # String representation
+        rep_mapped = REPRESENTATION_MAPPING.get(representation)
+        if rep_mapped is None:
+            raise ValueError(
+                f"Unknown representation method: {representation!r}. "
+                f"Valid options: {list(REPRESENTATION_MAPPING.keys())}"
+            )
+        params["representationMethod"] = rep_mapped
 
 
 def unstack_to_periods(

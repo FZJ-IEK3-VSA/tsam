@@ -129,7 +129,9 @@ def run_pipeline(
     representation_dict = dict(pd.Series(representation_dict).sort_index(axis=0))
 
     # Resolve segment representation: inherit from cluster config if not specified
-    segment_representation = (
+    from tsam.config import representation_to_pipeline_str
+
+    segment_representation = representation_to_pipeline_str(
         segments.representation if segments else cluster.get_representation()
     )
 
@@ -152,7 +154,7 @@ def run_pipeline(
     else:
         del_cluster_params = None
 
-    representation_method = cluster.get_representation()
+    representation_method = representation_to_pipeline_str(cluster.get_representation())
 
     # Step 5: Cluster (or predefined, or duration-curve variant)
     clustering_duration = 0.0

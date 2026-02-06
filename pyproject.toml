@@ -48,6 +48,7 @@ develop = [
   "pytest",
   "pytest-cov",
   "pytest-xdist",
+  "pytest-benchmark",
   "codecov",
   "sphinx",
   "sphinx-autobuild",

@@ -42,53 +42,39 @@ def duration_representation(
     # (period_wise = True) or the distribution of the total time series is preserved only. In the latter case, the
     # inner-cluster variance is smaller and the variance across the typical periods' mean values is higher
     if distribution_period_wise:
-        # Vectorized implementation using numpy 3D arrays instead of pandas MultiIndex
-        n_periods = candidates.shape[0]
-        n_attrs = num_attributes
-
-        # Reshape to 3D: (periods, attributes, timesteps)
-        candidates_3d = candidates.reshape(n_periods, n_attrs, n_timesteps_per_period)
-
         cluster_centers = []
+
         for cluster_num in np.unique(cluster_order):
             indice = np.where(cluster_order == cluster_num)[0]
             n_cands = len(indice)
 
             # Skip empty clusters
-            if n_cands == 0:
+            if len(indice) == 0:
                 continue
 
-            # Get all candidates for this cluster: (n_cands, n_attrs, timesteps)
-            cluster_data = candidates_3d[indice]
+            for a in candidates_df.columns.levels[0]:
+                candidateValues_np = candidates_df.loc[indice, a].values
 
-            # Process all attributes at once using vectorized operations
-            # Reshape to (n_attrs, n_cands * timesteps) for sorting
-            flat_per_attr = cluster_data.transpose(1, 0, 2).reshape(n_attrs, -1)
+                # flatten the 2D array (candidates, timesteps) into a 1D array and sort it.
+                sorted_flat = np.sort(candidateValues_np.flatten())
 
-            # Sort each attribute's values (stable sort for deterministic tie-breaking)
-            sorted_flat = np.sort(flat_per_attr, axis=1, kind="stable")
+                # Reshape and mean: (n_attrs, timesteps, n_cands) -> mean -> (n_attrs, timesteps)
+                sorted_reshaped = sorted_flat.reshape(n_timesteps_per_period, n_cands)
 
-            # Reshape and mean: (n_attrs, timesteps, n_cands) -> mean -> (n_attrs, timesteps)
-            sorted_reshaped = sorted_flat.reshape(
-                n_attrs, n_timesteps_per_period, n_cands
-            )
-            repr_values = sorted_reshaped.mean(axis=2)
+                repr_values = sorted_reshaped.mean(axis=2)
 
-            # Respect max and min of the attributes
-            if represent_min_max:
-                repr_values[:, 0] = sorted_flat[:, 0]
-                repr_values[:, -1] = sorted_flat[:, -1]
+                # Respect max and min of the attributes
+                if represent_min_max:
+                    repr_values[0] = sorted_flat[0]
+                    repr_values[-1] = sorted_flat[-1]
 
-            # Get mean profile order for each attribute (stable sort for deterministic tie-breaking)
-            mean_profiles = cluster_data.mean(axis=0)  # (n_attrs, timesteps)
-            orders = np.argsort(
-                mean_profiles, axis=1, kind="stable"
-            )  # (n_attrs, timesteps)
+                # get the order of the representation values such that euclidean distance
+                # to the candidates' mean profile is minimized.
+                orders = np.argsort(candidateValues_np.mean(axis=0))
 
-            # Reorder repr_values according to orders
-            final_repr = np.empty_like(repr_values)
-            for a in range(n_attrs):
-                final_repr[a, orders[a]] = repr_values[a]
+                # Create an empty array to place the results in the correct order
+                final_repr = np.empty_like(repr_values)
+                final_repr[orders] = repr_values
 
             # Flatten to (n_attrs * timesteps,)
             cluster_centers.append(final_repr.flatten())

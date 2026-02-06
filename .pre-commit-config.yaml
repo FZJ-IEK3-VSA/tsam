@@ -6,6 +6,7 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
+        args: ['--maxkb=4000']
       - id: check-merge-conflict
       - id: debug-statements
 
@@ -28,4 +29,4 @@ repos:
         additional_dependencies:
           - pandas-stubs
         args: [--ignore-missing-imports]
-        exclude: ^(docs/|test/)
+        exclude: ^(docs/|test/|benchmarks/)

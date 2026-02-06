@@ -162,6 +162,13 @@ def segmentation(
                     n_clusters=n_segments, linkage="ward", connectivity=adjacency_matrix
                 )
                 cluster_order = clustering.fit_predict(segmentation_candidates)
+                # Relabel clusters to temporal order (0 = first segment, 1 = second, ...)
+                # so that stored assignments are deterministic when reapplied.
+                _, first_indices = np.unique(cluster_order, return_index=True)
+                temporal_order = np.argsort(first_indices)
+                label_map = np.empty(n_segments, dtype=int)
+                label_map[temporal_order] = np.arange(n_segments)
+                cluster_order = label_map[cluster_order]
             # determine the indices where the segments change and the number of time steps in each segment
             seg_no, indices, segment_no_occur = np.unique(
                 cluster_order, return_index=True, return_counts=True
