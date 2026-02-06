@@ -161,3 +161,5 @@ Key concepts used in the tsam API:
      - Nested tuple with duration (in timesteps) for each segment in each typical period.
    * - ``cluster_representatives``
      - MultiIndex DataFrame with aggregated data. Index levels are (cluster, timestep) or (cluster, segment) if segmented.
+
+For a comprehensive glossary covering all internal pipeline concepts, naming conventions, and the mapping between legacy and new API names, see the `full glossary <glossary.md>`_.
