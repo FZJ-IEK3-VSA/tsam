@@ -7,11 +7,11 @@ Usage::
 
     # Benchmark an old version
     uv pip install tsam==2.3.9
-    pytest test/test_benchmarks.py --benchmark-save=v2.3.9
+    pytest benchmarks/bench.py --benchmark-save=v2.3.9
 
     # Switch back to dev and compare
     uv pip install -e .
-    pytest test/test_benchmarks.py --benchmark-compare='*v2.3.9'
+    pytest benchmarks/bench.py --benchmark-compare='*v2.3.9'
 
     # Compare two saved snapshots
     pytest-benchmark compare '*v2.3.9' '*v3.0.0' --group-by=name
@@ -21,10 +21,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 import tsam.timeseriesaggregation as tsam
 
@@ -41,7 +45,7 @@ _OPSD_CSV = _TEST_DIR / "data" / "opsd_germany_2019.csv"
 # Datasets
 # ---------------------------------------------------------------------------
 
-_DATASETS: dict[str, callable] = {
+_DATASETS: dict[str, Callable[[], pd.DataFrame]] = {
     "testdata": lambda: pd.read_csv(_TESTDATA_CSV, index_col=0, parse_dates=True),
     "opsd": lambda: pd.read_csv(_OPSD_CSV, index_col=0, parse_dates=True),
     "constant": lambda: pd.DataFrame(
