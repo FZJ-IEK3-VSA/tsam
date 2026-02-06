@@ -593,10 +593,9 @@ class ClusteringResult:
         >>> clustering = ClusteringResult.from_json("clustering.json")
         >>> result = clustering.apply(df)
         """
-        from tsam.api import _build_clustering_result
+        from tsam.api import _build_aggregation_result
         from tsam.pipeline import run_pipeline
         from tsam.pipeline.types import PredefParams
-        from tsam.result import AccuracyMetrics, AggregationResult
 
         # Warn if using replace extreme method (transfer is not exact)
         if (
@@ -691,61 +690,11 @@ class ClusteringResult:
             else None,
             round_decimals=round_decimals,
             numerical_tolerance=numerical_tolerance,
+            temporal_resolution=effective_temporal_resolution,
             predef=predef,
         )
 
-        # Rename index levels
-        cluster_representatives = result.typical_periods.rename_axis(
-            index={"PeriodNum": "cluster", "TimeStep": "timestep"}
-        )
-
-        # Build rescale deviations DataFrame
-        if result.rescale_deviations:
-            rescale_deviations = pd.DataFrame.from_dict(
-                result.rescale_deviations, orient="index"
-            )
-            rescale_deviations.index.name = "column"
-        else:
-            rescale_deviations = pd.DataFrame(
-                columns=["deviation_pct", "converged", "iterations"]
-            )
-
-        accuracy = AccuracyMetrics(
-            rmse=result.accuracy_indicators["RMSE"],
-            mae=result.accuracy_indicators["MAE"],
-            rmse_duration=result.accuracy_indicators["RMSE_duration"],
-            rescale_deviations=rescale_deviations,
-        )
-
-        # Build ClusteringResult
-        clustering_result = _build_clustering_result(
-            result=result,
-            n_segments=n_segments_val,
-            cluster_config=cluster,
-            segment_config=segments,
-            extremes_config=self.extremes_config,
-            preserve_column_means=self.preserve_column_means,
-            rescale_exclude_columns=list(self.rescale_exclude_columns)
-            if self.rescale_exclude_columns
-            else None,
-            temporal_resolution=effective_temporal_resolution,
-        )
-
-        # Build result object
-        return AggregationResult(
-            cluster_representatives=cluster_representatives,
-            cluster_weights=result.cluster_weights,
-            n_timesteps_per_period=result.n_timesteps_per_period,
-            segment_durations=self.segment_durations,
-            accuracy=accuracy,
-            clustering_duration=result.clustering_duration,
-            clustering=clustering_result,
-            is_transferred=True,
-            _original_data=result.original_data,
-            _reconstructed_data=result.reconstructed_data,
-            _time_index=result.time_index,
-            _segmented_df=result.segmented_df,
-        )
+        return _build_aggregation_result(result, is_transferred=True)
 
 
 @dataclass(frozen=True)

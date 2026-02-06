@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
-from tsam.config import (
-    ClusterConfig,
-    ClusteringResult,
-    ExtremeConfig,
-    SegmentConfig,
-)
+from tsam.config import ClusterConfig, ExtremeConfig, SegmentConfig
 from tsam.pipeline import run_pipeline
 from tsam.result import AccuracyMetrics, AggregationResult
+
+if TYPE_CHECKING:
+    from tsam.pipeline.types import PipelineResult
 
 
 def _parse_duration_hours(value: int | float | str, param_name: str) -> float:
@@ -255,9 +253,18 @@ def aggregate(
         rescale_exclude_columns=rescale_exclude_columns,
         round_decimals=round_decimals,
         numerical_tolerance=numerical_tolerance,
+        temporal_resolution=temporal_resolution,
     )
 
-    # Build cluster_representatives with renamed index
+    return _build_aggregation_result(result, is_transferred=False)
+
+
+def _build_aggregation_result(
+    result: PipelineResult,
+    is_transferred: bool,
+) -> AggregationResult:
+    """Convert PipelineResult to the user-facing AggregationResult."""
+    # Rename index levels
     cluster_representatives = result.typical_periods.rename_axis(
         index={"PeriodNum": "cluster", "TimeStep": "timestep"}
     )
@@ -280,148 +287,23 @@ def aggregate(
         rescale_deviations=rescale_deviations,
     )
 
-    # Build ClusteringResult
-    clustering_result = _build_clustering_result(
-        result=result,
-        n_segments=segments.n_segments if segments else None,
-        cluster_config=cluster,
-        segment_config=segments,
-        extremes_config=extremes,
-        preserve_column_means=preserve_column_means,
-        rescale_exclude_columns=rescale_exclude_columns,
-        temporal_resolution=temporal_resolution,
-    )
+    # Get segment_durations from ClusteringResult
+    segment_durations = result.clustering_result.segment_durations
 
-    # Compute segment_durations as tuple of tuples
-    segment_durations_tuple = None
-    if segments and result.segmented_df is not None:
-        segmented_df = result.segmented_df
-        segment_durations_tuple = tuple(
-            tuple(
-                int(seg_dur)
-                for _seg_step, seg_dur, _orig_start in segmented_df.loc[
-                    period_idx
-                ].index
-            )
-            for period_idx in segmented_df.index.get_level_values(0).unique()
-        )
-
-    # Build result object
     return AggregationResult(
         cluster_representatives=cluster_representatives,
         cluster_weights=result.cluster_weights,
         n_timesteps_per_period=result.n_timesteps_per_period,
-        segment_durations=segment_durations_tuple,
+        segment_durations=segment_durations,
         accuracy=accuracy,
         clustering_duration=result.clustering_duration,
-        clustering=clustering_result,
-        is_transferred=False,
+        clustering=result.clustering_result,
+        is_transferred=is_transferred,
         _original_data=result.original_data,
         _reconstructed_data=result.reconstructed_data,
         _time_index=result.time_index,
         _segmented_df=result.segmented_df,
     )
-
-
-def _build_clustering_result(
-    result,
-    n_segments: int | None,
-    cluster_config: ClusterConfig,
-    segment_config: SegmentConfig | None,
-    extremes_config: ExtremeConfig | None,
-    preserve_column_means: bool,
-    rescale_exclude_columns: list[str] | None,
-    temporal_resolution: float | None,
-) -> ClusteringResult:
-    """Build ClusteringResult from a PipelineResult."""
-    # Get cluster centers
-    cluster_centers: tuple[int, ...] | None = None
-    if result.cluster_center_indices is not None:
-        center_indices = [int(x) for x in result.cluster_center_indices]
-
-        if (
-            result.extreme_periods_info
-            and extremes_config is not None
-            and extremes_config.method in ("new_cluster", "append")
-        ):
-            for period_type in result.extreme_periods_info:
-                center_indices.append(
-                    int(result.extreme_periods_info[period_type]["stepNo"])
-                )
-
-        cluster_centers = tuple(center_indices)
-
-    # Compute segment data if segmentation was used
-    segment_assignments: tuple[tuple[int, ...], ...] | None = None
-    segment_durations: tuple[tuple[int, ...], ...] | None = None
-    segment_centers: tuple[tuple[int, ...], ...] | None = None
-
-    if n_segments is not None and result.segmented_df is not None:
-        segmented_df = result.segmented_df
-        segment_assignments_list = []
-        segment_durations_list = []
-
-        for period_idx in segmented_df.index.get_level_values(0).unique():
-            period_data = segmented_df.loc[period_idx]
-            assignments = []
-            durations = []
-            for seg_step, seg_dur, _orig_start in period_data.index:
-                assignments.extend([int(seg_step)] * int(seg_dur))
-                durations.append(int(seg_dur))
-            segment_assignments_list.append(tuple(assignments))
-            segment_durations_list.append(tuple(durations))
-
-        segment_assignments = tuple(segment_assignments_list)
-        segment_durations = tuple(segment_durations_list)
-
-        if result.segment_center_indices is not None:
-            if all(pc is not None for pc in result.segment_center_indices):
-                segment_centers = tuple(
-                    tuple(int(x) for x in period_centers)
-                    for period_centers in result.segment_center_indices
-                )
-
-    # Extract representation from configs
-    representation = cluster_config.get_representation()
-    segment_representation = segment_config.representation if segment_config else None
-
-    # Extract extreme cluster indices
-    extreme_cluster_indices: tuple[int, ...] | None = None
-    if result.extreme_cluster_indices:
-        extreme_cluster_indices = tuple(int(x) for x in result.extreme_cluster_indices)
-
-    return ClusteringResult(
-        period_duration=result.n_timesteps_per_period
-        * (
-            temporal_resolution
-            if temporal_resolution is not None
-            else _infer_resolution(result.original_data)
-        ),
-        cluster_assignments=tuple(int(x) for x in result.cluster_assignments),
-        cluster_centers=cluster_centers,
-        segment_assignments=segment_assignments,
-        segment_durations=segment_durations,
-        segment_centers=segment_centers,
-        preserve_column_means=preserve_column_means,
-        rescale_exclude_columns=tuple(rescale_exclude_columns)
-        if rescale_exclude_columns
-        else None,
-        representation=representation,
-        segment_representation=segment_representation,
-        temporal_resolution=temporal_resolution,
-        n_timesteps_per_period=result.n_timesteps_per_period,
-        extreme_cluster_indices=extreme_cluster_indices,
-        cluster_config=cluster_config,
-        segment_config=segment_config,
-        extremes_config=extremes_config,
-    )
-
-
-def _infer_resolution(data: pd.DataFrame) -> float:
-    """Infer temporal resolution from data index."""
-    if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
-        return (data.index[1] - data.index[0]).total_seconds() / 3600
-    return 1.0
 
 
 def unstack_to_periods(

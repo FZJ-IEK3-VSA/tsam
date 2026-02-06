@@ -10,6 +10,8 @@ if TYPE_CHECKING:
     import pandas as pd
     from sklearn.preprocessing import MinMaxScaler
 
+    from tsam.config import ClusteringResult
+
 
 @dataclass(frozen=True)
 class PredefParams:
@@ -74,3 +76,4 @@ class PipelineResult:
     round_decimals: int | None
     reconstructed_data: pd.DataFrame
     accuracy_indicators: pd.DataFrame
+    clustering_result: ClusteringResult

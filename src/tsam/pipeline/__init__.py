@@ -23,7 +23,19 @@ from tsam.pipeline.segment import segment_typical_periods
 from tsam.pipeline.types import PipelineResult, PredefParams
 
 if TYPE_CHECKING:
-    from tsam.config import ClusterConfig, ExtremeConfig, SegmentConfig
+    from tsam.config import (
+        ClusterConfig,
+        ClusteringResult,
+        ExtremeConfig,
+        SegmentConfig,
+    )
+
+
+def _infer_resolution(data: pd.DataFrame) -> float:
+    """Infer temporal resolution from data index."""
+    if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
+        return (data.index[1] - data.index[0]).total_seconds() / 3600
+    return 1.0
 
 
 def run_pipeline(
@@ -38,6 +50,7 @@ def run_pipeline(
     rescale_exclude_columns: list[str] | None = None,
     round_decimals: int | None = None,
     numerical_tolerance: float = 1e-13,
+    temporal_resolution: float | None = None,
     # Predefined parameters (for transfer/apply)
     predef: PredefParams | None = None,
 ) -> PipelineResult:
@@ -357,7 +370,25 @@ def run_pipeline(
     reconstructed_data_out = reconstructed_data[original_column_order]
     typical_periods = typical_periods[original_column_order]
 
-    # Step 16: Return PipelineResult
+    # Step 16: Build ClusteringResult
+    clustering_result = _build_clustering_result(
+        cluster_center_indices=cluster_center_indices,
+        extreme_periods_info=extreme_periods_info,
+        extremes_config=extremes,
+        cluster_order=cluster_order,
+        segmented_df=segmented_df,
+        segment_center_indices=segment_center_indices,
+        n_timesteps_per_period=n_timesteps_per_period,
+        temporal_resolution=temporal_resolution,
+        original_data=original_data_out,
+        cluster_config=cluster,
+        segment_config=segments,
+        rescale_cluster_periods=rescale_cluster_periods,
+        rescale_exclude_columns=rescale_exclude_columns,
+        extreme_cluster_idx=extreme_cluster_idx,
+    )
+
+    # Step 17: Return PipelineResult
     return PipelineResult(
         typical_periods=typical_periods,
         normalized_typical_periods=normalized_typical_periods,
@@ -381,4 +412,108 @@ def run_pipeline(
         round_decimals=round_decimals,
         reconstructed_data=reconstructed_data_out,
         accuracy_indicators=accuracy_df,
+        clustering_result=clustering_result,
+    )
+
+
+def _build_clustering_result(
+    *,
+    cluster_center_indices: list | None,
+    extreme_periods_info: dict,
+    extremes_config: ExtremeConfig | None,
+    cluster_order: list | np.ndarray,
+    segmented_df: pd.DataFrame | None,
+    segment_center_indices: list | None,
+    n_timesteps_per_period: int,
+    temporal_resolution: float | None,
+    original_data: pd.DataFrame,
+    cluster_config: ClusterConfig,
+    segment_config: SegmentConfig | None,
+    rescale_cluster_periods: bool,
+    rescale_exclude_columns: list[str] | None,
+    extreme_cluster_idx: list[int],
+) -> ClusteringResult:
+    """Build a ClusteringResult from pipeline intermediate data."""
+    from tsam.config import ClusteringResult
+
+    # Get cluster centers
+    cluster_centers: tuple[int, ...] | None = None
+    if cluster_center_indices is not None:
+        center_indices = [int(x) for x in cluster_center_indices]
+
+        if (
+            extreme_periods_info
+            and extremes_config is not None
+            and extremes_config.method in ("new_cluster", "append")
+        ):
+            for period_type in extreme_periods_info:
+                center_indices.append(int(extreme_periods_info[period_type]["stepNo"]))
+
+        cluster_centers = tuple(center_indices)
+
+    # Compute segment data if segmentation was used
+    segment_assignments: tuple[tuple[int, ...], ...] | None = None
+    segment_durations: tuple[tuple[int, ...], ...] | None = None
+    segment_centers: tuple[tuple[int, ...], ...] | None = None
+
+    if segment_config is not None and segmented_df is not None:
+        segment_assignments_list = []
+        segment_durations_list = []
+
+        for period_idx in segmented_df.index.get_level_values(0).unique():
+            period_data = segmented_df.loc[period_idx]
+            assignments = []
+            durations = []
+            for seg_step, seg_dur, _orig_start in period_data.index:
+                assignments.extend([int(seg_step)] * int(seg_dur))
+                durations.append(int(seg_dur))
+            segment_assignments_list.append(tuple(assignments))
+            segment_durations_list.append(tuple(durations))
+
+        segment_assignments = tuple(segment_assignments_list)
+        segment_durations = tuple(segment_durations_list)
+
+        if segment_center_indices is not None:
+            if all(pc is not None for pc in segment_center_indices):
+                segment_centers = tuple(
+                    tuple(int(x) for x in period_centers)
+                    for period_centers in segment_center_indices
+                )
+
+    # Extract representation from configs
+    representation = cluster_config.get_representation()
+    segment_representation = segment_config.representation if segment_config else None
+
+    # Extract extreme cluster indices
+    extreme_cluster_indices_tuple: tuple[int, ...] | None = None
+    if extreme_cluster_idx:
+        extreme_cluster_indices_tuple = tuple(int(x) for x in extreme_cluster_idx)
+
+    # Compute period_duration
+    effective_resolution = (
+        temporal_resolution
+        if temporal_resolution is not None
+        else _infer_resolution(original_data)
+    )
+    period_duration = n_timesteps_per_period * effective_resolution
+
+    return ClusteringResult(
+        period_duration=period_duration,
+        cluster_assignments=tuple(int(x) for x in cluster_order),
+        cluster_centers=cluster_centers,
+        segment_assignments=segment_assignments,
+        segment_durations=segment_durations,
+        segment_centers=segment_centers,
+        preserve_column_means=rescale_cluster_periods,
+        rescale_exclude_columns=tuple(rescale_exclude_columns)
+        if rescale_exclude_columns
+        else None,
+        representation=representation,
+        segment_representation=segment_representation,
+        temporal_resolution=temporal_resolution,
+        n_timesteps_per_period=n_timesteps_per_period,
+        extreme_cluster_indices=extreme_cluster_indices_tuple,
+        cluster_config=cluster_config,
+        segment_config=segment_config,
+        extremes_config=extremes_config,
     )
