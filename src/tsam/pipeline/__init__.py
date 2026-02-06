@@ -38,6 +38,70 @@ def _infer_resolution(data: pd.DataFrame) -> float:
     return 1.0
 
 
+def _count_occurrences(cluster_order: list | np.ndarray) -> dict[int, float]:
+    """Count how many original periods each cluster represents."""
+    nums, counts = np.unique(cluster_order, return_counts=True)
+    return {int(num): int(counts[ii]) for ii, num in enumerate(nums)}
+
+
+def _representatives_to_dataframe(
+    cluster_periods_list: list | np.ndarray,
+    column_index: pd.MultiIndex,
+) -> pd.DataFrame:
+    """Reshape flat cluster period vectors into a MultiIndex DataFrame.
+
+    Converts a list of 1-D arrays (one per cluster) into a DataFrame
+    indexed by (PeriodNum, TimeStep) with the original column names.
+    """
+    periods = (
+        cluster_periods_list
+        if isinstance(cluster_periods_list, list)
+        else [cluster_periods_list[i] for i in range(len(cluster_periods_list))]
+    )
+    df = (
+        pd.concat(
+            [pd.Series(s, index=column_index) for s in periods],
+            axis=1,
+        )
+        .unstack("TimeStep")
+        .T
+    )
+    assert isinstance(df, pd.DataFrame)
+    return df
+
+
+def _warn_if_out_of_bounds(
+    typical_periods: pd.DataFrame,
+    original_data: pd.DataFrame,
+    tolerance: float,
+) -> None:
+    """Warn if aggregated values exceed original data bounds."""
+    exceeds_max = typical_periods.max(axis=0) > original_data.max(axis=0)
+    if exceeds_max.any():
+        diff = typical_periods.max(axis=0) - original_data.max(axis=0)
+        exceeding_diff = diff[exceeds_max]
+        if exceeding_diff.max() > tolerance:
+            warnings.warn(
+                "At least one maximal value of the "
+                + "aggregated time series exceeds the maximal value "
+                + "the input time series for: "
+                + f"{exceeding_diff.to_dict()}"
+                + ". To silence the warning set the 'numericalTolerance' to a higher value."
+            )
+    below_min = typical_periods.min(axis=0) < original_data.min(axis=0)
+    if below_min.any():
+        diff = original_data.min(axis=0) - typical_periods.min(axis=0)
+        exceeding_diff = diff[below_min]
+        if exceeding_diff.max() > tolerance:
+            warnings.warn(
+                "Something went wrong... At least one minimal value of the "
+                + "aggregated time series exceeds the minimal value "
+                + "the input time series for: "
+                + f"{exceeding_diff.to_dict()}"
+                + ". To silence the warning set the 'numericalTolerance' to a higher value."
+            )
+
+
 def run_pipeline(
     data: pd.DataFrame,
     n_clusters: int,
@@ -206,10 +270,7 @@ def run_pipeline(
             extreme_cluster_idx = list(predef.extreme_cluster_idx)
 
     # Step 8: Compute cluster weights
-    nums, counts = np.unique(cluster_order, return_counts=True)
-    cluster_period_no_occur: dict[int, float] = {
-        int(num): int(counts[ii]) for ii, num in enumerate(nums)
-    }
+    cluster_period_no_occur = _count_occurrences(cluster_order)
 
     # Step 9: Rescale if requested
     rescale_deviations: dict = {}
@@ -236,25 +297,9 @@ def run_pipeline(
         )
 
     # Step 11: Format representatives to MultiIndex DataFrame
-    normalized_typical_periods = (
-        pd.concat(
-            [
-                pd.Series(s, index=period_profiles.column_index)
-                for s in (
-                    cluster_periods_list
-                    if isinstance(cluster_periods_list, list)
-                    else [
-                        cluster_periods_list[i]
-                        for i in range(len(cluster_periods_list))
-                    ]
-                )
-            ],
-            axis=1,
-        )
-        .unstack("TimeStep")
-        .T
+    normalized_typical_periods = _representatives_to_dataframe(
+        cluster_periods_list, period_profiles.column_index
     )
-    assert isinstance(normalized_typical_periods, pd.DataFrame)
 
     # Step 12: Segmentation if configured
     segmented_df = None
@@ -283,30 +328,9 @@ def run_pipeline(
         typical_periods = typical_periods.round(decimals=round_decimals)
 
     # Step 14: Bounds check + warnings
-    exceeds_max = typical_periods.max(axis=0) > norm_data.original_data.max(axis=0)
-    if exceeds_max.any():
-        diff = typical_periods.max(axis=0) - norm_data.original_data.max(axis=0)
-        exceeding_diff = diff[exceeds_max]
-        if exceeding_diff.max() > numerical_tolerance:
-            warnings.warn(
-                "At least one maximal value of the "
-                + "aggregated time series exceeds the maximal value "
-                + "the input time series for: "
-                + f"{exceeding_diff.to_dict()}"
-                + ". To silence the warning set the 'numericalTolerance' to a higher value."
-            )
-    below_min = typical_periods.min(axis=0) < norm_data.original_data.min(axis=0)
-    if below_min.any():
-        diff = norm_data.original_data.min(axis=0) - typical_periods.min(axis=0)
-        exceeding_diff = diff[below_min]
-        if exceeding_diff.max() > numerical_tolerance:
-            warnings.warn(
-                "Something went wrong... At least one minimal value of the "
-                + "aggregated time series exceeds the minimal value "
-                + "the input time series for: "
-                + f"{exceeding_diff.to_dict()}"
-                + ". To silence the warning set the 'numericalTolerance' to a higher value."
-            )
+    _warn_if_out_of_bounds(
+        typical_periods, norm_data.original_data, numerical_tolerance
+    )
 
     # Step 15: Reconstruct + compute accuracy
     reconstructed_data, normalized_predicted = reconstruct(
