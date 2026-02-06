@@ -58,7 +58,6 @@ def unstack_to_periods(
     n_columns = len(normalized_ts.columns)
 
     return PeriodProfiles(
-        profiles=unstacked.values,
         column_index=unstacked.columns,  # type: ignore[arg-type]
         time_index=time_index,
         profiles_dataframe=unstacked,

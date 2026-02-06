@@ -58,72 +58,43 @@ def run_pipeline(
 
     This replaces createTypicalPeriods() + predictOriginalData() + accuracyIndicators().
     """
-    # Extract cluster config fields (new-API names)
-    cluster_method = cluster.method
-    representation_method = cluster.get_representation()
-    weights = cluster.weights
-    solver = cluster.solver
-    use_duration_curves = cluster.use_duration_curves
-    normalize_column_means = cluster.normalize_column_means
-    include_period_sums = cluster.include_period_sums
-
-    # Extract extreme config fields
-    extreme_period_method: str | None = None
-    extreme_preserve_n_clusters = False
-    add_peak_max: list[str] = []
-    add_peak_min: list[str] = []
-    add_mean_max: list[str] = []
-    add_mean_min: list[str] = []
-    if extremes is not None:
-        extreme_period_method = extremes.method
-        extreme_preserve_n_clusters = extremes._effective_preserve_n_clusters
-        add_peak_max = extremes.max_value
-        add_peak_min = extremes.min_value
-        add_mean_max = extremes.max_period
-        add_mean_min = extremes.min_period
-
-    # Extract segment config fields
-    segmentation = segments is not None
-    n_segments = segments.n_segments if segments else 10
-    segment_representation_method: str | None = (
-        segments.representation if segments else None
-    )
-
     rescale_exclude_columns = rescale_exclude_columns or []
 
     # Build representationDict default (monolith lines 504-512)
     representation_dict: dict[str, str] = dict.fromkeys(list(data.columns), "mean")
-    # Sort representationDict alphabetically
     representation_dict = dict(pd.Series(representation_dict).sort_index(axis=0))
 
-    # Inherit segment representation from main if not specified
-    if segment_representation_method is None:
-        segment_representation_method = representation_method
+    # Resolve segment representation: inherit from cluster config if not specified
+    segment_representation = (
+        segments.representation if segments else cluster.get_representation()
+    )
 
     # Store original column order (before sort in normalize)
     original_column_order = list(data.columns)
 
     # Step 1: Normalize
-    norm_data = normalize(data, weights, normalize_column_means)
+    norm_data = normalize(data, cluster.weights, cluster.normalize_column_means)
 
     # Step 2: Unstack to periods
     period_profiles = unstack_to_periods(norm_data.values, n_timesteps_per_period)
+    candidates = period_profiles.profiles_dataframe.values
 
     # Step 3: Add period sum features if requested
-    if include_period_sums:
+    if cluster.include_period_sums:
         candidates, n_extra = add_period_sum_features(
-            period_profiles.profiles_dataframe, period_profiles.profiles
+            period_profiles.profiles_dataframe, candidates
         )
         del_cluster_params = -n_extra
     else:
-        candidates = period_profiles.profiles
         del_cluster_params = None
 
     # Step 4: Warn if extremePreserveNumClusters is ignored due to predefined
+    extreme_preserve = extremes is not None and extremes._effective_preserve_n_clusters
     if (
         predef is not None
-        and extreme_preserve_n_clusters
-        and extreme_period_method not in (None, "replace")
+        and extreme_preserve
+        and extremes is not None
+        and extremes.method not in (None, "replace")
     ):
         warnings.warn(
             "extremePreserveNumClusters=True is ignored when predefClusterOrder "
@@ -137,16 +108,17 @@ def run_pipeline(
     # Count extreme periods upfront if preserve_n_clusters is True
     n_extremes = 0
     if (
-        extreme_preserve_n_clusters
-        and extreme_period_method not in (None, "replace")
+        extreme_preserve
+        and extremes is not None
+        and extremes.method not in (None, "replace")
         and predef is None
     ):
         n_extremes = count_extreme_periods(
             period_profiles.profiles_dataframe,
-            add_peak_max,
-            add_peak_min,
-            add_mean_max,
-            add_mean_min,
+            extremes.max_value,
+            extremes.min_value,
+            extremes.max_period,
+            extremes.min_period,
         )
         if n_clusters <= n_extremes:
             raise ValueError(
@@ -156,6 +128,8 @@ def run_pipeline(
             )
 
     effective_n_clusters = n_clusters - n_extremes
+
+    representation_method = cluster.get_representation()
 
     # Step 5: Cluster (or predefined, or duration-curve variant)
     clustering_duration = 0.0
@@ -169,35 +143,32 @@ def run_pipeline(
                 predef.cluster_center_indices,
                 representation_method,
                 representation_dict,
-                True,  # distribution_period_wise
                 n_timesteps_per_period,
             )
         )
     else:
         t_start = time.time()
-        if not use_duration_curves:
+        if not cluster.use_duration_curves:
             cluster_centers, cluster_center_indices, cluster_order = cluster_periods(
                 candidates,
                 effective_n_clusters,
-                cluster_method,
-                solver,
+                cluster.method,
+                cluster.solver,
                 representation_method,
                 representation_dict,
-                True,  # distribution_period_wise
                 n_timesteps_per_period,
             )
         else:
-            cluster_centers, cluster_order, cluster_center_indices = (
+            cluster_centers, cluster_center_indices, cluster_order = (
                 cluster_sorted_periods(
                     candidates,
                     period_profiles.profiles_dataframe.values,
                     period_profiles.n_columns,
                     effective_n_clusters,
-                    cluster_method,
-                    solver,
+                    cluster.method,
+                    cluster.solver,
                     representation_method,
                     representation_dict,
-                    True,  # distribution_period_wise
                     n_timesteps_per_period,
                 )
             )
@@ -212,7 +183,7 @@ def run_pipeline(
     extreme_periods_info: dict = {}
     extreme_cluster_idx: list[int] = []
 
-    if extreme_period_method is not None:
+    if extremes is not None:
         columns = list(norm_data.original_data.columns)
         (
             cluster_periods_list,
@@ -223,11 +194,11 @@ def run_pipeline(
             period_profiles.profiles_dataframe,
             cluster_periods_list,
             cluster_order,
-            extreme_period_method,
-            add_peak_max,
-            add_peak_min,
-            add_mean_max,
-            add_mean_min,
+            extremes.method,
+            extremes.max_value,
+            extremes.min_value,
+            extremes.max_period,
+            extremes.min_period,
             columns,
         )
     else:
@@ -251,8 +222,8 @@ def run_pipeline(
             norm_data.original_data,
             list(norm_data.original_data.columns),
             n_timesteps_per_period,
-            normalize_column_means,
-            weights,
+            cluster.normalize_column_means,
+            cluster.weights,
             rescale_exclude_columns,
         )
 
@@ -293,15 +264,14 @@ def run_pipeline(
     predicted_segmented_df = None
     segment_center_indices = None
 
-    if segmentation:
+    if segments is not None:
         segmented_df, predicted_segmented_df, segment_center_indices = (
             segment_typical_periods(
                 normalized_typical_periods,
-                n_segments,
+                segments.n_segments,
                 n_timesteps_per_period,
-                segment_representation_method,
+                segment_representation,
                 representation_dict,
-                True,  # distribution_period_wise
                 predef.segment_order if predef is not None else None,
                 predef.segment_durations if predef is not None else None,
                 predef.segment_centers if predef is not None else None,
@@ -314,8 +284,8 @@ def run_pipeline(
     typical_periods = denormalize(
         normalized_typical_periods,
         norm_data,
-        weights,
-        normalize_column_means,
+        cluster.weights,
+        cluster.normalize_column_means,
         round_decimals,
     )
 
@@ -351,17 +321,17 @@ def run_pipeline(
         cluster_order,
         period_profiles,
         norm_data,
-        normalize_column_means,
-        weights,
+        cluster.normalize_column_means,
+        cluster.weights,
         round_decimals,
-        segmentation_active=segmentation,
+        segmentation_active=segments is not None,
         predicted_segmented_df=predicted_segmented_df,
     )
 
     accuracy_df = compute_accuracy(
         norm_data.values,
         normalized_predicted,
-        weights,
+        cluster.weights,
     )
 
     # Restore original column order in output DataFrames
@@ -391,25 +361,13 @@ def run_pipeline(
     # Step 17: Return PipelineResult
     return PipelineResult(
         typical_periods=typical_periods,
-        normalized_typical_periods=normalized_typical_periods,
-        cluster_assignments=np.array(cluster_order),
         cluster_weights=cluster_period_no_occur,
-        cluster_center_indices=cluster_center_indices,
-        extreme_cluster_indices=extreme_cluster_idx,
-        extreme_periods_info=extreme_periods_info,
-        time_index=period_profiles.time_index,
         n_timesteps_per_period=n_timesteps_per_period,
+        time_index=period_profiles.time_index,
         original_data=original_data_out,
-        normalized_data=norm_data,
-        period_profiles=period_profiles,
         clustering_duration=clustering_duration,
         rescale_deviations=rescale_deviations,
         segmented_df=segmented_df,
-        predicted_segmented_df=predicted_segmented_df,
-        segment_center_indices=segment_center_indices,
-        normalize_column_means=normalize_column_means,
-        weights=weights,
-        round_decimals=round_decimals,
         reconstructed_data=reconstructed_data_out,
         accuracy_indicators=accuracy_df,
         clustering_result=clustering_result,

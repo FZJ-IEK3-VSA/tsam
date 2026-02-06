@@ -15,7 +15,6 @@ def cluster_periods(
     solver: str,
     representation_method: str | None,
     representation_dict: dict | None,
-    distribution_period_wise: bool,
     n_timesteps_per_period: int,
 ) -> tuple[list, list | None, np.ndarray]:
     """Run clustering via aggregatePeriods.
@@ -32,7 +31,7 @@ def cluster_periods(
         clusterMethod=cluster_method,
         representationMethod=representation_method,
         representationDict=representation_dict,
-        distributionPeriodWise=distribution_period_wise,
+        distributionPeriodWise=True,
         timeStepsPerPeriod=n_timesteps_per_period,
     )
     return centers, center_indices, order
@@ -47,14 +46,13 @@ def cluster_sorted_periods(
     solver: str,
     representation_method: str | None,
     representation_dict: dict | None,
-    distribution_period_wise: bool,
     n_timesteps_per_period: int,
-) -> tuple[list, np.ndarray, list | None]:
+) -> tuple[list, list | None, np.ndarray]:
     """Duration-curve clustering: sort descending, cluster, pick medoid from original.
 
     Replicates _clusterSortedPeriods (monolith lines 1029-1091).
 
-    Returns (cluster_centers, cluster_order, cluster_center_indices).
+    Returns (cluster_centers, cluster_center_indices, cluster_order).
     """
     # Sort each period's timesteps descending for all columns
     n_periods, n_total = profiles_values.shape
@@ -71,7 +69,7 @@ def cluster_sorted_periods(
         clusterMethod=cluster_method,
         representationMethod=representation_method,
         representationDict=representation_dict,
-        distributionPeriodWise=distribution_period_wise,
+        distributionPeriodWise=True,
         timeStepsPerPeriod=n_timesteps_per_period,
     )
 
@@ -88,7 +86,7 @@ def cluster_sorted_periods(
         else:
             cluster_centers.append(candidates[indice][0])
 
-    return cluster_centers, cluster_order, center_indices
+    return cluster_centers, center_indices, cluster_order
 
 
 def use_predefined_assignments(
@@ -97,7 +95,6 @@ def use_predefined_assignments(
     center_indices: list | np.ndarray | None,
     representation_method: str | None,
     representation_dict: dict | None,
-    distribution_period_wise: bool,
     n_timesteps_per_period: int,
 ) -> tuple[list | np.ndarray, list | None, list | np.ndarray]:
     """Skip clustering, compute representatives from predefined assignments.
@@ -115,7 +112,7 @@ def use_predefined_assignments(
             default="medoid",
             representationMethod=representation_method,
             representationDict=representation_dict,
-            distributionPeriodWise=distribution_period_wise,
+            distributionPeriodWise=True,
             timeStepsPerPeriod=n_timesteps_per_period,
         )
         return centers, computed_indices, cluster_order
