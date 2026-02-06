@@ -1,8 +1,9 @@
 """Golden-file regression tests for old and new tsam API.
 
-Compares both the old ``TimeSeriesAggregation`` and the new
-``tsam.aggregate()`` results against stored CSV files, catching
-regressions where both APIs change together.
+Stores **reconstructed** time series (``predictOriginalData`` / ``result.reconstructed``)
+produced by the old (pre-v3.0.0) API as golden baselines.  Both old and new API
+results are compared against these baselines, catching regressions where both
+APIs change together.
 
 Golden files live in ``test/data/golden/{config_id}/{dataset}.csv``.
 
@@ -44,25 +45,25 @@ def _save_golden(df: pd.DataFrame, case: EquivalenceCase) -> None:
 
 def _load_golden(case: EquivalenceCase) -> pd.DataFrame:
     path = _golden_path(case)
-    return pd.read_csv(path, index_col=[0, 1])
+    return pd.read_csv(path, index_col=0, parse_dates=True)
 
 
 class TestGoldenRegression:
-    """Compare old and new API results against stored golden CSVs."""
+    """Compare old and new API reconstructed results against stored golden CSVs."""
 
     @pytest.mark.parametrize("case", CASES, ids=_case_ids(CASES))
     def test_update_golden(self, case: EquivalenceCase, update_golden):
-        """Save new-API results as golden files (only runs with --update-golden)."""
+        """Save old-API reconstructed results as golden files (only with --update-golden)."""
         if not update_golden:
             pytest.skip("use --update-golden to regenerate")
 
         data = _get_data(case.dataset)
-        new_result = _run_new(data, case)
-        _save_golden(new_result.cluster_representatives, case)
+        _, old_agg = _run_old(data, case)
+        _save_golden(old_agg.predictOriginalData(), case)
 
     @pytest.mark.parametrize("case", CASES, ids=_case_ids(CASES))
     def test_new_api_matches_golden(self, case: EquivalenceCase, update_golden):
-        """New API result must match stored golden CSV."""
+        """New API reconstructed result must match stored golden CSV."""
         if update_golden:
             pytest.skip("updating golden files")
 
@@ -77,14 +78,15 @@ class TestGoldenRegression:
         golden = _load_golden(case)
 
         pd.testing.assert_frame_equal(
-            new_result.cluster_representatives,
+            new_result.reconstructed,
             golden,
             check_names=False,
+            check_freq=False,
         )
 
     @pytest.mark.parametrize("case", CASES, ids=_case_ids(CASES))
     def test_old_api_matches_golden(self, case: EquivalenceCase, update_golden):
-        """Old API result must match stored golden CSV."""
+        """Old API reconstructed result must match stored golden CSV."""
         if update_golden:
             pytest.skip("updating golden files")
 
@@ -95,11 +97,12 @@ class TestGoldenRegression:
             )
 
         data = _get_data(case.dataset)
-        old_result, _ = _run_old(data, case)
+        _, old_agg = _run_old(data, case)
         golden = _load_golden(case)
 
         pd.testing.assert_frame_equal(
-            old_result,
+            old_agg.predictOriginalData(),
             golden,
             check_names=False,
+            check_freq=False,
         )
