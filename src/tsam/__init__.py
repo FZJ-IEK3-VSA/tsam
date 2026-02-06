@@ -53,7 +53,14 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-from tsam.config import ClusterConfig, ClusteringResult, ExtremeConfig, SegmentConfig
+from tsam.config import (
+    ClusterConfig,
+    ClusteringResult,
+    Distribution,
+    ExtremeConfig,
+    MinMaxMean,
+    SegmentConfig,
+)
 from tsam.exceptions import LegacyAPIWarning
 from tsam.result import AccuracyMetrics, AggregationResult
 
@@ -67,8 +74,10 @@ __all__ = [
     "AggregationResult",
     "ClusterConfig",
     "ClusteringResult",
+    "Distribution",
     "ExtremeConfig",
     "LegacyAPIWarning",
+    "MinMaxMean",
     "SegmentConfig",
     "TimeSeriesAggregation",
     "aggregate",

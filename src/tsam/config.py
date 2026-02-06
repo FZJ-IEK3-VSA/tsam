@@ -40,6 +40,119 @@ Solver = Literal["highs", "cbc", "gurobi", "cplex"]
 
 
 @dataclass(frozen=True)
+class Distribution:
+    """Representation that preserves the value distribution (duration curve).
+
+    Parameters
+    ----------
+    scope : "cluster" or "global", default "cluster"
+        "cluster": preserve each cluster's distribution separately
+        "global": preserve the overall time series distribution
+    preserve_minmax : bool, default False
+        If True, also preserves min/max values per timestep
+        (equivalent to old "distribution_minmax").
+    """
+
+    scope: Literal["cluster", "global"] = "cluster"
+    preserve_minmax: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        result: dict[str, Any] = {"type": "distribution"}
+        if self.scope != "cluster":
+            result["scope"] = self.scope
+        if self.preserve_minmax:
+            result["preserve_minmax"] = self.preserve_minmax
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Distribution:
+        """Create from dictionary (e.g., loaded from JSON)."""
+        return cls(
+            scope=data.get("scope", "cluster"),
+            preserve_minmax=data.get("preserve_minmax", False),
+        )
+
+
+@dataclass(frozen=True)
+class MinMaxMean:
+    """Representation combining min, max, and mean per column.
+
+    Columns not listed in max_columns or min_columns default to mean.
+
+    Parameters
+    ----------
+    max_columns : list[str]
+        Columns represented by their maximum value across cluster members.
+    min_columns : list[str]
+        Columns represented by their minimum value across cluster members.
+    """
+
+    max_columns: list[str] = field(default_factory=list)
+    min_columns: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        result: dict[str, Any] = {"type": "minmax_mean"}
+        if self.max_columns:
+            result["max_columns"] = self.max_columns
+        if self.min_columns:
+            result["min_columns"] = self.min_columns
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict) -> MinMaxMean:
+        """Create from dictionary (e.g., loaded from JSON)."""
+        return cls(
+            max_columns=data.get("max_columns", []),
+            min_columns=data.get("min_columns", []),
+        )
+
+
+# Union type for representation (strings remain valid for backward compat)
+Representation = RepresentationMethod | Distribution | MinMaxMean
+
+
+def _resolve_representation(rep: Representation) -> Representation:
+    """Normalize a string representation shortcut to an object when needed.
+
+    Returns the input unchanged for objects and simple string methods
+    (mean, medoid, maxoid). Converts distribution/distribution_minmax/minmax_mean
+    strings to their corresponding objects.
+    """
+    if isinstance(rep, (Distribution, MinMaxMean)):
+        return rep
+    if rep == "distribution":
+        return Distribution()
+    if rep == "distribution_minmax":
+        return Distribution(preserve_minmax=True)
+    if rep == "minmax_mean":
+        return MinMaxMean()
+    # Simple string methods: mean, medoid, maxoid
+    return rep
+
+
+def _representation_to_dict(rep: Representation) -> str | dict[str, Any]:
+    """Serialize a representation value to a JSON-compatible format."""
+    if isinstance(rep, (Distribution, MinMaxMean)):
+        return rep.to_dict()
+    return rep
+
+
+def _representation_from_dict(data: str | dict) -> Representation:
+    """Deserialize a representation value from a JSON-compatible format."""
+    if isinstance(data, str):
+        return data  # type: ignore[return-value]
+    # It's a dict with a "type" key
+    rep_type = data.get("type")
+    if rep_type == "distribution":
+        return Distribution.from_dict(data)
+    if rep_type == "minmax_mean":
+        return MinMaxMean.from_dict(data)
+    raise ValueError(f"Unknown representation type: {rep_type!r}")
+
+
+@dataclass(frozen=True)
 class ClusterConfig:
     """Configuration for the clustering algorithm.
 
@@ -54,14 +167,25 @@ class ClusterConfig:
         - "hierarchical": Agglomerative hierarchical clustering
         - "contiguous": Hierarchical with temporal contiguity constraint
 
-    representation : str, optional
-        How to represent cluster centers:
+    representation : str, Distribution, or MinMaxMean, optional
+        How to represent cluster centers. Accepts either a string shortcut
+        or a typed representation object for additional options:
+
+        String shortcuts:
         - "mean": Centroid (average of cluster members)
         - "medoid": Actual period closest to centroid
         - "maxoid": Actual period most dissimilar to others
         - "distribution": Preserve value distribution (duration curve)
         - "distribution_minmax": Distribution + preserve min/max values
         - "minmax_mean": Combine min/max/mean per timestep
+
+        Typed objects (for additional options):
+        - ``Distribution(scope="cluster"|"global", preserve_minmax=False)``:
+          Preserve value distribution. ``scope`` controls whether each
+          cluster's distribution is preserved separately ("cluster") or
+          the overall time series distribution ("global").
+        - ``MinMaxMean(max_columns=[...], min_columns=[...])``:
+          Combine min/max/mean per column. Columns not listed default to mean.
 
         Default depends on method:
         - "mean" for averaging, kmeans
@@ -91,15 +215,15 @@ class ClusterConfig:
     """
 
     method: ClusterMethod = "hierarchical"
-    representation: RepresentationMethod | None = None
+    representation: Representation | None = None
     weights: dict[str, float] | None = None
     normalize_column_means: bool = False
     use_duration_curves: bool = False
     include_period_sums: bool = False
     solver: Solver = "highs"
 
-    def get_representation(self) -> RepresentationMethod:
-        """Get the representation method, using default if not specified."""
+    def get_representation(self) -> Representation:
+        """Get the representation, using default if not specified."""
         if self.representation is not None:
             return self.representation
 
@@ -118,7 +242,7 @@ class ClusterConfig:
         """Convert to dictionary for JSON serialization."""
         result: dict[str, Any] = {"method": self.method}
         if self.representation is not None:
-            result["representation"] = self.representation
+            result["representation"] = _representation_to_dict(self.representation)
         if self.weights is not None:
             result["weights"] = self.weights
         if self.normalize_column_means:
@@ -134,9 +258,13 @@ class ClusterConfig:
     @classmethod
     def from_dict(cls, data: dict) -> ClusterConfig:
         """Create from dictionary (e.g., loaded from JSON)."""
+        rep_data = data.get("representation")
+        representation = (
+            _representation_from_dict(rep_data) if rep_data is not None else None
+        )
         return cls(
             method=data.get("method", "hierarchical"),
-            representation=data.get("representation"),
+            representation=representation,
             weights=data.get("weights"),
             normalize_column_means=data.get("normalize_column_means", False),
             use_duration_curves=data.get("use_duration_curves", False),
@@ -285,7 +413,7 @@ class ClusteringResult:
     segment_centers: tuple[tuple[int, ...], ...] | None = None
     preserve_column_means: bool = True
     rescale_exclude_columns: tuple[str, ...] | None = None
-    representation: RepresentationMethod = "medoid"
+    representation: Representation = "medoid"
     segment_representation: RepresentationMethod | None = None
     temporal_resolution: float | None = None
     extreme_cluster_indices: tuple[int, ...] | None = None
@@ -407,7 +535,7 @@ class ClusteringResult:
             "cluster_assignments": list(self.cluster_assignments),
             "n_timesteps_per_period": self.n_timesteps_per_period,
             "preserve_column_means": self.preserve_column_means,
-            "representation": self.representation,
+            "representation": _representation_to_dict(self.representation),
         }
         if self.cluster_centers is not None:
             result["cluster_centers"] = list(self.cluster_centers)
@@ -438,12 +566,14 @@ class ClusteringResult:
     def from_dict(cls, data: dict) -> ClusteringResult:
         """Create from dictionary (e.g., loaded from JSON)."""
         # Transfer fields
+        rep_data = data.get("representation", "medoid")
+        seg_rep_data = data.get("segment_representation")
         kwargs: dict[str, Any] = {
             "period_duration": data["period_duration"],
             "cluster_assignments": tuple(data["cluster_assignments"]),
             "n_timesteps_per_period": data["n_timesteps_per_period"],
             "preserve_column_means": data.get("preserve_column_means", True),
-            "representation": data.get("representation", "medoid"),
+            "representation": _representation_from_dict(rep_data),
         }
         if "cluster_centers" in data:
             kwargs["cluster_centers"] = tuple(data["cluster_centers"])
@@ -459,8 +589,8 @@ class ClusteringResult:
             kwargs["segment_centers"] = tuple(tuple(s) for s in data["segment_centers"])
         if "rescale_exclude_columns" in data:
             kwargs["rescale_exclude_columns"] = tuple(data["rescale_exclude_columns"])
-        if "segment_representation" in data:
-            kwargs["segment_representation"] = data["segment_representation"]
+        if seg_rep_data is not None:
+            kwargs["segment_representation"] = seg_rep_data
         if "temporal_resolution" in data:
             kwargs["temporal_resolution"] = data["temporal_resolution"]
         if "extreme_cluster_indices" in data:

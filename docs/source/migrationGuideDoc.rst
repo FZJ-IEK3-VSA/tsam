@@ -137,6 +137,12 @@ The table below maps every old parameter to its v3 equivalent.
    * - ``addMeanMin``
      - ``ExtremeConfig(min_period=...)``
      -
+   * - ``distributionPeriodWise``
+     - ``Distribution(scope="cluster"|"global")``
+     - See :ref:`representation objects <migration_representation_objects>`.
+   * - ``representationDict``
+     - ``MinMaxMean(max_columns=[...], min_columns=[...])``
+     - See :ref:`representation objects <migration_representation_objects>`.
 
 
 .. _migration_cluster_methods:
@@ -189,6 +195,100 @@ Representation method values
      - ``'distribution_minmax'``
    * - ``'minmaxmeanRepresentation'``
      - ``'minmax_mean'``
+
+
+.. _migration_representation_objects:
+
+Typed representation objects
+============================
+
+For ``distribution``, ``distribution_minmax``, and ``minmax_mean``
+representations, v3 offers typed objects that expose options previously
+controlled by separate parameters (``distributionPeriodWise``,
+``representationDict``). Plain string shortcuts still work for the
+common cases.
+
+**Distribution with global scope** (``distributionPeriodWise=False``):
+
+*v2*::
+
+    agg = tsam.TimeSeriesAggregation(
+        df,
+        noTypicalPeriods=8,
+        representationMethod='distributionRepresentation',
+        distributionPeriodWise=False,
+    )
+
+*v3*::
+
+    from tsam import Distribution
+
+    result = tsam.aggregate(
+        df,
+        n_clusters=8,
+        cluster=ClusterConfig(
+            representation=Distribution(scope="global"),
+        ),
+    )
+
+**Distribution with min/max preservation and global scope**:
+
+*v2*::
+
+    agg = tsam.TimeSeriesAggregation(
+        df,
+        noTypicalPeriods=8,
+        representationMethod='distributionAndMinMaxRepresentation',
+        distributionPeriodWise=False,
+    )
+
+*v3*::
+
+    from tsam import Distribution
+
+    result = tsam.aggregate(
+        df,
+        n_clusters=8,
+        cluster=ClusterConfig(
+            representation=Distribution(scope="global", preserve_minmax=True),
+        ),
+    )
+
+**Per-column min/max/mean** (``representationDict``):
+
+*v2*::
+
+    agg = tsam.TimeSeriesAggregation(
+        df,
+        noTypicalPeriods=8,
+        representationMethod='minmaxmeanRepresentation',
+        representationDict={'GHI': 'max', 'T': 'min', 'Wind': 'mean', 'Load': 'min'},
+    )
+
+*v3*::
+
+    from tsam import MinMaxMean
+
+    result = tsam.aggregate(
+        df,
+        n_clusters=8,
+        cluster=ClusterConfig(
+            representation=MinMaxMean(
+                max_columns=['GHI'],
+                min_columns=['T', 'Load'],
+            ),
+        ),
+    )
+
+Columns not listed in ``max_columns`` or ``min_columns`` default to mean.
+
+.. note::
+   The string shortcuts ``"distribution"``, ``"distribution_minmax"``, and
+   ``"minmax_mean"`` remain valid and are equivalent to:
+
+   - ``"distribution"`` → ``Distribution()``
+   - ``"distribution_minmax"`` → ``Distribution(preserve_minmax=True)``
+   - ``"minmax_mean"`` → ``MinMaxMean()`` (all columns default to mean)
 
 
 .. _migration_extreme_methods:
@@ -417,11 +517,6 @@ During migration you can silence the deprecation warnings::
 ***********************
 Removed parameters
 ***********************
-
-``representationDict``
-    No longer exposed. The internal representation dictionary is computed
-    automatically when using ``distribution_minmax`` or ``minmax_mean``
-    representations.
 
 ``prepareEnersysInput()``
     Removed. Access result properties directly instead.
