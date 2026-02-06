@@ -21,12 +21,10 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from conftest import GOLDEN_DIR
+from _configs import GOLDEN_DIR, case_ids, get_data
 from test_old_new_equivalence import (
     CASES,
     EquivalenceCase,
-    _case_ids,
-    _get_data,
     _run_new,
     _run_old,
 )
@@ -51,17 +49,17 @@ def _load_golden(case: EquivalenceCase) -> pd.DataFrame:
 class TestGoldenRegression:
     """Compare old and new API reconstructed results against stored golden CSVs."""
 
-    @pytest.mark.parametrize("case", CASES, ids=_case_ids(CASES))
+    @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_update_golden(self, case: EquivalenceCase, update_golden):
         """Save old-API reconstructed results as golden files (only with --update-golden)."""
         if not update_golden:
             pytest.skip("use --update-golden to regenerate")
 
-        data = _get_data(case.dataset)
+        data = get_data(case.dataset)
         _, old_agg = _run_old(data, case)
         _save_golden(old_agg.predictOriginalData(), case)
 
-    @pytest.mark.parametrize("case", CASES, ids=_case_ids(CASES))
+    @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_new_api_matches_golden(self, case: EquivalenceCase, update_golden):
         """New API reconstructed result must match stored golden CSV."""
         if update_golden:
@@ -73,7 +71,7 @@ class TestGoldenRegression:
                 f"golden file missing: {path.relative_to(GOLDEN_DIR.parent.parent)}"
             )
 
-        data = _get_data(case.dataset)
+        data = get_data(case.dataset)
         new_result = _run_new(data, case)
         golden = _load_golden(case)
 
@@ -84,7 +82,7 @@ class TestGoldenRegression:
             check_freq=False,
         )
 
-    @pytest.mark.parametrize("case", CASES, ids=_case_ids(CASES))
+    @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_old_api_matches_golden(self, case: EquivalenceCase, update_golden):
         """Old API reconstructed result must match stored golden CSV."""
         if update_golden:
@@ -96,7 +94,7 @@ class TestGoldenRegression:
                 f"golden file missing: {path.relative_to(GOLDEN_DIR.parent.parent)}"
             )
 
-        data = _get_data(case.dataset)
+        data = get_data(case.dataset)
         _, old_agg = _run_old(data, case)
         golden = _load_golden(case)
 
