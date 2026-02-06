@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,6 @@ import pandas as pd
 if TYPE_CHECKING:
     from tsam.config import ClusteringResult
     from tsam.plot import ResultPlotAccessor
-    from tsam.timeseriesaggregation import TimeSeriesAggregation
 
 
 @dataclass
@@ -151,7 +150,10 @@ class AggregationResult:
     clustering_duration: float
     clustering: ClusteringResult
     is_transferred: bool
-    _aggregation: TimeSeriesAggregation = field(repr=False, compare=False)
+    _original_data: pd.DataFrame = field(repr=False, compare=False)
+    _reconstructed_data: pd.DataFrame = field(repr=False, compare=False)
+    _time_index: pd.Index = field(repr=False, compare=False)
+    _segmented_df: pd.DataFrame | None = field(default=None, repr=False, compare=False)
 
     @cached_property
     def n_clusters(self) -> int:
@@ -203,14 +205,13 @@ class AggregationResult:
         >>> result.original.shape == df.shape
         True
         """
-        return cast("pd.DataFrame", self._aggregation.timeSeries)
+        return self._original_data
 
     @cached_property
     def reconstructed(self) -> pd.DataFrame:
         """Reconstructed time series from typical periods.
 
         Each original period is replaced by its assigned cluster representative.
-        This is cached for performance since reconstruction can be expensive.
 
         Returns
         -------
@@ -223,7 +224,7 @@ class AggregationResult:
         >>> result.reconstructed.shape == df.shape
         True
         """
-        return cast("pd.DataFrame", self._aggregation.predictOriginalData())
+        return self._reconstructed_data
 
     @cached_property
     def residuals(self) -> pd.DataFrame:
@@ -331,8 +332,6 @@ class AggregationResult:
         >>> # Save and reload assignments
         >>> result.assignments.to_csv("assignments.csv")
         """
-        agg = self._aggregation
-
         # Build period_idx and timestep_idx for each original timestep
         period_indices = []
         timestep_indices = []
@@ -350,21 +349,16 @@ class AggregationResult:
                 "timestep_idx": timestep_indices,
                 "cluster_idx": cluster_indices,
             },
-            index=agg.timeIndex,
+            index=self._time_index,
         )
 
         # Add segment_idx if segmentation was used
-        if self.n_segments is not None and hasattr(
-            agg, "segmentedNormalizedTypicalPeriods"
-        ):
+        if self.n_segments is not None and self._segmented_df is not None:
             segment_indices = []
             for cluster_idx in self.cluster_assignments:
-                # Get segment structure for this cluster's typical period
-                segment_data = agg.segmentedNormalizedTypicalPeriods.loc[cluster_idx]
-                # Segment Step is level 0, Segment Duration is level 1
+                segment_data = self._segmented_df.loc[cluster_idx]
                 segment_steps = segment_data.index.get_level_values(0)
                 segment_durations = segment_data.index.get_level_values(1)
-                # Repeat each segment index by its duration
                 segment_indices.extend(
                     np.repeat(segment_steps, segment_durations).tolist()
                 )

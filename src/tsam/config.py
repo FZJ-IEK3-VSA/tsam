@@ -593,11 +593,9 @@ class ClusteringResult:
         >>> clustering = ClusteringResult.from_json("clustering.json")
         >>> result = clustering.apply(df)
         """
-        # Import here to avoid circular imports
-        from tsam.api import _build_old_params
-        from tsam.exceptions import LegacyAPIWarning
+        from tsam.api import _build_clustering_result
+        from tsam.pipeline import run_pipeline
         from tsam.result import AccuracyMetrics, AggregationResult
-        from tsam.timeseriesaggregation import TimeSeriesAggregation
 
         # Warn if using replace extreme method (transfer is not exact)
         if (
@@ -623,12 +621,11 @@ class ClusteringResult:
         )
 
         # Validate n_timesteps_per_period matches data
-        # Infer timestep duration from data if not provided
         if effective_temporal_resolution is None:
             if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
                 inferred = (data.index[1] - data.index[0]).total_seconds() / 3600
             else:
-                inferred = 1.0  # Default to hourly
+                inferred = 1.0
         else:
             inferred = effective_temporal_resolution
 
@@ -649,68 +646,75 @@ class ClusteringResult:
             )
 
         # Build minimal ClusterConfig with just the representation.
-        # We intentionally ignore stored cluster_config.weights since:
-        # 1. Weights were only used to compute the original assignments
-        # 2. Assignments are now fixed, so weights are irrelevant
-        # 3. New data may have different columns than the original
         cluster = ClusterConfig(representation=self.representation)
+
+        # Map representation to old API name
+        rep_mapped = REPRESENTATION_MAPPING.get(
+            self.representation, "medoidRepresentation"
+        )
 
         # Use stored segment config if available, otherwise build from transfer fields
         segments: SegmentConfig | None = None
-        n_segments: int | None = None
+        n_segments_val: int | None = None
+        seg_rep_mapped = None
         if self.segment_assignments is not None and self.segment_durations is not None:
-            n_segments = len(self.segment_durations[0])
+            n_segments_val = len(self.segment_durations[0])
             segments = self.segment_config or SegmentConfig(
-                n_segments=n_segments,
+                n_segments=n_segments_val,
                 representation=self.segment_representation or "mean",
             )
+            seg_rep_mapped = REPRESENTATION_MAPPING.get(
+                segments.representation, "meanRepresentation"
+            )
 
-        # Build old API parameters, passing predefined values directly
-        # Note: Don't pass extremes config - extreme clusters are handled via
-        # extreme_cluster_indices and representations are computed from
-        # the periods assigned to those clusters in cluster_assignments
-        old_params = _build_old_params(
+        # Run pipeline with predefined parameters
+        result = run_pipeline(
             data=data,
             n_clusters=self.n_clusters,
-            period_duration=self.period_duration,
-            temporal_resolution=effective_temporal_resolution,
-            cluster=cluster,
-            segments=segments,
-            extremes=None,
-            preserve_column_means=self.preserve_column_means,
+            n_timesteps_per_period=self.n_timesteps_per_period,
+            cluster_method="hierarchical",  # Doesn't matter for predefined
+            representation_method=rep_mapped,
+            representation_dict=None,
+            solver="highs",
+            normalize_column_means=False,
+            weights=None,
+            rescale_cluster_periods=self.preserve_column_means,
             rescale_exclude_columns=list(self.rescale_exclude_columns)
             if self.rescale_exclude_columns
             else None,
+            extreme_period_method="None",
+            segmentation=segments is not None,
+            n_segments=n_segments_val if n_segments_val else 10,
+            segment_representation_method=seg_rep_mapped,
             round_decimals=round_decimals,
             numerical_tolerance=numerical_tolerance,
-            # Predefined values from this ClusteringResult
-            predef_cluster_assignments=self.cluster_assignments,
-            predef_cluster_centers=self.cluster_centers,
-            predef_extreme_cluster_indices=self.extreme_cluster_indices,
-            predef_segment_assignments=self.segment_assignments,
-            predef_segment_durations=self.segment_durations,
-            predef_segment_centers=self.segment_centers,
+            predef_cluster_order=list(self.cluster_assignments),
+            predef_cluster_center_indices=list(self.cluster_centers)
+            if self.cluster_centers
+            else None,
+            predef_extreme_cluster_idx=list(self.extreme_cluster_indices)
+            if self.extreme_cluster_indices
+            else None,
+            predef_segment_order=[list(s) for s in self.segment_assignments]
+            if self.segment_assignments
+            else None,
+            predef_segment_durations=[list(s) for s in self.segment_durations]
+            if self.segment_durations
+            else None,
+            predef_segment_centers=[list(s) for s in self.segment_centers]
+            if self.segment_centers
+            else None,
         )
 
-        # Run aggregation using old implementation (suppress deprecation warning)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", LegacyAPIWarning)
-            agg = TimeSeriesAggregation(**old_params)
-            cluster_representatives = agg.createTypicalPeriods()
-
-        # Rename index levels for consistency with new API terminology
-        cluster_representatives = cluster_representatives.rename_axis(
+        # Rename index levels
+        cluster_representatives = result.typical_periods.rename_axis(
             index={"PeriodNum": "cluster", "TimeStep": "timestep"}
         )
 
-        # Build accuracy metrics
-        accuracy_df = agg.accuracyIndicators()
-
         # Build rescale deviations DataFrame
-        rescale_deviations_dict = getattr(agg, "_rescaleDeviations", {})
-        if rescale_deviations_dict:
+        if result.rescale_deviations:
             rescale_deviations = pd.DataFrame.from_dict(
-                rescale_deviations_dict, orient="index"
+                result.rescale_deviations, orient="index"
             )
             rescale_deviations.index.name = "column"
         else:
@@ -719,18 +723,16 @@ class ClusteringResult:
             )
 
         accuracy = AccuracyMetrics(
-            rmse=accuracy_df["RMSE"],
-            mae=accuracy_df["MAE"],
-            rmse_duration=accuracy_df["RMSE_duration"],
+            rmse=result.accuracy_indicators["RMSE"],
+            mae=result.accuracy_indicators["MAE"],
+            rmse_duration=result.accuracy_indicators["RMSE_duration"],
             rescale_deviations=rescale_deviations,
         )
 
-        # Build ClusteringResult - preserve stored values
-        from tsam.api import _build_clustering_result
-
+        # Build ClusteringResult
         clustering_result = _build_clustering_result(
-            agg=agg,
-            n_segments=n_segments,
+            result=result,
+            n_segments=n_segments_val,
             cluster_config=cluster,
             segment_config=segments,
             extremes_config=self.extremes_config,
@@ -744,14 +746,17 @@ class ClusteringResult:
         # Build result object
         return AggregationResult(
             cluster_representatives=cluster_representatives,
-            cluster_weights=dict(agg.clusterPeriodNoOccur),
-            n_timesteps_per_period=agg.timeStepsPerPeriod,
+            cluster_weights=result.cluster_weights,
+            n_timesteps_per_period=result.n_timesteps_per_period,
             segment_durations=self.segment_durations,
             accuracy=accuracy,
-            clustering_duration=getattr(agg, "clusteringDuration", 0.0),
+            clustering_duration=result.clustering_duration,
             clustering=clustering_result,
             is_transferred=True,
-            _aggregation=agg,
+            _original_data=result.original_data,
+            _reconstructed_data=result.reconstructed_data,
+            _time_index=result.time_index,
+            _segmented_df=result.segmented_df,
         )
 
 
