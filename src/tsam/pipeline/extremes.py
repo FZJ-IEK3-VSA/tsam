@@ -8,6 +8,8 @@ if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
 
+    from tsam.config import ExtremeConfig
+
 
 def _append_col_with(column, append_with: str = " max."):
     """Append a string to the column name. For MultiIndexes, only last level is changed."""
@@ -23,11 +25,7 @@ def add_extreme_periods(
     profiles_df: pd.DataFrame,
     cluster_centers: list,
     cluster_order: list | np.ndarray,
-    extreme_method: str,
-    add_peak_max: list[str],
-    add_peak_min: list[str],
-    add_mean_max: list[str],
-    add_mean_min: list[str],
+    extremes: ExtremeConfig,
     columns: list[str],
 ) -> tuple[list, list | np.ndarray, list[int], dict]:
     """Add extreme periods to clustered data.
@@ -43,7 +41,7 @@ def add_extreme_periods(
 
     # Check which extreme periods exist
     for column in columns:
-        if column in add_peak_max:
+        if column in extremes.max_value:
             step_no = profiles_df[column].max(axis=1).idxmax()  # type: ignore[arg-type]
             if (
                 step_no not in extreme_period_no
@@ -57,7 +55,7 @@ def add_extreme_periods(
                 }
                 extreme_period_no.append(step_no)
 
-        if column in add_peak_min:
+        if column in extremes.min_value:
             step_no = profiles_df[column].min(axis=1).idxmin()  # type: ignore[arg-type]
             if (
                 step_no not in extreme_period_no
@@ -71,7 +69,7 @@ def add_extreme_periods(
                 }
                 extreme_period_no.append(step_no)
 
-        if column in add_mean_max:
+        if column in extremes.max_period:
             step_no = profiles_df[column].mean(axis=1).idxmax()  # type: ignore[call-overload]
             if (
                 step_no not in extreme_period_no
@@ -85,7 +83,7 @@ def add_extreme_periods(
                 }
                 extreme_period_no.append(step_no)
 
-        if column in add_mean_min:
+        if column in extremes.min_period:
             step_no = profiles_df[column].mean(axis=1).idxmin()  # type: ignore[call-overload]
             if (
                 step_no not in extreme_period_no
@@ -109,7 +107,7 @@ def add_extreme_periods(
     new_cluster_order = list(cluster_order)
     extreme_cluster_idx: list[int] = []
 
-    if extreme_method == "append":
+    if extremes.method == "append":
         for cluster_center in cluster_centers:
             new_cluster_centers.append(cluster_center)
         for i, period_type in enumerate(extreme_periods):
@@ -119,7 +117,7 @@ def add_extreme_periods(
                 cluster_centers
             )
 
-    elif extreme_method == "new_cluster":
+    elif extremes.method == "new_cluster":
         for cluster_center in cluster_centers:
             new_cluster_centers.append(cluster_center)
         for i, period_type in enumerate(extreme_periods):
@@ -151,7 +149,7 @@ def add_extreme_periods(
                         "new_cluster_no"
                     ]
 
-    elif extreme_method == "replace":
+    elif extremes.method == "replace":
         new_cluster_centers = list(cluster_centers)
         for period_type in extreme_periods:
             index = profiles_df.columns.get_loc(extreme_periods[period_type]["column"])

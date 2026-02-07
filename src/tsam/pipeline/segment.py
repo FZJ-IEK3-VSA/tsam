@@ -9,16 +9,16 @@ from tsam.utils.segmentation import segmentation
 if TYPE_CHECKING:
     import pandas as pd
 
+    from tsam.config import SegmentConfig
+    from tsam.pipeline.types import PredefParams
+
 
 def segment_typical_periods(
     normalized_typical_periods: pd.DataFrame,
-    n_segments: int,
     n_timesteps_per_period: int,
-    representation_method,
+    segments: SegmentConfig,
     representation_dict: dict | None,
-    predef_segment_order: list | None = None,
-    predef_segment_durations: list | None = None,
-    predef_segment_centers: list | None = None,
+    predef: PredefParams | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, list]:
     """Segment typical periods into fewer timesteps.
 
@@ -28,11 +28,13 @@ def segment_typical_periods(
     """
     return segmentation(  # type: ignore[no-any-return]
         normalized_typical_periods,
-        n_segments,
+        segments.n_segments,
         n_timesteps_per_period,
-        representation_method=representation_method,
+        representation_method=segments.representation,
         representation_dict=representation_dict,
-        predef_segment_order=predef_segment_order,
-        predef_segment_durations=predef_segment_durations,
-        predef_segment_centers=predef_segment_centers,
+        predef_segment_order=predef.segment_order if predef is not None else None,
+        predef_segment_durations=predef.segment_durations
+        if predef is not None
+        else None,
+        predef_segment_centers=predef.segment_centers if predef is not None else None,
     )

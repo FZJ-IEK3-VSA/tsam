@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 
 from tsam.period_aggregation import aggregate_periods
 from tsam.representations import representations
 
+if TYPE_CHECKING:
+    from tsam.config import ClusterConfig
+    from tsam.pipeline.types import PeriodProfiles, PredefParams
+
 
 def cluster_periods(
     candidates: np.ndarray,
     n_clusters: int,
-    cluster_method: str,
-    solver: str,
-    representation_method,
+    cluster: ClusterConfig,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
 ) -> tuple[list, list | None, np.ndarray]:
@@ -27,9 +31,9 @@ def cluster_periods(
         candidates,
         n_clusters=n_clusters,
         n_iter=100,
-        solver=solver,
-        cluster_method=cluster_method,
-        representation_method=representation_method,
+        solver=cluster.solver,
+        cluster_method=cluster.method,
+        representation_method=cluster.get_representation(),
         representation_dict=representation_dict,
         n_timesteps_per_period=n_timesteps_per_period,
     )
@@ -38,12 +42,9 @@ def cluster_periods(
 
 def cluster_sorted_periods(
     candidates: np.ndarray,
-    profiles_values: np.ndarray,
-    n_columns: int,
+    period_profiles: PeriodProfiles,
     n_clusters: int,
-    cluster_method: str,
-    solver: str,
-    representation_method,
+    cluster: ClusterConfig,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
 ) -> tuple[list, list | None, np.ndarray]:
@@ -53,6 +54,9 @@ def cluster_sorted_periods(
 
     Returns (cluster_centers, cluster_center_indices, cluster_order).
     """
+    profiles_values = period_profiles.profiles_dataframe.values
+    n_columns = period_profiles.n_columns
+
     # Sort each period's timesteps descending for all columns
     n_periods, n_total = profiles_values.shape
     n_timesteps = n_total // n_columns
@@ -64,9 +68,9 @@ def cluster_sorted_periods(
         sorted_values,
         n_clusters=n_clusters,
         n_iter=30,
-        solver=solver,
-        cluster_method=cluster_method,
-        representation_method=representation_method,
+        solver=cluster.solver,
+        cluster_method=cluster.method,
+        representation_method=cluster.get_representation(),
         representation_dict=representation_dict,
         n_timesteps_per_period=n_timesteps_per_period,
     )
@@ -89,8 +93,7 @@ def cluster_sorted_periods(
 
 def use_predefined_assignments(
     candidates: np.ndarray,
-    cluster_order: list | np.ndarray,
-    center_indices: list | np.ndarray | None,
+    predef: PredefParams,
     representation_method,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
@@ -101,15 +104,19 @@ def use_predefined_assignments(
 
     Returns (cluster_centers, cluster_center_indices, cluster_order).
     """
-    if center_indices is not None:
-        return candidates[center_indices], list(center_indices), cluster_order
+    if predef.cluster_center_indices is not None:
+        return (
+            candidates[predef.cluster_center_indices],
+            list(predef.cluster_center_indices),
+            predef.cluster_order,
+        )
     else:
         centers, computed_indices = representations(
             candidates,
-            cluster_order,
+            predef.cluster_order,
             default="medoid",
             representation_method=representation_method,
             representation_dict=representation_dict,
             n_timesteps_per_period=n_timesteps_per_period,
         )
-        return centers, computed_indices, cluster_order
+        return centers, computed_indices, predef.cluster_order

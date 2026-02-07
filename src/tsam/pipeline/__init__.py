@@ -132,8 +132,6 @@ def run_pipeline(
     from tsam.config import MinMaxMean
 
     cluster_rep = cluster.get_representation()
-    segment_rep = segments.representation if segments else cluster_rep
-
     # Override representation_dict for MinMaxMean
     if isinstance(cluster_rep, MinMaxMean):
         max_set = set(cluster_rep.max_columns)
@@ -163,8 +161,6 @@ def run_pipeline(
     else:
         del_cluster_params = None
 
-    representation_method = cluster_rep
-
     # Step 5: Cluster (or predefined, or duration-curve variant)
     clustering_duration = 0.0
     cluster_center_indices: list | None = None
@@ -173,9 +169,8 @@ def run_pipeline(
         cluster_centers, cluster_center_indices, cluster_order = (
             use_predefined_assignments(
                 candidates,
-                predef.cluster_order,
-                predef.cluster_center_indices,
-                representation_method,
+                predef,
+                cluster_rep,
                 representation_dict,
                 n_timesteps_per_period,
             )
@@ -186,9 +181,7 @@ def run_pipeline(
             cluster_centers, cluster_center_indices, cluster_order = cluster_periods(
                 candidates,
                 n_clusters,
-                cluster.method,
-                cluster.solver,
-                representation_method,
+                cluster,
                 representation_dict,
                 n_timesteps_per_period,
             )
@@ -196,12 +189,9 @@ def run_pipeline(
             cluster_centers, cluster_center_indices, cluster_order = (
                 cluster_sorted_periods(
                     candidates,
-                    period_profiles.profiles_dataframe.values,
-                    period_profiles.n_columns,
+                    period_profiles,
                     n_clusters,
-                    cluster.method,
-                    cluster.solver,
-                    representation_method,
+                    cluster,
                     representation_dict,
                     n_timesteps_per_period,
                 )
@@ -228,11 +218,7 @@ def run_pipeline(
             period_profiles.profiles_dataframe,
             cluster_periods_list,
             cluster_order,
-            extremes.method,
-            extremes.max_value,
-            extremes.min_value,
-            extremes.max_period,
-            extremes.min_period,
+            extremes,
             columns,
         )
     else:
@@ -280,13 +266,10 @@ def run_pipeline(
         segmented_df, predicted_segmented_df, segment_center_indices = (
             segment_typical_periods(
                 normalized_typical_periods,
-                segments.n_segments,
                 n_timesteps_per_period,
-                segment_rep,
+                segments,
                 representation_dict,
-                predef.segment_order if predef is not None else None,
-                predef.segment_durations if predef is not None else None,
-                predef.segment_centers if predef is not None else None,
+                predef,
             )
         )
         # Replace normalized_typical_periods with segmented version (drop Original Start Step level)
