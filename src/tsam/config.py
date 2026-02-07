@@ -112,35 +112,6 @@ class MinMaxMean:
 # Union type for representation (strings remain valid for backward compat)
 Representation = RepresentationMethod | Distribution | MinMaxMean
 
-# Mapping from new-style short names to old monolith representation method names
-REPRESENTATION_MAPPING: dict[str, str] = {
-    "mean": "meanRepresentation",
-    "medoid": "medoidRepresentation",
-    "maxoid": "maxoidRepresentation",
-    "distribution": "distributionRepresentation",
-    "distribution_minmax": "distributionAndMinMaxRepresentation",
-    "minmax_mean": "minmaxmeanRepresentation",
-}
-
-
-def representation_to_pipeline_str(rep: Representation) -> str:
-    """Convert a Representation value to the plain string expected by pipeline functions."""
-    if isinstance(rep, Distribution):
-        return "distribution_minmax" if rep.preserve_minmax else "distribution"
-    if isinstance(rep, MinMaxMean):
-        return "minmax_mean"
-    return rep
-
-
-def representation_is_period_wise(rep: Representation) -> bool:
-    """Return the distribution_period_wise flag for a Representation value.
-
-    Only relevant for Distribution representations; returns True for all others.
-    """
-    if isinstance(rep, Distribution):
-        return rep.scope == "cluster"
-    return True
-
 
 def _resolve_representation(rep: Representation) -> Representation:
     """Normalize a string representation shortcut to an object when needed.

@@ -128,19 +128,11 @@ def run_pipeline(
     representation_dict: dict[str, str] = dict.fromkeys(list(data.columns), "mean")
     representation_dict = dict(pd.Series(representation_dict).sort_index(axis=0))
 
-    # Resolve segment representation: inherit from cluster config if not specified
-    from tsam.config import (
-        MinMaxMean,
-        representation_is_period_wise,
-        representation_to_pipeline_str,
-    )
+    # Resolve representations: pass Representation objects directly (no string conversion)
+    from tsam.config import MinMaxMean
 
     cluster_rep = cluster.get_representation()
-    segment_rep_raw = segments.representation if segments else cluster_rep
-
-    segment_representation = representation_to_pipeline_str(segment_rep_raw)
-    distribution_period_wise = representation_is_period_wise(cluster_rep)
-    segment_distribution_period_wise = representation_is_period_wise(segment_rep_raw)
+    segment_rep = segments.representation if segments else cluster_rep
 
     # Override representation_dict for MinMaxMean
     if isinstance(cluster_rep, MinMaxMean):
@@ -171,7 +163,7 @@ def run_pipeline(
     else:
         del_cluster_params = None
 
-    representation_method = representation_to_pipeline_str(cluster.get_representation())
+    representation_method = cluster_rep
 
     # Step 5: Cluster (or predefined, or duration-curve variant)
     clustering_duration = 0.0
@@ -186,7 +178,6 @@ def run_pipeline(
                 representation_method,
                 representation_dict,
                 n_timesteps_per_period,
-                distribution_period_wise,
             )
         )
     else:
@@ -200,7 +191,6 @@ def run_pipeline(
                 representation_method,
                 representation_dict,
                 n_timesteps_per_period,
-                distribution_period_wise,
             )
         else:
             cluster_centers, cluster_center_indices, cluster_order = (
@@ -214,7 +204,6 @@ def run_pipeline(
                     representation_method,
                     representation_dict,
                     n_timesteps_per_period,
-                    distribution_period_wise,
                 )
             )
         clustering_duration = time.time() - t_start
@@ -293,12 +282,11 @@ def run_pipeline(
                 normalized_typical_periods,
                 segments.n_segments,
                 n_timesteps_per_period,
-                segment_representation,
+                segment_rep,
                 representation_dict,
                 predef.segment_order if predef is not None else None,
                 predef.segment_durations if predef is not None else None,
                 predef.segment_centers if predef is not None else None,
-                segment_distribution_period_wise,
             )
         )
         # Replace normalized_typical_periods with segmented version (drop Original Start Step level)

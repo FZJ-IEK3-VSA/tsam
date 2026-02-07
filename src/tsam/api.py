@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, cast
 import pandas as pd
 
 from tsam.config import (
-    REPRESENTATION_MAPPING,
     ClusterConfig,
     Distribution,
     ExtremeConfig,
@@ -343,12 +342,20 @@ def _apply_representation_params(
                 rep_dict[col] = "mean"
         params["representationDict"] = rep_dict
     else:
-        # String representation
-        rep_mapped = REPRESENTATION_MAPPING.get(representation)
+        # String representation — map to old monolith names
+        _str_to_monolith = {
+            "mean": "meanRepresentation",
+            "medoid": "medoidRepresentation",
+            "maxoid": "maxoidRepresentation",
+            "distribution": "distributionRepresentation",
+            "distribution_minmax": "distributionAndMinMaxRepresentation",
+            "minmax_mean": "minmaxmeanRepresentation",
+        }
+        rep_mapped = _str_to_monolith.get(representation)
         if rep_mapped is None:
             raise ValueError(
                 f"Unknown representation method: {representation!r}. "
-                f"Valid options: {list(REPRESENTATION_MAPPING.keys())}"
+                f"Valid options: {list(_str_to_monolith.keys())}"
             )
         params["representationMethod"] = rep_mapped
 

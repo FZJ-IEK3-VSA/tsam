@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
 
+from tsam.config import Distribution, MinMaxMean
 from tsam.utils.duration_representation import duration_representation
 
 # Aliases: old verbose names → new short names.
@@ -28,6 +29,26 @@ def representations(
     cluster_center_indices = None
     if representation_method is None:
         representation_method = default
+
+    # --- Dispatch on Representation objects first ---
+    if isinstance(representation_method, Distribution):
+        period_wise = representation_method.scope == "cluster"
+        cluster_centers = duration_representation(
+            candidates,
+            cluster_order,
+            period_wise,
+            n_timesteps_per_period,
+            represent_min_max=representation_method.preserve_minmax,
+        )
+        return cluster_centers, cluster_center_indices
+
+    if isinstance(representation_method, MinMaxMean):
+        cluster_centers = minmax_mean_representation(
+            candidates, cluster_order, representation_dict, n_timesteps_per_period
+        )
+        return cluster_centers, cluster_center_indices
+
+    # --- Fallback: string-based dispatch (monolith compat) ---
     # Normalize old names to new names
     representation_method = _ALIASES.get(representation_method, representation_method)
     if representation_method == "mean":
