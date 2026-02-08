@@ -59,7 +59,9 @@ def durationRepresentation(
                 candidateValues_np = candidates_df.loc[indice, a].values
 
                 # flatten the 2D array (candidates, timesteps) into a 1D array and sort it.
-                sorted_flat_values = np.sort(candidateValues_np.flatten())
+                sorted_flat_values = np.sort(
+                    candidateValues_np.flatten(), kind="stable"
+                )
 
                 # reshape the sorted values and calculate the mean for each representative time step.
                 representationValues_np = sorted_flat_values.reshape(
@@ -73,7 +75,8 @@ def durationRepresentation(
 
                 # get the order of the representation values such that euclidean distance
                 # to the candidates' mean profile is minimized.
-                mean_profile_order = np.argsort(candidateValues_np.mean(axis=0))
+                means = np.round(candidateValues_np.mean(axis=0), 10)
+                mean_profile_order = np.argsort(means, kind="stable")
 
                 # Create an empty array to place the results in the correct order
                 final_representation_for_attr = np.empty_like(representationValues_np)
