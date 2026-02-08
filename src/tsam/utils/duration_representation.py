@@ -42,49 +42,42 @@ def duration_representation(
     # (period_wise = True) or the distribution of the total time series is preserved only. In the latter case, the
     # inner-cluster variance is smaller and the variance across the typical periods' mean values is higher
     if distribution_period_wise:
-        cluster_centers = []
+        n_attrs = num_attributes
 
+        # Reshape to 3D: (periods, attributes, timesteps)
+        candidates_3d = candidates.reshape(-1, n_attrs, n_timesteps_per_period)
+
+        cluster_centers = []
         for cluster_num in np.unique(cluster_order):
             indice = np.where(cluster_order == cluster_num)[0]
-            n_candidates = len(indice)
-
-            # Skip empty clusters
-            if n_candidates == 0:
+            n_cands = len(indice)
+            if n_cands == 0:
                 continue
 
-            # This list will hold the representative values for each attribute
-            cluster_center_parts = []
+            # (n_cands, n_attrs, timesteps) -> (n_attrs, n_cands, timesteps)
+            cluster_data = candidates_3d[indice].transpose(1, 0, 2)
 
-            for a in candidates_df.columns.levels[0]:
-                candidate_values_np = candidates_df.loc[indice, a].values
+            # Sort all values per attribute, then reshape to duration curve
+            flat = cluster_data.reshape(n_attrs, -1)
+            flat.sort(axis=1, kind="stable")
+            repr_values = flat.reshape(n_attrs, n_timesteps_per_period, n_cands).mean(
+                axis=2
+            )
 
-                # flatten the 2D array (candidates, timesteps) into a 1D array and sort it.
-                sorted_flat_values = np.sort(candidate_values_np.flatten())
+            if represent_min_max:
+                repr_values[:, 0] = flat[:, 0]
+                repr_values[:, -1] = flat[:, -1]
 
-                # reshape the sorted values and calculate the mean for each representative time step.
-                representation_values_np = sorted_flat_values.reshape(
-                    n_timesteps_per_period, n_candidates
-                ).mean(axis=1)
+            # Reorder each attribute's repr_values by its mean profile.
+            # Round means before argsort to ensure identical tie-breaking
+            # across platforms and numpy versions.
+            means = np.round(cluster_data.mean(axis=1), 10)
+            order = means.argsort(axis=1, kind="stable")
+            rows = np.arange(n_attrs)[:, None]
+            final_repr = np.empty_like(repr_values)
+            final_repr[rows, order] = repr_values
 
-                # respect max and min of the attributes
-                if represent_min_max:
-                    representation_values_np[0] = sorted_flat_values[0]
-                    representation_values_np[-1] = sorted_flat_values[-1]
-
-                # get the order of the representation values such that euclidean distance
-                # to the candidates' mean profile is minimized.
-                mean_profile_order = np.argsort(candidate_values_np.mean(axis=0))
-
-                # Create an empty array to place the results in the correct order
-                final_representation_for_attr = np.empty_like(representation_values_np)
-                final_representation_for_attr[mean_profile_order] = (
-                    representation_values_np
-                )
-
-                # add to cluster center
-                cluster_center_parts.append(final_representation_for_attr)
-
-            cluster_centers.append(np.concatenate(cluster_center_parts))
+            cluster_centers.append(final_repr.ravel())
 
     else:
         cluster_centers_list = []
