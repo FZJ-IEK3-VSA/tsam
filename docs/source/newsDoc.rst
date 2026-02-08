@@ -23,12 +23,11 @@ Bug Fixes
   the global distribution differently when transferring a clustering. Segment clusters are now
   relabelled to temporal order after ``fit_predict()``.
 
-* Fixed non-deterministic tie-breaking in vectorized ``durationRepresentation()``
-  (``distributionPeriodWise=True`` path). The vectorized mean computation used C-contiguous
-  memory layout, producing ~1e-16 floating-point differences from the original pandas-based code,
-  which caused ``argsort`` to swap tied timesteps. Fixed by computing per-attribute means on
-  F-contiguous arrays to match pandas' accumulation order. Verified against tsam v2.3.9
-  golden baselines.
+* Fixed non-deterministic sorting in ``durationRepresentation()`` across both code paths.
+  The ``distributionPeriodWise=True`` path now uses vectorized numpy 3D operations with
+  ``kind="stable"`` and ``np.round(mean, 10)`` before ``argsort`` to ensure identical
+  tie-breaking across platforms. The ``distributionPeriodWise=False`` path applies the same
+  stable sort and rounding fixes. Verified against tsam v2.3.9 golden baselines.
 
 Testing & Benchmarks
 ====================
@@ -37,8 +36,23 @@ Testing & Benchmarks
   both APIs against golden baselines generated with tsam v2.3.9.
 
 * Added benchmark suite (``benchmarks/bench.py``) for performance comparison across versions
-  using pytest-benchmark. Current version is **50--80x faster** than v2.3.9 for hierarchical
-  methods on real-world data.
+  using pytest-benchmark. See below for results.
+
+Performance
+===========
+
+Benchmarked across 27 configurations × 4 datasets against v2.3.9:
+
+* Hierarchical methods on real-world data: **35--60x faster**
+* Distribution representation (cluster-wise): **35--55x faster**
+* Averaging: up to **77x faster**
+* Contiguous clustering: **50--54x faster**
+* Distribution representation (global scope): **7--16x faster**
+* Iterative methods (kmeans, kmedoids, kmaxoids): **1--6x faster** (core solver dominates)
+
+The ``durationRepresentation()`` function (``distributionPeriodWise=True`` path) was rewritten
+from a pandas per-attribute loop to vectorized numpy 3D array operations, providing an
+additional speedup on top of the v3.0.0 vectorization improvements.
 
 *********************
 Release version 3.1.0

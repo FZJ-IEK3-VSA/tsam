@@ -503,6 +503,76 @@ New capabilities
 
 
 ***********************
+Performance
+***********************
+
+tsam v3 is significantly faster than v2.3.9, primarily due to replacing
+pandas loops with vectorized numpy operations.
+
+.. list-table:: Speedup vs v2.3.9 (selected configurations)
+   :header-rows: 1
+   :widths: 40 15 15 15 15
+
+   * - Configuration
+     - constant
+     - testdata
+     - wide
+     - with_zero_col
+   * - hierarchical (default)
+     - 2x
+     - 44x
+     - 25x
+     - 42x
+   * - hierarchical (distribution)
+     - 5x
+     - 55x
+     - 35x
+     - 51x
+   * - averaging
+     - 5x
+     - 77x
+     - 66x
+     - 74x
+   * - contiguous
+     - 5x
+     - 54x
+     - 50x
+     - 53x
+   * - distribution (global)
+     - 2x
+     - 16x
+     - 7x
+     - 13x
+   * - kmeans
+     - 1.4x
+     - 4x
+     - 6x
+     - 6x
+   * - kmaxoids
+     - 1.3x
+     - 1.4x
+     - 1.4x
+     - 1.4x
+
+Key optimizations:
+
+- **``predictOriginalData()``**: Vectorized indexing replaces per-period
+  ``.unstack()`` loop (~290x function speedup).
+- **``durationRepresentation()``**: numpy 3D operations replace nested
+  pandas loops (~8x function speedup, contributing to the distribution
+  config gains above).
+- **``_rescaleClusterPeriods()``**: numpy 3D arrays replace pandas
+  MultiIndex operations (~11x function speedup).
+
+Iterative methods (kmeans, kmedoids, kmaxoids) show modest gains because
+the solver itself dominates runtime.
+
+Use ``benchmarks/bench.py`` to run your own comparisons::
+
+    pytest benchmarks/bench.py --benchmark-save=my_run
+
+
+***********************
 Suppressing warnings
 ***********************
 
