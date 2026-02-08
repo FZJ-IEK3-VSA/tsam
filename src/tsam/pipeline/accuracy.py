@@ -15,12 +15,10 @@ if TYPE_CHECKING:
 
 
 def reconstruct(
-    normalized_typical_periods: pd.DataFrame,
+    typical_periods: pd.DataFrame,
     cluster_order: list | np.ndarray,
     period_profiles: PeriodProfiles,
     norm_data: NormalizedData,
-    segmentation_active: bool,
-    predicted_segmented_df: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Expand typical periods via assignments, denormalize.
 
@@ -28,14 +26,8 @@ def reconstruct(
 
     Returns (denormalized_predicted, normalized_predicted).
     """
-    # Select typical periods source based on segmentation
-    if segmentation_active and predicted_segmented_df is not None:
-        typical = predicted_segmented_df
-    else:
-        typical = normalized_typical_periods
-
     # Unstack once, then use vectorized indexing to select periods by cluster order
-    typical_unstacked = typical.unstack()
+    typical_unstacked = typical_periods.unstack()
     reconstructed = typical_unstacked.loc[list(cluster_order)].values
 
     # Back in matrix form

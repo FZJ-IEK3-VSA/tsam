@@ -45,7 +45,7 @@ def _count_occurrences(cluster_order: list | np.ndarray) -> dict[int, float]:
 
 
 def _representatives_to_dataframe(
-    cluster_periods_list: list | np.ndarray,
+    cluster_periods_list: list,
     column_index: pd.MultiIndex,
 ) -> pd.DataFrame:
     """Reshape flat cluster period vectors into a MultiIndex DataFrame.
@@ -53,14 +53,9 @@ def _representatives_to_dataframe(
     Converts a list of 1-D arrays (one per cluster) into a DataFrame
     indexed by (PeriodNum, TimeStep) with the original column names.
     """
-    periods = (
-        cluster_periods_list
-        if isinstance(cluster_periods_list, list)
-        else [cluster_periods_list[i] for i in range(len(cluster_periods_list))]
-    )
     df = (
         pd.concat(
-            [pd.Series(s, index=column_index) for s in periods],
+            [pd.Series(s, index=column_index) for s in cluster_periods_list],
             axis=1,
         )
         .unstack("TimeStep")
@@ -102,6 +97,24 @@ def _warn_if_out_of_bounds(
             )
 
 
+def _build_representation_dict(
+    columns: pd.Index,
+    cluster_rep,
+) -> dict[str, str]:
+    """Build the representation dict (mean/min/max per column) from config."""
+    from tsam.config import MinMaxMean
+
+    representation_dict: dict[str, str] = dict.fromkeys(sorted(columns), "mean")
+    if isinstance(cluster_rep, MinMaxMean):
+        for col in cluster_rep.max_columns:
+            if col in representation_dict:
+                representation_dict[col] = "max"
+        for col in cluster_rep.min_columns:
+            if col in representation_dict:
+                representation_dict[col] = "min"
+    return representation_dict
+
+
 def run_pipeline(
     data: pd.DataFrame,
     n_clusters: int,
@@ -124,23 +137,8 @@ def run_pipeline(
     """
     rescale_exclude_columns = rescale_exclude_columns or []
 
-    # Build representation_dict default (monolith lines 504-512)
-    representation_dict: dict[str, str] = dict.fromkeys(list(data.columns), "mean")
-    representation_dict = dict(pd.Series(representation_dict).sort_index(axis=0))
-
-    # Resolve representations: pass Representation objects directly (no string conversion)
-    from tsam.config import MinMaxMean
-
     cluster_rep = cluster.get_representation()
-    # Override representation_dict for MinMaxMean
-    if isinstance(cluster_rep, MinMaxMean):
-        max_set = set(cluster_rep.max_columns)
-        min_set = set(cluster_rep.min_columns)
-        for col in representation_dict:
-            if col in max_set:
-                representation_dict[col] = "max"
-            elif col in min_set:
-                representation_dict[col] = "min"
+    representation_dict = _build_representation_dict(data.columns, cluster_rep)
 
     # Store original column order (before sort in normalize)
     original_column_order = list(data.columns)
@@ -153,15 +151,14 @@ def run_pipeline(
     candidates = period_profiles.profiles_dataframe.values
 
     # Step 3: Add period sum features if requested
+    n_feature_cols = candidates.shape[1]
     if cluster.include_period_sums:
         candidates, n_extra = add_period_sum_features(
             period_profiles.profiles_dataframe, candidates
         )
-        del_cluster_params = -n_extra
-    else:
-        del_cluster_params = None
+        n_feature_cols = candidates.shape[1] - n_extra
 
-    # Step 5: Cluster (or predefined, or duration-curve variant)
+    # Step 4: Cluster (or predefined, or duration-curve variant)
     clustering_duration = 0.0
     cluster_center_indices: list | None = None
 
@@ -198,17 +195,14 @@ def run_pipeline(
             )
         clustering_duration = time.time() - t_start
 
-    # Step 6: Trim eval features from representatives
-    cluster_periods_list = []
-    for center in cluster_centers:
-        cluster_periods_list.append(center[:del_cluster_params])
+    # Step 5: Trim eval features from representatives
+    cluster_periods_list = [center[:n_feature_cols] for center in cluster_centers]
 
-    # Step 7: Add extreme periods if configured
+    # Step 6: Add extreme periods if configured
     extreme_periods_info: dict = {}
     extreme_cluster_idx: list[int] = []
 
     if extremes is not None:
-        columns = list(norm_data.original_data.columns)
         (
             cluster_periods_list,
             cluster_order,
@@ -219,16 +213,15 @@ def run_pipeline(
             cluster_periods_list,
             cluster_order,
             extremes,
-            columns,
         )
     else:
         if predef is not None and predef.extreme_cluster_idx is not None:
             extreme_cluster_idx = list(predef.extreme_cluster_idx)
 
-    # Step 8: Compute cluster weights
+    # Step 7: Compute cluster weights
     cluster_period_no_occur = _count_occurrences(cluster_order)
 
-    # Step 9: Rescale if requested
+    # Step 8: Rescale if requested
     rescale_deviations: dict = {}
     if rescale_cluster_periods:
         cluster_periods_list, rescale_deviations = rescale_representatives(  # type: ignore[assignment]
@@ -240,8 +233,9 @@ def run_pipeline(
             n_timesteps_per_period,
             rescale_exclude_columns,
         )
+        cluster_periods_list = list(cluster_periods_list)
 
-    # Step 10: Adjust for partial periods
+    # Step 9: Adjust for partial periods
     if len(data) % n_timesteps_per_period != 0:
         last_cluster = (
             cluster_order[-1]
@@ -252,12 +246,12 @@ def run_pipeline(
             1 - float(len(data) % n_timesteps_per_period) / n_timesteps_per_period
         )
 
-    # Step 11: Format representatives to MultiIndex DataFrame
+    # Step 10: Format representatives to MultiIndex DataFrame
     normalized_typical_periods = _representatives_to_dataframe(
         cluster_periods_list, period_profiles.column_index
     )
 
-    # Step 12: Segmentation if configured
+    # Step 11: Segmentation if configured
     segmented_df = None
     predicted_segmented_df = None
     segment_center_indices = None
@@ -272,27 +266,29 @@ def run_pipeline(
                 predef,
             )
         )
-        # Replace normalized_typical_periods with segmented version (drop Original Start Step level)
-        normalized_typical_periods = segmented_df.reset_index(level=3, drop=True)
+        segmented_normalized = segmented_df.reset_index(level=3, drop=True)
+        denorm_source = segmented_normalized
+        reconstruct_source = predicted_segmented_df
+    else:
+        denorm_source = normalized_typical_periods
+        reconstruct_source = normalized_typical_periods
 
-    # Step 13: Denormalize -> typical_periods
-    typical_periods = denormalize(normalized_typical_periods, norm_data)
+    # Step 12: Denormalize -> typical_periods
+    typical_periods = denormalize(denorm_source, norm_data)
     if round_decimals is not None:
         typical_periods = typical_periods.round(decimals=round_decimals)
 
-    # Step 14: Bounds check + warnings
+    # Step 13: Bounds check + warnings
     _warn_if_out_of_bounds(
         typical_periods, norm_data.original_data, numerical_tolerance
     )
 
-    # Step 15: Reconstruct + compute accuracy
+    # Step 14: Reconstruct + compute accuracy
     reconstructed_data, normalized_predicted = reconstruct(
-        normalized_typical_periods,
+        reconstruct_source,
         cluster_order,
         period_profiles,
         norm_data,
-        segmentation_active=segments is not None,
-        predicted_segmented_df=predicted_segmented_df,
     )
     if round_decimals is not None:
         reconstructed_data = reconstructed_data.round(decimals=round_decimals)
@@ -309,7 +305,7 @@ def run_pipeline(
     reconstructed_data_out = reconstructed_data[original_column_order]
     typical_periods = typical_periods[original_column_order]
 
-    # Step 16: Build ClusteringResult
+    # Step 15: Build ClusteringResult
     clustering_result = _build_clustering_result(
         cluster_center_indices=cluster_center_indices,
         extreme_periods_info=extreme_periods_info,
@@ -327,7 +323,7 @@ def run_pipeline(
         extreme_cluster_idx=extreme_cluster_idx,
     )
 
-    # Step 17: Return PipelineResult
+    # Step 16: Return PipelineResult
     return PipelineResult(
         typical_periods=typical_periods,
         cluster_weights=cluster_period_no_occur,
@@ -341,6 +337,42 @@ def run_pipeline(
         accuracy_indicators=accuracy_df,
         clustering_result=clustering_result,
     )
+
+
+def _extract_segment_data(
+    segmented_df: pd.DataFrame,
+    segment_center_indices: list | None,
+) -> tuple[
+    tuple[tuple[int, ...], ...],
+    tuple[tuple[int, ...], ...],
+    tuple[tuple[int, ...], ...] | None,
+]:
+    """Extract segment assignments, durations, and centers from a segmented DataFrame.
+
+    Returns (assignments, durations, centers).
+    """
+    assignments_list = []
+    durations_list = []
+
+    for period_idx in segmented_df.index.get_level_values(0).unique():
+        period_data = segmented_df.loc[period_idx]
+        assignments = []
+        durations = []
+        for seg_step, seg_dur, _orig_start in period_data.index:
+            assignments.extend([int(seg_step)] * int(seg_dur))
+            durations.append(int(seg_dur))
+        assignments_list.append(tuple(assignments))
+        durations_list.append(tuple(durations))
+
+    centers: tuple[tuple[int, ...], ...] | None = None
+    if segment_center_indices is not None:
+        if all(pc is not None for pc in segment_center_indices):
+            centers = tuple(
+                tuple(int(x) for x in period_centers)
+                for period_centers in segment_center_indices
+            )
+
+    return tuple(assignments_list), tuple(durations_list), centers
 
 
 def _build_clustering_result(
@@ -384,28 +416,9 @@ def _build_clustering_result(
     segment_centers: tuple[tuple[int, ...], ...] | None = None
 
     if segment_config is not None and segmented_df is not None:
-        segment_assignments_list = []
-        segment_durations_list = []
-
-        for period_idx in segmented_df.index.get_level_values(0).unique():
-            period_data = segmented_df.loc[period_idx]
-            assignments = []
-            durations = []
-            for seg_step, seg_dur, _orig_start in period_data.index:
-                assignments.extend([int(seg_step)] * int(seg_dur))
-                durations.append(int(seg_dur))
-            segment_assignments_list.append(tuple(assignments))
-            segment_durations_list.append(tuple(durations))
-
-        segment_assignments = tuple(segment_assignments_list)
-        segment_durations = tuple(segment_durations_list)
-
-        if segment_center_indices is not None:
-            if all(pc is not None for pc in segment_center_indices):
-                segment_centers = tuple(
-                    tuple(int(x) for x in period_centers)
-                    for period_centers in segment_center_indices
-                )
+        segment_assignments, segment_durations, segment_centers = _extract_segment_data(
+            segmented_df, segment_center_indices
+        )
 
     # Extract representation from configs
     representation = cluster_config.get_representation()

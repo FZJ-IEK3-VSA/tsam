@@ -26,7 +26,6 @@ def add_extreme_periods(
     cluster_centers: list,
     cluster_order: list | np.ndarray,
     extremes: ExtremeConfig,
-    columns: list[str],
 ) -> tuple[list, list | np.ndarray, list[int], dict]:
     """Add extreme periods to clustered data.
 
@@ -34,6 +33,7 @@ def add_extreme_periods(
 
     Returns (new_cluster_centers, new_cluster_order, extreme_cluster_idx, extreme_periods_info).
     """
+    columns = profiles_df.columns.get_level_values(0).unique().tolist()
     extreme_periods: dict = {}
     extreme_period_no: list = []
 
