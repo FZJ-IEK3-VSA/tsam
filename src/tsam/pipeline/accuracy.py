@@ -46,12 +46,21 @@ def reconstruct(
         columns=norm_data.original_data.columns,
     )
 
-    # Note: In the monolith, normalized_typical_periods was modified in-place by
-    # _post_process_time_series (multiplied by _normalized_mean as side effect).
-    # Then predict_original_data divided by _normalized_mean to undo this.
-    # In our pipeline, there is no in-place modification, so no division is needed.
+    # In the monolith, _post_process_time_series modified normalized_typical_periods
+    # IN-PLACE: dividing out weights and multiplying by _normalized_mean.
+    # Then predict_original_data used the already-modified data, so it called
+    # _post_process_time_series with apply_weighting=False (weights already gone).
+    #
+    # In our pipeline there is no in-place modification, so normalized_predicted
+    # still has weights baked in. We undo them here so that:
+    # 1) denormalize gets weight-free data (matching the monolith's path)
+    # 2) the returned normalized_predicted is in the same space as norm_data.values
+    #    with weights removed, which compute_accuracy expects.
+    if norm_data.weights:
+        normalized_predicted = normalized_predicted.copy()
+        for column in norm_data.weights:
+            normalized_predicted[column] /= norm_data.weights[column]
 
-    # Denormalize (without applying weights - monolith line 1433 apply_weighting=False)
     denormalized = denormalize(normalized_predicted, norm_data, apply_weights=False)
 
     return denormalized, normalized_predicted
