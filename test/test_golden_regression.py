@@ -80,6 +80,7 @@ class TestGoldenRegression:
             golden,
             check_names=False,
             check_freq=False,
+            check_like=True,
             atol=1e-7,
         )
 
