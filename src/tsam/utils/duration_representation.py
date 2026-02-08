@@ -90,7 +90,7 @@ def duration_representation(
                 # get all the values of a certain attribute and cluster
                 candidate_values = candidates_df.loc[indice[0], a]
                 # calculate centroid of each cluster and append to list
-                mean_vals.append(candidate_values.mean())
+                mean_vals.append(np.round(candidate_values.mean(), 10))
                 # make a list of weights of each cluster for each time step within the period
                 cluster_lengths.append(np.repeat(n_candidates, n_timesteps_per_period))
             # concat centroid values and cluster weights for all clusters
@@ -106,7 +106,7 @@ def duration_representation(
                 axis=1,
             )
             # sort all values of all clusters according to the centroid values
-            means_and_weights_sorted = means_and_weights.sort_values(0)
+            means_and_weights_sorted = means_and_weights.sort_values(0, kind="stable")
             # save order of the sorted centroid values across all clusters
             order = means_and_weights_sorted.index
             # sort all values of the original time series
@@ -115,7 +115,7 @@ def duration_representation(
                 .stack(
                     future_stack=True,
                 )
-                .sort_values()
+                .sort_values(kind="stable")
                 .values
             )
             # take mean of sections of the original duration curve according to the cluster and its weight the
