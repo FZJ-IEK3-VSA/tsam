@@ -3,6 +3,24 @@ tsam's Change Log
 ##################
 
 *********************
+Release version 4.0.0
+*********************
+
+Breaking Changes
+================
+
+* **Output column order preserved**: ``cluster_representatives``, ``reconstructed``, and ``original``
+  now return columns in the same order as the input DataFrame. Previously, columns were
+  alphabetically sorted. Code that relied on sorted column order may need adjustment.
+
+Bug Fixes
+=========
+
+* Fixed incorrect reconstruction and accuracy metrics when using ``ClusterConfig(weights=...)``.
+  The pipeline did not undo column weights before denormalization, causing weighted columns
+  to produce wrong reconstructed values and RMSE/MAE metrics.
+
+*********************
 Release version 3.1.1
 *********************
 
