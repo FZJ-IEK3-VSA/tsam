@@ -193,6 +193,7 @@ class ResultPlotAccessor:
     def cluster_members(
         self,
         columns: list[str] | None = None,
+        clusters: list[int] | None = None,
         animate: str = "Cluster",
         title: str | None = None,
     ) -> go.Figure:
@@ -206,6 +207,8 @@ class ResultPlotAccessor:
         ----------
         columns : list[str], optional
             Columns to plot. If None, plots all columns.
+        clusters : list[int], optional
+            Cluster indices to include. If None, includes all clusters.
         animate : str, default "Cluster"
             Which dimension to put on the animation slider.
             The other dimension becomes ``facet_col``.
@@ -222,7 +225,7 @@ class ResultPlotAccessor:
         Examples
         --------
         >>> result.plot.cluster_members(columns=["Load"])
-        >>> result.plot.cluster_members()  # all columns
+        >>> result.plot.cluster_members(clusters=[0, 3])  # specific clusters
         >>> result.plot.cluster_members(animate="Column")  # flip through columns
         """
         from tsam.api import unstack_to_periods
@@ -238,7 +241,24 @@ class ResultPlotAccessor:
         n_ts = result.n_timesteps_per_period
         timesteps = np.arange(n_ts)
 
-        cluster_ids = sorted(set(assignments))
+        all_cluster_ids = sorted(set(assignments))
+        if clusters is not None:
+            invalid = [c for c in clusters if c not in all_cluster_ids]
+            if invalid:
+                warnings.warn(
+                    f"Cluster indices not found and will be ignored: {invalid}. "
+                    f"Available clusters: {all_cluster_ids}",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            cluster_ids = [c for c in clusters if c in all_cluster_ids]
+            if not cluster_ids:
+                raise ValueError(
+                    f"None of the requested clusters {clusters} exist. "
+                    f"Available clusters: {all_cluster_ids}"
+                )
+        else:
+            cluster_ids = all_cluster_ids
         members_by_cluster = {
             cid: np.where(assignments == cid)[0] for cid in cluster_ids
         }
