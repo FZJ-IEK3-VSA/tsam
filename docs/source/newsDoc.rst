@@ -102,6 +102,16 @@ Bug Fixes
   by using ``kind="stable"`` and ``np.round(mean, 10)`` before ``argsort``, ensuring
   identical tie-breaking across platforms. Verified against tsam v2.3.9 golden baselines.
 
+Result consistency
+==================
+
+The stable sort fix guarantees cross-platform reproducibility but changes tie-breaking
+compared to v2.3.9. Four distribution-related configurations (``hierarchical_distribution``,
+``hierarchical_distribution_minmax``, ``distribution_global``, ``distribution_minmax_global``)
+produce slightly different results, but will be consistent across systems from now on. All statistical properties are preserved. The remaining
+23 configurations are bit-for-bit identical to v2.3.9. See the
+:ref:`migration guide <migration_guide>` for details.
+
 Known Limitations
 =================
 
