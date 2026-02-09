@@ -264,84 +264,66 @@ class ResultPlotAccessor:
         }
         max_members = max(len(m) for m in members_by_cluster.values())
 
-        # Build long-form DataFrame.
-        # Pad every cluster to *max_members* slots (NaN for missing ones)
-        # so that animation frames always have the same trace count.
-        # Pre-allocate arrays to avoid creating many small DataFrames.
+        # Build long-form DataFrame for plotly.
+        # Pad every cluster to max_members so animation frames have equal trace counts.
 
         def _rep_values(cluster_id: int, col: str) -> np.ndarray:
             """Get representative values expanded to full timesteps."""
             rep = representatives.loc[cluster_id]
             if result.n_segments is not None:
                 durations = rep.index.get_level_values("Segment Duration").astype(int)
-                values = np.repeat(rep[col].values, durations)
-                if len(values) != n_ts:
-                    raise ValueError(
-                        f"Segment expansion for cluster {cluster_id} column {col!r} "
-                        f"produced {len(values)} values, expected {n_ts}"
-                    )
-                return values
+                return np.repeat(rep[col].values, durations)
             return rep[col].values  # type: ignore[no-any-return]
 
-        # traces_per_cluster = members (padded to max_members) + 1 representative
-        traces_per_cluster = (max_members + 1) * len(columns)
-        n_total_traces = len(cluster_ids) * traces_per_cluster
-        n_total_rows = n_total_traces * n_ts
+        def _make_trace(
+            values: np.ndarray, col: str, label: str, period: str, role: str
+        ) -> pd.DataFrame:
+            return pd.DataFrame(
+                {
+                    "Timestep": timesteps,
+                    "Value": values,
+                    "Column": col,
+                    "Cluster": label,
+                    "Period": period,
+                    "Role": role,
+                }
+            )
 
-        all_timesteps = np.tile(timesteps, n_total_traces)
-        all_values = np.empty(n_total_rows)
-        all_columns = np.empty(n_total_rows, dtype=object)
-        all_clusters = np.empty(n_total_rows, dtype=object)
-        all_periods = np.empty(n_total_rows, dtype=object)
-        all_roles = np.empty(n_total_rows, dtype=object)
-
-        pos = 0
+        traces: list[pd.DataFrame] = []
         for cid in cluster_ids:
             label = f"Cluster {cid} (n={weights.get(cid, 1)})"
             members = members_by_cluster[cid]
-            n_members = len(members)
 
             for col in columns:
-                # Members: extract all real member rows at once
-                member_block_len = max_members * n_ts
-                if n_members > 0:
-                    real_values = (
-                        unstacked[col].iloc[members].values
-                    )  # (n_members, n_ts)
-                    all_values[pos : pos + n_members * n_ts] = real_values.ravel()
-                # NaN-pad remaining slots for smaller clusters
-                if n_members < max_members:
-                    pad_start = pos + n_members * n_ts
-                    all_values[pad_start : pos + member_block_len] = np.nan
-
-                # Fill metadata arrays for all member slots at once
-                all_columns[pos : pos + member_block_len] = col
-                all_clusters[pos : pos + member_block_len] = label
-                all_roles[pos : pos + member_block_len] = "Member"
-                for slot in range(max_members):
-                    slot_start = pos + slot * n_ts
-                    all_periods[slot_start : slot_start + n_ts] = f"C{cid}_M{slot}"
-                pos += member_block_len
-
+                # Real member traces
+                for slot, period_idx in enumerate(members):
+                    values = unstacked[col].iloc[period_idx].values
+                    traces.append(
+                        _make_trace(values, col, label, f"C{cid}_M{slot}", "Member")
+                    )
+                # NaN-padded traces so all clusters have equal trace count
+                for slot in range(len(members), max_members):
+                    traces.append(
+                        _make_trace(
+                            np.full(n_ts, np.nan),
+                            col,
+                            label,
+                            f"C{cid}_M{slot}",
+                            "Member",
+                        )
+                    )
                 # Representative
-                end = pos + n_ts
-                all_values[pos:end] = _rep_values(cid, col)
-                all_columns[pos:end] = col
-                all_clusters[pos:end] = label
-                all_periods[pos:end] = f"C{cid}_Rep"
-                all_roles[pos:end] = "Representative"
-                pos = end
+                traces.append(
+                    _make_trace(
+                        _rep_values(cid, col),
+                        col,
+                        label,
+                        f"C{cid}_Rep",
+                        "Representative",
+                    )
+                )
 
-        long_df = pd.DataFrame(
-            {
-                "Timestep": all_timesteps,
-                "Value": all_values,
-                "Column": all_columns,
-                "Cluster": all_clusters,
-                "Period": all_periods,
-                "Role": all_roles,
-            }
-        )
+        long_df = pd.concat(traces, ignore_index=True)
 
         # Determine which dimension is animated vs faceted
         if animate not in ("Cluster", "Column"):
