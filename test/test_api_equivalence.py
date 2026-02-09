@@ -10,7 +10,15 @@ import tsam.timeseriesaggregation as old_tsam
 from conftest import TESTDATA_CSV
 
 # New API
-from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
+from tsam import (
+    ClusterConfig,
+    ClusteringResult,
+    Distribution,
+    ExtremeConfig,
+    MinMaxMean,
+    SegmentConfig,
+    aggregate,
+)
 from tsam.tuning import (
     find_clusters_for_reduction,
     find_optimal_combination,
@@ -324,6 +332,200 @@ class TestAggregateEquivalence:
             old_result,
             new_result.cluster_representatives,
             check_names=False,
+        )
+
+
+class TestRepresentationObjects:
+    """Tests for typed representation objects (Distribution, MinMaxMean)."""
+
+    def test_distribution_global_equivalence(self, sample_data):
+        """Test Distribution(scope='global') matches old distributionPeriodWise=False."""
+        old_agg = old_tsam.TimeSeriesAggregation(
+            sample_data,
+            noTypicalPeriods=8,
+            hoursPerPeriod=24,
+            clusterMethod="hierarchical",
+            representationMethod="distributionRepresentation",
+            distributionPeriodWise=False,
+            rescaleClusterPeriods=False,
+        )
+        old_result = old_agg.createTypicalPeriods()
+
+        new_result = aggregate(
+            sample_data,
+            n_clusters=8,
+            preserve_column_means=False,
+            cluster=ClusterConfig(
+                method="hierarchical",
+                representation=Distribution(scope="global"),
+            ),
+        )
+
+        pd.testing.assert_frame_equal(
+            old_result, new_result.cluster_representatives, check_names=False
+        )
+
+    def test_distribution_cluster_equivalence(self, sample_data):
+        """Test Distribution(scope='cluster') matches old distributionPeriodWise=True."""
+        old_agg = old_tsam.TimeSeriesAggregation(
+            sample_data,
+            noTypicalPeriods=8,
+            hoursPerPeriod=24,
+            clusterMethod="hierarchical",
+            representationMethod="distributionRepresentation",
+            distributionPeriodWise=True,
+            rescaleClusterPeriods=False,
+        )
+        old_result = old_agg.createTypicalPeriods()
+
+        new_result = aggregate(
+            sample_data,
+            n_clusters=8,
+            preserve_column_means=False,
+            cluster=ClusterConfig(
+                method="hierarchical",
+                representation=Distribution(scope="cluster"),
+            ),
+        )
+
+        pd.testing.assert_frame_equal(
+            old_result, new_result.cluster_representatives, check_names=False
+        )
+
+    def test_distribution_minmax_global_equivalence(self, sample_data):
+        """Test Distribution(scope='global', preserve_minmax=True) matches old API."""
+        old_agg = old_tsam.TimeSeriesAggregation(
+            sample_data,
+            noTypicalPeriods=8,
+            hoursPerPeriod=24,
+            clusterMethod="hierarchical",
+            representationMethod="distributionAndMinMaxRepresentation",
+            distributionPeriodWise=False,
+            rescaleClusterPeriods=False,
+        )
+        old_result = old_agg.createTypicalPeriods()
+
+        new_result = aggregate(
+            sample_data,
+            n_clusters=8,
+            preserve_column_means=False,
+            cluster=ClusterConfig(
+                method="hierarchical",
+                representation=Distribution(scope="global", preserve_minmax=True),
+            ),
+        )
+
+        pd.testing.assert_frame_equal(
+            old_result, new_result.cluster_representatives, check_names=False
+        )
+
+    def test_minmaxmean_equivalence(self, sample_data):
+        """Test MinMaxMean matches old representationDict."""
+        rep_dict = {"GHI": "max", "T": "min", "Wind": "mean", "Load": "min"}
+        old_agg = old_tsam.TimeSeriesAggregation(
+            sample_data,
+            noTypicalPeriods=8,
+            hoursPerPeriod=24,
+            clusterMethod="hierarchical",
+            representationMethod="minmaxmeanRepresentation",
+            representationDict=rep_dict,
+            rescaleClusterPeriods=False,
+        )
+        old_result = old_agg.createTypicalPeriods()
+
+        new_result = aggregate(
+            sample_data,
+            n_clusters=8,
+            preserve_column_means=False,
+            cluster=ClusterConfig(
+                method="hierarchical",
+                representation=MinMaxMean(
+                    max_columns=["GHI"], min_columns=["T", "Load"]
+                ),
+            ),
+        )
+
+        pd.testing.assert_frame_equal(
+            old_result, new_result.cluster_representatives, check_names=False
+        )
+
+    def test_segment_distribution_global_equivalence(self, sample_data):
+        """Test Distribution(scope='global') for segments matches old API."""
+        old_agg = old_tsam.TimeSeriesAggregation(
+            sample_data,
+            noTypicalPeriods=8,
+            hoursPerPeriod=24,
+            clusterMethod="hierarchical",
+            representationMethod="medoidRepresentation",
+            segmentation=True,
+            noSegments=8,
+            segmentRepresentationMethod="distributionRepresentation",
+            distributionPeriodWise=False,
+            rescaleClusterPeriods=False,
+        )
+        old_result = old_agg.createTypicalPeriods()
+
+        new_result = aggregate(
+            sample_data,
+            n_clusters=8,
+            preserve_column_means=False,
+            cluster=ClusterConfig(method="hierarchical", representation="medoid"),
+            segments=SegmentConfig(
+                n_segments=8, representation=Distribution(scope="global")
+            ),
+        )
+
+        pd.testing.assert_frame_equal(
+            old_result, new_result.cluster_representatives, check_names=False
+        )
+
+    def test_segment_distribution_global_roundtrip(self, sample_data, tmp_path):
+        """Test Distribution(scope='global') segment transfer via JSON roundtrip."""
+        result1 = aggregate(
+            sample_data,
+            n_clusters=8,
+            preserve_column_means=False,
+            cluster=ClusterConfig(method="hierarchical", representation="medoid"),
+            segments=SegmentConfig(
+                n_segments=8, representation=Distribution(scope="global")
+            ),
+        )
+
+        # JSON roundtrip
+        json_path = tmp_path / "clustering.json"
+        result1.clustering.to_json(str(json_path))
+        loaded = ClusteringResult.from_json(str(json_path))
+        result2 = loaded.apply(sample_data)
+
+        pd.testing.assert_frame_equal(
+            result1.cluster_representatives, result2.cluster_representatives
+        )
+
+    def test_representation_object_json_roundtrip(self, sample_data, tmp_path):
+        """Test that typed representation objects survive JSON roundtrip."""
+        result = aggregate(
+            sample_data,
+            n_clusters=8,
+            preserve_column_means=False,
+            cluster=ClusterConfig(
+                method="hierarchical",
+                representation=MinMaxMean(
+                    max_columns=["GHI"], min_columns=["T", "Load"]
+                ),
+            ),
+        )
+
+        json_path = tmp_path / "clustering.json"
+        result.clustering.to_json(str(json_path))
+        loaded = ClusteringResult.from_json(str(json_path))
+
+        assert isinstance(loaded.representation, MinMaxMean)
+        assert loaded.representation.max_columns == ["GHI"]
+        assert loaded.representation.min_columns == ["T", "Load"]
+
+        result2 = loaded.apply(sample_data)
+        pd.testing.assert_frame_equal(
+            result.cluster_representatives, result2.cluster_representatives
         )
 
 

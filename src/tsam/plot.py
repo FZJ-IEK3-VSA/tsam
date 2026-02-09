@@ -8,6 +8,7 @@ Usage:
     >>> result.plot.compare()  # Compare original vs reconstructed
     >>> result.plot.residuals()  # View reconstruction errors
     >>> result.plot.cluster_representatives()
+    >>> result.plot.cluster_members()  # All periods per cluster
     >>> result.plot.cluster_weights()
     >>> result.plot.accuracy()
 
@@ -24,7 +25,7 @@ Install with: pip install tsam[plot]
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -132,6 +133,7 @@ class ResultPlotAccessor:
     >>> result.plot.compare()  # Compare original vs reconstructed
     >>> result.plot.residuals()  # View reconstruction errors
     >>> result.plot.cluster_representatives()
+    >>> result.plot.cluster_members()
     >>> result.plot.cluster_weights()
     """
 
@@ -185,6 +187,260 @@ class ResultPlotAccessor:
             facet_col="Column" if len(columns) > 1 else None,
             title=title,
         )
+
+        return fig
+
+    def cluster_members(
+        self,
+        columns: list[str] | None = None,
+        clusters: list[int] | None = None,
+        animate: str = "Cluster",
+        title: str | None = None,
+    ) -> go.Figure:
+        """Plot all original periods grouped by cluster with representative highlighted.
+
+        Shows individual member periods as faint lines and the cluster
+        representative as a bold line. A slider lets you flip through
+        either clusters or columns.
+
+        Parameters
+        ----------
+        columns : list[str], optional
+            Columns to plot. If None, plots all columns.
+        clusters : list[int], optional
+            Cluster indices to include. If None, includes all clusters.
+        animate : str, default "Cluster"
+            Which dimension to put on the animation slider.
+            The other dimension becomes ``facet_col``.
+
+            - ``"Cluster"``: slider flips through clusters, columns are facets.
+            - ``"Column"``: slider flips through columns, clusters are facets.
+        title : str, optional
+            Plot title. Defaults to "Cluster Members".
+
+        Returns
+        -------
+        go.Figure
+
+        Examples
+        --------
+        >>> result.plot.cluster_members(columns=["Load"])
+        >>> result.plot.cluster_members(clusters=[0, 3])  # specific clusters
+        >>> result.plot.cluster_members(animate="Column")  # flip through columns
+        """
+        from plotly.subplots import make_subplots
+
+        from tsam.api import unstack_to_periods
+
+        result = self._result
+        columns = _validate_columns(
+            columns, list(result.original.columns), "original data"
+        )
+        n_ts = result.n_timesteps_per_period
+        idx = result.original.index
+        if isinstance(idx, pd.DatetimeIndex) and len(idx) > 1:
+            timestep_hours = (idx[1] - idx[0]).total_seconds() / 3600
+        else:
+            timestep_hours = 1.0
+        unstacked = unstack_to_periods(result.original, n_ts * timestep_hours)
+        assignments = result.cluster_assignments
+        representatives = result.cluster_representatives
+        weights = result.cluster_weights
+        timesteps = np.arange(n_ts)
+
+        all_cluster_ids = sorted(set(assignments))
+        if clusters is not None:
+            invalid = [c for c in clusters if c not in all_cluster_ids]
+            if invalid:
+                warnings.warn(
+                    f"Cluster indices not found and will be ignored: {invalid}. "
+                    f"Available clusters: {all_cluster_ids}",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            cluster_ids = [c for c in clusters if c in all_cluster_ids]
+            if not cluster_ids:
+                raise ValueError(
+                    f"None of the requested clusters {clusters} exist. "
+                    f"Available clusters: {all_cluster_ids}"
+                )
+        else:
+            cluster_ids = all_cluster_ids
+        members_by_cluster = {
+            cid: np.where(assignments == cid)[0] for cid in cluster_ids
+        }
+
+        def _rep_values(cluster_id: int, col: str) -> np.ndarray:
+            """Get representative values expanded to full timesteps."""
+            rep = representatives.loc[cluster_id]
+            if result.n_segments is not None:
+                durations = rep.index.get_level_values("Segment Duration").astype(int)
+                return np.repeat(rep[col].values, durations)
+            return rep[col].values  # type: ignore[no-any-return]
+
+        if animate not in ("Cluster", "Column"):
+            raise ValueError(f"animate must be 'Cluster' or 'Column', got {animate!r}")
+
+        # Pre-extract member data as numpy arrays for fast access.
+        # member_arrays[cid][col] = 2D array (n_members, n_ts)
+        member_arrays: dict[int, dict[str, np.ndarray]] = {}
+        for cid in cluster_ids:
+            members = members_by_cluster[cid]
+            member_arrays[cid] = {
+                col: np.asarray(unstacked[col].iloc[members].values) for col in columns
+            }
+
+        cluster_labels = {
+            cid: f"Cluster {cid} (n={weights.get(cid, 1)})" for cid in cluster_ids
+        }
+
+        # Determine which dimension is animated vs faceted.
+        anim_keys: list[int | str]
+        if animate == "Cluster":
+            anim_keys = list(cluster_ids)
+            anim_labels = [cluster_labels[c] for c in cluster_ids]
+            facet_labels = columns
+        else:
+            anim_keys = list(columns)
+            anim_labels = list(columns)
+            facet_labels = [cluster_labels[c] for c in cluster_ids]
+
+        n_facets = len(facet_labels)
+        traces_per_facet = 2  # one bundled member trace + one representative
+        MEMBER = {"color": "rgba(99, 110, 250, 0.3)"}
+        REP = {"color": "#EF553B", "width": 3}
+
+        # Precompute NaN-separated x-arrays (one per unique member count).
+        # Each member's timesteps are separated by a NaN to break the line.
+        _member_x: dict[int, np.ndarray] = {}
+        for cid in cluster_ids:
+            n_m = len(members_by_cluster[cid])
+            if n_m not in _member_x:
+                tile = np.empty(n_ts + 1)
+                tile[:n_ts] = timesteps
+                tile[n_ts] = np.nan
+                _member_x[n_m] = np.tile(tile, n_m)[:-1]
+
+        def _member_y(cid: int, col: str) -> np.ndarray:
+            """All members as NaN-separated y-values (vectorized)."""
+            data = member_arrays[cid][col]  # (n_members, n_ts)
+            padded = np.column_stack([data, np.full(data.shape[0], np.nan)])
+            return padded.ravel()[:-1]
+
+        def _frame_traces(anim_key: int | str) -> list[go.Scatter]:
+            """Build Scatter traces for one animation frame."""
+            out: list[go.Scatter] = []
+            first_member = True
+            first_rep = True
+            for facet_idx in range(n_facets):
+                if animate == "Cluster":
+                    cid, col = cast("int", anim_key), columns[facet_idx]
+                else:
+                    cid, col = cluster_ids[facet_idx], cast("str", anim_key)
+
+                n_m = len(members_by_cluster[cid])
+                out.append(
+                    go.Scatter(
+                        x=_member_x[n_m],
+                        y=_member_y(cid, col),
+                        mode="lines",
+                        line=MEMBER,
+                        name="Member",
+                        legendgroup="Member",
+                        showlegend=first_member,
+                    )
+                )
+                first_member = False
+
+                out.append(
+                    go.Scatter(
+                        x=timesteps,
+                        y=_rep_values(cid, col),
+                        mode="lines",
+                        line=REP,
+                        name="Representative",
+                        legendgroup="Representative",
+                        showlegend=first_rep,
+                    )
+                )
+                first_rep = False
+
+            return out
+
+        # Build figure with subplots for facets.
+        if n_facets > 1:
+            fig = make_subplots(rows=1, cols=n_facets, subplot_titles=facet_labels)
+        else:
+            fig = go.Figure()
+
+        # Initial traces (first animation frame).
+        initial = _frame_traces(anim_keys[0])
+        if n_facets > 1:
+            rows = [1] * len(initial)
+            cols_idx = [i // traces_per_facet + 1 for i in range(len(initial))]
+            fig.add_traces(initial, rows=rows, cols=cols_idx)
+        else:
+            fig.add_traces(initial)
+
+        # Animation frames.
+        fig.frames = [
+            go.Frame(data=_frame_traces(key), name=label)
+            for key, label in zip(anim_keys, anim_labels)
+        ]
+
+        # Slider.
+        steps = [
+            {
+                "args": [
+                    [f.name],
+                    {
+                        "frame": {"duration": 0, "redraw": True},
+                        "mode": "immediate",
+                    },
+                ],
+                "label": f.name,
+                "method": "animate",
+            }
+            for f in fig.frames
+        ]
+        fig.update_layout(
+            sliders=[{"active": 0, "steps": steps}],
+            title=title or "Cluster Members",
+        )
+
+        # Y-axis scaling.
+        if animate == "Cluster":
+            # Facets are columns (different units) — independent y-axes,
+            # fixed across all cluster frames.
+            if n_facets > 1:
+                fig.update_yaxes(matches=None, showticklabels=True)
+            for i, col in enumerate(columns):
+                vals = np.concatenate(
+                    [member_arrays[cid][col].ravel() for cid in cluster_ids]
+                )
+                ymin, ymax = float(np.nanmin(vals)), float(np.nanmax(vals))
+                margin = (ymax - ymin) * 0.05
+                key = "yaxis" if i == 0 else f"yaxis{i + 1}"
+                fig.layout[key].range = [ymin - margin, ymax + margin]
+        else:
+            # Facets are clusters (same column) — y-axis range adapts per
+            # column frame.
+            for frame_idx, col in enumerate(columns):
+                vals = np.concatenate(
+                    [member_arrays[cid][col].ravel() for cid in cluster_ids]
+                )
+                ymin, ymax = float(np.nanmin(vals)), float(np.nanmax(vals))
+                margin = (ymax - ymin) * 0.05
+                n_axes = max(n_facets, 1)
+                axis_ranges = {}
+                for i in range(n_axes):
+                    key = "yaxis" if i == 0 else f"yaxis{i + 1}"
+                    axis_ranges[key] = {"range": [ymin - margin, ymax + margin]}
+                fig.frames[frame_idx].layout = go.Layout(**axis_ranges)
+            if fig.frames:
+                for key, val in fig.frames[0].layout.to_plotly_json().items():
+                    if key.startswith("yaxis"):
+                        fig.layout[key].range = val["range"]
 
         return fig
 
