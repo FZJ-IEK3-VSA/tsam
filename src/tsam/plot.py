@@ -339,6 +339,20 @@ class ResultPlotAccessor:
                 elif trace.name == "Representative":
                     trace.line = {"width": 3}
 
+        # Independent y-axes per column, fixed to global min/max across clusters
+        if len(columns) > 1:
+            fig.update_yaxes(matches=None, showticklabels=True)
+            for i, col in enumerate(columns):
+                col_data = long_df.loc[long_df["Column"] == col, "Value"]
+                ymin, ymax = col_data.min(), col_data.max()
+                margin = (ymax - ymin) * 0.05
+                axis_key = "yaxis" if i == 0 else f"yaxis{i + 1}"
+                fig.layout[axis_key].range = [ymin - margin, ymax + margin]
+        else:
+            ymin, ymax = long_df["Value"].min(), long_df["Value"].max()
+            margin = (ymax - ymin) * 0.05
+            fig.update_yaxes(range=[ymin - margin, ymax + margin])
+
         return fig
 
     def cluster_weights(self, title: str = "Cluster Weights") -> go.Figure:
