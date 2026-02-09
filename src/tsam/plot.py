@@ -25,7 +25,7 @@ Install with: pip install tsam[plot]
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -228,6 +228,8 @@ class ResultPlotAccessor:
         >>> result.plot.cluster_members(clusters=[0, 3])  # specific clusters
         >>> result.plot.cluster_members(animate="Column")  # flip through columns
         """
+        from plotly.subplots import make_subplots
+
         from tsam.api import unstack_to_periods
 
         result = self._result
@@ -266,9 +268,6 @@ class ResultPlotAccessor:
         }
         max_members = max(len(m) for m in members_by_cluster.values())
 
-        # Build long-form DataFrame for plotly.
-        # Pad every cluster to max_members so animation frames have equal trace counts.
-
         def _rep_values(cluster_id: int, col: str) -> np.ndarray:
             """Get representative values expanded to full timesteps."""
             rep = representatives.loc[cluster_id]
@@ -277,121 +276,170 @@ class ResultPlotAccessor:
                 return np.repeat(rep[col].values, durations)
             return rep[col].values  # type: ignore[no-any-return]
 
-        def _make_trace(
-            values: np.ndarray, col: str, label: str, period: str, role: str
-        ) -> pd.DataFrame:
-            return pd.DataFrame(
-                {
-                    "Timestep": timesteps,
-                    "Value": values,
-                    "Column": col,
-                    "Cluster": label,
-                    "Period": period,
-                    "Role": role,
-                }
-            )
-
-        traces: list[pd.DataFrame] = []
-        for cid in cluster_ids:
-            label = f"Cluster {cid} (n={weights.get(cid, 1)})"
-            members = members_by_cluster[cid]
-
-            for col in columns:
-                # Member traces (NaN-padded so all clusters have equal trace count)
-                for slot in range(max_members):
-                    if slot < len(members):
-                        values = unstacked[col].iloc[members[slot]].values
-                    else:
-                        values = np.full(n_ts, np.nan)
-                    traces.append(
-                        _make_trace(values, col, label, f"C{cid}_M{slot}", "Member")
-                    )
-                # Representative
-                traces.append(
-                    _make_trace(
-                        _rep_values(cid, col),
-                        col,
-                        label,
-                        f"C{cid}_Rep",
-                        "Representative",
-                    )
-                )
-
-        long_df = pd.concat(traces, ignore_index=True)
-
-        # Determine which dimension is animated vs faceted
         if animate not in ("Cluster", "Column"):
             raise ValueError(f"animate must be 'Cluster' or 'Column', got {animate!r}")
-        if animate == "Column":
-            anim, facet = "Column", "Cluster"
+
+        # Pre-extract member data as numpy arrays for fast access.
+        # member_arrays[cid][col] = 2D array (n_members, n_ts)
+        member_arrays: dict[int, dict[str, np.ndarray]] = {}
+        for cid in cluster_ids:
+            members = members_by_cluster[cid]
+            member_arrays[cid] = {
+                col: np.asarray(unstacked[col].iloc[members].values) for col in columns
+            }
+
+        cluster_labels = {
+            cid: f"Cluster {cid} (n={weights.get(cid, 1)})" for cid in cluster_ids
+        }
+
+        # Determine which dimension is animated vs faceted.
+        anim_keys: list[int | str]
+        if animate == "Cluster":
+            anim_keys = list(cluster_ids)
+            anim_labels = [cluster_labels[c] for c in cluster_ids]
+            facet_labels = columns
         else:
-            anim, facet = "Cluster", "Column"
+            anim_keys = list(columns)
+            anim_labels = list(columns)
+            facet_labels = [cluster_labels[c] for c in cluster_ids]
 
-        n_facets = long_df[facet].nunique()
+        n_facets = len(facet_labels)
+        traces_per_facet = max_members + 1
+        MEMBER = {"color": "#636EFA"}
+        REP = {"color": "#EF553B", "width": 3}
+        EMPTY_X: list[int] = []
+        EMPTY_Y: list[float] = []
 
-        fig = px.line(
-            long_df,
-            x="Timestep",
-            y="Value",
-            color="Role",
-            line_group="Period",
-            animation_frame=anim,
-            facet_col=facet if n_facets > 1 else None,
+        def _frame_traces(anim_key: int | str) -> list[go.Scatter]:
+            """Build Scatter traces for one animation frame."""
+            out: list[go.Scatter] = []
+            first_member = True
+            first_rep = True
+            for facet_idx in range(n_facets):
+                if animate == "Cluster":
+                    cid, col = cast("int", anim_key), columns[facet_idx]
+                else:
+                    cid, col = cluster_ids[facet_idx], cast("str", anim_key)
+
+                data = member_arrays[cid][col]
+                n_members = data.shape[0]
+
+                for slot in range(max_members):
+                    if slot < n_members:
+                        out.append(
+                            go.Scatter(
+                                x=timesteps,
+                                y=data[slot],
+                                mode="lines",
+                                line=MEMBER,
+                                opacity=0.3,
+                                name="Member",
+                                legendgroup="Member",
+                                showlegend=first_member,
+                            )
+                        )
+                        first_member = False
+                    else:
+                        out.append(
+                            go.Scatter(
+                                x=EMPTY_X,
+                                y=EMPTY_Y,
+                                mode="lines",
+                                line=MEMBER,
+                                opacity=0.3,
+                                name="Member",
+                                legendgroup="Member",
+                                showlegend=False,
+                            )
+                        )
+
+                out.append(
+                    go.Scatter(
+                        x=timesteps,
+                        y=_rep_values(cid, col),
+                        mode="lines",
+                        line=REP,
+                        name="Representative",
+                        legendgroup="Representative",
+                        showlegend=first_rep,
+                    )
+                )
+                first_rep = False
+
+            return out
+
+        # Build figure with subplots for facets.
+        if n_facets > 1:
+            fig = make_subplots(rows=1, cols=n_facets, subplot_titles=facet_labels)
+        else:
+            fig = go.Figure()
+
+        # Initial traces (first animation frame).
+        for i, trace in enumerate(_frame_traces(anim_keys[0])):
+            if n_facets > 1:
+                fig.add_trace(trace, row=1, col=i // traces_per_facet + 1)
+            else:
+                fig.add_trace(trace)
+
+        # Animation frames.
+        fig.frames = [
+            go.Frame(data=_frame_traces(key), name=label)
+            for key, label in zip(anim_keys, anim_labels)
+        ]
+
+        # Slider.
+        steps = [
+            {
+                "args": [
+                    [f.name],
+                    {
+                        "frame": {"duration": 0, "redraw": True},
+                        "mode": "immediate",
+                    },
+                ],
+                "label": f.name,
+                "method": "animate",
+            }
+            for f in fig.frames
+        ]
+        fig.update_layout(
+            sliders=[{"active": 0, "steps": steps}],
             title=title or "Cluster Members",
         )
 
-        # Style: members faint, representative bold
-        fig.update_traces(selector={"name": "Member"}, opacity=0.3)
-        fig.update_traces(selector={"name": "Representative"}, line={"width": 3})
-        for frame in fig.frames:
-            for trace in frame.data:
-                if trace.name == "Member":
-                    trace.opacity = 0.3
-                elif trace.name == "Representative":
-                    trace.line = {"width": 3}
-
-        # Y-axis scaling depends on which dimension is animated.
+        # Y-axis scaling.
         if animate == "Cluster":
-            # Facets are columns (different units) — each needs its own y-axis
-            # with tick labels, fixed across all cluster frames.
+            # Facets are columns (different units) — independent y-axes,
+            # fixed across all cluster frames.
             if n_facets > 1:
                 fig.update_yaxes(matches=None, showticklabels=True)
-                for i, col in enumerate(long_df["Column"].unique()):
-                    col_data = long_df.loc[long_df["Column"] == col, "Value"].dropna()
-                    ymin, ymax = col_data.min(), col_data.max()
-                    margin = (ymax - ymin) * 0.05
-                    key = "yaxis" if i == 0 else f"yaxis{i + 1}"
-                    fig.layout[key].range = [ymin - margin, ymax + margin]
-            else:
-                ymin, ymax = (
-                    long_df["Value"].dropna().min(),
-                    long_df["Value"].dropna().max(),
+            for i, col in enumerate(columns):
+                vals = np.concatenate(
+                    [member_arrays[cid][col].ravel() for cid in cluster_ids]
                 )
+                ymin, ymax = float(np.nanmin(vals)), float(np.nanmax(vals))
                 margin = (ymax - ymin) * 0.05
-                fig.update_yaxes(range=[ymin - margin, ymax + margin])
+                key = "yaxis" if i == 0 else f"yaxis{i + 1}"
+                fig.layout[key].range = [ymin - margin, ymax + margin]
         else:
-            # Facets are clusters (same column) — shared y-axis,
-            # range adapts per column frame. Tick labels only on left.
-            for frame in fig.frames:
-                frame_data = long_df[long_df[anim] == frame.name]
-                ymin, ymax = (
-                    frame_data["Value"].dropna().min(),
-                    frame_data["Value"].dropna().max(),
+            # Facets are clusters (same column) — y-axis range adapts per
+            # column frame.
+            for frame_idx, col in enumerate(columns):
+                vals = np.concatenate(
+                    [member_arrays[cid][col].ravel() for cid in cluster_ids]
                 )
+                ymin, ymax = float(np.nanmin(vals)), float(np.nanmax(vals))
                 margin = (ymax - ymin) * 0.05
-                n_axes = n_facets if n_facets > 1 else 1
+                n_axes = max(n_facets, 1)
                 axis_ranges = {}
                 for i in range(n_axes):
                     key = "yaxis" if i == 0 else f"yaxis{i + 1}"
                     axis_ranges[key] = {"range": [ymin - margin, ymax + margin]}
-                frame.layout = go.Layout(**axis_ranges)
+                fig.frames[frame_idx].layout = go.Layout(**axis_ranges)
             if fig.frames:
                 for key, val in fig.frames[0].layout.to_plotly_json().items():
                     if key.startswith("yaxis"):
                         fig.layout[key].range = val["range"]
-
-        # Strip "Column=" / "Cluster=" prefix from facet subplot titles
-        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=", 1)[-1]))
 
         return fig
 
