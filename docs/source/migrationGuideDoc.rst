@@ -330,6 +330,15 @@ Default changes
      - 10
      - *required*
      - Code that relied on the default must now pass a value explicitly.
+   * - ``SegmentConfig(representation=...)``
+     - Inherited from ``representationMethod``
+     - ``"mean"``
+     - In v2, omitting ``segmentRepresentationMethod`` caused segments to
+       inherit the cluster representation (e.g. distribution). In v3,
+       ``SegmentConfig`` always defaults to ``"mean"``. If you relied on
+       the implicit inheritance, pass the representation explicitly::
+
+           SegmentConfig(n_segments=12, representation=Distribution(scope="global"))
 
 ***********************
 Accessing results

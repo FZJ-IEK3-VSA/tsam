@@ -17,6 +17,11 @@ Breaking Changes
 
 * **New functional API**: The primary interface is now ``tsam.aggregate()`` which returns an ``AggregationResult`` object
 * **Configuration objects**: Clustering and segmentation options are now configured via ``ClusterConfig``, ``SegmentConfig``, and ``ExtremeConfig`` dataclasses
+* **Segment representation default**: In v2, omitting ``segmentRepresentationMethod`` caused segments
+  to silently inherit the cluster ``representationMethod`` (e.g. distribution). In v3,
+  ``SegmentConfig(representation=...)`` defaults to ``"mean"`` independently. If you relied on the
+  implicit inheritance, pass the representation explicitly:
+  ``SegmentConfig(n_segments=12, representation=Distribution(scope="global"))``
 * **Removed methods**: The ``reconstruct()`` method has been removed; use the ``reconstructed`` property on ``AggregationResult`` instead
 * **Renamed parameters**: Parameters have been renamed for consistency:
 
