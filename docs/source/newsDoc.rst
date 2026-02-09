@@ -92,6 +92,8 @@ Improvements
 Bug Fixes
 =========
 
+These bugs existed in v2.3.9:
+
 * Fixed rescaling with segmentation (was applying rescaling twice)
 * Fixed ``predictOriginalData()`` denormalization when using ``sameMean=True`` with segmentation
 * Fixed segment label ordering bug: ``AgglomerativeClustering`` produces arbitrary cluster labels,
@@ -100,7 +102,7 @@ Bug Fixes
   relabelled to temporal order after ``fit_predict()``.
 * Fixed non-deterministic sorting in ``durationRepresentation()`` across both code paths
   by using ``kind="stable"`` and ``np.round(mean, 10)`` before ``argsort``, ensuring
-  identical tie-breaking across platforms. Verified against tsam v2.3.9 golden baselines.
+  identical tie-breaking across platforms.
 
 Result consistency
 ==================
