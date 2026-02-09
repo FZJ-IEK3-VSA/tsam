@@ -238,7 +238,10 @@ class ResultPlotAccessor:
         )
         n_ts = result.n_timesteps_per_period
         idx = result.original.index
-        timestep_hours = (idx[1] - idx[0]).total_seconds() / 3600
+        if isinstance(idx, pd.DatetimeIndex) and len(idx) > 1:
+            timestep_hours = (idx[1] - idx[0]).total_seconds() / 3600
+        else:
+            timestep_hours = 1.0
         unstacked = unstack_to_periods(result.original, n_ts * timestep_hours)
         assignments = result.cluster_assignments
         representatives = result.cluster_representatives
@@ -266,7 +269,6 @@ class ResultPlotAccessor:
         members_by_cluster = {
             cid: np.where(assignments == cid)[0] for cid in cluster_ids
         }
-        max_members = max(len(m) for m in members_by_cluster.values())
 
         def _rep_values(cluster_id: int, col: str) -> np.ndarray:
             """Get representative values expanded to full timesteps."""
@@ -304,11 +306,26 @@ class ResultPlotAccessor:
             facet_labels = [cluster_labels[c] for c in cluster_ids]
 
         n_facets = len(facet_labels)
-        traces_per_facet = max_members + 1
+        traces_per_facet = 2  # one bundled member trace + one representative
         MEMBER = {"color": "#636EFA"}
         REP = {"color": "#EF553B", "width": 3}
-        EMPTY_X: list[int] = []
-        EMPTY_Y: list[float] = []
+
+        # Precompute NaN-separated x-arrays (one per unique member count).
+        # Each member's timesteps are separated by a NaN to break the line.
+        _member_x: dict[int, np.ndarray] = {}
+        for cid in cluster_ids:
+            n_m = len(members_by_cluster[cid])
+            if n_m not in _member_x:
+                tile = np.empty(n_ts + 1)
+                tile[:n_ts] = timesteps
+                tile[n_ts] = np.nan
+                _member_x[n_m] = np.tile(tile, n_m)[:-1]
+
+        def _member_y(cid: int, col: str) -> np.ndarray:
+            """All members as NaN-separated y-values (vectorized)."""
+            data = member_arrays[cid][col]  # (n_members, n_ts)
+            padded = np.column_stack([data, np.full(data.shape[0], np.nan)])
+            return padded.ravel()[:-1]
 
         def _frame_traces(anim_key: int | str) -> list[go.Scatter]:
             """Build Scatter traces for one animation frame."""
@@ -321,37 +338,20 @@ class ResultPlotAccessor:
                 else:
                     cid, col = cluster_ids[facet_idx], cast("str", anim_key)
 
-                data = member_arrays[cid][col]
-                n_members = data.shape[0]
-
-                for slot in range(max_members):
-                    if slot < n_members:
-                        out.append(
-                            go.Scatter(
-                                x=timesteps,
-                                y=data[slot],
-                                mode="lines",
-                                line=MEMBER,
-                                opacity=0.3,
-                                name="Member",
-                                legendgroup="Member",
-                                showlegend=first_member,
-                            )
-                        )
-                        first_member = False
-                    else:
-                        out.append(
-                            go.Scatter(
-                                x=EMPTY_X,
-                                y=EMPTY_Y,
-                                mode="lines",
-                                line=MEMBER,
-                                opacity=0.3,
-                                name="Member",
-                                legendgroup="Member",
-                                showlegend=False,
-                            )
-                        )
+                n_m = len(members_by_cluster[cid])
+                out.append(
+                    go.Scatter(
+                        x=_member_x[n_m],
+                        y=_member_y(cid, col),
+                        mode="lines",
+                        line=MEMBER,
+                        opacity=0.3,
+                        name="Member",
+                        legendgroup="Member",
+                        showlegend=first_member,
+                    )
+                )
+                first_member = False
 
                 out.append(
                     go.Scatter(
@@ -375,11 +375,13 @@ class ResultPlotAccessor:
             fig = go.Figure()
 
         # Initial traces (first animation frame).
-        for i, trace in enumerate(_frame_traces(anim_keys[0])):
-            if n_facets > 1:
-                fig.add_trace(trace, row=1, col=i // traces_per_facet + 1)
-            else:
-                fig.add_trace(trace)
+        initial = _frame_traces(anim_keys[0])
+        if n_facets > 1:
+            rows = [1] * len(initial)
+            cols_idx = [i // traces_per_facet + 1 for i in range(len(initial))]
+            fig.add_traces(initial, rows=rows, cols=cols_idx)
+        else:
+            fig.add_traces(initial)
 
         # Animation frames.
         fig.frames = [
