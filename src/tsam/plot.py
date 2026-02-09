@@ -234,11 +234,13 @@ class ResultPlotAccessor:
         columns = _validate_columns(
             columns, list(result.original.columns), "original data"
         )
-        unstacked = unstack_to_periods(result.original, result.n_timesteps_per_period)
+        n_ts = result.n_timesteps_per_period
+        idx = result.original.index
+        timestep_hours = (idx[1] - idx[0]).total_seconds() / 3600
+        unstacked = unstack_to_periods(result.original, n_ts * timestep_hours)
         assignments = result.cluster_assignments
         representatives = result.cluster_representatives
         weights = result.cluster_weights
-        n_ts = result.n_timesteps_per_period
         timesteps = np.arange(n_ts)
 
         all_cluster_ids = sorted(set(assignments))
