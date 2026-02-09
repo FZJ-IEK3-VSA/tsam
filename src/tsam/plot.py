@@ -193,18 +193,25 @@ class ResultPlotAccessor:
     def cluster_members(
         self,
         columns: list[str] | None = None,
+        animate: str = "Cluster",
         title: str | None = None,
     ) -> go.Figure:
         """Plot all original periods grouped by cluster with representative highlighted.
 
         Shows individual member periods as faint lines and the cluster
-        representative as a bold line. An animation slider lets you flip
-        through clusters.
+        representative as a bold line. A slider lets you flip through
+        either clusters or columns.
 
         Parameters
         ----------
         columns : list[str], optional
             Columns to plot. If None, plots all columns.
+        animate : str, default "Cluster"
+            Which dimension to put on the animation slider.
+            The other dimension becomes ``facet_col``.
+
+            - ``"Cluster"``: slider flips through clusters, columns are facets.
+            - ``"Column"``: slider flips through columns, clusters are facets.
         title : str, optional
             Plot title. Defaults to "Cluster Members".
 
@@ -216,107 +223,88 @@ class ResultPlotAccessor:
         --------
         >>> result.plot.cluster_members(columns=["Load"])
         >>> result.plot.cluster_members()  # all columns
+        >>> result.plot.cluster_members(animate="Column")  # flip through columns
         """
         from tsam.api import unstack_to_periods
 
         result = self._result
-        orig = result.original
-        available_columns = list(orig.columns)
-        columns = _validate_columns(columns, available_columns, "original data")
-
-        # Unstack original data into periods: MultiIndex columns (col, timestep)
-        unstacked = unstack_to_periods(orig, result.n_timesteps_per_period)
-
+        columns = _validate_columns(
+            columns, list(result.original.columns), "original data"
+        )
+        unstacked = unstack_to_periods(result.original, result.n_timesteps_per_period)
         assignments = result.cluster_assignments
         representatives = result.cluster_representatives
         weights = result.cluster_weights
-        n_timesteps = result.n_timesteps_per_period
+        n_ts = result.n_timesteps_per_period
+        timesteps = np.arange(n_ts)
 
-        # Group period indices by cluster
         cluster_ids = sorted(set(assignments))
-        members_per_cluster = {
+        members_by_cluster = {
             cid: np.where(assignments == cid)[0] for cid in cluster_ids
         }
-        max_members = max(len(m) for m in members_per_cluster.values())
+        max_members = max(len(m) for m in members_by_cluster.values())
 
-        # Build long-form DataFrame with consistent line_group slots
-        # across all clusters so animation frames have equal trace counts.
-        # Pad smaller clusters with NaN so those traces draw nothing.
-        dfs: list[pd.DataFrame] = []
-        timesteps = np.arange(n_timesteps)
+        # Build long-form DataFrame.
+        # Pad every cluster to *max_members* slots (NaN for missing ones)
+        # so that animation frames always have the same trace count.
+        rows: list[pd.DataFrame] = []
 
-        for cluster_id in cluster_ids:
-            cluster_label = f"Cluster {cluster_id} (n={weights.get(cluster_id, 0)})"
-            member_indices = members_per_cluster[cluster_id]
-
-            for slot in range(max_members):
-                if slot < len(member_indices):
-                    period_idx = member_indices[slot]
-                    for col in columns:
-                        values = unstacked.loc[period_idx, col].values
-                        dfs.append(
-                            pd.DataFrame(
-                                {
-                                    "Timestep": timesteps,
-                                    "Value": values,
-                                    "Column": col,
-                                    "Cluster": cluster_label,
-                                    "Period": f"M{slot}_{col}",
-                                    "Role": "Member",
-                                }
-                            )
-                        )
-                else:
-                    # Pad with NaN so every frame has the same trace count
-                    for col in columns:
-                        dfs.append(
-                            pd.DataFrame(
-                                {
-                                    "Timestep": timesteps,
-                                    "Value": np.nan,
-                                    "Column": col,
-                                    "Cluster": cluster_label,
-                                    "Period": f"M{slot}_{col}",
-                                    "Role": "Member",
-                                }
-                            )
-                        )
-
-            # Representative period — expand segments to full timesteps
-            rep_data = representatives.loc[cluster_id]
+        def _rep_values(cluster_id: int, col: str) -> np.ndarray:
+            """Get representative values expanded to full timesteps."""
+            rep = representatives.loc[cluster_id]
             if result.n_segments is not None:
-                # Segmented: index is (Segment Step, Segment Duration)
-                durations = rep_data.index.get_level_values("Segment Duration")
-                for col in columns:
-                    values = np.repeat(rep_data[col].values, durations)
-                    dfs.append(
+                durations = rep.index.get_level_values("Segment Duration")
+                return np.repeat(rep[col].values, durations)
+            return rep[col].values  # type: ignore[no-any-return]
+
+        for cid in cluster_ids:
+            label = f"Cluster {cid} (n={weights.get(cid, 0)})"
+            members = members_by_cluster[cid]
+
+            for col in columns:
+                # Members (with NaN-padding for smaller clusters)
+                for slot in range(max_members):
+                    values = (
+                        unstacked.loc[members[slot], col].values
+                        if slot < len(members)
+                        else np.full(n_ts, np.nan)
+                    )
+                    rows.append(
                         pd.DataFrame(
                             {
                                 "Timestep": timesteps,
                                 "Value": values,
                                 "Column": col,
-                                "Cluster": cluster_label,
-                                "Period": f"Rep_{col}",
-                                "Role": "Representative",
-                            }
-                        )
-                    )
-            else:
-                for col in columns:
-                    dfs.append(
-                        pd.DataFrame(
-                            {
-                                "Timestep": timesteps,
-                                "Value": rep_data[col].values,
-                                "Column": col,
-                                "Cluster": cluster_label,
-                                "Period": f"Rep_{col}",
-                                "Role": "Representative",
+                                "Cluster": label,
+                                "Period": f"C{cid}_M{slot}",
+                                "Role": "Member",
                             }
                         )
                     )
 
-        long_df = pd.concat(dfs, ignore_index=True)
+                # Representative
+                rows.append(
+                    pd.DataFrame(
+                        {
+                            "Timestep": timesteps,
+                            "Value": _rep_values(cid, col),
+                            "Column": col,
+                            "Cluster": label,
+                            "Period": f"C{cid}_Rep",
+                            "Role": "Representative",
+                        }
+                    )
+                )
+
+        long_df = pd.concat(rows, ignore_index=True)
+
+        # Determine which dimension is animated vs faceted
+        if animate == "Column":
+            anim, facet = "Column", "Cluster"
+        else:
+            anim, facet = "Cluster", "Column"
+
+        n_facets = long_df[facet].nunique()
 
         fig = px.line(
             long_df,
@@ -324,8 +312,8 @@ class ResultPlotAccessor:
             y="Value",
             color="Role",
             line_group="Period",
-            facet_col="Column" if len(columns) > 1 else None,
-            animation_frame="Cluster",
+            animation_frame=anim,
+            facet_col=facet if n_facets > 1 else None,
             title=title or "Cluster Members",
         )
 
@@ -339,19 +327,39 @@ class ResultPlotAccessor:
                 elif trace.name == "Representative":
                     trace.line = {"width": 3}
 
-        # Independent y-axes per column, fixed to global min/max across clusters
-        if len(columns) > 1:
-            fig.update_yaxes(matches=None, showticklabels=True)
-            for i, col in enumerate(columns):
-                col_data = long_df.loc[long_df["Column"] == col, "Value"]
-                ymin, ymax = col_data.min(), col_data.max()
+        # Y-axis scaling depends on which dimension is animated.
+        if animate == "Cluster":
+            # Facets are columns (different units) — each needs its own y-axis
+            # with tick labels, fixed across all cluster frames.
+            if n_facets > 1:
+                fig.update_yaxes(matches=None, showticklabels=True)
+                for i, col in enumerate(long_df["Column"].unique()):
+                    col_data = long_df.loc[long_df["Column"] == col, "Value"]
+                    ymin, ymax = col_data.min(), col_data.max()
+                    margin = (ymax - ymin) * 0.05
+                    key = "yaxis" if i == 0 else f"yaxis{i + 1}"
+                    fig.layout[key].range = [ymin - margin, ymax + margin]
+            else:
+                ymin, ymax = long_df["Value"].min(), long_df["Value"].max()
                 margin = (ymax - ymin) * 0.05
-                axis_key = "yaxis" if i == 0 else f"yaxis{i + 1}"
-                fig.layout[axis_key].range = [ymin - margin, ymax + margin]
+                fig.update_yaxes(range=[ymin - margin, ymax + margin])
         else:
-            ymin, ymax = long_df["Value"].min(), long_df["Value"].max()
-            margin = (ymax - ymin) * 0.05
-            fig.update_yaxes(range=[ymin - margin, ymax + margin])
+            # Facets are clusters (same column) — shared y-axis,
+            # range adapts per column frame. Tick labels only on left.
+            for frame in fig.frames:
+                frame_data = long_df[long_df[anim] == frame.name]
+                ymin, ymax = frame_data["Value"].min(), frame_data["Value"].max()
+                margin = (ymax - ymin) * 0.05
+                n_axes = n_facets if n_facets > 1 else 1
+                axis_ranges = {}
+                for i in range(n_axes):
+                    key = "yaxis" if i == 0 else f"yaxis{i + 1}"
+                    axis_ranges[key] = {"range": [ymin - margin, ymax + margin]}
+                frame.layout = go.Layout(**axis_ranges)
+            if fig.frames:
+                for key, val in fig.frames[0].layout.to_plotly_json().items():
+                    if key.startswith("yaxis"):
+                        fig.layout[key].range = val["range"]
 
         return fig
 
