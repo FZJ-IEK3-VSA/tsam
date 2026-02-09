@@ -273,7 +273,7 @@ class ResultPlotAccessor:
             """Get representative values expanded to full timesteps."""
             rep = representatives.loc[cluster_id]
             if result.n_segments is not None:
-                durations = rep.index.get_level_values("Segment Duration")
+                durations = rep.index.get_level_values("Segment Duration").astype(int)
                 values = np.repeat(rep[col].values, durations)
                 if len(values) != n_ts:
                     raise ValueError(
@@ -299,21 +299,29 @@ class ResultPlotAccessor:
         for cid in cluster_ids:
             label = f"Cluster {cid} (n={weights.get(cid, 1)})"
             members = members_by_cluster[cid]
+            n_members = len(members)
 
             for col in columns:
-                # Members (with NaN-padding for smaller clusters)
+                # Members: extract all real member rows at once
+                member_block_len = max_members * n_ts
+                if n_members > 0:
+                    real_values = (
+                        unstacked[col].iloc[members].values
+                    )  # (n_members, n_ts)
+                    all_values[pos : pos + n_members * n_ts] = real_values.ravel()
+                # NaN-pad remaining slots for smaller clusters
+                if n_members < max_members:
+                    pad_start = pos + n_members * n_ts
+                    all_values[pad_start : pos + member_block_len] = np.nan
+
+                # Fill metadata arrays for all member slots at once
+                all_columns[pos : pos + member_block_len] = col
+                all_clusters[pos : pos + member_block_len] = label
+                all_roles[pos : pos + member_block_len] = "Member"
                 for slot in range(max_members):
-                    end = pos + n_ts
-                    all_values[pos:end] = (
-                        unstacked[col].iloc[members[slot]].values
-                        if slot < len(members)
-                        else np.nan
-                    )
-                    all_columns[pos:end] = col
-                    all_clusters[pos:end] = label
-                    all_periods[pos:end] = f"C{cid}_M{slot}"
-                    all_roles[pos:end] = "Member"
-                    pos = end
+                    slot_start = pos + slot * n_ts
+                    all_periods[slot_start : slot_start + n_ts] = f"C{cid}_M{slot}"
+                pos += member_block_len
 
                 # Representative
                 end = pos + n_ts
@@ -373,13 +381,16 @@ class ResultPlotAccessor:
             if n_facets > 1:
                 fig.update_yaxes(matches=None, showticklabels=True)
                 for i, col in enumerate(long_df["Column"].unique()):
-                    col_data = long_df.loc[long_df["Column"] == col, "Value"]
+                    col_data = long_df.loc[long_df["Column"] == col, "Value"].dropna()
                     ymin, ymax = col_data.min(), col_data.max()
                     margin = (ymax - ymin) * 0.05
                     key = "yaxis" if i == 0 else f"yaxis{i + 1}"
                     fig.layout[key].range = [ymin - margin, ymax + margin]
             else:
-                ymin, ymax = long_df["Value"].min(), long_df["Value"].max()
+                ymin, ymax = (
+                    long_df["Value"].dropna().min(),
+                    long_df["Value"].dropna().max(),
+                )
                 margin = (ymax - ymin) * 0.05
                 fig.update_yaxes(range=[ymin - margin, ymax + margin])
         else:
@@ -387,7 +398,10 @@ class ResultPlotAccessor:
             # range adapts per column frame. Tick labels only on left.
             for frame in fig.frames:
                 frame_data = long_df[long_df[anim] == frame.name]
-                ymin, ymax = frame_data["Value"].min(), frame_data["Value"].max()
+                ymin, ymax = (
+                    frame_data["Value"].dropna().min(),
+                    frame_data["Value"].dropna().max(),
+                )
                 margin = (ymax - ymin) * 0.05
                 n_axes = n_facets if n_facets > 1 else 1
                 axis_ranges = {}
