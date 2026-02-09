@@ -361,6 +361,9 @@ class ResultPlotAccessor:
                     if key.startswith("yaxis"):
                         fig.layout[key].range = val["range"]
 
+        # Strip "Column=" / "Cluster=" prefix from facet subplot titles
+        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=", 1)[-1]))
+
         return fig
 
     def cluster_weights(self, title: str = "Cluster Weights") -> go.Figure:
