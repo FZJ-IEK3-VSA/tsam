@@ -295,22 +295,14 @@ class ResultPlotAccessor:
             members = members_by_cluster[cid]
 
             for col in columns:
-                # Real member traces
-                for slot, period_idx in enumerate(members):
-                    values = unstacked[col].iloc[period_idx].values
+                # Member traces (NaN-padded so all clusters have equal trace count)
+                for slot in range(max_members):
+                    if slot < len(members):
+                        values = unstacked[col].iloc[members[slot]].values
+                    else:
+                        values = np.full(n_ts, np.nan)
                     traces.append(
                         _make_trace(values, col, label, f"C{cid}_M{slot}", "Member")
-                    )
-                # NaN-padded traces so all clusters have equal trace count
-                for slot in range(len(members), max_members):
-                    traces.append(
-                        _make_trace(
-                            np.full(n_ts, np.nan),
-                            col,
-                            label,
-                            f"C{cid}_M{slot}",
-                            "Member",
-                        )
                     )
                 # Representative
                 traces.append(
