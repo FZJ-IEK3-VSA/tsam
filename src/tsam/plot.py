@@ -8,6 +8,7 @@ Usage:
     >>> result.plot.compare()  # Compare original vs reconstructed
     >>> result.plot.residuals()  # View reconstruction errors
     >>> result.plot.cluster_representatives()
+    >>> result.plot.cluster_members()  # All periods per cluster
     >>> result.plot.cluster_weights()
     >>> result.plot.accuracy()
 
@@ -132,6 +133,7 @@ class ResultPlotAccessor:
     >>> result.plot.compare()  # Compare original vs reconstructed
     >>> result.plot.residuals()  # View reconstruction errors
     >>> result.plot.cluster_representatives()
+    >>> result.plot.cluster_members()
     >>> result.plot.cluster_weights()
     """
 
@@ -185,6 +187,157 @@ class ResultPlotAccessor:
             facet_col="Column" if len(columns) > 1 else None,
             title=title,
         )
+
+        return fig
+
+    def cluster_members(
+        self,
+        columns: list[str] | None = None,
+        title: str | None = None,
+    ) -> go.Figure:
+        """Plot all original periods grouped by cluster with representative highlighted.
+
+        Shows individual member periods as faint lines and the cluster
+        representative as a bold line. An animation slider lets you flip
+        through clusters.
+
+        Parameters
+        ----------
+        columns : list[str], optional
+            Columns to plot. If None, plots all columns.
+        title : str, optional
+            Plot title. Defaults to "Cluster Members".
+
+        Returns
+        -------
+        go.Figure
+
+        Examples
+        --------
+        >>> result.plot.cluster_members(columns=["Load"])
+        >>> result.plot.cluster_members()  # all columns
+        """
+        from tsam.api import unstack_to_periods
+
+        result = self._result
+        orig = result.original
+        available_columns = list(orig.columns)
+        columns = _validate_columns(columns, available_columns, "original data")
+
+        # Unstack original data into periods: MultiIndex columns (col, timestep)
+        unstacked = unstack_to_periods(orig, result.n_timesteps_per_period)
+
+        assignments = result.cluster_assignments
+        representatives = result.cluster_representatives
+        weights = result.cluster_weights
+        n_timesteps = result.n_timesteps_per_period
+
+        # Group period indices by cluster
+        cluster_ids = sorted(set(assignments))
+        members_per_cluster = {
+            cid: np.where(assignments == cid)[0] for cid in cluster_ids
+        }
+        max_members = max(len(m) for m in members_per_cluster.values())
+
+        # Build long-form DataFrame with consistent line_group slots
+        # across all clusters so animation frames have equal trace counts.
+        # Pad smaller clusters with NaN so those traces draw nothing.
+        dfs: list[pd.DataFrame] = []
+        timesteps = np.arange(n_timesteps)
+
+        for cluster_id in cluster_ids:
+            cluster_label = f"Cluster {cluster_id} (n={weights.get(cluster_id, 0)})"
+            member_indices = members_per_cluster[cluster_id]
+
+            for slot in range(max_members):
+                if slot < len(member_indices):
+                    period_idx = member_indices[slot]
+                    for col in columns:
+                        values = unstacked.loc[period_idx, col].values
+                        dfs.append(
+                            pd.DataFrame(
+                                {
+                                    "Timestep": timesteps,
+                                    "Value": values,
+                                    "Column": col,
+                                    "Cluster": cluster_label,
+                                    "Period": f"M{slot}_{col}",
+                                    "Role": "Member",
+                                }
+                            )
+                        )
+                else:
+                    # Pad with NaN so every frame has the same trace count
+                    for col in columns:
+                        dfs.append(
+                            pd.DataFrame(
+                                {
+                                    "Timestep": timesteps,
+                                    "Value": np.nan,
+                                    "Column": col,
+                                    "Cluster": cluster_label,
+                                    "Period": f"M{slot}_{col}",
+                                    "Role": "Member",
+                                }
+                            )
+                        )
+
+            # Representative period — expand segments to full timesteps
+            rep_data = representatives.loc[cluster_id]
+            if result.n_segments is not None:
+                # Segmented: index is (Segment Step, Segment Duration)
+                durations = rep_data.index.get_level_values("Segment Duration")
+                for col in columns:
+                    values = np.repeat(rep_data[col].values, durations)
+                    dfs.append(
+                        pd.DataFrame(
+                            {
+                                "Timestep": timesteps,
+                                "Value": values,
+                                "Column": col,
+                                "Cluster": cluster_label,
+                                "Period": f"Rep_{col}",
+                                "Role": "Representative",
+                            }
+                        )
+                    )
+            else:
+                for col in columns:
+                    dfs.append(
+                        pd.DataFrame(
+                            {
+                                "Timestep": timesteps,
+                                "Value": rep_data[col].values,
+                                "Column": col,
+                                "Cluster": cluster_label,
+                                "Period": f"Rep_{col}",
+                                "Role": "Representative",
+                            }
+                        )
+                    )
+
+        long_df = pd.concat(dfs, ignore_index=True)
+
+        fig = px.line(
+            long_df,
+            x="Timestep",
+            y="Value",
+            color="Role",
+            line_group="Period",
+            facet_col="Column" if len(columns) > 1 else None,
+            animation_frame="Cluster",
+            title=title or "Cluster Members",
+        )
+
+        # Style: members faint, representative bold
+        fig.update_traces(selector={"name": "Member"}, opacity=0.3)
+        fig.update_traces(selector={"name": "Representative"}, line={"width": 3})
+        for frame in fig.frames:
+            for trace in frame.data:
+                if trace.name == "Member":
+                    trace.opacity = 0.3
+                elif trace.name == "Representative":
+                    trace.line = {"width": 3}
 
         return fig
 
