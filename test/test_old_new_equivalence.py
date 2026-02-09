@@ -139,6 +139,24 @@ _NEW_KWARGS: dict[str, dict] = {
             weights={"Load": 2.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         ),
     },
+    "segmentation_samemean": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="hierarchical", normalize_column_means=True),
+        "segments": SegmentConfig(n_segments=4),
+    },
+    "segmentation_distribution_global": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="hierarchical",
+            representation=Distribution(scope="global"),
+        ),
+        "segments": SegmentConfig(
+            n_segments=4, representation=Distribution(scope="global")
+        ),
+        "preserve_column_means": False,
+    },
     "extremes_append": {
         "n_clusters": 8,
         "period_duration": 24,

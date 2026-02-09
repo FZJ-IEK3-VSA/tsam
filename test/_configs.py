@@ -244,6 +244,32 @@ CONFIGS: list[BaseConfig] = [
         only_datasets={"testdata"},
     ),
     BaseConfig(
+        id="segmentation_samemean",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "sameMean": True,
+            "segmentation": True,
+            "noSegments": 4,
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="segmentation_distribution_global",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "representationMethod": "distributionRepresentation",
+            "distributionPeriodWise": False,
+            "segmentation": True,
+            "noSegments": 4,
+            "rescaleClusterPeriods": False,
+        },
+        only_datasets={"testdata", "with_zero_column"},
+    ),
+    BaseConfig(
         id="extremes_append",
         old_kwargs={
             "noTypicalPeriods": 8,
