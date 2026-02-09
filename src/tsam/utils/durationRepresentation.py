@@ -42,54 +42,42 @@ def durationRepresentation(
     # (periodWise = True) or the distribution of the total time series is preserved only. In the latter case, the
     # inner-cluster variance is smaller and the variance across the typical periods' mean values is higher
     if distributionPeriodWise:
-        # Vectorized implementation using numpy 3D arrays instead of pandas MultiIndex
-        n_periods = candidates.shape[0]
         n_attrs = num_attributes
 
         # Reshape to 3D: (periods, attributes, timesteps)
-        candidates_3d = candidates.reshape(n_periods, n_attrs, timeStepsPerPeriod)
+        candidates_3d = candidates.reshape(-1, n_attrs, timeStepsPerPeriod)
 
         clusterCenters = []
         for clusterNum in np.unique(clusterOrder):
             indice = np.where(clusterOrder == clusterNum)[0]
             n_cands = len(indice)
-
-            # Skip empty clusters
             if n_cands == 0:
                 continue
 
-            # Get all candidates for this cluster: (n_cands, n_attrs, timesteps)
-            cluster_data = candidates_3d[indice]
+            # (n_cands, n_attrs, timesteps) -> (n_attrs, n_cands, timesteps)
+            cluster_data = candidates_3d[indice].transpose(1, 0, 2)
 
-            # Process all attributes at once using vectorized operations
-            # Reshape to (n_attrs, n_cands * timesteps) for sorting
-            flat_per_attr = cluster_data.transpose(1, 0, 2).reshape(n_attrs, -1)
+            # Sort all values per attribute, then reshape to duration curve
+            flat = cluster_data.reshape(n_attrs, -1)
+            flat.sort(axis=1, kind="stable")
+            repr_values = flat.reshape(n_attrs, timeStepsPerPeriod, n_cands).mean(
+                axis=2
+            )
 
-            # Sort each attribute's values (stable sort for deterministic tie-breaking)
-            sorted_flat = np.sort(flat_per_attr, axis=1, kind="stable")
-
-            # Reshape and mean: (n_attrs, timesteps, n_cands) -> mean -> (n_attrs, timesteps)
-            sorted_reshaped = sorted_flat.reshape(n_attrs, timeStepsPerPeriod, n_cands)
-            repr_values = sorted_reshaped.mean(axis=2)
-
-            # Respect max and min of the attributes
             if representMinMax:
-                repr_values[:, 0] = sorted_flat[:, 0]
-                repr_values[:, -1] = sorted_flat[:, -1]
+                repr_values[:, 0] = flat[:, 0]
+                repr_values[:, -1] = flat[:, -1]
 
-            # Get mean profile order for each attribute (stable sort for deterministic tie-breaking)
-            mean_profiles = cluster_data.mean(axis=0)  # (n_attrs, timesteps)
-            orders = np.argsort(
-                mean_profiles, axis=1, kind="stable"
-            )  # (n_attrs, timesteps)
-
-            # Reorder repr_values according to orders
+            # Reorder each attribute's repr_values by its mean profile.
+            # Round means before argsort to ensure identical tie-breaking
+            # across platforms and numpy versions.
+            means = np.round(cluster_data.mean(axis=1), 10)
+            order = means.argsort(axis=1, kind="stable")
+            rows = np.arange(n_attrs)[:, None]
             final_repr = np.empty_like(repr_values)
-            for a in range(n_attrs):
-                final_repr[a, orders[a]] = repr_values[a]
+            final_repr[rows, order] = repr_values
 
-            # Flatten to (n_attrs * timesteps,)
-            clusterCenters.append(final_repr.flatten())
+            clusterCenters.append(final_repr.ravel())
 
     else:
         clusterCentersList = []
@@ -102,7 +90,7 @@ def durationRepresentation(
                 # get all the values of a certain attribute and cluster
                 candidateValues = candidates_df.loc[indice[0], a]
                 # calculate centroid of each cluster and append to list
-                meanVals.append(candidateValues.mean())
+                meanVals.append(np.round(candidateValues.mean(), 10))
                 # make a list of weights of each cluster for each time step within the period
                 clusterLengths.append(np.repeat(noCandidates, timeStepsPerPeriod))
             # concat centroid values and cluster weights for all clusters
@@ -118,7 +106,7 @@ def durationRepresentation(
                 axis=1,
             )
             # sort all values of all clusters according to the centroid values
-            meansAndWeightsSorted = meansAndWeights.sort_values(0)
+            meansAndWeightsSorted = meansAndWeights.sort_values(0, kind="stable")
             # save order of the sorted centroid values across all clusters
             order = meansAndWeightsSorted.index
             # sort all values of the original time series
@@ -127,7 +115,7 @@ def durationRepresentation(
                 .stack(
                     future_stack=True,
                 )
-                .sort_values()
+                .sort_values(kind="stable")
                 .values
             )
             # take mean of sections of the original duration curve according to the cluster and its weight the

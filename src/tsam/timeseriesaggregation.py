@@ -132,7 +132,6 @@ class TimeSeriesAggregation:
         weightDict=None,
         segmentation=False,
         extremePeriodMethod="None",
-        extremePreserveNumClusters=False,
         representationMethod=None,
         representationDict=None,
         distributionPeriodWise=True,
@@ -318,8 +317,6 @@ class TimeSeriesAggregation:
         self.clusterMethod = clusterMethod
 
         self.extremePeriodMethod = extremePeriodMethod
-
-        self.extremePreserveNumClusters = extremePreserveNumClusters
 
         self.evalSumPeriods = evalSumPeriods
 
@@ -685,46 +682,6 @@ class TimeSeriesAggregation:
             )
 
         return unnormalizedTimeSeries
-
-    def _countExtremePeriods(self, groupedSeries):
-        """
-        Count unique extreme periods without modifying any state.
-
-        Used by extremePreserveNumClusters to determine how many clusters
-        to reserve for extreme periods before clustering.
-
-        Note: The extreme-finding logic (idxmax/idxmin on peak/mean) must
-        stay in sync with _addExtremePeriods. This is intentionally separate
-        because _addExtremePeriods also filters out periods that are already
-        cluster centers (not known at count time).
-        """
-        extremePeriodIndices = set()
-
-        # Only iterate over columns that are actually in extreme lists
-        extreme_columns = (
-            set(self.addPeakMax)
-            | set(self.addPeakMin)
-            | set(self.addMeanMax)
-            | set(self.addMeanMin)
-        )
-
-        for column in extreme_columns:
-            col_data = groupedSeries[column]
-
-            if column in self.addPeakMax:
-                extremePeriodIndices.add(col_data.max(axis=1).idxmax())
-            if column in self.addPeakMin:
-                extremePeriodIndices.add(col_data.min(axis=1).idxmin())
-
-            # Compute mean only once if needed for either addMeanMax or addMeanMin
-            if column in self.addMeanMax or column in self.addMeanMin:
-                mean_series = col_data.mean(axis=1)
-                if column in self.addMeanMax:
-                    extremePeriodIndices.add(mean_series.idxmax())
-                if column in self.addMeanMin:
-                    extremePeriodIndices.add(mean_series.idxmin())
-
-        return len(extremePeriodIndices)
 
     def _addExtremePeriods(
         self,
@@ -1098,40 +1055,8 @@ class TimeSeriesAggregation:
         """
         self._preProcessTimeSeries()
 
-        # Warn if extremePreserveNumClusters is ignored due to predefined cluster order
-        if (
-            self.predefClusterOrder is not None
-            and self.extremePreserveNumClusters
-            and self.extremePeriodMethod not in ("None", "replace_cluster_center")
-        ):
-            warnings.warn(
-                "extremePreserveNumClusters=True is ignored when predefClusterOrder "
-                "is set. Extreme periods will be appended via _addExtremePeriods "
-                "without reserving clusters upfront. To avoid this warning, set "
-                "extremePreserveNumClusters=False or remove predefClusterOrder.",
-                UserWarning,
-                stacklevel=2,
-            )
-
-        # Count extreme periods upfront if include_in_count is True
-        # Note: replace_cluster_center doesn't add new clusters, so skip
-        n_extremes = 0
-        if (
-            self.extremePreserveNumClusters
-            and self.extremePeriodMethod not in ("None", "replace_cluster_center")
-            and self.predefClusterOrder is None  # Don't count for predefined
-        ):
-            n_extremes = self._countExtremePeriods(self.normalizedPeriodlyProfiles)
-
-            if self.noTypicalPeriods <= n_extremes:
-                raise ValueError(
-                    f"n_clusters ({self.noTypicalPeriods}) must be greater than "
-                    f"the number of extreme periods ({n_extremes}) when "
-                    "preserve_n_clusters=True"
-                )
-
         # Compute effective number of clusters for the clustering algorithm
-        effective_n_clusters = self.noTypicalPeriods - n_extremes
+        effective_n_clusters = self.noTypicalPeriods
 
         # check for additional cluster parameters
         if self.evalSumPeriods:
