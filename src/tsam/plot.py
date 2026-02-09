@@ -267,58 +267,77 @@ class ResultPlotAccessor:
         # Build long-form DataFrame.
         # Pad every cluster to *max_members* slots (NaN for missing ones)
         # so that animation frames always have the same trace count.
-        rows: list[pd.DataFrame] = []
+        # Pre-allocate arrays to avoid creating many small DataFrames.
 
         def _rep_values(cluster_id: int, col: str) -> np.ndarray:
             """Get representative values expanded to full timesteps."""
             rep = representatives.loc[cluster_id]
             if result.n_segments is not None:
                 durations = rep.index.get_level_values("Segment Duration")
-                return np.repeat(rep[col].values, durations)
+                values = np.repeat(rep[col].values, durations)
+                if len(values) != n_ts:
+                    raise ValueError(
+                        f"Segment expansion for cluster {cluster_id} column {col!r} "
+                        f"produced {len(values)} values, expected {n_ts}"
+                    )
+                return values
             return rep[col].values  # type: ignore[no-any-return]
 
+        # traces_per_cluster = members (padded to max_members) + 1 representative
+        traces_per_cluster = (max_members + 1) * len(columns)
+        n_total_traces = len(cluster_ids) * traces_per_cluster
+        n_total_rows = n_total_traces * n_ts
+
+        all_timesteps = np.tile(timesteps, n_total_traces)
+        all_values = np.empty(n_total_rows)
+        all_columns = np.empty(n_total_rows, dtype=object)
+        all_clusters = np.empty(n_total_rows, dtype=object)
+        all_periods = np.empty(n_total_rows, dtype=object)
+        all_roles = np.empty(n_total_rows, dtype=object)
+
+        pos = 0
         for cid in cluster_ids:
-            label = f"Cluster {cid} (n={weights.get(cid, 0)})"
+            label = f"Cluster {cid} (n={weights.get(cid, 1)})"
             members = members_by_cluster[cid]
 
             for col in columns:
                 # Members (with NaN-padding for smaller clusters)
                 for slot in range(max_members):
-                    values = (
-                        unstacked.loc[members[slot], col].values
+                    end = pos + n_ts
+                    all_values[pos:end] = (
+                        unstacked[col].iloc[members[slot]].values
                         if slot < len(members)
-                        else np.full(n_ts, np.nan)
+                        else np.nan
                     )
-                    rows.append(
-                        pd.DataFrame(
-                            {
-                                "Timestep": timesteps,
-                                "Value": values,
-                                "Column": col,
-                                "Cluster": label,
-                                "Period": f"C{cid}_M{slot}",
-                                "Role": "Member",
-                            }
-                        )
-                    )
+                    all_columns[pos:end] = col
+                    all_clusters[pos:end] = label
+                    all_periods[pos:end] = f"C{cid}_M{slot}"
+                    all_roles[pos:end] = "Member"
+                    pos = end
 
                 # Representative
-                rows.append(
-                    pd.DataFrame(
-                        {
-                            "Timestep": timesteps,
-                            "Value": _rep_values(cid, col),
-                            "Column": col,
-                            "Cluster": label,
-                            "Period": f"C{cid}_Rep",
-                            "Role": "Representative",
-                        }
-                    )
-                )
+                end = pos + n_ts
+                all_values[pos:end] = _rep_values(cid, col)
+                all_columns[pos:end] = col
+                all_clusters[pos:end] = label
+                all_periods[pos:end] = f"C{cid}_Rep"
+                all_roles[pos:end] = "Representative"
+                pos = end
 
-        long_df = pd.concat(rows, ignore_index=True)
+        long_df = pd.DataFrame(
+            {
+                "Timestep": all_timesteps,
+                "Value": all_values,
+                "Column": all_columns,
+                "Cluster": all_clusters,
+                "Period": all_periods,
+                "Role": all_roles,
+            }
+        )
 
         # Determine which dimension is animated vs faceted
+        if animate not in ("Cluster", "Column"):
+            raise ValueError(f"animate must be 'Cluster' or 'Column', got {animate!r}")
         if animate == "Column":
             anim, facet = "Column", "Cluster"
         else:
