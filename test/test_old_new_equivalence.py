@@ -161,49 +161,37 @@ _NEW_KWARGS: dict[str, dict] = {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(method="hierarchical"),
-        "extremes": ExtremeConfig(
-            method="append", max_value=["Load"], preserve_n_clusters=False
-        ),
+        "extremes": ExtremeConfig(method="append", max_value=["Load"]),
     },
     "extremes_replace": {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(method="hierarchical"),
-        "extremes": ExtremeConfig(
-            method="replace", max_value=["Load"], preserve_n_clusters=False
-        ),
+        "extremes": ExtremeConfig(method="replace", max_value=["Load"]),
     },
     "extremes_new_cluster": {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(method="hierarchical"),
-        "extremes": ExtremeConfig(
-            method="new_cluster", max_value=["Load"], preserve_n_clusters=False
-        ),
+        "extremes": ExtremeConfig(method="new_cluster", max_value=["Load"]),
     },
     "extremes_min_value": {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(method="hierarchical"),
-        "extremes": ExtremeConfig(
-            method="append", min_value=["T"], preserve_n_clusters=False
-        ),
+        "extremes": ExtremeConfig(method="append", min_value=["T"]),
     },
     "extremes_max_period": {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(method="hierarchical"),
-        "extremes": ExtremeConfig(
-            method="append", max_period=["GHI"], preserve_n_clusters=False
-        ),
+        "extremes": ExtremeConfig(method="append", max_period=["GHI"]),
     },
     "extremes_min_period": {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(method="hierarchical"),
-        "extremes": ExtremeConfig(
-            method="append", min_period=["Wind"], preserve_n_clusters=False
-        ),
+        "extremes": ExtremeConfig(method="append", min_period=["Wind"]),
     },
     "extremes_multi": {
         "n_clusters": 8,
@@ -214,16 +202,13 @@ _NEW_KWARGS: dict[str, dict] = {
             max_value=["Load"],
             min_value=["T"],
             max_period=["GHI"],
-            preserve_n_clusters=False,
         ),
     },
     "extremes_with_segmentation": {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(method="hierarchical"),
-        "extremes": ExtremeConfig(
-            method="append", max_value=["Load"], preserve_n_clusters=False
-        ),
+        "extremes": ExtremeConfig(method="append", max_value=["Load"]),
         "segments": SegmentConfig(n_segments=6),
     },
     "extremes_wide_multi": {
@@ -234,24 +219,19 @@ _NEW_KWARGS: dict[str, dict] = {
             method="append",
             max_value=["DE_Load"],
             min_value=["FR_T"],
-            preserve_n_clusters=False,
         ),
     },
     "extremes_constant": {
         "n_clusters": 3,
         "period_duration": 24,
         "cluster": ClusterConfig(method="hierarchical"),
-        "extremes": ExtremeConfig(
-            method="append", max_value=["A"], preserve_n_clusters=False
-        ),
+        "extremes": ExtremeConfig(method="append", max_value=["A"]),
     },
     "extremes_zero_column": {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(method="hierarchical"),
-        "extremes": ExtremeConfig(
-            method="append", max_value=["Zero"], preserve_n_clusters=False
-        ),
+        "extremes": ExtremeConfig(method="append", max_value=["Zero"]),
     },
 }
 

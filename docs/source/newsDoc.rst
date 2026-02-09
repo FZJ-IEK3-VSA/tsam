@@ -83,9 +83,6 @@ New Features
 * ``Distribution`` and ``MinMaxMean`` **representation objects** for ``ClusterConfig`` and
   ``SegmentConfig``, providing a structured alternative to plain string representation names
 
-* ``preserve_n_clusters`` option on ``ExtremeConfig``: when set to ``True``, extreme periods
-  count toward ``n_clusters`` instead of being added on top
-
 Improvements
 ============
 
