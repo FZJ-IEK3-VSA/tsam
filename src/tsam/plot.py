@@ -307,7 +307,7 @@ class ResultPlotAccessor:
 
         n_facets = len(facet_labels)
         traces_per_facet = 2  # one bundled member trace + one representative
-        MEMBER = {"color": "#636EFA"}
+        MEMBER = {"color": "rgba(99, 110, 250, 0.3)"}
         REP = {"color": "#EF553B", "width": 3}
 
         # Precompute NaN-separated x-arrays (one per unique member count).
@@ -345,7 +345,6 @@ class ResultPlotAccessor:
                         y=_member_y(cid, col),
                         mode="lines",
                         line=MEMBER,
-                        opacity=0.3,
                         name="Member",
                         legendgroup="Member",
                         showlegend=first_member,
