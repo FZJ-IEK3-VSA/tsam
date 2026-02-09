@@ -152,7 +152,9 @@ _NEW_KWARGS: dict[str, dict] = {
             method="hierarchical",
             representation=Distribution(scope="global"),
         ),
-        "segments": SegmentConfig(n_segments=4),
+        "segments": SegmentConfig(
+            n_segments=4, representation=Distribution(scope="global")
+        ),
         "preserve_column_means": False,
     },
     "extremes_append": {
