@@ -9,7 +9,17 @@ from typing import TYPE_CHECKING, Any, Literal
 import pandas as pd
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from tsam.result import AggregationResult
+
+
+def _infer_resolution(data: pd.DataFrame) -> float:
+    """Infer temporal resolution from data index."""
+    if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
+        return (data.index[1] - data.index[0]).total_seconds() / 3600
+    return 1.0
+
 
 # Type aliases for clarity
 ClusterMethod = Literal[
@@ -446,6 +456,129 @@ class ClusteringResult:
                 "segment_assignments must be provided when segment_centers is specified"
             )
 
+    @classmethod
+    def from_pipeline(
+        cls,
+        *,
+        cluster_center_indices: list | None,
+        extreme_periods_info: dict,
+        extremes_config: ExtremeConfig | None,
+        cluster_order: list | np.ndarray,
+        segmented_df: pd.DataFrame | None,
+        segment_center_indices: list | None,
+        n_timesteps_per_period: int,
+        temporal_resolution: float | None,
+        original_data: pd.DataFrame,
+        cluster_config: ClusterConfig,
+        segment_config: SegmentConfig | None,
+        rescale_cluster_periods: bool,
+        rescale_exclude_columns: list[str] | None,
+        extreme_cluster_idx: list[int],
+    ) -> ClusteringResult:
+        """Build a ClusteringResult from pipeline intermediate data."""
+        # Get cluster centers
+        cluster_centers: tuple[int, ...] | None = None
+        if cluster_center_indices is not None:
+            center_indices = [int(x) for x in cluster_center_indices]
+
+            if (
+                extreme_periods_info
+                and extremes_config is not None
+                and extremes_config.method in ("new_cluster", "append")
+            ):
+                for period_type in extreme_periods_info:
+                    center_indices.append(
+                        int(extreme_periods_info[period_type]["step_no"])
+                    )
+
+            cluster_centers = tuple(center_indices)
+
+        # Compute segment data if segmentation was used
+        segment_assignments: tuple[tuple[int, ...], ...] | None = None
+        segment_durations: tuple[tuple[int, ...], ...] | None = None
+        segment_centers: tuple[tuple[int, ...], ...] | None = None
+
+        if segment_config is not None and segmented_df is not None:
+            segment_assignments, segment_durations, segment_centers = (
+                cls._extract_segment_data(segmented_df, segment_center_indices)
+            )
+
+        # Extract representation from configs
+        representation = cluster_config.get_representation()
+        segment_representation = (
+            segment_config.representation if segment_config else None
+        )
+
+        # Extract extreme cluster indices
+        extreme_cluster_indices_tuple: tuple[int, ...] | None = None
+        if extreme_cluster_idx:
+            extreme_cluster_indices_tuple = tuple(int(x) for x in extreme_cluster_idx)
+
+        # Compute period_duration
+        effective_resolution = (
+            temporal_resolution
+            if temporal_resolution is not None
+            else _infer_resolution(original_data)
+        )
+        period_duration = n_timesteps_per_period * effective_resolution
+
+        return cls(
+            period_duration=period_duration,
+            cluster_assignments=tuple(int(x) for x in cluster_order),
+            cluster_centers=cluster_centers,
+            segment_assignments=segment_assignments,
+            segment_durations=segment_durations,
+            segment_centers=segment_centers,
+            preserve_column_means=rescale_cluster_periods,
+            rescale_exclude_columns=tuple(rescale_exclude_columns)
+            if rescale_exclude_columns
+            else None,
+            representation=representation,
+            segment_representation=segment_representation,
+            temporal_resolution=temporal_resolution,
+            n_timesteps_per_period=n_timesteps_per_period,
+            extreme_cluster_indices=extreme_cluster_indices_tuple,
+            column_weights=tuple(sorted(cluster_config.weights.items()))
+            if cluster_config.weights
+            else None,
+            cluster_config=cluster_config,
+            segment_config=segment_config,
+            extremes_config=extremes_config,
+        )
+
+    @staticmethod
+    def _extract_segment_data(
+        segmented_df: pd.DataFrame,
+        segment_center_indices: list | None,
+    ) -> tuple[
+        tuple[tuple[int, ...], ...],
+        tuple[tuple[int, ...], ...],
+        tuple[tuple[int, ...], ...] | None,
+    ]:
+        """Extract segment assignments, durations, and centers from a segmented DataFrame."""
+        assignments_list = []
+        durations_list = []
+
+        for period_idx in segmented_df.index.get_level_values(0).unique():
+            period_data = segmented_df.loc[period_idx]
+            assignments = []
+            durations = []
+            for seg_step, seg_dur, _orig_start in period_data.index:
+                assignments.extend([int(seg_step)] * int(seg_dur))
+                durations.append(int(seg_dur))
+            assignments_list.append(tuple(assignments))
+            durations_list.append(tuple(durations))
+
+        centers: tuple[tuple[int, ...], ...] | None = None
+        if segment_center_indices is not None:
+            if all(pc is not None for pc in segment_center_indices):
+                centers = tuple(
+                    tuple(int(x) for x in period_centers)
+                    for period_centers in segment_center_indices
+                )
+
+        return tuple(assignments_list), tuple(durations_list), centers
+
     @property
     def n_clusters(self) -> int:
         """Number of clusters (typical periods)."""
@@ -767,10 +900,7 @@ class ClusteringResult:
 
         # Validate n_timesteps_per_period matches data
         if effective_temporal_resolution is None:
-            if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
-                inferred = (data.index[1] - data.index[0]).total_seconds() / 3600
-            else:
-                inferred = 1.0
+            inferred = _infer_resolution(data)
         else:
             inferred = effective_temporal_resolution
 

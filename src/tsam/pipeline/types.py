@@ -51,6 +51,44 @@ class PeriodProfiles:
 
 
 @dataclass(frozen=True)
+class PreparedData:
+    """Output of the data preparation phase (steps 1-3)."""
+
+    norm_data: NormalizedData
+    period_profiles: PeriodProfiles
+    candidates: np.ndarray
+    weighted_candidates: np.ndarray | None
+    representation_dict: dict[str, str]
+    n_feature_cols: int
+    original_column_order: list[str]
+
+
+@dataclass(frozen=True)
+class ClusteringOutput:
+    """Output of the clustering + post-processing phase (steps 4-9)."""
+
+    cluster_periods_list: list
+    cluster_order: list | np.ndarray
+    cluster_counts: dict[int, float]
+    cluster_center_indices: list | None
+    extreme_cluster_idx: list[int]
+    extreme_periods_info: dict
+    clustering_duration: float
+    rescale_deviations: dict
+
+
+@dataclass(frozen=True)
+class FormattedOutput:
+    """Output of the formatting + reconstruction phase (steps 10-14)."""
+
+    typical_periods: pd.DataFrame
+    reconstructed_data: pd.DataFrame
+    accuracy_df: pd.DataFrame
+    segmented_df: pd.DataFrame | None
+    segment_center_indices: list | None
+
+
+@dataclass(frozen=True)
 class PipelineResult:
     """Single handoff from pipeline to api.py / config.py."""
 

@@ -16,6 +16,7 @@ from tsam.period_aggregation import aggregate_periods  # noqa: F401 (re-exported
 from tsam.pipeline import run_pipeline
 from tsam.pipeline.types import PredefParams
 from tsam.representations import representations  # noqa: F401 (re-exported)
+from tsam.weights import validate_weights
 
 pd.set_option("mode.chained_assignment", None)
 
@@ -748,6 +749,11 @@ class TimeSeriesAggregation:
             raise ValueError(
                 "Pre processed data includes NaN. Please check the time_series input data."
             )
+
+        # Validate weights before pipeline
+        validated = validate_weights(self.time_series.columns, self.weight_dict or None)
+        if validated is not None:
+            self.weight_dict = validated
 
         # Run pipeline
         result = run_pipeline(**self._build_pipeline_args())

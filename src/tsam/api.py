@@ -16,6 +16,7 @@ from tsam.config import (
 )
 from tsam.pipeline import run_pipeline
 from tsam.result import AccuracyMetrics, AggregationResult
+from tsam.weights import validate_weights
 
 if TYPE_CHECKING:
     from tsam.pipeline.types import PipelineResult
@@ -242,11 +243,18 @@ def aggregate(
         if missing:
             raise ValueError(f"Extreme period columns not found in data: {missing}")
 
-    # Validate weight columns exist
-    if cluster.weights is not None:
-        missing = set(cluster.weights.keys()) - set(data.columns)
-        if missing:
-            raise ValueError(f"Weight columns not found in data: {missing}")
+    # Validate and normalize weights
+    validated = validate_weights(data.columns, cluster.weights)
+    if validated is not cluster.weights:
+        cluster = ClusterConfig(
+            method=cluster.method,
+            representation=cluster.representation,
+            weights=validated,
+            normalize_column_means=cluster.normalize_column_means,
+            use_duration_curves=cluster.use_duration_curves,
+            include_period_sums=cluster.include_period_sums,
+            solver=cluster.solver,
+        )
 
     # Run pipeline
     result = run_pipeline(
