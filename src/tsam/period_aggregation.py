@@ -1,9 +1,16 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 
 from tsam.representations import representations
 
+if TYPE_CHECKING:
+    from tsam.config import Distribution, MinMaxMean
+
 # Aliases: old verbose names → new short names.
-# The monolith sends old names; the pipeline sends new names.
+# The legacy wrapper sends old names; the pipeline sends new names.
 _METHOD_ALIASES = {
     "k_means": "kmeans",
     "k_medoids": "kmedoids",
@@ -13,17 +20,17 @@ _METHOD_ALIASES = {
 
 
 def aggregate_periods(
-    candidates,
-    n_clusters=8,
-    n_iter=100,
-    cluster_method="kmeans",
-    solver="highs",
-    representation_method=None,
-    representation_dict=None,
-    distribution_period_wise=True,
-    n_timesteps_per_period=None,
-    representation_candidates=None,
-):
+    candidates: np.ndarray,
+    n_clusters: int = 8,
+    n_iter: int = 100,
+    cluster_method: str = "kmeans",
+    solver: str = "highs",
+    representation_method: str | Distribution | MinMaxMean | None = None,
+    representation_dict: dict[str, str] | None = None,
+    distribution_period_wise: bool = True,
+    n_timesteps_per_period: int | None = None,
+    representation_candidates: np.ndarray | None = None,
+) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
     """
     Clusters the data based on one of the cluster methods:
     'averaging', 'kmeans', 'kmedoids' or 'hierarchical'
@@ -56,18 +63,18 @@ def aggregate_periods(
         n_sets = len(candidates)
         if n_sets % n_clusters == 0:
             cluster_size = int(n_sets / n_clusters)
-            cluster_order = [
+            order_lists = [
                 [n_cluster] * cluster_size for n_cluster in range(n_clusters)
             ]
         else:
             cluster_size = int(n_sets / n_clusters)
-            cluster_order = [
+            order_lists = [
                 [n_cluster] * cluster_size for n_cluster in range(n_clusters)
             ]
-            cluster_order.append(
+            order_lists.append(
                 [n_clusters - 1] * int(n_sets - cluster_size * n_clusters)
             )
-        cluster_order = np.hstack(np.array(cluster_order, dtype=object))
+        cluster_order = np.hstack(np.array(order_lists, dtype=object))  # type: ignore[call-overload]
         cluster_centers, cluster_center_indices = representations(
             _rep_candidates,
             cluster_order,
@@ -78,7 +85,7 @@ def aggregate_periods(
             n_timesteps_per_period=n_timesteps_per_period,
         )
 
-    if cluster_method == "kmeans":
+    elif cluster_method == "kmeans":
         from sklearn.cluster import KMeans
 
         k_means = KMeans(n_clusters=n_clusters, max_iter=1000, n_init=n_iter, tol=1e-4)
@@ -95,7 +102,7 @@ def aggregate_periods(
             n_timesteps_per_period=n_timesteps_per_period,
         )
 
-    if cluster_method == "kmedoids":
+    elif cluster_method == "kmedoids":
         from tsam.utils.k_medoids_exact import KMedoids
 
         k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
@@ -111,7 +118,7 @@ def aggregate_periods(
             n_timesteps_per_period=n_timesteps_per_period,
         )
 
-    if cluster_method == "kmaxoids":
+    elif cluster_method == "kmaxoids":
         from tsam.utils.k_maxoids import KMaxoids
 
         k_maxoid = KMaxoids(n_clusters=n_clusters)
@@ -127,7 +134,7 @@ def aggregate_periods(
             n_timesteps_per_period=n_timesteps_per_period,
         )
 
-    if cluster_method == "hierarchical" or cluster_method == "contiguous":
+    elif cluster_method == "hierarchical" or cluster_method == "contiguous":
         if n_clusters == 1:
             cluster_order = np.asarray([0] * len(candidates))
         else:
@@ -154,6 +161,12 @@ def aggregate_periods(
             representation_dict=representation_dict,
             distribution_period_wise=distribution_period_wise,
             n_timesteps_per_period=n_timesteps_per_period,
+        )
+
+    else:
+        raise ValueError(
+            f"Unknown cluster_method '{cluster_method}'. "
+            f"Valid options: 'averaging', 'kmeans', 'kmedoids', 'kmaxoids', 'hierarchical', 'contiguous'."
         )
 
     return cluster_centers, cluster_center_indices, cluster_order

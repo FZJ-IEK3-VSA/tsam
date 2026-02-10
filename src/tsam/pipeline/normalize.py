@@ -16,13 +16,12 @@ def normalize(
 
     Weights are NOT applied here — they are used only for clustering distance.
     """
-    # Sort columns alphabetically (monolith line 636)
+    # Sort columns alphabetically
     data = data.sort_index(axis=1)
 
-    # Convert to float (monolith line 639)
     data = data.astype(float)
 
-    # Fit MinMaxScaler and normalize (monolith lines 588-593)
+    # Fit MinMaxScaler and normalize
     scaler = MinMaxScaler()
     normalized = pd.DataFrame(
         scaler.fit_transform(data),
@@ -30,10 +29,9 @@ def normalize(
         index=data.index,
     )
 
-    # Store mean before normalize_column_means division (monolith line 595)
+    # Store mean before normalize_column_means division
     normalized_mean = normalized.mean()
 
-    # Divide by mean if normalize_column_means (monolith lines 596-597)
     if normalize_column_means:
         normalized = normalized / normalized_mean
 
@@ -56,11 +54,10 @@ def denormalize(
     """
     result = df.copy()
 
-    # Undo normalize_column_means (monolith lines 619-620)
     if norm_data.normalize_column_means:
         result = result * norm_data.normalized_mean
 
-    # Inverse transform using stored scaler (monolith lines 622-626)
+    # Inverse transform using stored scaler
     unnormalized = pd.DataFrame(
         norm_data.scaler.inverse_transform(result),
         columns=result.columns,

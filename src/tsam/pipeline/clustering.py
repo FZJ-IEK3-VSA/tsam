@@ -10,7 +10,7 @@ from tsam.period_aggregation import aggregate_periods
 from tsam.representations import representations
 
 if TYPE_CHECKING:
-    from tsam.config import ClusterConfig
+    from tsam.config import ClusterConfig, Distribution, MinMaxMean
     from tsam.pipeline.types import PeriodProfiles, PredefParams
 
 
@@ -21,7 +21,7 @@ def cluster_periods(
     representation_dict: dict | None,
     n_timesteps_per_period: int,
     weighted_candidates: np.ndarray | None = None,
-) -> tuple[list, list | None, np.ndarray]:
+) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
     """Run clustering via aggregate_periods.
 
     If weighted_candidates is provided, clustering uses weighted data for
@@ -57,7 +57,7 @@ def cluster_sorted_periods(
     representation_dict: dict | None,
     n_timesteps_per_period: int,
     weighted_candidates: np.ndarray | None = None,
-) -> tuple[list, list | None, np.ndarray]:
+) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
     """Duration-curve clustering: sort descending, cluster, pick medoid from original.
 
     If weighted_candidates is provided, the sorted profiles are weighted
@@ -86,7 +86,7 @@ def cluster_sorted_periods(
     else:
         clustering_input = sorted_values
 
-    _alt_centers, center_indices, cluster_order = aggregate_periods(
+    _, center_indices, cluster_order = aggregate_periods(
         clustering_input,
         n_clusters=n_clusters,
         n_iter=30,
@@ -103,15 +103,15 @@ def cluster_sorted_periods(
     # Pick medoid from original (unsorted, unweighted) candidates
     cluster_centers = []
     for cluster_num in np.unique(cluster_order):
-        indice = np.where(cluster_order == cluster_num)[0]
-        if len(indice) > 1:
-            current_mean = sorted_values[indice].mean(axis=0)
+        indices = np.where(cluster_order == cluster_num)[0]
+        if len(indices) > 1:
+            current_mean = sorted_values[indices].mean(axis=0)
             mindist_idx = np.argmin(
-                np.square(sorted_values[indice] - current_mean).sum(axis=1)
+                np.square(sorted_values[indices] - current_mean).sum(axis=1)
             )
-            cluster_centers.append(candidates[indice][mindist_idx])
+            cluster_centers.append(candidates[indices][mindist_idx])
         else:
-            cluster_centers.append(candidates[indice][0])
+            cluster_centers.append(candidates[indices][0])
 
     return cluster_centers, center_indices, cluster_order
 
@@ -119,13 +119,11 @@ def cluster_sorted_periods(
 def use_predefined_assignments(
     candidates: np.ndarray,
     predef: PredefParams,
-    representation_method,
+    representation_method: str | Distribution | MinMaxMean | None,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
-) -> tuple[list | np.ndarray, list | None, list | np.ndarray]:
+) -> tuple[list[np.ndarray] | np.ndarray, list[int] | None, list | np.ndarray]:
     """Skip clustering, compute representatives from predefined assignments.
-
-    Replicates monolith lines 1154-1169.
 
     Returns (cluster_centers, cluster_center_indices, cluster_order).
     """
@@ -138,7 +136,7 @@ def use_predefined_assignments(
     else:
         centers, computed_indices = representations(
             candidates,
-            predef.cluster_order,
+            predef.cluster_order,  # type: ignore[arg-type]
             default="medoid",
             representation_method=representation_method,
             representation_dict=representation_dict,

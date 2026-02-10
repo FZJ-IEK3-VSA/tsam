@@ -342,7 +342,7 @@ def _apply_representation_params(
                 rep_dict[col] = "mean"
         params["representationDict"] = rep_dict
     else:
-        # String representation — map to old monolith names
+        # String representation — map to legacy wrapper names
         _str_to_monolith = {
             "mean": "meanRepresentation",
             "medoid": "medoidRepresentation",

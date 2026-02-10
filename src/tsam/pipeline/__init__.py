@@ -26,7 +26,9 @@ if TYPE_CHECKING:
     from tsam.config import (
         ClusterConfig,
         ClusteringResult,
+        Distribution,
         ExtremeConfig,
+        MinMaxMean,
         SegmentConfig,
     )
 
@@ -153,17 +155,17 @@ def _build_weight_vector(
 
 def _build_representation_dict(
     columns: pd.Index,
-    cluster_rep,
+    cluster_representation: str | Distribution | MinMaxMean | None,
 ) -> dict[str, str]:
     """Build the representation dict (mean/min/max per column) from config."""
     from tsam.config import MinMaxMean
 
     representation_dict: dict[str, str] = dict.fromkeys(sorted(columns), "mean")
-    if isinstance(cluster_rep, MinMaxMean):
-        for col in cluster_rep.max_columns:
+    if isinstance(cluster_representation, MinMaxMean):
+        for col in cluster_representation.max_columns:
             if col in representation_dict:
                 representation_dict[col] = "max"
-        for col in cluster_rep.min_columns:
+        for col in cluster_representation.min_columns:
             if col in representation_dict:
                 representation_dict[col] = "min"
     return representation_dict
@@ -191,8 +193,10 @@ def run_pipeline(
     """
     rescale_exclude_columns = rescale_exclude_columns or []
 
-    cluster_rep = cluster.get_representation()
-    representation_dict = _build_representation_dict(data.columns, cluster_rep)
+    cluster_representation = cluster.get_representation()
+    representation_dict = _build_representation_dict(
+        data.columns, cluster_representation
+    )
 
     # Store original column order (before sort in normalize)
     original_column_order = list(data.columns)
@@ -236,7 +240,7 @@ def run_pipeline(
             use_predefined_assignments(
                 candidates,
                 predef,
-                cluster_rep,
+                cluster_representation,
                 representation_dict,
                 n_timesteps_per_period,
             )

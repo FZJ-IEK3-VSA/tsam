@@ -14,10 +14,7 @@ def unstack_to_periods(
     normalized_ts: pd.DataFrame,
     n_timesteps_per_period: int,
 ) -> PeriodProfiles:
-    """Extend to integer multiple of period length, reshape to period matrix.
-
-    Replicates unstack_to_periods (monolith lines 27-85) and the call at lines 656-660.
-    """
+    """Extend to integer multiple of period length, reshape to period matrix."""
     unstacked = normalized_ts.copy()
 
     # Extend to integer multiple of period length
@@ -72,8 +69,6 @@ def add_period_sum_features(
     candidates: np.ndarray,
 ) -> tuple[np.ndarray, int]:
     """Append per-column sums as extra features.
-
-    Replicates monolith lines 1137-1151.
 
     Returns (augmented_candidates, n_extra_features_to_trim).
     """

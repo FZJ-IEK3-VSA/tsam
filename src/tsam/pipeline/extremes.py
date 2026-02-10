@@ -21,6 +21,30 @@ def _append_col_with(column, append_with: str = " max."):
         return tuple(col)
 
 
+def _detect_extreme(
+    profiles_df: pd.DataFrame,
+    column,
+    series: pd.Series,
+    suffix: str,
+    extreme_period_no: list,
+    cc_list: list,
+    extreme_periods: dict,
+) -> None:
+    """Detect a single extreme period and add it to extreme_periods if unique."""
+    step_no = series  # already reduced to a scalar index
+    if (
+        step_no not in extreme_period_no
+        and profiles_df.loc[step_no, :].values.tolist() not in cc_list
+    ):
+        key = _append_col_with(column, suffix)
+        extreme_periods[key] = {
+            "step_no": step_no,
+            "profile": profiles_df.loc[step_no, :].values,
+            "column": column,
+        }
+        extreme_period_no.append(step_no)
+
+
 def add_extreme_periods(
     profiles_df: pd.DataFrame,
     cluster_centers: list,
@@ -28,8 +52,6 @@ def add_extreme_periods(
     extremes: ExtremeConfig,
 ) -> tuple[list, list | np.ndarray, list[int], dict]:
     """Add extreme periods to clustered data.
-
-    Replicates _add_extreme_periods (monolith lines 729-918).
 
     Returns (new_cluster_centers, new_cluster_order, extreme_cluster_idx, extreme_periods_info).
     """
@@ -39,63 +61,34 @@ def add_extreme_periods(
 
     cc_list = [center.tolist() for center in cluster_centers]
 
-    # Check which extreme periods exist
+    # Detect extreme periods for each column
+    _CHECKS: list[tuple[list[str], str, str]] = [
+        (extremes.max_value, "max", " max."),
+        (extremes.min_value, "min", " min."),
+        (extremes.max_period, "mean_max", " daily max."),
+        (extremes.min_period, "mean_min", " daily min."),
+    ]
     for column in columns:
-        if column in extremes.max_value:
-            step_no = profiles_df[column].max(axis=1).idxmax()  # type: ignore[arg-type]
-            if (
-                step_no not in extreme_period_no
-                and profiles_df.loc[step_no, :].values.tolist() not in cc_list
-            ):
-                max_col = _append_col_with(column, " max.")
-                extreme_periods[max_col] = {
-                    "step_no": step_no,
-                    "profile": profiles_df.loc[step_no, :].values,
-                    "column": column,
-                }
-                extreme_period_no.append(step_no)
-
-        if column in extremes.min_value:
-            step_no = profiles_df[column].min(axis=1).idxmin()  # type: ignore[arg-type]
-            if (
-                step_no not in extreme_period_no
-                and profiles_df.loc[step_no, :].values.tolist() not in cc_list
-            ):
-                min_col = _append_col_with(column, " min.")
-                extreme_periods[min_col] = {
-                    "step_no": step_no,
-                    "profile": profiles_df.loc[step_no, :].values,
-                    "column": column,
-                }
-                extreme_period_no.append(step_no)
-
-        if column in extremes.max_period:
-            step_no = profiles_df[column].mean(axis=1).idxmax()  # type: ignore[call-overload]
-            if (
-                step_no not in extreme_period_no
-                and profiles_df.loc[step_no, :].values.tolist() not in cc_list
-            ):
-                mean_max_col = _append_col_with(column, " daily max.")
-                extreme_periods[mean_max_col] = {
-                    "step_no": step_no,
-                    "profile": profiles_df.loc[step_no, :].values,
-                    "column": column,
-                }
-                extreme_period_no.append(step_no)
-
-        if column in extremes.min_period:
-            step_no = profiles_df[column].mean(axis=1).idxmin()  # type: ignore[call-overload]
-            if (
-                step_no not in extreme_period_no
-                and profiles_df.loc[step_no, :].values.tolist() not in cc_list
-            ):
-                mean_min_col = _append_col_with(column, " daily min.")
-                extreme_periods[mean_min_col] = {
-                    "step_no": step_no,
-                    "profile": profiles_df.loc[step_no, :].values,
-                    "column": column,
-                }
-                extreme_period_no.append(step_no)
+        for config_list, kind, suffix in _CHECKS:
+            if column not in config_list:
+                continue
+            if kind == "max":
+                step_no = profiles_df[column].max(axis=1).idxmax()  # type: ignore[arg-type]
+            elif kind == "min":
+                step_no = profiles_df[column].min(axis=1).idxmin()  # type: ignore[arg-type]
+            elif kind == "mean_max":
+                step_no = profiles_df[column].mean(axis=1).idxmax()  # type: ignore[call-overload]
+            else:  # mean_min
+                step_no = profiles_df[column].mean(axis=1).idxmin()  # type: ignore[call-overload]
+            _detect_extreme(
+                profiles_df,
+                column,
+                step_no,
+                suffix,
+                extreme_period_no,
+                cc_list,
+                extreme_periods,
+            )
 
     # Get current related clusters of extreme periods
     for period_type in extreme_periods:

@@ -22,8 +22,6 @@ def segment_typical_periods(
 ) -> tuple[pd.DataFrame, pd.DataFrame, list]:
     """Segment typical periods into fewer timesteps.
 
-    Replicates monolith lines 1253-1270.
-
     Returns (segmented_df, predicted_segmented_df, segment_center_indices).
     """
     return segmentation(  # type: ignore[no-any-return]

@@ -23,8 +23,6 @@ def rescale_representatives(
 ) -> tuple[np.ndarray, dict]:
     """Rescale cluster periods so weighted mean matches original.
 
-    Replicates _rescale_cluster_periods (monolith lines 930-1027).
-
     Returns (rescaled_periods, deviations_dict).
     """
     columns = list(original_data.columns)
@@ -73,8 +71,8 @@ def rescale_representatives(
         # Difference between predicted and original sum
         diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
 
-        a = 0
-        while diff > sum_raw * TOLERANCE and a < MAX_ITERATOR:
+        iteration = 0
+        while diff > sum_raw * TOLERANCE and iteration < MAX_ITERATOR:
             # Rescale values (only non-extreme clusters)
             arr[idx_wo_peak, ci, :] *= (sum_raw - sum_peak) / sum_clu_wo_peak
 
@@ -90,15 +88,15 @@ def rescale_representatives(
                 weighting_vec[idx_wo_peak] * col_data[idx_wo_peak, :].sum(axis=1)
             )
             diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
-            a += 1
+            iteration += 1
 
         # Calculate and store final deviation
         deviation_pct = (diff / sum_raw) * 100 if sum_raw != 0 else 0.0
-        converged = a < MAX_ITERATOR
+        converged = iteration < MAX_ITERATOR
         rescale_deviations[column] = {
             "deviation_pct": deviation_pct,
             "converged": converged,
-            "iterations": a,
+            "iterations": iteration,
         }
 
         if not converged and deviation_pct > 0.01:

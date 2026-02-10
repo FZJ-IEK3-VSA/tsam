@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
 
@@ -5,7 +7,7 @@ from tsam.config import Distribution, MinMaxMean
 from tsam.utils.duration_representation import duration_representation
 
 # Aliases: old verbose names → new short names.
-# The monolith sends old names; the pipeline sends new names.
+# The legacy wrapper sends old names; the pipeline sends new names.
 _ALIASES = {
     "meanRepresentation": "mean",
     "medoidRepresentation": "medoid",
@@ -18,14 +20,14 @@ _ALIASES = {
 
 
 def representations(
-    candidates,
-    cluster_order,
-    default,
-    representation_method=None,
-    representation_dict=None,
-    distribution_period_wise=True,
-    n_timesteps_per_period=None,
-):
+    candidates: np.ndarray,
+    cluster_order: np.ndarray,
+    default: str,
+    representation_method: str | Distribution | MinMaxMean | None = None,
+    representation_dict: dict[str, str] | None = None,
+    distribution_period_wise: bool = True,
+    n_timesteps_per_period: int | None = None,
+) -> tuple[list[np.ndarray], list[int] | None]:
     cluster_center_indices = None
     if representation_method is None:
         representation_method = default
@@ -44,11 +46,14 @@ def representations(
 
     if isinstance(representation_method, MinMaxMean):
         cluster_centers = minmax_mean_representation(
-            candidates, cluster_order, representation_dict, n_timesteps_per_period
+            candidates,
+            cluster_order,
+            representation_dict,  # type: ignore[arg-type]
+            n_timesteps_per_period,  # type: ignore[arg-type]
         )
         return cluster_centers, cluster_center_indices
 
-    # --- Fallback: string-based dispatch (monolith compat) ---
+    # --- Fallback: string-based dispatch (legacy wrapper compat) ---
     # Normalize old names to new names
     representation_method = _ALIASES.get(representation_method, representation_method)
     if representation_method == "mean":
@@ -63,7 +68,10 @@ def representations(
         )
     elif representation_method == "minmax_mean":
         cluster_centers = minmax_mean_representation(
-            candidates, cluster_order, representation_dict, n_timesteps_per_period
+            candidates,
+            cluster_order,
+            representation_dict,  # type: ignore[arg-type]
+            n_timesteps_per_period,  # type: ignore[arg-type]
         )
     elif representation_method == "distribution":
         cluster_centers = duration_representation(
@@ -87,7 +95,10 @@ def representations(
     return cluster_centers, cluster_center_indices
 
 
-def maxoid_representation(candidates, cluster_order):
+def maxoid_representation(
+    candidates: np.ndarray,
+    cluster_order: np.ndarray,
+) -> tuple[list[np.ndarray], list[int]]:
     """
     Represents the candidates of a given cluster group (cluster_order)
     by its medoid, measured with the euclidean distance.
@@ -103,16 +114,19 @@ def maxoid_representation(candidates, cluster_order):
     cluster_centers = []
     cluster_center_indices = []
     for cluster_num in np.unique(cluster_order):
-        indice = np.where(cluster_order == cluster_num)
-        inner_dist_matrix = euclidean_distances(candidates, candidates[indice])
+        indices = np.where(cluster_order == cluster_num)
+        inner_dist_matrix = euclidean_distances(candidates, candidates[indices])
         min_dist_idx = np.argmax(inner_dist_matrix.sum(axis=0))
-        cluster_centers.append(candidates[indice][min_dist_idx])
-        cluster_center_indices.append(indice[0][min_dist_idx])
+        cluster_centers.append(candidates[indices][min_dist_idx])
+        cluster_center_indices.append(indices[0][min_dist_idx])
 
     return cluster_centers, cluster_center_indices
 
 
-def medoid_representation(candidates, cluster_order):
+def medoid_representation(
+    candidates: np.ndarray,
+    cluster_order: np.ndarray,
+) -> tuple[list[np.ndarray], list[int]]:
     """
     Represents the candidates of a given cluster group (cluster_order)
     by its medoid, measured with the euclidean distance.
@@ -128,16 +142,19 @@ def medoid_representation(candidates, cluster_order):
     cluster_centers = []
     cluster_center_indices = []
     for cluster_num in np.unique(cluster_order):
-        indice = np.where(cluster_order == cluster_num)
-        inner_dist_matrix = euclidean_distances(candidates[indice])
+        indices = np.where(cluster_order == cluster_num)
+        inner_dist_matrix = euclidean_distances(candidates[indices])
         min_dist_idx = np.argmin(inner_dist_matrix.sum(axis=0))
-        cluster_centers.append(candidates[indice][min_dist_idx])
-        cluster_center_indices.append(indice[0][min_dist_idx])
+        cluster_centers.append(candidates[indices][min_dist_idx])
+        cluster_center_indices.append(indices[0][min_dist_idx])
 
     return cluster_centers, cluster_center_indices
 
 
-def mean_representation(candidates, cluster_order):
+def mean_representation(
+    candidates: np.ndarray,
+    cluster_order: np.ndarray,
+) -> list[np.ndarray]:
     """
     Represents the candidates of a given cluster group (cluster_order)
     by its mean.
@@ -152,15 +169,18 @@ def mean_representation(candidates, cluster_order):
     # set cluster centers as means of the group candidates
     cluster_centers = []
     for cluster_num in np.unique(cluster_order):
-        indice = np.where(cluster_order == cluster_num)
-        current_mean = candidates[indice].mean(axis=0)
+        indices = np.where(cluster_order == cluster_num)
+        current_mean = candidates[indices].mean(axis=0)
         cluster_centers.append(current_mean)
     return cluster_centers
 
 
 def minmax_mean_representation(
-    candidates, cluster_order, representation_dict, n_timesteps_per_period
-):
+    candidates: np.ndarray,
+    cluster_order: np.ndarray,
+    representation_dict: dict[str, str],
+    n_timesteps_per_period: int,
+) -> list[np.ndarray]:
     """
     Represents the candidates of a given cluster group (cluster_order)
     by either the minimum, the maximum or the mean values of each time step for
@@ -181,27 +201,27 @@ def minmax_mean_representation(
     :param n_timesteps_per_period: The number of discrete timesteps which describe one period. required
     :type n_timesteps_per_period: integer
     """
-    # set cluster center depending of the representation_dict
     cluster_centers = []
+    rep_values = list(representation_dict.values())
     for cluster_num in np.unique(cluster_order):
-        indice = np.where(cluster_order == cluster_num)
+        indices = np.where(cluster_order == cluster_num)
         current_cluster_center = np.zeros(
             len(representation_dict) * n_timesteps_per_period
         )
-        for attribute_num in range(len(representation_dict)):
+        for attribute_num, rep in enumerate(rep_values):
             start_idx = attribute_num * n_timesteps_per_period
             end_idx = (attribute_num + 1) * n_timesteps_per_period
-            if list(representation_dict.values())[attribute_num] == "min":
+            if rep == "min":
                 current_cluster_center[start_idx:end_idx] = candidates[
-                    indice, start_idx:end_idx
+                    indices, start_idx:end_idx
                 ].min(axis=1)
-            elif list(representation_dict.values())[attribute_num] == "max":
+            elif rep == "max":
                 current_cluster_center[start_idx:end_idx] = candidates[
-                    indice, start_idx:end_idx
+                    indices, start_idx:end_idx
                 ].max(axis=1)
-            elif list(representation_dict.values())[attribute_num] == "mean":
+            elif rep == "mean":
                 current_cluster_center[start_idx:end_idx] = candidates[
-                    indice, start_idx:end_idx
+                    indices, start_idx:end_idx
                 ].mean(axis=1)
             else:
                 raise ValueError(
