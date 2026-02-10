@@ -58,9 +58,9 @@ clustering_result.apply(data, temporal_resolution, round_decimals, numerical_tol
 ```
 
 **Key difference during transfer:** `weights=None` and
-`normalize_column_means=False`, so `NormalizedData` stores no weights and
-no mean-normalization. The clustering assignments carry the structural
-information; denormalization is a plain `scaler.inverse_transform`.
+`normalize_column_means=False`, so no weighted candidates are created and
+no mean-normalization is applied. The clustering assignments carry the
+structural information; denormalization is a plain `scaler.inverse_transform`.
 
 ---
 
@@ -88,14 +88,14 @@ information; denormalization is a plain `scaler.inverse_transform`.
 ### Step 1: Normalize
 
 ```
-normalize(data, cluster.weights, cluster.normalize_column_means)
+normalize(data, cluster.normalize_column_means)
     → NormalizedData
 ```
 
 | Module | `pipeline/normalize.py` |
 |---|---|
 | **Input** | `data` (raw DataFrame) |
-| **From `ClusterConfig`** | `weights`, `normalize_column_means` |
+| **From `ClusterConfig`** | `normalize_column_means` |
 | **Output** | `NormalizedData` |
 
 Operations:
@@ -104,17 +104,17 @@ Operations:
 3. Fit `MinMaxScaler`, transform to [0, 1]
 4. Store column means (`normalized_mean`)
 5. If `normalize_column_means`: divide each column by its mean
-6. Apply per-column `weights`
+
+Weights are **not** applied here — they are handled separately in step 2b.
 
 `NormalizedData` captures everything needed for all downstream steps:
 
 | Field | Description | Downstream consumers |
 |---|---|---|
-| `values` | Normalized + weighted DataFrame | `unstack_to_periods`, `compute_accuracy` |
+| `values` | Normalized (unweighted) DataFrame | `unstack_to_periods`, `compute_accuracy` |
 | `scaler` | Fitted `MinMaxScaler` | `denormalize` (both call sites) |
 | `normalized_mean` | Column means before sameMean division | `denormalize` (when `normalize_column_means=True`) |
 | `original_data` | Sorted, float-cast copy of input | `add_extreme_periods`, `rescale_representatives`, `reconstruct`, bounds check, output reindex |
-| `weights` | Per-column weights (or `None`) | `denormalize`, `rescale_representatives`, `compute_accuracy` |
 | `normalize_column_means` | Whether sameMean was applied | `denormalize`, `rescale_representatives` |
 
 ### Step 2: Unstack to periods
@@ -144,23 +144,46 @@ of the period length.
 | `time_index` | `PipelineResult` |
 | `n_columns` | `cluster_sorted_periods` |
 
+### Step 2b: Apply column weights (optional)
+
+```
+if cluster.weights:
+    _build_weight_vector(norm_data.values.columns, cluster.weights) → validated_weights
+    _weight_candidates(candidates, validated_weights, n_columns, n_timesteps)
+        → weighted_candidates
+```
+
+| Module | `pipeline/__init__.py` |
+|---|---|
+| **Gate** | `cluster.weights is not None` |
+| **Input** | `candidates` (from step 2) |
+| **From `ClusterConfig`** | `weights` |
+| **Output** | `weighted_candidates` (separate array, used only for clustering distance) |
+
+Creates a copy of the candidates array with per-column weight
+multiplication applied. The original `candidates` remain unweighted and
+are used for computing representations, rescaling, reconstruction, and
+accuracy. This ensures weights affect only which periods get grouped
+together, not the output values.
+
 ### Step 3: Add period sum features (optional)
 
 ```
 if cluster.include_period_sums:
-    add_period_sum_features(profiles_dataframe, candidates)
+    add_period_sum_features(profiles_dataframe, weighted_candidates or candidates)
         → (augmented_candidates, n_extra)
 ```
 
 | Module | `pipeline/periods.py` |
 |---|---|
 | **Gate** | `cluster.include_period_sums` |
-| **Input** | `period_profiles.profiles_dataframe`, `candidates` |
-| **Output** | augmented `candidates` array, count of extra features to trim later |
+| **Input** | `period_profiles.profiles_dataframe`, `weighted_candidates` (if weights active) or `candidates` |
+| **Output** | augmented candidate array, count of extra features to trim later |
 
 Appends per-column period sums as extra columns to bias clustering toward
-preserving totals. The extra features are trimmed off representatives in
-step 5.
+preserving totals. When weights are active, sums are appended to the
+weighted copy (they are clustering features only). The extra features are
+trimmed off representatives in step 5.
 
 ### Step 4: Cluster
 
@@ -187,26 +210,31 @@ use_predefined_assignments(candidates, predef.cluster_order,
 ```
 cluster_periods(candidates, n_clusters, cluster.method,
     cluster.solver, representation_method, representation_dict,
-    n_timesteps_per_period)
+    n_timesteps_per_period, weighted_candidates=weighted_candidates)
 ```
 
 | Module | `pipeline/clustering.py` |
 |---|---|
-| **Input** | `candidates` |
+| **Input** | `candidates` (unweighted), `weighted_candidates` (optional, for distance) |
 | **From `ClusterConfig`** | `method`, `solver`, `get_representation()` |
 | **Derived** | `representation_dict`, `n_clusters` |
+
+When `weighted_candidates` is provided, clustering uses it for distance
+computation and passes `candidates` as `representation_candidates` to
+`aggregate_periods()`, so representations are computed from unweighted data.
 
 #### Branch C: Duration curve clustering (`predef is None`, `use_duration_curves=True`)
 
 ```
 cluster_sorted_periods(candidates, profiles_values, n_columns,
     n_clusters, cluster.method, cluster.solver,
-    representation_method, representation_dict, n_timesteps_per_period)
+    representation_method, representation_dict, n_timesteps_per_period,
+    weighted_candidates=weighted_candidates)
 ```
 
 | Module | `pipeline/clustering.py` |
 |---|---|
-| **Input** | `candidates`, `period_profiles.profiles_dataframe.values`, `period_profiles.n_columns` |
+| **Input** | `candidates` (unweighted), `period_profiles`, `weighted_candidates` (optional) |
 | **From `ClusterConfig`** | `method`, `solver`, `get_representation()`, `use_duration_curves` (gate) |
 
 All three branches delegate to `period_aggregation.aggregate_periods()` and
@@ -248,7 +276,7 @@ Depending on `method`:
 ### Step 7: Compute cluster weights
 
 ```
-_count_occurrences(cluster_order) → cluster_period_no_occur
+_count_occurrences(cluster_order) → cluster_counts
 ```
 
 Counts how many original periods are assigned to each cluster.
@@ -257,29 +285,31 @@ Counts how many original periods are assigned to each cluster.
 
 ```
 if rescale_cluster_periods:
-    rescale_representatives(cluster_periods_list, cluster_period_no_occur,
-        extreme_cluster_idx, profiles_dataframe, norm_data,
-        n_timesteps_per_period, rescale_exclude_columns)
+    rescale_representatives(cluster_periods_list, cluster_counts,
+        extreme_cluster_idx, profiles_dataframe, original_data,
+        normalize_column_means, n_timesteps_per_period,
+        rescale_exclude_columns)
     → (rescaled_cluster_periods_list, rescale_deviations)
 ```
 
 | Module | `pipeline/rescale.py` |
 |---|---|
 | **Gate** | `rescale_cluster_periods` |
-| **Input** | `cluster_periods_list`, `cluster_period_no_occur`, `extreme_cluster_idx`, `period_profiles.profiles_dataframe` |
-| **From `NormalizedData`** | `original_data` (upper bound), `weights` (scale upper bound), `normalize_column_means` (scale upper bound) |
+| **Input** | `cluster_periods_list`, `cluster_counts`, `extreme_cluster_idx`, `period_profiles.profiles_dataframe` |
+| **From `NormalizedData`** | `original_data` (upper bound), `normalize_column_means` (scale upper bound) |
 | **From `run_pipeline`** | `n_timesteps_per_period`, `rescale_exclude_columns` |
 | **Output** | rescaled array, per-column deviation dict |
 
 Iteratively rescales non-extreme cluster representatives so each column's
 weighted sum matches the original time series total. Extreme clusters are
-excluded from rescaling.
+excluded from rescaling. Because the data is unweighted, the clipping
+bound only depends on `normalize_column_means` (no weight compensation).
 
 ### Step 9: Adjust for partial periods
 
 ```python
 if len(data) % n_timesteps_per_period != 0:
-    cluster_period_no_occur[last_cluster] -= fractional_adjustment
+    cluster_counts[last_cluster] -= fractional_adjustment
 ```
 
 Inline. Reduces the last cluster's weight proportionally if the time series
@@ -331,13 +361,14 @@ if round_decimals is not None:
 | Module | `pipeline/normalize.py` |
 |---|---|
 | **Input** | `normalized_typical_periods` |
-| **From `NormalizedData`** | `weights`, `normalize_column_means`, `normalized_mean`, `scaler` |
+| **From `NormalizedData`** | `normalize_column_means`, `normalized_mean`, `scaler` |
 | **Output** | `typical_periods` (in original units) |
 
 Operations:
-1. Undo weights (divide each column by its weight)
-2. Undo sameMean (multiply by `normalized_mean`)
-3. Inverse-transform via stored `scaler`
+1. Undo sameMean (multiply by `normalized_mean`)
+2. Inverse-transform via stored `scaler`
+
+No weight removal is needed — weights were never baked into the data.
 
 Rounding is applied after denormalization as a formatting step.
 
@@ -354,13 +385,13 @@ original data's max/min beyond `numerical_tolerance`.
 
 ```
 reconstruct(normalized_typical_periods, cluster_order,
-    period_profiles, norm_data, segmentation_active, predicted_segmented_df)
+    period_profiles, norm_data)
     → (reconstructed_data, normalized_predicted)
 
 if round_decimals is not None:
     reconstructed_data.round(decimals=round_decimals)
 
-compute_accuracy(norm_data.values, normalized_predicted, norm_data)
+compute_accuracy(norm_data.values, normalized_predicted)
     → accuracy_df
 ```
 
@@ -375,12 +406,10 @@ compute_accuracy(norm_data.values, normalized_predicted, norm_data)
 | `cluster_order` | step 4 (or step 6 if extremes modified it) |
 | `period_profiles` | step 2 (`column_index`, `profiles_dataframe.index`) |
 | `norm_data` | step 1 (`original_data` for trimming/index, `scaler`/`normalized_mean`/`normalize_column_means` via `denormalize`) |
-| `segmentation_active` | `segments is not None` |
-| `predicted_segmented_df` | step 11 (or `None`) |
 
-Internally calls `denormalize(normalized_predicted, norm_data, apply_weights=False)`.
-Weights are not undone during reconstruction because accuracy is measured
-in the normalized-but-unweighted space.
+Internally calls `denormalize(normalized_predicted, norm_data)`. No weight
+handling is needed — both the typical periods and the normalized data are
+in the same unweighted space.
 
 **`compute_accuracy()`:**
 
@@ -388,11 +417,9 @@ in the normalized-but-unweighted space.
 |---|---|
 | `normalized_original` | `norm_data.values` (from step 1) |
 | `normalized_predicted` | returned by `reconstruct()` |
-| `norm_data` | step 1 (reads `weights` to undo weighting before error calculation) |
 
-Computes RMSE, MAE, and duration-curve RMSE per column. If weights are
-present, divides the original normalized data by the weight to compare in
-unweighted normalized space.
+Computes RMSE, MAE, and duration-curve RMSE per column. Both inputs are
+unweighted normalized data, so they are directly comparable.
 
 ### Step 15: Build ClusteringResult
 
@@ -425,14 +452,15 @@ columns alphabetically internally), then packs everything into a
 |---|---|---|---|
 | `method` | 4 | `cluster_periods()` / `cluster_sorted_periods()` | direct |
 | `representation` | 4, 11 (fallback) | clustering functions, `segment_typical_periods()` | `cluster.get_representation()` |
-| `weights` | 1 | `normalize()` | direct; then stored in `norm_data.weights` |
+| `weights` | 2b | `_weight_candidates()` | via `_build_weight_vector()`; creates separate `weighted_candidates` |
 | `normalize_column_means` | 1 | `normalize()` | direct; then stored in `norm_data.normalize_column_means` |
 | `use_duration_curves` | 4 | branch gate in `run_pipeline()` | direct |
 | `include_period_sums` | 3 | `add_period_sum_features()` | direct |
 | `solver` | 4 | `cluster_periods()` / `cluster_sorted_periods()` | direct |
 
-After step 1, `weights` and `normalize_column_means` are never read from
-`ClusterConfig` again. All downstream access goes through `NormalizedData`.
+After step 2b, `weights` are never read again — the `weighted_candidates`
+array carries the weight information into clustering. After step 1,
+`normalize_column_means` is accessed only through `NormalizedData`.
 
 After step 4, `method`, `solver`, `use_duration_curves`, and
 `include_period_sums` are never read again. The clustering phase is complete.
@@ -468,16 +496,19 @@ Both fields are consumed exclusively in step 11.
 ```
 Step  1  normalize()                    creates NormalizedData
 Step  2  unstack_to_periods()           reads .values
+Step 2b  _weight_candidates()           reads .values.columns (for weight validation)
 Step  6  add_extreme_periods()          reads .original_data (for column list)
-Step  8  rescale_representatives()      reads .original_data, .weights, .normalize_column_means
-Step 12  denormalize()                  reads .weights, .normalize_column_means, .normalized_mean, .scaler
+Step  8  rescale_representatives()      reads .original_data, .normalize_column_means
+Step 12  denormalize()                  reads .normalize_column_means, .normalized_mean, .scaler
 Step 13  _warn_if_out_of_bounds()       reads .original_data
 Step 14  reconstruct()                  reads .original_data (length, index, columns)
          └─ denormalize()              reads .normalize_column_means, .normalized_mean, .scaler
-                                        (apply_weights=False, so .weights is skipped)
-Step 14  compute_accuracy()             reads .weights
+Step 14  compute_accuracy()             reads .values (direct comparison, no weight handling)
 Step 16  output reindex                 reads .original_data
 ```
+
+Note: `NormalizedData` no longer carries a `weights` field. Weights are
+handled entirely via the separate `weighted_candidates` array in step 2b.
 
 ### `PeriodProfiles` — created once, read by clustering and reshaping
 
@@ -510,7 +541,7 @@ converts into the user-facing `AggregationResult`:
 PipelineResult                          AggregationResult
 ─────────────                           ─────────────────
 typical_periods                    →    cluster_representatives (renamed index levels)
-cluster_weights                    →    cluster_weights
+cluster_counts                     →    cluster_counts
 n_timesteps_per_period             →    n_timesteps_per_period
 time_index                         →    _time_index
 original_data                      →    _original_data → .original (property)

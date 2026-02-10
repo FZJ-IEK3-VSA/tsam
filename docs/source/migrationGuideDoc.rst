@@ -354,7 +354,7 @@ object with everything attached.
    * - ``agg.clusterOrder``
      - ``result.cluster_assignments``
    * - ``agg.clusterPeriodNoOccur``
-     - ``result.cluster_weights``
+     - ``result.cluster_counts``
    * - ``agg.clusterCenterIndices``
      - ``result.clustering.cluster_centers``
    * - ``agg.timeSeries``

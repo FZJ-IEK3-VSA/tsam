@@ -126,7 +126,7 @@ def aggregate(
         Object containing:
         - cluster_representatives: DataFrame with aggregated periods
         - cluster_assignments: Which cluster each original period belongs to
-        - cluster_weights: Occurrence count per cluster
+        - cluster_counts: Occurrence count per cluster
         - accuracy: RMSE, MAE metrics
         - Methods: to_dict()
 
@@ -299,7 +299,7 @@ def _build_aggregation_result(
 
     return AggregationResult(
         cluster_representatives=cluster_representatives,
-        cluster_weights=result.cluster_weights,
+        cluster_counts=result.cluster_counts,
         n_timesteps_per_period=result.n_timesteps_per_period,
         segment_durations=segment_durations,
         accuracy=accuracy,

@@ -22,7 +22,7 @@ A call to `tsam.aggregate()` produces an `AggregationResult` by running
         │
         ▼
   ┌─────────────┐
-  │  Normalize   │ Step 1 — scale to [0,1], apply weights & column-mean normalization
+  │  Normalize   │ Step 1 — scale to [0,1], column-mean normalization (no weights)
   └──────┬───────┘
          ▼
   ┌─────────────┐
@@ -30,11 +30,15 @@ A call to `tsam.aggregate()` produces an `AggregationResult` by running
   └──────┬───────┘
          ▼
   ┌─────────────┐
-  │  Augment    │ Step 3 — optionally append period-sum features for clustering
+  │  Weight     │ Step 2b — apply per-column weights to a copy for clustering distance
   └──────┬───────┘
          ▼
   ┌─────────────┐
-  │  Cluster    │ Step 4 — group similar periods into k clusters
+  │  Augment    │ Step 3 — optionally append period-sum features (to weighted copy)
+  └──────┬───────┘
+         ▼
+  ┌─────────────┐
+  │  Cluster    │ Step 4 — group similar periods using weighted distance; represent from unweighted
   └──────┬───────┘
          ▼
   ┌─────────────┐
@@ -138,7 +142,7 @@ instead of running clustering from scratch.
 |---|---|
 | **Module** | `pipeline/normalize.py` |
 | **Function** | `normalize()` |
-| **Config** | `ClusterConfig.weights`, `ClusterConfig.normalize_column_means` |
+| **Config** | `ClusterConfig.normalize_column_means` |
 | **Output** | `NormalizedData` |
 
 This step prepares the raw data for clustering by removing scale
@@ -154,8 +158,12 @@ differences between columns.
    divide each column by its mean so all columns have equal weight
    regardless of their typical magnitude. Useful when columns have very
    different average levels.
-5. **Apply weights** (optional): multiply each column by a user-supplied
-   weight factor to emphasize or de-emphasize it during clustering.
+
+**Weights are NOT applied here.** Per-column weights (`ClusterConfig.weights`)
+are applied in step 2b to a separate copy used only for clustering distance.
+The `NormalizedData` produced here contains unweighted normalized values that
+flow through all downstream steps (rescaling, denormalization, reconstruction,
+accuracy) without any weight compensation.
 
 **Why it matters:** Without normalization, columns with larger numeric ranges
 dominate the clustering distance. A temperature column ranging 0–40 would
@@ -187,6 +195,32 @@ the last period is padded by repeating initial rows.
 
 ---
 
+### Step 2b: Apply column weights (optional)
+
+| | |
+|---|---|
+| **Module** | `pipeline/__init__.py` |
+| **Functions** | `_build_weight_vector()`, `_weight_candidates()` |
+| **Config** | `ClusterConfig.weights` |
+
+If `ClusterConfig.weights` is provided, a **separate weighted copy** of the
+candidates array is created by multiplying each column's values by its
+weight factor. This weighted copy is used exclusively for clustering
+distance calculation in step 4. All other pipeline steps (rescaling,
+denormalization, reconstruction, accuracy) operate on the **unweighted**
+candidates from step 2.
+
+This separation means:
+- Weights influence *which* periods get grouped together.
+- Cluster *representatives* (medoid, mean, etc.) are computed from
+  unweighted data, so typical periods are in the original normalized space.
+- No downstream step needs to "undo" weights.
+
+If no weights are provided, steps 2b and 3 are skipped and the unweighted
+candidates are passed directly to clustering.
+
+---
+
 ### Step 3: Add period-sum features (optional)
 
 | | |
@@ -195,12 +229,12 @@ the last period is padded by repeating initial rows.
 | **Function** | `add_period_sum_features()` |
 | **Config** | `ClusterConfig.include_period_sums` |
 
-Appends the per-column sum of each period as extra features in the
-candidate matrix. This biases the clustering distance toward preserving
-total energy/load per period.
-
-The extra columns are removed from the cluster centers in step 5 — they
-only influence which periods get grouped together.
+Appends the per-column sum of each period as extra features. When weights
+are active, the sums are appended to the **weighted** candidates (they are
+clustering features). When no weights are active, they are appended to the
+regular candidates. Either way, the extra columns are removed from the
+cluster centers in step 5 — they only influence which periods get grouped
+together.
 
 ---
 
@@ -214,6 +248,12 @@ only influence which periods get grouped together.
 
 This is the core step. It groups the period profiles into `n_clusters`
 clusters and selects or computes a representative for each.
+
+When weights are active, clustering uses the **weighted** candidates for
+distance computation but computes representatives from the **unweighted**
+candidates. This is handled via the `representation_candidates` parameter
+in `aggregate_periods()`. The result: cluster assignments reflect weighted
+importance, but typical-period values are in the original normalized space.
 
 **Clustering methods** (`ClusterConfig.method`):
 
@@ -322,6 +362,10 @@ used for:
 
 **Solution:** Iteratively scale each column of each non-extreme cluster
 center until the weighted sum matches the original total (within tolerance).
+Values are clipped to `[0, scale_ub]` where `scale_ub` depends on
+`normalize_column_means` (ratio of max to mean). Because the data is
+unweighted at this point, no weight compensation is needed for the
+clipping bound.
 
 Extreme clusters (from step 6) are excluded from rescaling to preserve
 their extreme values.
@@ -389,9 +433,10 @@ After segmentation, the pipeline tracks two DataFrames:
 Inverts the transformations from step 1 to return values in original
 units:
 
-1. Undo weights (divide by weight).
-2. Undo column-mean normalization (multiply by stored mean).
-3. Inverse min-max scaling (via the stored `MinMaxScaler`).
+1. Undo column-mean normalization (multiply by stored mean).
+2. Inverse min-max scaling (via the stored `MinMaxScaler`).
+
+No weight removal is needed because weights were never baked into the data.
 
 The output is `typical_periods` — the final representative periods in
 the user's original units.
@@ -421,8 +466,9 @@ distribution representations or aggressive rescaling.
 series by replacing each original period with its assigned cluster
 representative. The result has the same shape as the input data.
 
-**Accuracy:** Compares the reconstruction to the original (in normalized
-space) and computes per-column:
+**Accuracy:** Compares the reconstruction to the original in normalized
+(unweighted) space. Both are directly comparable — no weight compensation
+needed. Computes per-column:
 
 | Metric | Description |
 |---|---|
@@ -469,7 +515,7 @@ result = tsam.aggregate(df, n_clusters=8)
 
 # Core outputs
 result.cluster_representatives  # DataFrame (cluster × timestep)
-result.cluster_weights          # {cluster_id: count}
+result.cluster_counts           # {cluster_id: count}
 result.cluster_assignments      # array of cluster IDs per original period
 
 # Reconstruction

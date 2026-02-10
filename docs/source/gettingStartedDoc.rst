@@ -155,8 +155,8 @@ Key concepts used in the tsam API:
      - Time resolution of input data. Accepts float (hours) or pandas Timedelta strings (e.g., ``1.0``, ``'1h'``, ``'15min'``). If not provided, inferred from the datetime index.
    * - ``cluster_assignments``
      - Array mapping each original period to its cluster index (0 to n_clusters-1).
-   * - ``cluster_weights``
-     - Dictionary mapping cluster index to occurrence count (how many original periods each cluster represents).
+   * - ``cluster_counts``
+     - Dictionary mapping cluster index to occurrence count (how many original periods each cluster represents). May be fractional for partial periods.
    * - ``segment_durations``
      - Nested tuple with duration (in timesteps) for each segment in each typical period.
    * - ``cluster_representatives``

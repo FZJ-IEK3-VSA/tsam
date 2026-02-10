@@ -2,6 +2,70 @@
 tsam's Change Log
 ##################
 
+*******************
+Release version 4.0
+*******************
+
+Improvements
+============
+
+* **Decoupled column weights from data pipeline**: ``ClusterConfig.weights`` now affects
+  **only** the clustering distance calculation.  Previously, weights were multiplied into
+  the normalized data during preprocessing, which forced every downstream step to
+  compensate (rescaling widened clip bounds by the weight factor, reconstruction divided
+  out weights before denormalization, and accuracy computation divided out weights
+  before comparison).
+
+  **Where weights are applied now:**
+
+  - A separate *weighted candidates* array is created after unstacking and used
+    exclusively as the distance matrix for clustering (step 4).
+  - When ``include_period_sums`` is enabled, period-sum features are appended to
+    the weighted candidates only.
+  - Cluster *representations* (medoid, mean, distribution, etc.) are computed from
+    the **unweighted** candidates so that typical periods live in the original
+    normalized space.
+
+  **Where weights are no longer applied:**
+
+  - ``normalize()`` no longer accepts or applies weights.
+  - ``NormalizedData`` no longer carries a ``weights`` field.
+  - ``denormalize()`` no longer has an ``apply_weights`` parameter.
+  - ``rescale_representatives()`` no longer widens the clipping bound by the
+    weight factor.
+  - ``reconstruct()`` no longer divides out weights before denormalization.
+  - ``compute_accuracy()`` no longer divides out weights before error comparison.
+
+  This simplifies the pipeline, eliminates a class of weight-related bugs, and makes
+  the semantics of ``ClusterConfig.weights`` match its documentation: *"per-column
+  weights for clustering distance calculation"*.
+
+  **Compatibility note:** Cluster *assignments* are identical to the previous version
+  (the weighted distance matrix is mathematically equivalent).  With medoid or maxoid
+  representation, the selected representative may differ in edge cases because the
+  medoid is now chosen in the unweighted output space rather than the weighted
+  clustering space.  The legacy ``TimeSeriesAggregation`` class is unchanged.
+
+*********************
+Release version 3.1.2
+*********************
+
+Improvements
+============
+
+* **Disambiguated "weights" terminology**: Renamed ``AggregationResult.cluster_weights``
+  to ``cluster_counts`` to avoid confusion with per-column clustering weights
+  (``ClusterConfig.weights``). The old name remains as a deprecated property emitting
+  ``FutureWarning``.
+
+* **Column weights preserved during transfer**: ``ClusteringResult.apply()`` now replays
+  the original ``ClusterConfig.weights`` so that transferred results use the same
+  clustering distance when recomputing representatives.
+
+* **Fixed type annotation**: ``cluster_counts`` (formerly ``cluster_weights``) is now
+  correctly annotated as ``dict[int, float]`` since partial-period adjustment can produce
+  fractional values.
+
 *********************
 Release version 4.0.0
 *********************
@@ -109,7 +173,7 @@ New Features
 
   - ``cluster_representatives``: DataFrame with aggregated typical periods
   - ``cluster_assignments``: Which cluster each original period belongs to
-  - ``cluster_weights``: Occurrence count per cluster
+  - ``cluster_counts``: Occurrence count per cluster (fractional for partial periods)
   - ``accuracy``: ``AccuracyMetrics`` object with RMSE, MAE, and duration curve RMSE
   - ``reconstructed``: Reconstructed time series (cached property)
   - ``residuals``: Difference between original and reconstructed

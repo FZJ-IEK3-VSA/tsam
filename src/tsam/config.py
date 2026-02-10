@@ -197,6 +197,11 @@ class ClusterConfig:
         Higher weight = more influence on clustering.
         Example: {"demand": 2.0, "solar": 1.0}
 
+        Weights are applied to a separate copy of the candidate matrix used
+        only for clustering distance. They do not affect normalization,
+        rescaling, denormalization, reconstruction, or accuracy computation.
+        Columns not listed default to weight 1.0.
+
     normalize_column_means : bool, default False
         Normalize all columns to the same mean before clustering.
         Useful when columns have very different scales.
@@ -420,6 +425,7 @@ class ClusteringResult:
     segment_representation: Representation | None = None
     temporal_resolution: float | None = None
     extreme_cluster_indices: tuple[int, ...] | None = None
+    column_weights: tuple[tuple[str, float], ...] | None = None
 
     # === Reference fields (for documentation, not used by apply()) ===
     cluster_config: ClusterConfig | None = None
@@ -558,6 +564,8 @@ class ClusteringResult:
             result["temporal_resolution"] = self.temporal_resolution
         if self.extreme_cluster_indices is not None:
             result["extreme_cluster_indices"] = list(self.extreme_cluster_indices)
+        if self.column_weights is not None:
+            result["column_weights"] = {k: v for k, v in self.column_weights}
         # Reference fields (optional, for documentation)
         if self.cluster_config is not None:
             result["cluster_config"] = self.cluster_config.to_dict()
@@ -600,6 +608,8 @@ class ClusteringResult:
             kwargs["temporal_resolution"] = data["temporal_resolution"]
         if "extreme_cluster_indices" in data:
             kwargs["extreme_cluster_indices"] = tuple(data["extreme_cluster_indices"])
+        if "column_weights" in data:
+            kwargs["column_weights"] = tuple(sorted(data["column_weights"].items()))
         # Reference fields
         if "cluster_config" in data:
             kwargs["cluster_config"] = ClusterConfig.from_dict(data["cluster_config"])
@@ -780,8 +790,11 @@ class ClusteringResult:
                 f"but clustering expects {self.n_original_periods} periods"
             )
 
-        # Build minimal ClusterConfig with just the representation.
-        cluster = ClusterConfig(representation=self.representation)
+        # Build ClusterConfig with representation and column weights.
+        cluster = ClusterConfig(
+            representation=self.representation,
+            weights=dict(self.column_weights) if self.column_weights else None,
+        )
 
         # Use stored segment config if available, otherwise build from transfer fields
         segments: SegmentConfig | None = None

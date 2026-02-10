@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING
@@ -94,9 +95,10 @@ class AggregationResult:
         Length equals the number of original periods.
         Values are cluster indices (0 to n_clusters-1).
 
-    cluster_weights : dict[int, int]
+    cluster_counts : dict[int, float]
         How many original periods each cluster represents.
         Keys are cluster indices, values are occurrence counts.
+        Values can be fractional due to partial-period adjustment.
 
     n_clusters : int
         Number of clusters (typical periods).
@@ -132,7 +134,7 @@ class AggregationResult:
             1           0.15   0.42   0.82
     ...
 
-    >>> result.cluster_weights
+    >>> result.cluster_counts
     {0: 45, 1: 52, 2: 38, ...}
 
     >>> result.accuracy.rmse
@@ -143,7 +145,7 @@ class AggregationResult:
     """
 
     cluster_representatives: pd.DataFrame
-    cluster_weights: dict[int, int]
+    cluster_counts: dict[int, float]
     n_timesteps_per_period: int
     segment_durations: tuple[tuple[int, ...], ...] | None
     accuracy: AccuracyMetrics
@@ -160,7 +162,7 @@ class AggregationResult:
         """Number of clusters (typical periods).
 
         Derived from the cluster_representatives DataFrame index,
-        which is the authoritative source. Note: cluster_weights may
+        which is the authoritative source. Note: cluster_counts may
         have more entries than actual cluster IDs due to tsam quirks.
         """
         return self.cluster_representatives.index.get_level_values(0).nunique()
@@ -178,6 +180,16 @@ class AggregationResult:
         Values are cluster indices (0 to n_clusters-1).
         """
         return np.array(self.clustering.cluster_assignments)
+
+    @property
+    def cluster_weights(self) -> dict[int, float]:
+        """Deprecated: use cluster_counts instead."""
+        warnings.warn(
+            "'cluster_weights' is deprecated, use 'cluster_counts'.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self.cluster_counts
 
     def __repr__(self) -> str:
         seg_info = f", n_segments={self.n_segments}" if self.n_segments else ""
@@ -255,7 +267,7 @@ class AggregationResult:
         return {
             "cluster_representatives": self.cluster_representatives.to_dict(),
             "cluster_assignments": self.cluster_assignments.tolist(),
-            "cluster_weights": self.cluster_weights,
+            "cluster_counts": self.cluster_counts,
             "n_clusters": self.n_clusters,
             "n_timesteps_per_period": self.n_timesteps_per_period,
             "n_segments": self.n_segments,

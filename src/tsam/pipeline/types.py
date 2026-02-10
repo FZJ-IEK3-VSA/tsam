@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import numpy as np
@@ -29,11 +29,10 @@ class PredefParams:
 class NormalizedData:
     """Carries everything needed for denormalization."""
 
-    values: pd.DataFrame  # normalized + weighted time series
+    values: pd.DataFrame  # normalized (unweighted) time series
     scaler: MinMaxScaler  # fitted on original, reusable for inverse_transform
     normalized_mean: pd.Series  # mean before normalize_column_means division
     original_data: pd.DataFrame  # for bounds check + rescale upper bound
-    weights: dict[str, float] | None  # per-column weighting factors
     normalize_column_means: (
         bool  # whether normalize_column_means normalization was applied
     )
@@ -56,7 +55,7 @@ class PipelineResult:
     """Single handoff from pipeline to api.py / config.py."""
 
     typical_periods: pd.DataFrame  # denormalized, MultiIndex (cluster, timestep)
-    cluster_weights: dict[int, Any]
+    cluster_counts: dict[int, float]
     n_timesteps_per_period: int
     time_index: pd.Index
     original_data: pd.DataFrame

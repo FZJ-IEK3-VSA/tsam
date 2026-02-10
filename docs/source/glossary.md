@@ -36,8 +36,8 @@ For a quick overview of the most common terms, see the
 | **Denormalization** | Inverse of normalization: scaling from [0, 1] back to original units using the stored scaler. | `_unnormalizeTimeSeries()` | `denormalize()` |
 | **Scaler** | The fitted MinMaxScaler storing each column's min/max. Created once, used for both directions. | (not stored) | `scaler` |
 | **Mean Normalization** | Optional: dividing each column by its normalized mean so all columns contribute equally to distances regardless of value distribution. | `sameMean` | `normalize_column_means` |
-| **Column Weight** | A per-column multiplier applied after normalization. Higher weight = more influence on clustering distance. Weight of 0 is replaced by `MIN_WEIGHT` (1e-6). | `weightDict` | `weights` |
-| **Weighted Profile** | A period profile after normalization and column weighting. This is what clustering actually sees. | `normalizedPeriodlyProfiles` (misleading — includes weights) | `weighted_profiles` |
+| **Column Weight** | A per-column multiplier applied to a **separate copy** of the candidate matrix, used only for clustering distance. Higher weight = more influence on clustering. Does not affect normalization, rescaling, denormalization, reconstruction, or accuracy. Weight of 0 is replaced by `MIN_WEIGHT` (1e-6). | `weightDict` | `weights` |
+| **Weighted Candidates** | A copy of the period profiles with column weights applied. Used exclusively as the distance matrix for clustering; all other pipeline steps operate on the unweighted originals. | `normalizedPeriodlyProfiles` (misleading — included weights in data) | `weighted_candidates` |
 
 ## 4. Clustering
 
@@ -85,7 +85,7 @@ For a quick overview of the most common terms, see the
 | Term | Definition | Old code | New code |
 |------|-----------|----------|----------|
 | **Rescaling** | Iterative post-clustering adjustment: multiplicatively scales non-extreme representatives so the weighted sum of each column matches the original time series total. Ensures energy/mass conservation. | `_rescaleClusterPeriods()`, `rescaleClusterPeriods` (bool) | `rescale()` (function), `preserve_column_means` (parameter) |
-| **Rescale Upper Bound** | Maximum allowed value during rescaling, derived from column weight and mean-normalization settings. | `scale_ub` | `rescale_upper_bound` |
+| **Rescale Upper Bound** | Maximum allowed value during rescaling, derived from mean-normalization settings only (ratio of column max to column mean when `normalize_column_means` is active, otherwise 1.0). Column weights do not affect this bound. | `scale_ub` | `rescale_upper_bound` |
 | **Rescale Deviation** | Remaining percentage difference after rescaling converges or hits max iterations. | `_rescaleDeviations` | `rescale_deviations` |
 | **Rescale-Excluded Columns** | Columns exempt from rescaling (e.g., binary indicators). | `rescaleExcludeColumns` | `rescale_exclude_columns` |
 
@@ -106,7 +106,7 @@ For a quick overview of the most common terms, see the
 | Term | Definition | Old code | New code |
 |------|-----------|----------|----------|
 | **Typical Period** | User-facing synonym for **representative**. The representative profile denormalized to original units. | `typicalPeriods` | `cluster_representatives` (in `AggregationResult`) |
-| **Cluster Weight** | Number of original periods assigned to a cluster. May be fractional if time series length isn't an integer multiple of period duration. | `_clusterPeriodNoOccur` | `cluster_weights` |
+| **Cluster Count** | Number of original periods assigned to a cluster. May be fractional if time series length isn't an integer multiple of period duration. | `_clusterPeriodNoOccur` | `cluster_counts` |
 | **Reconstruction** | Approximation of the original time series: replace each period with its cluster's representative. | `predictedData` | `reconstructed` |
 | **Residuals** | Difference: original minus reconstruction. | (computed ad-hoc) | `residuals` |
 
@@ -133,7 +133,7 @@ For a quick overview of the most common terms, see the
 2. **Config dataclasses**: `PascalCase` + `Config` suffix (e.g., `ClusterConfig`, `ExtremeConfig`)
 3. **Result dataclasses**: `PascalCase` + `Result`/`Metrics` suffix (e.g., `AggregationResult`)
 4. **Pipeline functions**: `snake_case` verbs: `normalize()`, `denormalize()`, `unstack_to_periods()`, `cluster()`, `compute_representatives()`, `add_extreme_periods()`, `rescale()`, `segment()`
-5. **Intermediate variables**: `snake_case` nouns from glossary: `period_profiles`, `weighted_profiles`, `cluster_assignments`, `representatives`, `extreme_cluster_indices`
+5. **Intermediate variables**: `snake_case` nouns from glossary: `period_profiles`, `weighted_candidates`, `cluster_assignments`, `representatives`, `extreme_cluster_indices`
 6. **No abbreviations** except: `n_clusters`, `n_segments`, `RMSE`, `MAE`
 
 ## Ambiguities Resolved
@@ -142,9 +142,9 @@ For a quick overview of the most common terms, see the
 |---|---|
 | `clusterCenters` vs `clusterPeriods` (trimmed centers) | Single name: `representatives`. Trim immediately after computation. |
 | `clusterOrder` (not an ordering!) | `cluster_assignments` |
-| `clusterPeriodNoOccur` (double negative) | `cluster_weights` |
+| `clusterPeriodNoOccur` (double negative) | `cluster_counts` |
 | `typicalPeriods` vs `normalizedTypicalPeriods` | `representatives` (normalized internal) / `cluster_representatives` (denormalized output) |
-| `candidates` (candidates for what?) | `period_profiles` (or `weighted_profiles` after weighting) |
+| `candidates` (candidates for what?) | `period_profiles` (unweighted); `weighted_candidates` (separate weighted copy for clustering distance) |
 | `sameMean` (cryptic bool) | `normalize_column_means` |
 | `sortValues` (sort what?) | `use_duration_curves` |
 | `evalSumPeriods` | `include_period_sums` |

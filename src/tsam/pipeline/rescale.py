@@ -3,13 +3,9 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-
-if TYPE_CHECKING:
-    from tsam.pipeline.types import NormalizedData
 
 MAX_ITERATOR = 20
 TOLERANCE = 1e-6
@@ -20,21 +16,18 @@ def rescale_representatives(
     cluster_period_no_occur: dict[int, float],
     extreme_cluster_idx: list[int],
     profiles_df: pd.DataFrame,
-    norm_data: NormalizedData,
+    original_data: pd.DataFrame,
+    normalize_column_means: bool,
     n_timesteps_per_period: int,
     exclude_columns: list[str],
 ) -> tuple[np.ndarray, dict]:
     """Rescale cluster periods so weighted mean matches original.
 
     Replicates _rescale_cluster_periods (monolith lines 930-1027).
-    Must produce identical floating-point results.
 
     Returns (rescaled_periods, deviations_dict).
     """
-    original_data = norm_data.original_data
     columns = list(original_data.columns)
-    normalize_column_means = norm_data.normalize_column_means
-    weights = norm_data.weights
 
     rescale_deviations: dict = {}
 
@@ -76,8 +69,6 @@ def rescale_representatives(
             scale_ub = (
                 scale_ub * original_data[column].max() / original_data[column].mean()
             )
-        if weights and column in weights:
-            scale_ub = scale_ub * weights[column]
 
         # Difference between predicted and original sum
         diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
