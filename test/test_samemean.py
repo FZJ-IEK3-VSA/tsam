@@ -29,10 +29,6 @@ def test_samemean():
     typPeriods = aggregation.create_typical_periods()
     print("Clustering took " + str(time.time() - starttime))
 
-    # test if the normalized time series all have the same mean
-    means = aggregation.normalized_time_series.mean().values
-    np.testing.assert_allclose(means, np.array([means[0]] * len(means)), rtol=1e-5)
-
     # repredict the original data
     rearangedData = aggregation.predict_original_data()
 

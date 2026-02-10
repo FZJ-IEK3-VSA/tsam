@@ -2,12 +2,12 @@
 tsam's Change Log
 ##################
 
-*******************
-Release version 4.0
-*******************
+*********************
+Release version 4.0.0
+*********************
 
-Improvements
-============
+Breaking Changes
+================
 
 * **Decoupled column weights from data pipeline**: ``ClusterConfig.weights`` now affects
   **only** the clustering distance calculation.  Previously, weights were multiplied into
@@ -46,17 +46,17 @@ Improvements
   medoid is now chosen in the unweighted output space rather than the weighted
   clustering space.  The legacy ``TimeSeriesAggregation`` class is unchanged.
 
-*********************
-Release version 3.1.2
-*********************
+* **Output column order preserved**: ``cluster_representatives``, ``reconstructed``, and ``original``
+  now return columns in the same order as the input DataFrame. Previously, columns were
+  alphabetically sorted. Code that relied on sorted column order may need adjustment.
+
+* **Renamed ``cluster_weights`` to ``cluster_counts``**: ``AggregationResult.cluster_weights``
+  has been renamed to ``cluster_counts`` to avoid confusion with per-column clustering weights
+  (``ClusterConfig.weights``). The old name remains as a deprecated property emitting
+  ``FutureWarning``.
 
 Improvements
 ============
-
-* **Disambiguated "weights" terminology**: Renamed ``AggregationResult.cluster_weights``
-  to ``cluster_counts`` to avoid confusion with per-column clustering weights
-  (``ClusterConfig.weights``). The old name remains as a deprecated property emitting
-  ``FutureWarning``.
 
 * **Column weights preserved during transfer**: ``ClusteringResult.apply()`` now replays
   the original ``ClusterConfig.weights`` so that transferred results use the same
@@ -65,24 +65,6 @@ Improvements
 * **Fixed type annotation**: ``cluster_counts`` (formerly ``cluster_weights``) is now
   correctly annotated as ``dict[int, float]`` since partial-period adjustment can produce
   fractional values.
-
-*********************
-Release version 4.0.0
-*********************
-
-Breaking Changes
-================
-
-* **Output column order preserved**: ``cluster_representatives``, ``reconstructed``, and ``original``
-  now return columns in the same order as the input DataFrame. Previously, columns were
-  alphabetically sorted. Code that relied on sorted column order may need adjustment.
-
-Bug Fixes
-=========
-
-* Fixed incorrect reconstruction and accuracy metrics when using ``ClusterConfig(weights=...)``.
-  The pipeline did not undo column weights before denormalization, causing weighted columns
-  to produce wrong reconstructed values and RMSE/MAE metrics.
 
 *********************
 Release version 3.1.1
