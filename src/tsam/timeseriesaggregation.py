@@ -1081,11 +1081,17 @@ class TimeSeriesAggregation:
             # check if representatives are defined
             if self.predefClusterCenterIndices is not None:
                 self.clusterCenterIndices = self.predefClusterCenterIndices
-                self.clusterCenters = candidates[self.predefClusterCenterIndices]
+                repr_candidates = (
+                    candidates[:, :delClusterParams] if delClusterParams else candidates
+                )
+                self.clusterCenters = repr_candidates[self.predefClusterCenterIndices]
             else:
-                # otherwise take the medoids
+                # otherwise take the medoids (strip extra eval columns)
+                repr_candidates = (
+                    candidates[:, :delClusterParams] if delClusterParams else candidates
+                )
                 self.clusterCenters, self.clusterCenterIndices = representations(
-                    candidates,
+                    repr_candidates,
                     self._clusterOrder,
                     default="medoidRepresentation",
                     representationMethod=self.representationMethod,
@@ -1110,6 +1116,7 @@ class TimeSeriesAggregation:
                     representationDict=self.representationDict,
                     distributionPeriodWise=self.distributionPeriodWise,
                     timeStepsPerPeriod=self.timeStepsPerPeriod,
+                    n_extra_columns=-delClusterParams if delClusterParams else 0,
                 )
             else:
                 self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
@@ -1117,10 +1124,9 @@ class TimeSeriesAggregation:
                 )
             self.clusteringDuration = time.time() - cluster_duration
 
-        # get cluster centers without additional evaluation values
-        self.clusterPeriods = []
-        for i, cluster_center in enumerate(self.clusterCenters):
-            self.clusterPeriods.append(cluster_center[:delClusterParams])
+        # All paths now produce cluster centers without extra evaluation columns,
+        # so no stripping is needed.
+        self.clusterPeriods = list(self.clusterCenters)
 
         if not self.extremePeriodMethod == "None":
             (

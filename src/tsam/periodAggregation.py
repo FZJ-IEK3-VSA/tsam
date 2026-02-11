@@ -13,6 +13,7 @@ def aggregatePeriods(
     representationDict=None,
     distributionPeriodWise=True,
     timeStepsPerPeriod=None,
+    n_extra_columns=0,
 ):
     """
     Clusters the data based on one of the cluster methods:
@@ -30,7 +31,16 @@ def aggregatePeriods(
     :param clusterMethod: Chosen clustering algorithm. Possible values are
         'averaging','k_means','exact k_medoid' or 'hierarchical'. optional (default: 'k_means')
     :type clusterMethod: string
+
+    :param n_extra_columns: Number of extra columns appended to candidates for
+        clustering (e.g. period sums) that should be excluded from the
+        representation step. optional (default: 0)
+    :type n_extra_columns: integer
     """
+    # Candidates used for representation exclude extra evaluation columns
+    repr_candidates = (
+        candidates[:, :-n_extra_columns] if n_extra_columns else candidates
+    )
 
     # cluster the data
     if clusterMethod == "averaging":
@@ -50,7 +60,7 @@ def aggregatePeriods(
             )
         clusterOrder = np.hstack(np.array(clusterOrder, dtype=object))
         clusterCenters, clusterCenterIndices = representations(
-            candidates,
+            repr_candidates,
             clusterOrder,
             default="meanRepresentation",
             representationMethod=representationMethod,
@@ -67,7 +77,7 @@ def aggregatePeriods(
         clusterOrder = k_means.fit_predict(candidates)
         # get with own mean representation to avoid numerical trouble caused by sklearn
         clusterCenters, clusterCenterIndices = representations(
-            candidates,
+            repr_candidates,
             clusterOrder,
             default="meanRepresentation",
             representationMethod=representationMethod,
@@ -83,7 +93,7 @@ def aggregatePeriods(
 
         clusterOrder = k_medoid.fit_predict(candidates)
         clusterCenters, clusterCenterIndices = representations(
-            candidates,
+            repr_candidates,
             clusterOrder,
             default="medoidRepresentation",
             representationMethod=representationMethod,
@@ -99,7 +109,7 @@ def aggregatePeriods(
 
         clusterOrder = k_maxoid.fit_predict(candidates)
         clusterCenters, clusterCenterIndices = representations(
-            candidates,
+            repr_candidates,
             clusterOrder,
             default="maxoidRepresentation",
             representationMethod=representationMethod,
@@ -128,7 +138,7 @@ def aggregatePeriods(
             clusterOrder = clustering.fit_predict(candidates)
         # represent hierarchical aggregation with medoid
         clusterCenters, clusterCenterIndices = representations(
-            candidates,
+            repr_candidates,
             clusterOrder,
             default="medoidRepresentation",
             representationMethod=representationMethod,
