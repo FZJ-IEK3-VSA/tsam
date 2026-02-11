@@ -395,6 +395,178 @@ CONFIGS: list[BaseConfig] = [
         },
         only_datasets={"with_zero_column"},
     ),
+    # --- Clustering method x segmentation ---
+    BaseConfig(
+        id="kmeans_segmentation",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_means",
+            "segmentation": True,
+            "noSegments": 8,
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="kmedoids_segmentation",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_medoids",
+            "segmentation": True,
+            "noSegments": 8,
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="kmaxoids_segmentation",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_maxoids",
+            "segmentation": True,
+            "noSegments": 8,
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="averaging_segmentation",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "averaging",
+            "segmentation": True,
+            "noSegments": 8,
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="contiguous_segmentation",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "adjacent_periods",
+            "segmentation": True,
+            "noSegments": 8,
+        },
+        only_datasets={"testdata"},
+    ),
+    # --- Untested boolean clustering options ---
+    BaseConfig(
+        id="hierarchical_duration_curves",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "sortValues": True,
+        },
+    ),
+    BaseConfig(
+        id="hierarchical_eval_sum_periods",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "evalSumPeriods": True,
+        },
+    ),
+    BaseConfig(
+        id="kmeans_duration_curves",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_means",
+            "sortValues": True,
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    # --- rescale_exclude_columns ---
+    BaseConfig(
+        id="hierarchical_rescale_exclude",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "rescaleExcludeColumns": ["GHI"],
+        },
+        only_datasets={"testdata"},
+    ),
+    # --- round_decimals ---
+    BaseConfig(
+        id="hierarchical_round",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "roundOutput": 2,
+        },
+        only_datasets={"testdata"},
+    ),
+    # --- Clustering method x extremes ---
+    BaseConfig(
+        id="kmeans_extremes_append",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_means",
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["Load"],
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="contiguous_extremes_append",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "adjacent_periods",
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["Load"],
+        },
+        only_datasets={"testdata"},
+    ),
+    # --- Cross-feature interactions ---
+    BaseConfig(
+        id="hierarchical_weighted_segmentation",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 2.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "segmentation": True,
+            "noSegments": 8,
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="kmeans_distribution",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_means",
+            "representationMethod": "durationRepresentation",
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="extremes_replace_segmentation",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "extremePeriodMethod": "replace_cluster_center",
+            "addPeakMax": ["Load"],
+            "segmentation": True,
+            "noSegments": 6,
+        },
+        only_datasets={"testdata"},
+    ),
 ]
 
 

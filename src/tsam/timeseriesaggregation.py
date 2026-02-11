@@ -983,11 +983,18 @@ class TimeSeriesAggregation:
         # Reshape back to 2D: (n_clusters, n_cols * n_timesteps)
         return arr.reshape(n_clusters, -1)
 
-    def _clusterSortedPeriods(self, candidates, n_init=20, n_clusters=None):
+    def _clusterSortedPeriods(
+        self, candidates, n_init=20, n_clusters=None, delClusterParams=None
+    ):
         """
         Runs the clustering algorithms for the sorted profiles within the period
         instead of the original profiles. (Duration curve clustering)
         """
+        # Strip extra evaluation columns for representation
+        repr_candidates = (
+            candidates[:, :delClusterParams] if delClusterParams else candidates
+        )
+
         # Vectorized sort: reshape to 3D (periods x columns x timesteps), sort, reshape back
         values = self.normalizedPeriodlyProfiles.values.copy()
         n_periods, n_total = values.shape
@@ -1035,15 +1042,15 @@ class TimeSeriesAggregation:
                 mindistIdx_C = np.argmin(
                     np.square(sortedClusterValues[indice] - currentMean_C).sum(axis=1)
                 )
-                # append original time series of this period
-                medoid_C = candidates[indice][mindistIdx_C]
+                # append original time series of this period (without extra eval columns)
+                medoid_C = repr_candidates[indice][mindistIdx_C]
 
                 # append to cluster center
                 clusterCenters_C.append(medoid_C)
 
             else:
                 # if only on period is part of the cluster, add this index
-                clusterCenters_C.append(candidates[indice][0])
+                clusterCenters_C.append(repr_candidates[indice][0])
 
         return clusterCenters_C, clusterOrders_C
 
@@ -1081,11 +1088,17 @@ class TimeSeriesAggregation:
             # check if representatives are defined
             if self.predefClusterCenterIndices is not None:
                 self.clusterCenterIndices = self.predefClusterCenterIndices
-                self.clusterCenters = candidates[self.predefClusterCenterIndices]
+                repr_candidates = (
+                    candidates[:, :delClusterParams] if delClusterParams else candidates
+                )
+                self.clusterCenters = repr_candidates[self.predefClusterCenterIndices]
             else:
-                # otherwise take the medoids
+                # otherwise take the medoids (strip extra eval columns)
+                repr_candidates = (
+                    candidates[:, :delClusterParams] if delClusterParams else candidates
+                )
                 self.clusterCenters, self.clusterCenterIndices = representations(
-                    candidates,
+                    repr_candidates,
                     self._clusterOrder,
                     default="medoidRepresentation",
                     representationMethod=self.representationMethod,
@@ -1110,17 +1123,19 @@ class TimeSeriesAggregation:
                     representationDict=self.representationDict,
                     distributionPeriodWise=self.distributionPeriodWise,
                     timeStepsPerPeriod=self.timeStepsPerPeriod,
+                    n_extra_columns=-delClusterParams if delClusterParams else 0,
                 )
             else:
                 self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
-                    candidates, n_clusters=effective_n_clusters
+                    candidates,
+                    n_clusters=effective_n_clusters,
+                    delClusterParams=delClusterParams,
                 )
             self.clusteringDuration = time.time() - cluster_duration
 
-        # get cluster centers without additional evaluation values
-        self.clusterPeriods = []
-        for i, cluster_center in enumerate(self.clusterCenters):
-            self.clusterPeriods.append(cluster_center[:delClusterParams])
+        # All paths now produce cluster centers without extra evaluation columns,
+        # so no stripping is needed.
+        self.clusterPeriods = list(self.clusterCenters)
 
         if not self.extremePeriodMethod == "None":
             (
