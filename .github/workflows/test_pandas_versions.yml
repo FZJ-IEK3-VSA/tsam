@@ -15,13 +15,6 @@ jobs:
                 library_version:
                     [
                         "2.2.0",
-                        "2.2.1",
-                        "2.2.2",
-                        "2.2.3",
-                        "2.3.0",
-                        "2.3.1",
-                        "2.3.2",
-                        "2.3.3",
                         "3.0.0",
                     ]
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
@@ -29,8 +22,8 @@ jobs:
             runner_tag: ${{ matrix.runner_tag }}
             requirements_file_name: environment.yml
             examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
-            multiprocessing_example_string: "-n auto"
             library_version: ${{ matrix.library_version }}
             dependency_position_env_file: "3"
             library_name: "pandas"
             multiprocessing_pytest_string: "-n auto"
+            multiprocessing_example_string: "-n auto"
