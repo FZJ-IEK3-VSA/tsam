@@ -6,24 +6,26 @@ on:
         branches: ["master"]
 
 jobs:
+    extract-versions:
+        uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions.yml@main
+        with:
+            library_name: pyomo
+
     TestPushCondaForgeDev:
         name: Test conda-forge development version on ${{ matrix.runner_tag }}
+        needs: extract-versions
         strategy:
             fail-fast: false
             matrix:
                 runner_tag: ["self-hosted"]
-                library_version:
-                    [
-                        "6.4.3",
-                        "6.9.5",
-                    ]
+                library_version: ${{ fromJSON(needs.extract-versions.outputs.versions) }}
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
         with:
             runner_tag: ${{ matrix.runner_tag }}
             requirements_file_name: environment.yml
             examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
             library_version: ${{ matrix.library_version }}
-            dependency_position_env_file: "5"
+            dependency_position_env_file: ${{ needs.extract-versions.outputs.dependency_position }}
             library_name: "pyomo"
             multiprocessing_pytest_string: "-n auto"
             multiprocessing_example_string: "-n auto"
