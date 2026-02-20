@@ -19,6 +19,8 @@ jobs:
       library_name: "python"
       library_version: ${{ matrix.python_version }}
       dependency_position_env_file: "0"
+      multiprocessing_pytest_string: "-n auto"
+      multiprocessing_example_string: "-n auto"
   TestPullPyPIDev:
     name: Test PyPI development version on ${{ matrix.runner_tag }}
     strategy:
@@ -56,3 +58,5 @@ jobs:
       library_name: ${{ matrix.dependencies.library_name }}
       library_version: ${{ matrix.dependencies.version }}
       dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
+      multiprocessing_pytest_string: "-n auto"
+      multiprocessing_example_string: "-n auto"
