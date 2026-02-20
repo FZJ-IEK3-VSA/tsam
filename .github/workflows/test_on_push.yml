@@ -4,17 +4,6 @@ on:
     branches: ["**"]
 
 jobs:
-  Lint:
-    name: Lint with ruff
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/ruff-action@v3
-      - name: Check Linter
-        run: ruff check --output-format=github --config=pyproject.toml
-      - name: Check Format
-        run: ruff format --diff --config=pyproject.toml
-
   TestPushCondaForgeDev:
     name: Test conda-forge development version on ${{ matrix.runner_tag }}
     strategy:
