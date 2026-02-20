@@ -1,43 +1,62 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
-  "labels": ["dependencies"],
-  "schedule": ["before 5am on monday"],
-  "timezone": "Europe/Berlin",
-  "packageRules": [
-    {
-      "description": "Group all Python dependency updates together",
-      "matchManagers": ["pip_requirements", "pip_setup", "pep621", "conda"],
-      "groupName": "python-dependencies",
-      "groupSlug": "python-deps",
-      "commitMessageTopic": "Python dependencies"
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended"
+    ],
+    "labels": [
+        "dependencies"
+    ],
+    "schedule": [
+        "before 5am on monday"
+    ],
+    "timezone": "Europe/Berlin",
+    "packageRules": [
+        {
+            "description": "Group all Python dependency updates together",
+            "matchManagers": [
+                "pip_requirements",
+                "pip_setup",
+                "pep621",
+                "conda"
+            ],
+            "groupName": "python-dependencies",
+            "groupSlug": "python-deps",
+            "commitMessageTopic": "Python dependencies"
+        },
+        {
+            "description": "Group GitHub Actions updates",
+            "matchManagers": [
+                "github-actions"
+            ],
+            "groupName": "github-actions",
+            "commitMessageTopic": "GitHub Actions"
+        }
+    ],
+    "pip_requirements": {
+        "enabled": true,
+        "fileMatch": [
+            "(^|/)requirements.*\\.txt$"
+        ]
     },
-    {
-      "description": "Group GitHub Actions updates",
-      "matchManagers": ["github-actions"],
-      "groupName": "github-actions",
-      "commitMessageTopic": "GitHub Actions"
-    }
-  ],
-  "pip_requirements": {
-    "enabled": true,
-    "fileMatch": ["(^|/)requirements.*\\.txt$"]
-  },
-  "pep621": {
-    "enabled": true,
-    "fileMatch": ["(^|/)pyproject\\.toml$"]
-  },
-  "conda": {
-    "enabled": true,
-    "fileMatch": ["(^|/)environment.*\\.ya?ml$"]
-  },
-  "vulnerabilityAlerts": {
-    "enabled": true,
-    "labels": ["security"]
-  },
-  "prConcurrentLimit": 5,
-  "prHourlyLimit": 2,
-  "rangeStrategy": "widen"
+    "pep621": {
+        "enabled": true,
+        "fileMatch": [
+            "(^|/)pyproject\\.toml$"
+        ]
+    },
+    "conda": {
+        "enabled": true,
+        "fileMatch": [
+            "(^|/)environment.*\\.ya?ml$"
+        ]
+    },
+    "vulnerabilityAlerts": {
+        "enabled": true,
+        "labels": [
+            "security"
+        ]
+    },
+    "prConcurrentLimit": 5,
+    "prHourlyLimit": 2,
+    "rangeStrategy": "widen"
 }
