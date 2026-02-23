@@ -4,17 +4,6 @@ on:
     branches: ["**"]
 
 jobs:
-  Lint:
-    name: Lint with ruff
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/ruff-action@v3
-      - name: Check Linter
-        run: ruff check --output-format=github --config=pyproject.toml
-      - name: Check Format
-        run: ruff format --diff --config=pyproject.toml
-
   TestPushCondaForgeDev:
     name: Test conda-forge development version on ${{ matrix.runner_tag }}
     strategy:
@@ -26,6 +15,7 @@ jobs:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
       examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
+      multiprocessing_pytest_string: "-n auto"
       multiprocessing_example_string: "-n auto"
   TestPushPyPIDev:
     name: Test PyPi development version on ${{ matrix.runner_tag }}
@@ -39,4 +29,5 @@ jobs:
       python_version: "3.13"
       optional_dependency_PyPI_tag: "[develop]"
       examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
+      multiprocessing_pytest_string: "-n auto"
       multiprocessing_example_string: "-n auto"

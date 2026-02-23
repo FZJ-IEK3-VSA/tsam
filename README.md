@@ -17,7 +17,6 @@ The documentation of the tsam code can be found [**here**](https://tsam.readthed
 * flexible integration of extreme periods as own cluster centers
 * weighting for the case of multidimensional time-series to represent their relevance
 
-
 ## Installation
 
 To avoid dependency conflicts, it is recommended that you install Tsam in its own environment. You can use either [uv](https://docs.astral.sh/uv/)  or [conda/mamba](https://conda-forge.org/download/) ) to manage environments and installations. Before proceeding, you must install either UV or Conda/Mamba, or both.
