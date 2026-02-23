@@ -34,14 +34,8 @@
     ],
     "pep621": {
         "enabled": true,
-        "fileMatch": [
-            "(^|/)pyproject\\.toml$"
-        ]
-    },
-    "conda": {
-        "enabled": true,
-        "fileMatch": [
-            "(^|/)environment.*\\.ya?ml$"
+        "managerFilePatterns": [
+            "/(^|/)pyproject\\.toml$/"
         ]
     },
     "vulnerabilityAlerts": {
