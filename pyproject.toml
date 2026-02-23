@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tsam"
-version = "3.1.0"
+version = "3.1.1"
 description = "Time series aggregation module (tsam) to create typical periods"
 authors = [
   { name = "Leander Kotzur", email = "leander.kotzur@googlemail.com" },
@@ -79,9 +79,7 @@ pythonpath = [
   "test",
 ] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
-filterwarnings = [
-  "ignore::tsam.exceptions.LegacyAPIWarning",
-]
+filterwarnings = ["ignore::tsam.exceptions.LegacyAPIWarning"]
 
 [tool.ruff]
 target-version = "py310"
