@@ -20,10 +20,10 @@ from tsam import (
     aggregate,
 )
 from tsam.tuning import (
-    find_clusters_for_reduction,
+    _find_clusters_for_reduction,
+    _find_segments_for_reduction,
     find_optimal_combination,
     find_pareto_front,
-    find_segments_for_reduction,
 )
 
 
@@ -533,7 +533,7 @@ class TestTuningEquivalence:
     """Tests that new tuning functions produce equivalent results to old API."""
 
     def test_find_clusters_for_reduction(self):
-        """Test find_clusters_for_reduction matches old function."""
+        """Test _find_clusters_for_reduction matches old function."""
         test_cases = [
             (100, 10, 0.5),
             (101, 10, 0.5),
@@ -545,7 +545,7 @@ class TestTuningEquivalence:
             old_result = old_tune.getNoPeriodsForDataReduction(
                 n_timesteps, n_segments, data_reduction
             )
-            new_result = find_clusters_for_reduction(
+            new_result = _find_clusters_for_reduction(
                 n_timesteps, n_segments, data_reduction
             )
             assert old_result == new_result, (
@@ -554,7 +554,7 @@ class TestTuningEquivalence:
             )
 
     def test_find_segments_for_reduction(self):
-        """Test find_segments_for_reduction matches old function."""
+        """Test _find_segments_for_reduction matches old function."""
         test_cases = [
             (100, 10, 0.5),
             (8760, 8, 0.01),
@@ -564,7 +564,7 @@ class TestTuningEquivalence:
             old_result = old_tune.getNoSegmentsForDataReduction(
                 n_timesteps, n_clusters, data_reduction
             )
-            new_result = find_segments_for_reduction(
+            new_result = _find_segments_for_reduction(
                 n_timesteps, n_clusters, data_reduction
             )
             assert old_result == new_result
