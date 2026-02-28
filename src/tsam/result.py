@@ -241,7 +241,7 @@ class AggregationResult:
         >>> result = tsam.aggregate(df, n_clusters=8)
         >>> result.residuals.mean()  # Should be close to zero
         """
-        return self.original - self.reconstructed
+        return cast("pd.DataFrame", self.original - self.reconstructed)
 
     def to_dict(self) -> dict:
         """Export results as a dictionary for serialization.
@@ -389,6 +389,7 @@ class AggregationResult:
         >>> result.plot.compare()  # Compare original vs reconstructed
         >>> result.plot.residuals()  # View reconstruction errors
         >>> result.plot.cluster_representatives()
+        >>> result.plot.cluster_members()  # All periods per cluster
         >>> result.plot.cluster_weights()
         >>> result.plot.accuracy()
         """
