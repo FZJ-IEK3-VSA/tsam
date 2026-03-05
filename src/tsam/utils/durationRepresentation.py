@@ -59,7 +59,7 @@ def durationRepresentation(
 
             # Sort all values per attribute, then reshape to duration curve
             flat = cluster_data.reshape(n_attrs, -1)
-            flat.sort(axis=1, kind="stable")
+            flat = np.sort(flat, axis=1, kind="stable")
             repr_values = flat.reshape(n_attrs, timeStepsPerPeriod, n_cands).mean(
                 axis=2
             )
