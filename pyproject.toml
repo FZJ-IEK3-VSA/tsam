@@ -115,7 +115,6 @@ ignore = [
   "RUF012", # mutable class attributes - these are constants in this codebase
   "RUF002", # ambiguous unicode characters in docstrings
   "RUF059", # Unpacked variable is never used
-  "UP038",  # use X | Y in isinstance (performance regression, see ruff issue)
 ]
 
 [tool.ruff.lint.isort]
