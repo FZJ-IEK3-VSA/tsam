@@ -8,6 +8,7 @@ jobs:
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions.yml@main
     with:
       library_name: python
+      env_file: environment.yml
 
   TestPullCondaForgeDev:
     name: Test development version on ${{ matrix.runner_tag }}
