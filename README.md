@@ -80,7 +80,6 @@ import pandas as pd
 import tsam
 ```
 
-
 Read in the time series data set with pandas
 ```python
 raw = pd.read_csv('testdata.csv', index_col=0, parse_dates=True)

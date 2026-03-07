@@ -9,6 +9,7 @@ jobs:
         with:
             libraries: "scikit-learn,pandas,numpy,pyomo,networkx,tqdm,highspy"
             version_type: both
+            env_file: environment.yml
 
     TestDependencyVersions:
         name: Test ${{ matrix.dependencies.library_name }} ${{ matrix.dependencies.version }} (${{ matrix.dependencies.version_type }})
