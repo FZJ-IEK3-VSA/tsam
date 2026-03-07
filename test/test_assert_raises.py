@@ -2,6 +2,7 @@ import copy
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
@@ -112,13 +113,12 @@ def test_assert_raises():
     )
 
     # check warning when number of segments per period is higher than the number of time steps per period
-    np.testing.assert_warns(
-        Warning,
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        segmentation=True,
-        noSegments=25,
-    )
+    with pytest.warns(Warning):
+        tsam.TimeSeriesAggregation(
+            timeSeries=raw,
+            segmentation=True,
+            noSegments=25,
+        )
 
     # check erroneous clusterMethod argument
     np.testing.assert_raises_regex(
