@@ -80,15 +80,15 @@ pythonpath = [
 ] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
 filterwarnings = [
-    "ignore::tsam.exceptions.LegacyAPIWarning",
-    # Third-party library warnings outside of tsam's control
-    "ignore::RuntimeWarning:threadpoolctl",
-    "ignore:KMeans is known to have a memory leak:UserWarning:sklearn",
-    "ignore::sklearn.exceptions.ConvergenceWarning",
-    # Expected tsam warnings raised during edge-case tests
-    "ignore:The cluster is too small:UserWarning:tsam",
-    "ignore:Segmentation is turned off:UserWarning:tsam",
-    "ignore:Max iteration number reached:UserWarning:tsam",
+  "ignore::tsam.exceptions.LegacyAPIWarning",
+  # Third-party library warnings outside of tsam's control
+  "ignore::RuntimeWarning:threadpoolctl",
+  "ignore:KMeans is known to have a memory leak:UserWarning:sklearn",
+  "ignore::sklearn.exceptions.ConvergenceWarning",
+  # Expected tsam warnings raised during edge-case tests
+  "ignore:The cluster is too small:UserWarning:tsam",
+  "ignore:Segmentation is turned off:UserWarning:tsam",
+  "ignore:Max iteration number reached:UserWarning:tsam",
 ]
 
 [tool.ruff]
