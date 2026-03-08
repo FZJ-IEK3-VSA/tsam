@@ -8,10 +8,13 @@ jobs:
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions.yml@main
     with:
       library_name: python
+      env_file: environment.yml
+      
 
   TestPullCondaForgeDev:
     name: Test development version on ${{ matrix.runner_tag }}
     needs: extract-python-versions
+    if: github.actor != 'renovate[bot]'
     strategy:
       fail-fast: false
       matrix:
@@ -30,25 +33,27 @@ jobs:
   TestPullPyPIDev:
     name: Test PyPI development version on ${{ matrix.runner_tag }}
     needs: extract-python-versions
+    if: github.actor != 'renovate[bot]'
     strategy:
       fail-fast: false
       matrix:
         runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_pypi_test.yml@main
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_pypi_test_uv.yml@main
     with:
       runner_tag: ${{ matrix.runner_tag }}
       examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
       python_version: ${{ needs.extract-python-versions.outputs.max_version }}
       optional_dependency_PyPI_tag: "[develop]"
-      additional_conda_forge_dependencies: "glpk"
 
   extract-min-versions:
+    if: github.actor != 'renovate[bot]'
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@main
     with:
       libraries: "python,scikit-learn,pandas,numpy,pyomo,networkx,tqdm,highspy"
       version_type: min
 
   TestMinDependencies:
+    if: github.actor != 'renovate[bot]'
     needs: extract-min-versions
     strategy:
       fail-fast: false
