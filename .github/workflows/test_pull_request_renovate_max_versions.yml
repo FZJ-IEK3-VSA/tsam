@@ -1,0 +1,41 @@
+on:
+  pull_request:
+    branches: ["develop"]
+
+jobs:
+  detect-changes:
+    name: Detect changed dependencies
+    if: startsWith(github.head_ref, 'renovate/')
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_detect_renovate_changed_libraries.yml@main
+    with:
+      files: "environment.yml pyproject.toml"
+
+  extract-versions:
+    name: Extract max versions of changed libraries
+    needs: detect-changes
+    if: startsWith(github.head_ref, 'renovate/') && needs.detect-changes.outputs.libraries != ''
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@main
+    with:
+      libraries: ${{ needs.detect-changes.outputs.libraries }}
+      version_type: max
+      env_file: environment.yml
+
+  TestRenovateMaxVersions:
+    name: Test ${{ matrix.dependencies.library_name }} ${{ matrix.dependencies.version }} (max)
+    needs: extract-versions
+    if: startsWith(github.head_ref, 'renovate/')
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_tag: ["self-hosted"]
+        dependencies: ${{ fromJSON(needs.extract-versions.outputs.matrix) }}
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    with:
+      runner_tag: ${{ matrix.runner_tag }}
+      requirements_file_name: environment.yml
+      examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
+      library_name: ${{ matrix.dependencies.library_name }}
+      library_version: ${{ matrix.dependencies.version }}
+      dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
+      multiprocessing_pytest_string: "-n auto"
+      multiprocessing_example_string: "-n auto"

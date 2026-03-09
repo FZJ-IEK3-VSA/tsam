@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import warnings
 from typing import cast
 
@@ -37,6 +38,8 @@ def _parse_duration_hours(value: int | float | str, param_name: str) -> float:
         return float(value)
     if isinstance(value, str):
         try:
+            # Normalize deprecated lowercase day alias: '1d' → '1D' (pandas 4+)
+            value = re.sub(r"(?<=[0-9])d(?![a-z])", "D", value)
             td = pd.Timedelta(value)
             return td.total_seconds() / 3600
         except ValueError as e:
