@@ -32,22 +32,10 @@
             "commitMessageTopic": "GitHub Actions"
         }
     ],
-    "pip_requirements": {
-        "enabled": true,
-        "fileMatch": [
-            "(^|/)requirements.*\\.txt$"
-        ]
-    },
     "pep621": {
         "enabled": true,
-        "fileMatch": [
-            "(^|/)pyproject\\.toml$"
-        ]
-    },
-    "conda": {
-        "enabled": true,
-        "fileMatch": [
-            "(^|/)environment.*\\.ya?ml$"
+        "managerFilePatterns": [
+            "/(^|/)pyproject\\.toml$/"
         ]
     },
     "vulnerabilityAlerts": {

@@ -8,6 +8,7 @@ jobs:
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions.yml@main
         with:
             library_name: python
+            env_file: environment.yml
 
     TestPushCondaForgeDev:
         name: Test conda-forge development version on ${{ matrix.runner_tag }}
@@ -44,7 +45,7 @@ jobs:
                         "windows-2022",
                     ]
                 python_version: ${{ fromJSON(needs.extract-python-versions.outputs.versions) }}
-        uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_pypi_test.yml@main
+        uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_pypi_test_uv.yml@main
         with:
             runner_tag: ${{ matrix.runner_tag }}
             python_version: ${{ matrix.python_version }}
