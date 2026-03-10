@@ -233,11 +233,112 @@ _NEW_KWARGS: dict[str, dict] = {
         "cluster": ClusterConfig(method="hierarchical"),
         "extremes": ExtremeConfig(method="append", max_value=["Zero"]),
     },
+    # --- Clustering method x segmentation ---
+    "kmeans_segmentation": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="kmeans"),
+        "segments": SegmentConfig(n_segments=8),
+    },
+    "kmedoids_segmentation": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="kmedoids"),
+        "segments": SegmentConfig(n_segments=8),
+    },
+    "kmaxoids_segmentation": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="kmaxoids"),
+        "segments": SegmentConfig(n_segments=8),
+    },
+    "averaging_segmentation": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="averaging"),
+        "segments": SegmentConfig(n_segments=8),
+    },
+    "contiguous_segmentation": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="contiguous"),
+        "segments": SegmentConfig(n_segments=8),
+    },
+    # --- Untested boolean clustering options ---
+    "hierarchical_duration_curves": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="hierarchical", use_duration_curves=True),
+    },
+    "hierarchical_eval_sum_periods": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="hierarchical", include_period_sums=True),
+    },
+    "kmeans_duration_curves": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="kmeans", use_duration_curves=True),
+    },
+    # --- rescale_exclude_columns ---
+    "hierarchical_rescale_exclude": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="hierarchical"),
+        "rescale_exclude_columns": ["GHI"],
+    },
+    # --- round_decimals ---
+    "hierarchical_round": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="hierarchical"),
+        "round_decimals": 2,
+    },
+    # --- Clustering method x extremes ---
+    "kmeans_extremes_append": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="kmeans"),
+        "extremes": ExtremeConfig(method="append", max_value=["Load"]),
+    },
+    "contiguous_extremes_append": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="contiguous"),
+        "extremes": ExtremeConfig(method="append", max_value=["Load"]),
+    },
+    # --- Cross-feature interactions ---
+    "hierarchical_weighted_segmentation": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="hierarchical",
+            weights={"Load": 2.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+        ),
+        "segments": SegmentConfig(n_segments=8),
+    },
+    "kmeans_distribution": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="kmeans", representation="distribution"),
+    },
+    "extremes_replace_segmentation": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(method="hierarchical"),
+        "extremes": ExtremeConfig(method="replace", max_value=["Load"]),
+        "segments": SegmentConfig(n_segments=6),
+    },
 }
 
 _RTOL: dict[str, float] = {
     "kmeans": 1e-5,
     "kmaxoids": 1e-5,
+    "kmeans_segmentation": 1e-5,
+    "kmaxoids_segmentation": 1e-5,
+    "kmeans_duration_curves": 1e-5,
+    "kmeans_extremes_append": 1e-5,
+    "kmeans_distribution": 1e-5,
 }
 
 
