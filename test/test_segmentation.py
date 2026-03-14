@@ -2,6 +2,9 @@ import time
 
 import numpy as np
 import pandas as pd
+import pytest
+
+pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
 
 import tsam.timeseriesaggregation as tsam
 from conftest import RESULTS_DIR, TESTDATA_CSV

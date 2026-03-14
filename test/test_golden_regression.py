@@ -18,8 +18,12 @@ Usage::
 
 from __future__ import annotations
 
+import warnings
+from contextlib import contextmanager
+
 import pandas as pd
 import pytest
+from sklearn.exceptions import ConvergenceWarning
 
 from _configs import GOLDEN_DIR, case_ids, get_data
 from test_old_new_equivalence import (
@@ -28,6 +32,21 @@ from test_old_new_equivalence import (
     _run_new,
     _run_old,
 )
+
+# Cases where specific warnings are expected and should be suppressed.
+_EXPECT_CONVERGENCE = {"kmeans/constant"}
+_EXPECT_TOLERANCE = {"kmaxoids/wide", "hierarchical_distribution_minmax/wide"}
+
+
+@contextmanager
+def _expected_warnings(case: EquivalenceCase):
+    """Suppress warnings that are expected for specific config/dataset combos."""
+    with warnings.catch_warnings():
+        if case.id in _EXPECT_CONVERGENCE:
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+        if case.id in _EXPECT_TOLERANCE:
+            warnings.filterwarnings("ignore", "At least one maximal value")
+        yield
 
 
 def _golden_path(case: EquivalenceCase) -> str:
@@ -56,8 +75,9 @@ class TestGoldenRegression:
             pytest.skip("use --update-golden to regenerate")
 
         data = get_data(case.dataset)
-        _, old_agg = _run_old(data, case)
-        _save_golden(old_agg.predictOriginalData(), case)
+        with _expected_warnings(case):
+            _, old_agg = _run_old(data, case)
+            _save_golden(old_agg.predictOriginalData(), case)
 
     @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_new_api_matches_golden(self, case: EquivalenceCase, update_golden):
@@ -72,7 +92,8 @@ class TestGoldenRegression:
             )
 
         data = get_data(case.dataset)
-        new_result = _run_new(data, case)
+        with _expected_warnings(case):
+            new_result = _run_new(data, case)
         golden = _load_golden(case)
 
         pd.testing.assert_frame_equal(
@@ -96,7 +117,8 @@ class TestGoldenRegression:
             )
 
         data = get_data(case.dataset)
-        _, old_agg = _run_old(data, case)
+        with _expected_warnings(case):
+            _, old_agg = _run_old(data, case)
         golden = _load_golden(case)
 
         pd.testing.assert_frame_equal(

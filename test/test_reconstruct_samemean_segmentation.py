@@ -15,6 +15,10 @@ import pytest
 
 import tsam
 from tsam import ClusterConfig, SegmentConfig
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:Max iteration number reached:UserWarning"
+)
 from tsam.result import AggregationResult
 
 
