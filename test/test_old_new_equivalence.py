@@ -10,6 +10,7 @@ benchmarks/bench.py).  New-API kwargs are defined here in ``_NEW_KWARGS``.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -34,6 +35,7 @@ from tsam import (
     SegmentConfig,
     aggregate,
 )
+from tsam.exceptions import LegacyAPIWarning
 
 # ---------------------------------------------------------------------------
 # New-API kwargs for each config ID
@@ -399,8 +401,10 @@ def _run_old(data: pd.DataFrame, case: EquivalenceCase):
     """Run old API and return (result_df, agg_object)."""
     if case.seed is not None:
         np.random.seed(case.seed)
-    agg = old_tsam.TimeSeriesAggregation(timeSeries=data, **case.old_kwargs)
-    result = agg.createTypicalPeriods()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", LegacyAPIWarning)
+        agg = old_tsam.TimeSeriesAggregation(timeSeries=data, **case.old_kwargs)
+        result = agg.createTypicalPeriods()
     return result, agg
 
 
@@ -416,6 +420,8 @@ def _run_new(data: pd.DataFrame, case: EquivalenceCase):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+@pytest.mark.filterwarnings("ignore:At least one maximal value:UserWarning")
 class TestOldNewEquivalence:
     """Parametrized comparison of old and new API across all configs x datasets."""
 
