@@ -199,17 +199,23 @@ def _prepare_data(
         )
 
     # Step 3: Add period sum features if requested
+    # Period sums are extra columns appended for clustering distance only;
+    # they must NOT reach representations() which expects original columns.
     n_feature_cols = candidates.shape[1]
+    has_period_sums = False
     if cluster.include_period_sums:
+        has_period_sums = True
         if weighted_candidates is not None:
             weighted_candidates, _n_extra = add_period_sum_features(
                 period_profiles.profiles_dataframe, weighted_candidates
             )
         else:
-            candidates, _n_extra = add_period_sum_features(
+            # Augmented matrix is used for clustering distance only;
+            # candidates stays unaugmented for representation.
+            augmented, _n_extra = add_period_sum_features(
                 period_profiles.profiles_dataframe, candidates
             )
-        n_feature_cols = candidates.shape[1]
+            weighted_candidates = augmented
 
     return PreparedData(
         norm_data=norm_data,
@@ -219,6 +225,7 @@ def _prepare_data(
         representation_dict=representation_dict,
         n_feature_cols=n_feature_cols,
         original_column_order=original_column_order,
+        has_period_sums=has_period_sums,
     )
 
 
@@ -266,6 +273,13 @@ def _cluster_and_postprocess(
                 weighted_candidates=weighted_candidates,
             )
         else:
+            # Duration-curve clustering sorts profiles — period-sum features
+            # are not sortable columns, so don't pass them as weighted candidates.
+            dc_weighted = (
+                weighted_candidates
+                if weighted_candidates is not None and not prepared.has_period_sums
+                else None
+            )
             cluster_centers, cluster_center_indices, cluster_order = (
                 cluster_sorted_periods(
                     candidates,
@@ -274,7 +288,7 @@ def _cluster_and_postprocess(
                     cluster,
                     prepared.representation_dict,
                     n_timesteps_per_period,
-                    weighted_candidates=weighted_candidates,
+                    weighted_candidates=dc_weighted,
                 )
             )
         clustering_duration = time.time() - t_start

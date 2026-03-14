@@ -61,6 +61,7 @@ class PreparedData:
     representation_dict: dict[str, str]
     n_feature_cols: int
     original_column_order: list[str]
+    has_period_sums: bool = False
 
 
 @dataclass(frozen=True)
