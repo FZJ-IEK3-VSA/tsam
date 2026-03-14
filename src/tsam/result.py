@@ -241,7 +241,7 @@ class AggregationResult:
         >>> result = tsam.aggregate(df, n_clusters=8)
         >>> result.residuals.mean()  # Should be close to zero
         """
-        return self.original - self.reconstructed
+        return cast("pd.DataFrame", self.original - self.reconstructed)
 
     def to_dict(self) -> dict:
         """Export results as a dictionary for serialization.
