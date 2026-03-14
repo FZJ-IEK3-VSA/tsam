@@ -25,7 +25,7 @@ Install with: pip install tsam[plot]
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -194,7 +194,7 @@ class ResultPlotAccessor:
         self,
         columns: list[str] | None = None,
         clusters: list[int] | None = None,
-        animate: str = "Cluster",
+        slider: Literal["cluster", "column"] = "cluster",
         title: str | None = None,
     ) -> go.Figure:
         """Plot all original periods grouped by cluster with representative highlighted.
@@ -209,12 +209,12 @@ class ResultPlotAccessor:
             Columns to plot. If None, plots all columns.
         clusters : list[int], optional
             Cluster indices to include. If None, includes all clusters.
-        animate : str, default "Cluster"
-            Which dimension to put on the animation slider.
+        slider : ``"cluster"`` or ``"column"``, default ``"cluster"``
+            Which dimension to put on the slider.
             The other dimension becomes ``facet_col``.
 
-            - ``"Cluster"``: slider flips through clusters, columns are facets.
-            - ``"Column"``: slider flips through columns, clusters are facets.
+            - ``"cluster"``: slider flips through clusters, columns are facets.
+            - ``"column"``: slider flips through columns, clusters are facets.
         title : str, optional
             Plot title. Defaults to "Cluster Members".
 
@@ -226,12 +226,13 @@ class ResultPlotAccessor:
         --------
         >>> result.plot.cluster_members(columns=["Load"])
         >>> result.plot.cluster_members(clusters=[0, 3])  # specific clusters
-        >>> result.plot.cluster_members(animate="Column")  # flip through columns
+        >>> result.plot.cluster_members(slider="column")  # flip through columns
         """
         from plotly.subplots import make_subplots
 
         from tsam.api import unstack_to_periods
 
+        _slider = slider.lower()
         result = self._result
         columns = _validate_columns(
             columns, list(result.original.columns), "original data"
@@ -278,8 +279,8 @@ class ResultPlotAccessor:
                 return np.repeat(rep[col].values, durations)
             return rep[col].values  # type: ignore[no-any-return]
 
-        if animate not in ("Cluster", "Column"):
-            raise ValueError(f"animate must be 'Cluster' or 'Column', got {animate!r}")
+        if _slider not in ("cluster", "column"):
+            raise ValueError(f"slider must be 'cluster' or 'column', got {slider!r}")
 
         # Pre-extract member data as numpy arrays for fast access.
         # member_arrays[cid][col] = 2D array (n_members, n_ts)
@@ -296,7 +297,7 @@ class ResultPlotAccessor:
 
         # Determine which dimension is animated vs faceted.
         anim_keys: list[int | str]
-        if animate == "Cluster":
+        if _slider == "cluster":
             anim_keys = list(cluster_ids)
             anim_labels = [cluster_labels[c] for c in cluster_ids]
             facet_labels = columns
@@ -333,7 +334,7 @@ class ResultPlotAccessor:
             first_member = True
             first_rep = True
             for facet_idx in range(n_facets):
-                if animate == "Cluster":
+                if _slider == "cluster":
                     cid, col = cast("int", anim_key), columns[facet_idx]
                 else:
                     cid, col = cluster_ids[facet_idx], cast("str", anim_key)
@@ -409,7 +410,7 @@ class ResultPlotAccessor:
         )
 
         # Y-axis scaling.
-        if animate == "Cluster":
+        if _slider == "cluster":
             # Facets are columns (different units) — independent y-axes,
             # fixed across all cluster frames.
             if n_facets > 1:

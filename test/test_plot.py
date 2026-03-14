@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import pytest
@@ -88,14 +89,14 @@ class TestClusterMembers:
         fig = result.plot.cluster_members(clusters=[0, 1])
         assert isinstance(fig, go.Figure)
 
-    def test_animate_column(self, result):
-        fig = result.plot.cluster_members(animate="Column")
+    def test_slider_column(self, result):
+        fig = result.plot.cluster_members(slider="column")
         assert isinstance(fig, go.Figure)
         assert fig.frames
 
-    def test_invalid_animate_raises(self, result):
-        with pytest.raises(ValueError, match="animate must be"):
-            result.plot.cluster_members(animate="invalid")
+    def test_invalid_slider_raises(self, result):
+        with pytest.raises(ValueError, match="slider must be"):
+            result.plot.cluster_members(slider="invalid")
 
     def test_invalid_clusters_warns(self, result):
         with pytest.warns(UserWarning, match="not found"):
@@ -106,9 +107,47 @@ class TestClusterMembers:
         with pytest.raises(ValueError, match="None of the requested"):
             result.plot.cluster_members(clusters=[9999])
 
+    def test_representative_trace_matches_data(self, result):
+        """Verify the representative trace contains correct values from cluster_representatives."""
+        col = result.original.columns[0]
+        cluster_id = sorted(set(result.cluster_assignments))[0]
+        fig = result.plot.cluster_members(columns=[col], clusters=[cluster_id])
+
+        # With single column + single cluster: traces are [member, representative]
+        rep_trace = fig.data[1]
+        expected = result.cluster_representatives.loc[cluster_id, col].values
+        np.testing.assert_array_almost_equal(rep_trace.y, expected)
+
+    def test_member_trace_contains_all_members(self, result):
+        """Verify member trace has data for every period assigned to the cluster."""
+        col = result.original.columns[0]
+        cluster_id = sorted(set(result.cluster_assignments))[0]
+        n_members = int((result.cluster_assignments == cluster_id).sum())
+        n_ts = result.n_timesteps_per_period
+        fig = result.plot.cluster_members(columns=[col], clusters=[cluster_id])
+
+        member_trace = fig.data[0]
+        # NaN-separated: n_members segments of n_ts values, with n_members-1 NaN separators
+        y = np.array(member_trace.y, dtype=float)
+        expected_len = n_members * n_ts + (n_members - 1)
+        assert len(y) == expected_len
+        # Count NaN separators
+        assert np.isnan(y).sum() == n_members - 1
+
     def test_with_segmentation(self, result_segmented):
         fig = result_segmented.plot.cluster_members()
         assert isinstance(fig, go.Figure)
+
+    def test_segmented_representative_expanded(self, result_segmented):
+        """Verify segmented representative is expanded to full timestep length."""
+        col = result_segmented.original.columns[0]
+        cluster_id = sorted(set(result_segmented.cluster_assignments))[0]
+        fig = result_segmented.plot.cluster_members(
+            columns=[col], clusters=[cluster_id]
+        )
+        rep_trace = fig.data[1]
+        # Should be expanded to n_timesteps_per_period, not n_segments
+        assert len(rep_trace.y) == result_segmented.n_timesteps_per_period
 
 
 # ---- cluster_weights -------------------------------------------------------
