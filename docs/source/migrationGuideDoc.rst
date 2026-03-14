@@ -330,6 +330,15 @@ Default changes
      - 10
      - *required*
      - Code that relied on the default must now pass a value explicitly.
+   * - ``SegmentConfig(representation=...)``
+     - Inherited from ``representationMethod``
+     - ``"mean"``
+     - In v2, omitting ``segmentRepresentationMethod`` caused segments to
+       inherit the cluster representation (e.g. distribution). In v3,
+       ``SegmentConfig`` always defaults to ``"mean"``. If you relied on
+       the implicit inheritance, pass the representation explicitly::
+
+           SegmentConfig(n_segments=12, representation=Distribution(scope="global"))
 
 ***********************
 Accessing results
@@ -500,6 +509,136 @@ New capabilities
   instead of full steepest descent.
 - **Built-in visualization**: ``result.plot()`` shows an interactive
   RMSE-vs-timesteps chart.
+
+
+***********************
+Performance
+***********************
+
+tsam v3 is significantly faster than v2.3.9, primarily due to replacing
+pandas loops with vectorized numpy operations.
+
+.. list-table:: Speedup vs v2.3.9 (selected configurations)
+   :header-rows: 1
+   :widths: 40 15 15 15 15
+
+   * - Configuration
+     - constant
+     - testdata
+     - wide
+     - with_zero_col
+   * - hierarchical (default)
+     - 2x
+     - 44x
+     - 25x
+     - 42x
+   * - hierarchical (distribution)
+     - 5x
+     - 55x
+     - 35x
+     - 51x
+   * - averaging
+     - 5x
+     - 77x
+     - 66x
+     - 74x
+   * - contiguous
+     - 5x
+     - 54x
+     - 50x
+     - 53x
+   * - distribution (global)
+     - 2x
+     - 16x
+     - 7x
+     - 13x
+   * - kmeans
+     - 1.4x
+     - 4x
+     - 6x
+     - 6x
+   * - kmaxoids
+     - 1.3x
+     - 1.4x
+     - 1.4x
+     - 1.4x
+
+Key optimizations:
+
+- **``predictOriginalData()``**: Vectorized indexing replaces per-period
+  ``.unstack()`` loop (~290x function speedup).
+- **``durationRepresentation()``**: numpy 3D operations replace nested
+  pandas loops (~8x function speedup, contributing to the distribution
+  config gains above).
+- **``_rescaleClusterPeriods()``**: numpy 3D arrays replace pandas
+  MultiIndex operations (~11x function speedup).
+
+Iterative methods (kmeans, kmedoids, kmaxoids) show modest gains because
+the solver itself dominates runtime.
+
+Use ``benchmarks/bench.py`` to run your own comparisons::
+
+    pytest benchmarks/bench.py --benchmark-save=my_run
+
+
+*************************************
+Result consistency and reproducibility
+*************************************
+
+Consistency with v2.3.9
+=======================
+
+Cross-platform reproducibility
+==============================
+
+v2.3.9 used numpy's default unstable sort (``introsort``) in
+``durationRepresentation()``, which does not guarantee a specific order
+for tied values. In practice, this caused different results on different
+platforms (macOS vs Linux vs Windows) for distribution representations.
+
+v3 fixes this by using ``kind="stable"`` (mergesort) for all sorting
+operations and rounding floating-point means to 10 decimal places before
+tie-breaking. This guarantees **identical results across macOS, Linux,
+and Windows** for all configurations.
+
+Consistency with v2.3.9
+=======================
+
+As a consequence of the stable sort fix, 4 distribution-related
+configurations produce slightly different results compared to v2.3.9:
+
+- ``hierarchical_distribution``
+- ``hierarchical_distribution_minmax``
+- ``distribution_global``
+- ``distribution_minmax_global``
+
+The stable sort breaks ties by position rather than arbitrarily, and
+rounding absorbs ~1e-16 floating-point noise that previously created
+artificial ordering among effectively-equal means. This changes the
+assignment of representative values to time steps, but preserves all
+statistical properties (same distribution, same min/max, same weighted
+mean).
+
+All other 23 configurations (hierarchical with medoid/mean/maxoid,
+averaging, contiguous, kmeans, kmedoids, kmaxoids, minmaxmean,
+segmentation, extremes) are bit-for-bit identical to v2.3.9.
+
+Going forward
+=============
+
+Result stability is enforced by two test layers:
+
+1. **Golden regression tests** (``test/test_golden_regression.py``):
+   148 tests compare both APIs against stored CSV baselines. Any code
+   change that alters output values will fail these tests.
+
+2. **Old/new API equivalence tests** (``test/test_old_new_equivalence.py``):
+   296 tests verify that the legacy ``TimeSeriesAggregation`` class and
+   the new ``tsam.aggregate()`` function produce identical results.
+
+If a future release intentionally changes results (e.g., improved
+algorithm), the golden files will be regenerated and the change
+documented in the changelog.
 
 
 ***********************

@@ -1,36 +1,31 @@
 on:
     workflow_dispatch:
-    # push:
-    #     branches: ["test_dependency_range_v_3_0"]
     pull_request:
         branches: ["master"]
 
 jobs:
-    TestPushCondaForgeDev:
-        name: Test conda-forge development version on ${{ matrix.runner_tag }}
+    extract-versions:
+        uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@main
+        with:
+            libraries: "scikit-learn,pandas,numpy,pyomo,networkx,tqdm,highspy"
+            version_type: both
+            env_file: environment.yml
+
+    TestDependencyVersions:
+        name: Test ${{ matrix.dependencies.library_name }} ${{ matrix.dependencies.version }} (${{ matrix.dependencies.version_type }})
+        needs: extract-versions
         strategy:
             fail-fast: false
             matrix:
                 runner_tag: ["self-hosted"]
-                library_version:
-                    [
-                        "2.2.0",
-                        "2.2.1",
-                        "2.2.2",
-                        "2.2.3",
-                        "2.3.0",
-                        "2.3.1",
-                        "2.3.2",
-                        "2.3.3",
-                        "3.0.0",
-                    ]
+                dependencies: ${{ fromJSON(needs.extract-versions.outputs.matrix) }}
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
         with:
             runner_tag: ${{ matrix.runner_tag }}
             requirements_file_name: environment.yml
             examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
-            multiprocessing_example_string: "-n auto"
-            library_version: ${{ matrix.library_version }}
-            dependency_position_env_file: "3"
-            library_name: "pandas"
+            library_version: ${{ matrix.dependencies.version }}
+            dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
+            library_name: ${{ matrix.dependencies.library_name }}
             multiprocessing_pytest_string: "-n auto"
+            multiprocessing_example_string: "-n auto"

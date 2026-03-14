@@ -34,6 +34,7 @@ def main() -> None:
 
     cases = build_old_cases(CONFIGS)
     total = 0
+    skipped: list[str] = []
 
     for case in cases:
         data = get_data(case.dataset)
@@ -41,8 +42,14 @@ def main() -> None:
         if case.seed is not None:
             np.random.seed(case.seed)
 
-        agg = tsam.TimeSeriesAggregation(timeSeries=data, **case.old_kwargs)
-        agg.createTypicalPeriods()
+        try:
+            agg = tsam.TimeSeriesAggregation(timeSeries=data, **case.old_kwargs)
+            agg.createTypicalPeriods()
+        except (TypeError, ValueError) as exc:
+            skipped.append(f"{case.id}  ({type(exc).__name__}: {exc})")
+            print(f"  SKIP {case.id}  ({type(exc).__name__}: {exc})")
+            continue
+
         reconstructed = agg.predictOriginalData()
 
         # Save
@@ -54,6 +61,10 @@ def main() -> None:
         print(f"  {case.id}  ({reconstructed.shape})")
 
     print(f"\nGenerated {total} golden files.")
+    if skipped:
+        print(f"Skipped {len(skipped)} incompatible cases:")
+        for s in skipped:
+            print(f"  {s}")
 
 
 if __name__ == "__main__":

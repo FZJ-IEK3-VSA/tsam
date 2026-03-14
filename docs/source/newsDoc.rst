@@ -70,64 +70,22 @@ Improvements
 Release version 3.1.1
 *********************
 
-New Features
-============
+tsam v3.1.1 is the first stable v3 release (versions 3.0.0 and 3.1.0 were yanked from PyPI).
+It introduces a modern functional API alongside significant improvements to performance,
+plotting, hyperparameter tuning, and overall code quality.
 
-* Added ``Distribution`` and ``MinMaxMean`` representation objects for ``ClusterConfig`` and
-  ``SegmentConfig``, providing a structured alternative to plain string representation names.
-
-* Added migration guide (``docs/source/migrationGuideDoc.rst``) documenting the transition
-  from the v2 class-based API to the v3 functional API.
-
-Bug Fixes
-=========
-
-* Fixed segment label ordering bug: ``AgglomerativeClustering`` produces arbitrary cluster labels,
-  which caused ``durationRepresentation()`` with ``distributionPeriodWise=False`` to allocate
-  the global distribution differently when transferring a clustering. Segment clusters are now
-  relabelled to temporal order after ``fit_predict()``.
-
-* Fixed non-deterministic tie-breaking in vectorized ``durationRepresentation()``
-  (``distributionPeriodWise=True`` path). The vectorized mean computation used C-contiguous
-  memory layout, producing ~1e-16 floating-point differences from the original pandas-based code,
-  which caused ``argsort`` to swap tied timesteps. Fixed by computing per-attribute means on
-  F-contiguous arrays to match pandas' accumulation order. Verified against tsam v2.3.9
-  golden baselines.
-
-Testing & Benchmarks
-====================
-
-* Added extensive regression test suite (296 equivalence tests + 148 golden-file tests) comparing
-  both APIs against golden baselines generated with tsam v2.3.9.
-
-* Added benchmark suite (``benchmarks/bench.py``) for performance comparison across versions
-  using pytest-benchmark. Current version is **50--80x faster** than v2.3.9 for hierarchical
-  methods on real-world data.
-
-*********************
-Release version 3.1.0
-*********************
-
-* Removed ``preserve_n_clusters`` from ``ExtremeConfig``. Extreme periods are always added on top
-  of ``n_clusters``.
-
-* Removed ``matplotlib`` dependency; all plotting and notebooks now use ``plotly``
-
-* The tdqm test pipeline has been reduced due to the number of versions and the maturity of the library.
-
-* Renamed the examples for more clarity
-
-*********************
-Release version 3.0.0
-*********************
-
-tsam v3.0.0 is a major release introducing a modern, functional API alongside significant improvements to plotting, hyperparameter tuning, and overall code quality.
+See the :ref:`migration guide <migration_guide>` for a complete guide on upgrading from v2.
 
 Breaking Changes
 ================
 
 * **New functional API**: The primary interface is now ``tsam.aggregate()`` which returns an ``AggregationResult`` object
 * **Configuration objects**: Clustering and segmentation options are now configured via ``ClusterConfig``, ``SegmentConfig``, and ``ExtremeConfig`` dataclasses
+* **Segment representation default**: In v2, omitting ``segmentRepresentationMethod`` caused segments
+  to silently inherit the cluster ``representationMethod`` (e.g. distribution). In v3,
+  ``SegmentConfig(representation=...)`` defaults to ``"mean"`` independently. If you relied on the
+  implicit inheritance, pass the representation explicitly:
+  ``SegmentConfig(n_segments=12, representation=Distribution(scope="global"))``
 * **Removed methods**: The ``reconstruct()`` method has been removed; use the ``reconstructed`` property on ``AggregationResult`` instead
 * **Renamed parameters**: Parameters have been renamed for consistency:
 
@@ -168,7 +126,7 @@ New Features
   - Apply same clustering to different data via ``apply()``
   - Transfer clustering from one dataset to another (e.g., cluster on wind, apply to all columns)
 
-* **Integrated plotting** via ``result.plot`` accessor with Plotly:
+* **Integrated plotting** via ``result.plot`` accessor with Plotly (replaces matplotlib):
 
   - ``result.plot.compare()``: Compare original vs reconstructed (duration curves)
   - ``result.plot.residuals()``: Visualize reconstruction errors
@@ -186,16 +144,41 @@ New Features
 
 * **Utility functions**: ``tsam.unstack_to_periods()`` for reshaping time series for heatmap visualization
 
+* ``Distribution`` and ``MinMaxMean`` **representation objects** for ``ClusterConfig`` and
+  ``SegmentConfig``, providing a structured alternative to plain string representation names
+
 Improvements
 ============
 
 * Segment center preservation for better accuracy when using medoid/maxoid segment representation
 * Consistent semantic naming across the entire codebase
 * Better handling of extreme periods with ``n_clusters`` edge cases
-* Fixed rescaling with segmentation (was applying rescaling twice)
-* Fixed ``predict_original_data()`` denormalization when using ``same_mean=True`` with segmentation
-* Fixed non-deterministic sorting in duration representation by using stable sort, ensuring reproducible results across environments
 * Lazy loading of optional modules (``plot``, ``tuning``) to reduce import time
+
+Bug Fixes
+=========
+
+These bugs existed in v2.3.9:
+
+* Fixed rescaling with segmentation (was applying rescaling twice)
+* Fixed ``predictOriginalData()`` denormalization when using ``sameMean=True`` with segmentation
+* Fixed segment label ordering bug: ``AgglomerativeClustering`` produces arbitrary cluster labels,
+  which caused ``durationRepresentation()`` with ``distributionPeriodWise=False`` to allocate
+  the global distribution differently when transferring a clustering. Segment clusters are now
+  relabelled to temporal order after ``fit_predict()``.
+* Fixed non-deterministic sorting in ``durationRepresentation()`` across both code paths
+  by using ``kind="stable"`` and ``np.round(mean, 10)`` before ``argsort``, ensuring
+  identical tie-breaking across platforms.
+
+Result consistency
+==================
+
+The stable sort fix guarantees cross-platform reproducibility but changes tie-breaking
+compared to v2.3.9. Four distribution-related configurations (``hierarchical_distribution``,
+``hierarchical_distribution_minmax``, ``distribution_global``, ``distribution_minmax_global``)
+produce slightly different results, but will be consistent across systems from now on. All statistical properties are preserved. The remaining
+23 configurations are bit-for-bit identical to v2.3.9. See the
+:ref:`migration guide <migration_guide>` for details.
 
 Known Limitations
 =================
@@ -210,34 +193,36 @@ Known Limitations
 Performance
 ===========
 
-Multiple vectorization optimizations replace pandas loops with numpy array operations, significantly improving performance for datasets with many columns.
+Multiple vectorization optimizations replace pandas loops with numpy array operations,
+providing **35--77x** end-to-end speedups over v2.3.9 for most configurations.
 
-**Function-level optimizations:**
+**Benchmarked across 27 configurations × 4 datasets against v2.3.9:**
 
-* **``predict_original_data()``** (reconstruction step, always used):
-  Replaced per-period ``.unstack()`` loop with single vectorized indexing.
-  Function speedup: ~650ms → ~2ms (**290x**).
+* Hierarchical methods on real-world data: **35--60x faster**
+* Distribution representation (cluster-wise): **35--55x faster**
+* Averaging: up to **77x faster**
+* Contiguous clustering: **50--54x faster**
+* Distribution representation (global scope): **7--16x faster**
+* Iterative methods (kmeans, kmedoids, kmaxoids): **1--6x faster** (core solver dominates)
 
-* **``_rescale_cluster_periods()``** (only when ``preserve_column_means=True``):
-  Replaced pandas MultiIndex operations with numpy 3D array operations.
-  Function speedup: ~400ms → ~36ms (**11x**).
+**Key function-level optimizations:**
 
-* **``_cluster_sorted_periods()``** (only when ``use_duration_curves=True``):
-  Replaced per-column DataFrame sorting loop with numpy 3D reshape + sort.
-  Sorting step speedup: ~291ms → ~25ms (**12x**).
+* **``predictOriginalData()``**: Vectorized indexing replaces per-period
+  ``.unstack()`` loop (~290x function speedup).
+* **``durationRepresentation()``**: Vectorized numpy 3D operations replace
+  nested pandas loops (~8x function speedup).
+* **``_rescaleClusterPeriods()``**: numpy 3D arrays replace pandas
+  MultiIndex operations (~11x function speedup).
+* **``_clusterSortedPeriods()``**: numpy 3D reshape + sort replaces
+  per-column DataFrame sorting loop (~12x function speedup).
 
-* **``duration_representation()``** (only when ``representation='distribution'``):
-  Replaced nested loops with pandas MultiIndex indexing with numpy 3D operations.
-  Function speedup: ~220ms → ~26ms (**8x**).
+Testing & Benchmarks
+====================
 
-**Combined workflow benchmarks** (8760 hours, 4 columns):
-
-  =============================================  ==========  ==========  =========
-  Workflow                                       Before      After       Speedup
-  =============================================  ==========  ==========  =========
-  Basic (cluster + reconstruct)                  1244 ms     20 ms       **64x**
-  All options combined                           1268 ms     29 ms       **45x**
-  =============================================  ==========  ==========  =========
+* Regression test suite: 296 old/new API equivalence tests + 148 golden-file tests
+  comparing both APIs against baselines generated with tsam v2.3.9.
+* Benchmark suite (``benchmarks/bench.py``) for performance comparison across versions
+  using pytest-benchmark.
 
 Deprecations
 ============
@@ -270,43 +255,6 @@ The class-based API remains available for backward compatibility but is deprecat
         cluster_method='hierarchical',
     )
     typical_periods = aggregation.create_typical_periods()
-
-Quick Migration Example
-=======================
-
-**Before (v2)**::
-
-    import tsam.timeseriesaggregation as tsam
-
-    agg = tsam.TimeSeriesAggregation(
-        df,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod='hierarchical',
-        representationMethod='distributionAndMinMaxRepresentation',
-        segmentation=True,
-        noSegments=12,
-    )
-    typical = agg.createTypicalPeriods()
-    reconstructed = agg.predictOriginalData()
-
-**After (v3)**::
-
-    import tsam
-    from tsam import ClusterConfig, SegmentConfig
-
-    result = tsam.aggregate(
-        df,
-        n_clusters=8,
-        period_duration=24,
-        cluster=ClusterConfig(
-            method='hierarchical',
-            representation='distribution_minmax',
-        ),
-        segments=SegmentConfig(n_segments=12),
-    )
-    typical = result.cluster_representatives
-    reconstructed = result.reconstructed
 
 
 *********************
