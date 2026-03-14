@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
-
 import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
+
+pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
 
 
 def test_subhourlyResolution():

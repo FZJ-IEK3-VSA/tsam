@@ -35,7 +35,7 @@ from test_old_new_equivalence import (
 
 # Cases where specific warnings are expected and should be suppressed.
 _EXPECT_CONVERGENCE = {"kmeans/constant"}
-_EXPECT_TOLERANCE = {"kmaxoids/wide", "hierarchical_distribution_minmax/wide"}
+_EXPECT_MAXVAL_WARNING = {"kmaxoids/wide", "hierarchical_distribution_minmax/wide"}
 
 
 @contextmanager
@@ -44,7 +44,7 @@ def _expected_warnings(case: EquivalenceCase):
     with warnings.catch_warnings():
         if case.id in _EXPECT_CONVERGENCE:
             warnings.filterwarnings("ignore", category=ConvergenceWarning)
-        if case.id in _EXPECT_TOLERANCE:
+        if case.id in _EXPECT_MAXVAL_WARNING:
             warnings.filterwarnings("ignore", "At least one maximal value")
         yield
 

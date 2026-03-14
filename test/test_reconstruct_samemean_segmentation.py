@@ -15,10 +15,6 @@ import pytest
 
 import tsam
 from tsam import ClusterConfig, SegmentConfig
-
-pytestmark = pytest.mark.filterwarnings(
-    "ignore:Max iteration number reached:UserWarning"
-)
 from tsam.result import AggregationResult
 
 
@@ -67,6 +63,7 @@ class TestReconstructSameMeanSegmentation:
         )
         self._check_reconstruction_bounds(result)
 
+    @pytest.mark.filterwarnings("ignore:Max iteration number reached:UserWarning")
     def test_normalize_column_means_only(self, test_data):
         """normalize_column_means alone should work correctly."""
         result = tsam.aggregate(
@@ -77,6 +74,7 @@ class TestReconstructSameMeanSegmentation:
         )
         self._check_reconstruction_bounds(result)
 
+    @pytest.mark.filterwarnings("ignore:Max iteration number reached:UserWarning")
     def test_normalize_column_means_with_segments(self, test_data):
         """normalize_column_means + segmentation should work correctly.
 
@@ -102,6 +100,7 @@ class TestReconstructSameMeanSegmentation:
         )
         self._check_reconstruction_bounds(result)
 
+    @pytest.mark.filterwarnings("ignore:Max iteration number reached:UserWarning")
     def test_normalize_with_different_segment_counts(self, test_data):
         """Test various segment counts with normalize_column_means."""
         for n_segments in [2, 4, 8]:
