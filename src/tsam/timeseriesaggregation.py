@@ -14,7 +14,7 @@ from tsam.config import (
 from tsam.exceptions import LegacyAPIWarning
 from tsam.period_aggregation import aggregate_periods  # noqa: F401 (re-exported)
 from tsam.pipeline import run_pipeline
-from tsam.pipeline.types import PredefParams
+from tsam.pipeline.types import PipelineConfig, PredefParams
 from tsam.representations import representations  # noqa: F401 (re-exported)
 from tsam.weights import validate_weights
 
@@ -654,13 +654,13 @@ class TimeSeriesAggregation:
             return MinMaxMean(max_columns=max_cols, min_columns=min_cols)
         return _REPR_METHOD_MAP.get(method)
 
-    def _build_pipeline_args(self):
-        """Build kwargs for run_pipeline() from old-API parameters."""
+    def _build_pipeline_config(self) -> PipelineConfig:
+        """Build PipelineConfig from old-API parameters."""
         cluster = ClusterConfig(
-            method=_CLUSTER_METHOD_MAP[self.cluster_method],
+            method=_CLUSTER_METHOD_MAP[self.cluster_method],  # type: ignore[arg-type]
             representation=self._translate_representation(),
             weights=self.weight_dict if self.weight_dict else None,
-            normalize_column_means=self.same_mean,
+            scale_by_column_means=self.same_mean,
             use_duration_curves=self.sort_values,
             include_period_sums=self.eval_sum_periods,
             solver=self.solver,
@@ -669,7 +669,7 @@ class TimeSeriesAggregation:
         extremes = None
         if self.extreme_period_method != "None":
             extremes = ExtremeConfig(
-                method=_EXTREME_METHOD_MAP[self.extreme_period_method],
+                method=_EXTREME_METHOD_MAP[self.extreme_period_method],  # type: ignore[arg-type]
                 max_value=list(self.add_peak_max),
                 min_value=list(self.add_peak_min),
                 max_period=list(self.add_mean_max),
@@ -719,20 +719,19 @@ class TimeSeriesAggregation:
                 ),
             )
 
-        return {
-            "data": self.time_series,
-            "n_clusters": self.no_typical_periods,
-            "n_timesteps_per_period": self.time_steps_per_period,
-            "cluster": cluster,
-            "extremes": extremes,
-            "segments": segments,
-            "rescale_cluster_periods": self.rescale_cluster_periods,
-            "rescale_exclude_columns": self.rescale_exclude_columns or None,
-            "round_decimals": self.round_output,
-            "numerical_tolerance": self.numerical_tolerance,
-            "temporal_resolution": self.resolution,
-            "predef": predef,
-        }
+        return PipelineConfig(
+            n_clusters=self.no_typical_periods,
+            n_timesteps_per_period=self.time_steps_per_period,
+            cluster=cluster,
+            extremes=extremes,
+            segments=segments,
+            rescale_cluster_periods=self.rescale_cluster_periods,
+            rescale_exclude_columns=self.rescale_exclude_columns or None,
+            round_decimals=self.round_output,
+            numerical_tolerance=self.numerical_tolerance,
+            temporal_resolution=self.resolution,
+            predef=predef,
+        )
 
     def create_typical_periods(self):
         """
@@ -756,7 +755,8 @@ class TimeSeriesAggregation:
             self.weight_dict = validated
 
         # Run pipeline
-        result = run_pipeline(**self._build_pipeline_args())
+        cfg = self._build_pipeline_config()
+        result = run_pipeline(data=self.time_series, cfg=cfg)
 
         # Extract state for properties and other methods
         self._pipeline_result = result

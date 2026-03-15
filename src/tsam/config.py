@@ -123,25 +123,6 @@ class MinMaxMean:
 Representation = RepresentationMethod | Distribution | MinMaxMean
 
 
-def _resolve_representation(rep: Representation) -> Representation:
-    """Normalize a string representation shortcut to an object when needed.
-
-    Returns the input unchanged for objects and simple string methods
-    (mean, medoid, maxoid). Converts distribution/distribution_minmax/minmax_mean
-    strings to their corresponding objects.
-    """
-    if isinstance(rep, (Distribution, MinMaxMean)):
-        return rep
-    if rep == "distribution":
-        return Distribution()
-    if rep == "distribution_minmax":
-        return Distribution(preserve_minmax=True)
-    if rep == "minmax_mean":
-        return MinMaxMean()
-    # Simple string methods: mean, medoid, maxoid
-    return rep
-
-
 def _representation_to_dict(rep: Representation) -> str | dict[str, Any]:
     """Serialize a representation value to a JSON-compatible format."""
     if isinstance(rep, (Distribution, MinMaxMean)):
@@ -162,7 +143,6 @@ def _representation_from_dict(data: str | dict) -> Representation:
     raise ValueError(f"Unknown representation type: {rep_type!r}")
 
 
-@dataclass(frozen=True)
 class ClusterConfig:
     """Configuration for the clustering algorithm.
 
@@ -212,9 +192,11 @@ class ClusterConfig:
         rescaling, denormalization, reconstruction, or accuracy computation.
         Columns not listed default to weight 1.0.
 
-    normalize_column_means : bool, default False
-        Normalize all columns to the same mean before clustering.
+    scale_by_column_means : bool, default False
+        Divide each column by its mean after MinMax normalization, so all
+        columns have equal mean before clustering.
         Useful when columns have very different scales.
+        (Previously called ``normalize_column_means``.)
 
     use_duration_curves : bool, default False
         Sort values within each period before clustering.
@@ -229,13 +211,73 @@ class ClusterConfig:
         Options: "highs" (default, open source), "cbc", "gurobi", "cplex"
     """
 
-    method: ClusterMethod = "hierarchical"
-    representation: Representation | None = None
-    weights: dict[str, float] | None = None
-    normalize_column_means: bool = False
-    use_duration_curves: bool = False
-    include_period_sums: bool = False
-    solver: Solver = "highs"
+    method: ClusterMethod
+    representation: Representation | None
+    weights: dict[str, float] | None
+    scale_by_column_means: bool
+    use_duration_curves: bool
+    include_period_sums: bool
+    solver: Solver
+
+    __slots__ = (
+        "include_period_sums",
+        "method",
+        "representation",
+        "scale_by_column_means",
+        "solver",
+        "use_duration_curves",
+        "weights",
+    )
+
+    def __init__(
+        self,
+        method: ClusterMethod = "hierarchical",
+        representation: Representation | None = None,
+        weights: dict[str, float] | None = None,
+        scale_by_column_means: bool = False,
+        use_duration_curves: bool = False,
+        include_period_sums: bool = False,
+        solver: Solver = "highs",
+        # Backward compat alias
+        normalize_column_means: bool | None = None,
+    ) -> None:
+        if normalize_column_means is not None:
+            warnings.warn(
+                "'normalize_column_means' is deprecated, use 'scale_by_column_means'.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            scale_by_column_means = normalize_column_means
+        object.__setattr__(self, "method", method)
+        object.__setattr__(self, "representation", representation)
+        object.__setattr__(self, "weights", weights)
+        object.__setattr__(self, "scale_by_column_means", scale_by_column_means)
+        object.__setattr__(self, "use_duration_curves", use_duration_curves)
+        object.__setattr__(self, "include_period_sums", include_period_sums)
+        object.__setattr__(self, "solver", solver)
+
+    def __setattr__(self, name: str, value: object) -> None:
+        raise AttributeError("ClusterConfig is immutable")
+
+    def __delattr__(self, name: str) -> None:
+        raise AttributeError("ClusterConfig is immutable")
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ClusterConfig):
+            return NotImplemented
+        return all(getattr(self, s) == getattr(other, s) for s in self.__slots__)
+
+    def __hash__(self) -> int:
+        return hash(tuple(getattr(self, s) for s in self.__slots__))
+
+    def __repr__(self) -> str:
+        parts = ", ".join(f"{s}={getattr(self, s)!r}" for s in self.__slots__)
+        return f"ClusterConfig({parts})"
+
+    @property
+    def normalize_column_means(self) -> bool:
+        """Deprecated alias for ``scale_by_column_means``."""
+        return self.scale_by_column_means
 
     def get_representation(self) -> Representation:
         """Get the representation, using default if not specified."""
@@ -260,8 +302,8 @@ class ClusterConfig:
             result["representation"] = _representation_to_dict(self.representation)
         if self.weights is not None:
             result["weights"] = self.weights
-        if self.normalize_column_means:
-            result["normalize_column_means"] = self.normalize_column_means
+        if self.scale_by_column_means:
+            result["scale_by_column_means"] = self.scale_by_column_means
         if self.use_duration_curves:
             result["use_duration_curves"] = self.use_duration_curves
         if self.include_period_sums:
@@ -281,7 +323,10 @@ class ClusterConfig:
             method=data.get("method", "hierarchical"),
             representation=representation,
             weights=data.get("weights"),
-            normalize_column_means=data.get("normalize_column_means", False),
+            scale_by_column_means=data.get(
+                "scale_by_column_means",
+                data.get("normalize_column_means", False),
+            ),
             use_duration_curves=data.get("use_duration_curves", False),
             include_period_sums=data.get("include_period_sums", False),
             solver=data.get("solver", "highs"),
@@ -873,7 +918,7 @@ class ClusteringResult:
         """
         from tsam.api import _build_aggregation_result
         from tsam.pipeline import run_pipeline
-        from tsam.pipeline.types import PredefParams
+        from tsam.pipeline.types import PipelineConfig, PredefParams
 
         # Warn if using replace extreme method (transfer is not exact)
         if (
@@ -928,7 +973,6 @@ class ClusteringResult:
 
         # Use stored segment config if available, otherwise build from transfer fields
         segments: SegmentConfig | None = None
-        n_segments_val: int | None = None
         if self.segment_assignments is not None and self.segment_durations is not None:
             n_segments_val = len(self.segment_durations[0])
             segments = self.segment_config or SegmentConfig(
@@ -956,8 +1000,7 @@ class ClusteringResult:
             else None,
         )
 
-        result = run_pipeline(
-            data=data,
+        cfg = PipelineConfig(
             n_clusters=self.n_clusters,
             n_timesteps_per_period=self.n_timesteps_per_period,
             cluster=cluster,
@@ -971,6 +1014,8 @@ class ClusteringResult:
             temporal_resolution=effective_temporal_resolution,
             predef=predef,
         )
+
+        result = run_pipeline(data=data, cfg=cfg)
 
         return _build_aggregation_result(result, is_transferred=True)
 

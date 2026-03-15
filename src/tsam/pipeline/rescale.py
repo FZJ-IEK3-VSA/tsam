@@ -7,8 +7,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-MAX_ITERATOR = 20
-TOLERANCE = 1e-6
+from tsam.options import options
 
 
 def rescale_representatives(
@@ -72,7 +71,10 @@ def rescale_representatives(
         diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
 
         iteration = 0
-        while diff > sum_raw * TOLERANCE and iteration < MAX_ITERATOR:
+        while (
+            diff > sum_raw * options.rescale_tolerance
+            and iteration < options.rescale_max_iterations
+        ):
             # Rescale values (only non-extreme clusters)
             arr[idx_wo_peak, ci, :] *= (sum_raw - sum_peak) / sum_clu_wo_peak
 
@@ -92,7 +94,7 @@ def rescale_representatives(
 
         # Calculate and store final deviation
         deviation_pct = (diff / sum_raw) * 100 if sum_raw != 0 else 0.0
-        converged = iteration < MAX_ITERATOR
+        converged = iteration < options.rescale_max_iterations
         rescale_deviations[column] = {
             "deviation_pct": deviation_pct,
             "converged": converged,

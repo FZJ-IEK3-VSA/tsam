@@ -309,7 +309,7 @@ class AggregationResult:
         """
         return sorted(self.cluster_representatives.index.get_level_values(0).unique())
 
-    @property
+    @cached_property
     def assignments(self) -> pd.DataFrame:
         """Get timestep-level assignment information.
 
@@ -378,7 +378,7 @@ class AggregationResult:
 
         return result_df
 
-    @property
+    @cached_property
     def plot(self) -> ResultPlotAccessor:
         """Access plotting methods.
 

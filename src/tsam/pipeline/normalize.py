@@ -10,15 +10,12 @@ from tsam.pipeline.types import NormalizedData
 
 def normalize(
     data: pd.DataFrame,
-    normalize_column_means: bool,
+    scale_by_column_means: bool,
 ) -> NormalizedData:
-    """Sort columns, cast float, fit MinMaxScaler, normalize, normalize_column_means.
+    """Cast float, fit MinMaxScaler, normalize, optionally divide by column means.
 
     Weights are NOT applied here — they are used only for clustering distance.
     """
-    # Sort columns alphabetically
-    data = data.sort_index(axis=1)
-
     data = data.astype(float)
 
     # Fit MinMaxScaler and normalize
@@ -29,18 +26,17 @@ def normalize(
         index=data.index,
     )
 
-    # Store mean before normalize_column_means division
+    # Store mean before scale_by_column_means division
     normalized_mean = normalized.mean()
 
-    if normalize_column_means:
+    if scale_by_column_means:
         normalized = normalized / normalized_mean
 
     return NormalizedData(
         values=normalized,
         scaler=scaler,
         normalized_mean=normalized_mean,
-        original_data=data,
-        normalize_column_means=normalize_column_means,
+        scale_by_column_means=scale_by_column_means,
     )
 
 
@@ -54,7 +50,7 @@ def denormalize(
     """
     result = df.copy()
 
-    if norm_data.normalize_column_means:
+    if norm_data.scale_by_column_means:
         result = result * norm_data.normalized_mean
 
     # Inverse transform using stored scaler

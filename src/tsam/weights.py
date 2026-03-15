@@ -5,10 +5,17 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
+from tsam.options import options
+
 if TYPE_CHECKING:
     import pandas as pd
 
-MIN_WEIGHT = 1e-6
+
+def __getattr__(name: str):
+    """Backward compat: ``MIN_WEIGHT`` now lives in ``tsam.options``."""
+    if name == "MIN_WEIGHT":
+        return options.min_weight
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def validate_weights(
@@ -19,7 +26,7 @@ def validate_weights(
 
     Consolidates:
     - Column existence check (raises ValueError for unknown columns)
-    - MIN_WEIGHT clamping (warns and clamps near-zero weights)
+    - min_weight clamping (warns and clamps near-zero weights)
     - Returns None if all weights are effectively 1.0
 
     Parameters
@@ -50,12 +57,12 @@ def validate_weights(
     any_non_unit = False
     cleaned: dict[str, float] = {}
     for col, w in weights.items():
-        if w < MIN_WEIGHT:
+        if w < options.min_weight:
             warnings.warn(
                 f'weight of "{col}" set to the minimal tolerable weighting',
                 stacklevel=2,
             )
-            w = MIN_WEIGHT
+            w = options.min_weight
         if w != 1.0:
             any_non_unit = True
         cleaned[col] = w

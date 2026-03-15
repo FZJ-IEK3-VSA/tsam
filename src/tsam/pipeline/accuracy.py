@@ -16,9 +16,10 @@ if TYPE_CHECKING:
 
 def reconstruct(
     typical_periods: pd.DataFrame,
-    cluster_order: list | np.ndarray,
+    cluster_order: np.ndarray,
     period_profiles: PeriodProfiles,
     norm_data: NormalizedData,
+    original_data: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Expand typical periods via assignments, denormalize.
 
@@ -37,11 +38,11 @@ def reconstruct(
     clustered_data_df = clustered_data_df.stack(future_stack=True, level="TimeStep")  # type: ignore[assignment]
 
     # Trim to original data length
-    original_len = len(norm_data.original_data)
+    original_len = len(original_data)
     normalized_predicted = pd.DataFrame(
         clustered_data_df.values[:original_len],
-        index=norm_data.original_data.index,
-        columns=norm_data.original_data.columns,
+        index=original_data.index,
+        columns=original_data.columns,
     )
 
     denormalized = denormalize(normalized_predicted, norm_data)

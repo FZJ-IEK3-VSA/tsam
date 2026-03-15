@@ -8,13 +8,11 @@ import pandas as pd
 
 from tsam.config import (
     ClusterConfig,
-    Distribution,
     ExtremeConfig,
-    MinMaxMean,
-    Representation,
     SegmentConfig,
 )
 from tsam.pipeline import run_pipeline
+from tsam.pipeline.types import PipelineConfig
 from tsam.result import AccuracyMetrics, AggregationResult
 from tsam.weights import validate_weights
 
@@ -26,7 +24,7 @@ def _parse_duration_hours(value: int | float | str, param_name: str) -> float:
     """Parse a duration value to hours.
 
     Accepts:
-    - int/float: interpreted as hours (e.g., 24 → 24.0 hours)
+    - int/float: interpreted as hours (e.g., 24 -> 24.0 hours)
     - str: pandas Timedelta string (e.g., '24h', '1d', '15min')
 
     Returns duration in hours as float.
@@ -250,15 +248,14 @@ def aggregate(
             method=cluster.method,
             representation=cluster.representation,
             weights=validated,
-            normalize_column_means=cluster.normalize_column_means,
+            scale_by_column_means=cluster.scale_by_column_means,
             use_duration_curves=cluster.use_duration_curves,
             include_period_sums=cluster.include_period_sums,
             solver=cluster.solver,
         )
 
-    # Run pipeline
-    result = run_pipeline(
-        data=data,
+    # Build pipeline config
+    cfg = PipelineConfig(
         n_clusters=n_clusters,
         n_timesteps_per_period=n_timesteps_per_period,
         cluster=cluster,
@@ -270,6 +267,8 @@ def aggregate(
         numerical_tolerance=numerical_tolerance,
         temporal_resolution=temporal_resolution,
     )
+
+    result = run_pipeline(data=data, cfg=cfg)
 
     return _build_aggregation_result(result, is_transferred=False)
 
@@ -319,53 +318,6 @@ def _build_aggregation_result(
         _time_index=result.time_index,
         _segmented_df=result.segmented_df,
     )
-
-
-def _apply_representation_params(
-    params: dict, representation: Representation, columns: list[str]
-) -> None:
-    """Apply representation parameters to the old API params dict.
-
-    Handles both string shortcuts and typed representation objects
-    (Distribution, MinMaxMean).
-    """
-    if isinstance(representation, Distribution):
-        if representation.preserve_minmax:
-            params["representationMethod"] = "distributionAndMinMaxRepresentation"
-        else:
-            params["representationMethod"] = "distributionRepresentation"
-        params["distributionPeriodWise"] = representation.scope == "cluster"
-    elif isinstance(representation, MinMaxMean):
-        params["representationMethod"] = "minmaxmeanRepresentation"
-        # Build representationDict: columns not in max/min default to mean
-        rep_dict: dict[str, str] = {}
-        max_set = set(representation.max_columns)
-        min_set = set(representation.min_columns)
-        for col in columns:
-            if col in max_set:
-                rep_dict[col] = "max"
-            elif col in min_set:
-                rep_dict[col] = "min"
-            else:
-                rep_dict[col] = "mean"
-        params["representationDict"] = rep_dict
-    else:
-        # String representation — map to legacy wrapper names
-        _str_to_monolith = {
-            "mean": "meanRepresentation",
-            "medoid": "medoidRepresentation",
-            "maxoid": "maxoidRepresentation",
-            "distribution": "distributionRepresentation",
-            "distribution_minmax": "distributionAndMinMaxRepresentation",
-            "minmax_mean": "minmaxmeanRepresentation",
-        }
-        rep_mapped = _str_to_monolith.get(representation)
-        if rep_mapped is None:
-            raise ValueError(
-                f"Unknown representation method: {representation!r}. "
-                f"Valid options: {list(_str_to_monolith.keys())}"
-            )
-        params["representationMethod"] = rep_mapped
 
 
 def unstack_to_periods(

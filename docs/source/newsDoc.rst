@@ -6,50 +6,58 @@ tsam's Change Log
 Release version 4.0.0
 *********************
 
+Architecture
+============
+
+* **Pipeline rewrite**: The monolithic ``TimeSeriesAggregation`` internals have been
+  replaced with a stateless pipeline of pure functions in ``src/tsam/pipeline/``.
+  Each step (normalize, unstack, cluster, represent, rescale, segment, reconstruct)
+  is now an independent function that takes explicit inputs and returns explicit outputs.
+  Both ``tsam.aggregate()`` and the legacy ``TimeSeriesAggregation`` class now delegate
+  to the same ``run_pipeline()`` orchestrator.
+
+* **snake_case identifiers**: All internal identifiers have been renamed from camelCase
+  to snake_case. The legacy ``TimeSeriesAggregation`` class retains its original
+  parameter names (both camelCase and snake_case accepted) for backward compatibility.
+
 Breaking Changes
 ================
 
-* **Decoupled column weights from data pipeline**: ``ClusterConfig.weights`` now affects
-  **only** the clustering distance calculation.  Previously, weights were multiplied into
-  the normalized data during preprocessing, which forced every downstream step to
-  compensate (rescaling widened clip bounds by the weight factor, reconstruction divided
-  out weights before denormalization, and accuracy computation divided out weights
-  before comparison).
+* **Decoupled column weights from data pipeline**: ``ClusterConfig.weights``
+  (and ``weightDict`` in the legacy API) now affects **only** the clustering distance
+  calculation. Previously, weights were multiplied into the normalized data during
+  preprocessing, which forced every downstream step to compensate (rescaling widened
+  clip bounds by the weight factor, reconstruction divided out weights before
+  denormalization, and accuracy computation divided out weights before comparison).
+  This applies to **both** ``tsam.aggregate()`` and the legacy ``TimeSeriesAggregation``
+  class, since both now use the same pipeline internally.
 
   **Where weights are applied now:**
 
   - A separate *weighted candidates* array is created after unstacking and used
-    exclusively as the distance matrix for clustering (step 4).
+    exclusively as the distance matrix for clustering.
   - When ``include_period_sums`` is enabled, period-sum features are appended to
     the weighted candidates only.
   - Cluster *representations* (medoid, mean, distribution, etc.) are computed from
     the **unweighted** candidates so that typical periods live in the original
     normalized space.
 
-  **Where weights are no longer applied:**
-
-  - ``normalize()`` no longer accepts or applies weights.
-  - ``NormalizedData`` no longer carries a ``weights`` field.
-  - ``denormalize()`` no longer has an ``apply_weights`` parameter.
-  - ``rescale_representatives()`` no longer widens the clipping bound by the
-    weight factor.
-  - ``reconstruct()`` no longer divides out weights before denormalization.
-  - ``compute_accuracy()`` no longer divides out weights before error comparison.
-
   This simplifies the pipeline, eliminates a class of weight-related bugs, and makes
-  the semantics of ``ClusterConfig.weights`` match its documentation: *"per-column
-  weights for clustering distance calculation"*.
+  the semantics of weights match their documentation: *"per-column weights for
+  clustering distance calculation"*.
 
-  **Compatibility note:** Cluster *assignments* are identical to the previous version
-  (the weighted distance matrix is mathematically equivalent).  With medoid or maxoid
-  representation, the selected representative may differ in edge cases because the
-  medoid is now chosen in the unweighted output space rather than the weighted
-  clustering space.  This applies to both the new ``tsam.aggregate()`` API and the
-  legacy ``TimeSeriesAggregation`` class, which now uses the same pipeline internally.
+  **Numerical impact:** Cluster *assignments* are identical to v3 (the weighted
+  distance matrix is mathematically equivalent). Across all golden regression tests,
+  the **only** configuration that produces different output is
+  ``hierarchical_weighted/testdata.csv`` — the single case combining non-uniform
+  weights with medoid representation (the medoid is now chosen in the unweighted
+  output space). All other configurations are bit-identical to v3.
 
 * **Output column order preserved**: ``cluster_representatives``, ``reconstructed``, and ``original``
   now return columns in the same order as the input DataFrame. Previously, columns were
   alphabetically sorted. Code that relied on sorted column order may need adjustment.
+  (The legacy ``TimeSeriesAggregation`` class preserves alphabetical sorting for backward
+  compatibility.)
 
 * **Renamed ``cluster_weights`` to ``cluster_counts``**: ``AggregationResult.cluster_weights``
   has been renamed to ``cluster_counts`` to avoid confusion with per-column clustering weights
@@ -66,6 +74,8 @@ Improvements
 * **Fixed type annotation**: ``cluster_counts`` (formerly ``cluster_weights``) is now
   correctly annotated as ``dict[int, float]`` since partial-period adjustment can produce
   fractional values.
+
+See the :ref:`v3 to v4 migration guide <migration_v3_to_v4>` for upgrade instructions.
 
 *********************
 Release version 3.1.1

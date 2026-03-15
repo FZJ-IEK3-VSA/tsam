@@ -62,6 +62,7 @@ from tsam.config import (
     SegmentConfig,
 )
 from tsam.exceptions import LegacyAPIWarning
+from tsam.options import options
 from tsam.result import AccuracyMetrics, AggregationResult
 
 # Legacy imports for backward compatibility
@@ -81,6 +82,7 @@ __all__ = [
     "SegmentConfig",
     "TimeSeriesAggregation",
     "aggregate",
+    "options",
     "plot",
     "tuning",
     "unstackToPeriods",  # Legacy alias

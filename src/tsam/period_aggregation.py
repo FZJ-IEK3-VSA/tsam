@@ -61,19 +61,11 @@ def aggregate_periods(
     # cluster the data
     if cluster_method == "averaging":
         n_sets = len(candidates)
-        if n_sets % n_clusters == 0:
-            cluster_size = int(n_sets / n_clusters)
-            order_lists = [
-                [n_cluster] * cluster_size for n_cluster in range(n_clusters)
-            ]
-        else:
-            cluster_size = int(n_sets / n_clusters)
-            order_lists = [
-                [n_cluster] * cluster_size for n_cluster in range(n_clusters)
-            ]
-            order_lists.append(
-                [n_clusters - 1] * int(n_sets - cluster_size * n_clusters)
-            )
+        cluster_size = n_sets // n_clusters
+        order_lists = [[n_cluster] * cluster_size for n_cluster in range(n_clusters)]
+        remainder = n_sets - cluster_size * n_clusters
+        if remainder > 0:
+            order_lists.append([n_clusters - 1] * remainder)
         cluster_order = np.hstack(np.array(order_lists, dtype=object))  # type: ignore[call-overload]
         cluster_centers, cluster_center_indices = representations(
             _rep_candidates,

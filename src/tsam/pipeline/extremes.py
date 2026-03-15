@@ -118,18 +118,29 @@ def add_extreme_periods(
             new_cluster_centers.append(extreme_periods[period_type]["profile"])
             extreme_periods[period_type]["new_cluster_no"] = i + len(cluster_centers)
 
+        # Build set of extreme period step numbers for quick lookup
+        extreme_step_nos = {extreme_periods[pt]["step_no"] for pt in extreme_periods}
+
         for i, c_period in enumerate(new_cluster_order):
+            # Skip periods that are themselves an extreme period for a different type
+            if i in extreme_step_nos:
+                # Only reassign if this period IS the extreme for exactly one type
+                own_types = [
+                    pt for pt in extreme_periods if extreme_periods[pt]["step_no"] == i
+                ]
+                if len(own_types) == 1:
+                    new_cluster_order[i] = extreme_periods[own_types[0]][
+                        "new_cluster_no"
+                    ]
+                continue
+
             cluster_dist = sum(
                 (profiles_df.iloc[i].values - cluster_centers[c_period]) ** 2
             )
-            for ii, extrem_period_type in enumerate(extreme_periods):
-                is_other_extreme = False
-                for other_ex_period in extreme_periods:
-                    if (
-                        i == extreme_periods[other_ex_period]["step_no"]
-                        and other_ex_period != extrem_period_type
-                    ):
-                        is_other_extreme = True
+            # Find the closest extreme period (deterministic: first match with smallest distance)
+            best_extreme = None
+            best_dist = cluster_dist
+            for extrem_period_type in extreme_periods:
                 extperiod_dist = sum(
                     (
                         profiles_df.iloc[i].values
@@ -137,10 +148,12 @@ def add_extreme_periods(
                     )
                     ** 2
                 )
-                if extperiod_dist < cluster_dist and not is_other_extreme:
-                    new_cluster_order[i] = extreme_periods[extrem_period_type][
-                        "new_cluster_no"
-                    ]
+                if extperiod_dist < best_dist:
+                    best_dist = extperiod_dist
+                    best_extreme = extrem_period_type
+
+            if best_extreme is not None:
+                new_cluster_order[i] = extreme_periods[best_extreme]["new_cluster_no"]
 
     elif extremes.method == "replace":
         new_cluster_centers = list(cluster_centers)
