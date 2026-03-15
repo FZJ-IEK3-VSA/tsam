@@ -67,6 +67,11 @@ Breaking Changes
 Improvements
 ============
 
+* **Versioned clustering JSON**: ``ClusteringResult.to_json()`` now includes a
+  ``"version"`` field recording the tsam version that created the file. When loading
+  a clustering produced by an older version, the version is available as
+  ``clustering.version`` so downstream code can detect and handle format differences.
+
 * **Column weights preserved during transfer**: ``ClusteringResult.apply()`` now replays
   the original ``ClusterConfig.weights`` so that transferred results use the same
   clustering distance when recomputing representatives.
@@ -74,6 +79,14 @@ Improvements
 * **Fixed type annotation**: ``cluster_counts`` (formerly ``cluster_weights``) is now
   correctly annotated as ``dict[int, float]`` since partial-period adjustment can produce
   fractional values.
+
+* **Deterministic extreme period assignment**: The ``new_cluster`` extreme method now
+  picks the closest extreme period by distance (deterministic) instead of the previous
+  last-match-wins loop order (non-deterministic when multiple extreme types match).
+
+* **Warning for incompatible options**: Using ``use_duration_curves=True`` with
+  ``include_period_sums=True`` and ``weights`` now emits a warning, since weights are
+  silently ignored in that combination.
 
 See the :ref:`v3 to v4 migration guide <migration_v3_to_v4>` for upgrade instructions.
 

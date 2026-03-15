@@ -383,6 +383,16 @@ class SegmentConfig:
         )
 
 
+def _get_version() -> str:
+    """Get tsam version string for ClusteringResult."""
+    import importlib.metadata
+
+    try:
+        return importlib.metadata.version("tsam")
+    except importlib.metadata.PackageNotFoundError:
+        return "unknown"
+
+
 @dataclass(frozen=True)
 class ClusteringResult:
     """Clustering assignments that can be saved/loaded and applied to new data.
@@ -487,6 +497,9 @@ class ClusteringResult:
     segment_config: SegmentConfig | None = None
     extremes_config: ExtremeConfig | None = None
 
+    # === Format version ===
+    version: str | None = None
+
     def __post_init__(self) -> None:
         if self.segment_assignments is not None and self.segment_durations is None:
             raise ValueError(
@@ -589,6 +602,7 @@ class ClusteringResult:
             cluster_config=cluster_config,
             segment_config=segment_config,
             extremes_config=extremes_config,
+            version=_get_version(),
         )
 
     @staticmethod
@@ -718,6 +732,7 @@ class ClusteringResult:
         """Convert to dictionary for JSON serialization."""
         # Transfer fields (always included)
         result: dict[str, Any] = {
+            "version": self.version or _get_version(),
             "period_duration": self.period_duration,
             "cluster_assignments": list(self.cluster_assignments),
             "n_timesteps_per_period": self.n_timesteps_per_period,
@@ -765,6 +780,7 @@ class ClusteringResult:
             "n_timesteps_per_period": data["n_timesteps_per_period"],
             "preserve_column_means": data.get("preserve_column_means", True),
             "representation": _representation_from_dict(rep_data),
+            "version": data.get("version"),
         }
         if "cluster_centers" in data:
             kwargs["cluster_centers"] = tuple(data["cluster_centers"])
