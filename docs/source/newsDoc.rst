@@ -3,6 +3,94 @@ tsam's Change Log
 ##################
 
 *********************
+Release version 4.0.0
+*********************
+
+Architecture
+============
+
+* **Pipeline rewrite**: The monolithic ``TimeSeriesAggregation`` internals have been
+  replaced with a stateless pipeline of pure functions in ``src/tsam/pipeline/``.
+  Each step (normalize, unstack, cluster, represent, rescale, segment, reconstruct)
+  is now an independent function that takes explicit inputs and returns explicit outputs.
+  Both ``tsam.aggregate()`` and the legacy ``TimeSeriesAggregation`` class now delegate
+  to the same ``run_pipeline()`` orchestrator.
+
+* **snake_case identifiers**: All internal identifiers have been renamed from camelCase
+  to snake_case. The legacy ``TimeSeriesAggregation`` class retains its original
+  parameter names (both camelCase and snake_case accepted) for backward compatibility.
+
+Breaking Changes
+================
+
+* **Decoupled column weights from data pipeline**: ``ClusterConfig.weights``
+  (and ``weightDict`` in the legacy API) now affects **only** the clustering distance
+  calculation. Previously, weights were multiplied into the normalized data during
+  preprocessing, which forced every downstream step to compensate (rescaling widened
+  clip bounds by the weight factor, reconstruction divided out weights before
+  denormalization, and accuracy computation divided out weights before comparison).
+  This applies to **both** ``tsam.aggregate()`` and the legacy ``TimeSeriesAggregation``
+  class, since both now use the same pipeline internally.
+
+  **Where weights are applied now:**
+
+  - A separate *weighted candidates* array is created after unstacking and used
+    exclusively as the distance matrix for clustering.
+  - When ``include_period_sums`` is enabled, period-sum features are appended to
+    the weighted candidates only.
+  - Cluster *representations* (medoid, mean, distribution, etc.) are computed from
+    the **unweighted** candidates so that typical periods live in the original
+    normalized space.
+
+  This simplifies the pipeline, eliminates a class of weight-related bugs, and makes
+  the semantics of weights match their documentation: *"per-column weights for
+  clustering distance calculation"*.
+
+  **Numerical impact:** Cluster *assignments* are identical to v3 (the weighted
+  distance matrix is mathematically equivalent). Across all golden regression tests,
+  the **only** configuration that produces different output is
+  ``hierarchical_weighted/testdata.csv`` — the single case combining non-uniform
+  weights with medoid representation (the medoid is now chosen in the unweighted
+  output space). All other configurations are bit-identical to v3.
+
+* **Output column order preserved**: ``cluster_representatives``, ``reconstructed``, and ``original``
+  now return columns in the same order as the input DataFrame. Previously, columns were
+  alphabetically sorted. Code that relied on sorted column order may need adjustment.
+  (The legacy ``TimeSeriesAggregation`` class preserves alphabetical sorting for backward
+  compatibility.)
+
+* **Renamed ``cluster_weights`` to ``cluster_counts``**: ``AggregationResult.cluster_weights``
+  has been renamed to ``cluster_counts`` to avoid confusion with per-column clustering weights
+  (``ClusterConfig.weights``). The old name remains as a deprecated property emitting
+  ``FutureWarning``.
+
+Improvements
+============
+
+* **Versioned clustering JSON**: ``ClusteringResult.to_json()`` now includes a
+  ``"version"`` field recording the tsam version that created the file. When loading
+  a clustering produced by an older version, the version is available as
+  ``clustering.version`` so downstream code can detect and handle format differences.
+
+* **Column weights preserved during transfer**: ``ClusteringResult.apply()`` now replays
+  the original ``ClusterConfig.weights`` so that transferred results use the same
+  clustering distance when recomputing representatives.
+
+* **Fixed type annotation**: ``cluster_counts`` (formerly ``cluster_weights``) is now
+  correctly annotated as ``dict[int, float]`` since partial-period adjustment can produce
+  fractional values.
+
+* **Deterministic extreme period assignment**: The ``new_cluster`` extreme method now
+  picks the closest extreme period by distance (deterministic) instead of the previous
+  last-match-wins loop order (non-deterministic when multiple extreme types match).
+
+* **Warning for incompatible options**: Using ``use_duration_curves=True`` with
+  ``include_period_sums=True`` and ``weights`` now emits a warning, since weights are
+  silently ignored in that combination.
+
+See the :ref:`v3 to v4 migration guide <migration_v3_to_v4>` for upgrade instructions.
+
+*********************
 Release version 3.1.1
 *********************
 
@@ -49,7 +137,7 @@ New Features
 
   - ``cluster_representatives``: DataFrame with aggregated typical periods
   - ``cluster_assignments``: Which cluster each original period belongs to
-  - ``cluster_weights``: Occurrence count per cluster
+  - ``cluster_counts``: Occurrence count per cluster (fractional for partial periods)
   - ``accuracy``: ``AccuracyMetrics`` object with RMSE, MAE, and duration curve RMSE
   - ``reconstructed``: Reconstructed time series (cached property)
   - ``residuals``: Difference between original and reconstructed
@@ -152,8 +240,8 @@ providing **35--77x** end-to-end speedups over v2.3.9 for most configurations.
 * **``_clusterSortedPeriods()``**: numpy 3D reshape + sort replaces
   per-column DataFrame sorting loop (~12x function speedup).
 
-Testing
-=======
+Testing & Benchmarks
+====================
 
 * Regression test suite: 296 old/new API equivalence tests + 148 golden-file tests
   comparing both APIs against baselines generated with tsam v2.3.9.
@@ -169,7 +257,7 @@ Deprecations
 
 * **HyperTunedAggregations class**: The legacy hyperparameter tuning class in ``tsam.hyperparametertuning`` is deprecated. Use ``tsam.tuning.find_optimal_combination()`` or ``tsam.tuning.find_pareto_front()`` instead.
 
-* **getNoPeriodsForDataReduction / getNoSegmentsForDataReduction**: Helper functions deprecated along with ``HyperTunedAggregations``.
+* **get_no_periods_for_data_reduction / get_no_segments_for_data_reduction**: Helper functions deprecated along with ``HyperTunedAggregations``.
 
 * To suppress warnings during migration::
 
@@ -186,11 +274,11 @@ The class-based API remains available for backward compatibility but is deprecat
 
     aggregation = tsam_legacy.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod='hierarchical',
+        no_typical_periods=8,
+        hours_per_period=24,
+        cluster_method='hierarchical',
     )
-    typical_periods = aggregation.createTypicalPeriods()
+    typical_periods = aggregation.create_typical_periods()
 
 
 *********************

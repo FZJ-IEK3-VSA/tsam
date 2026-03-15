@@ -108,14 +108,14 @@ The class-based API is still available for backward compatibility:
 
    aggregation = tsam_legacy.TimeSeriesAggregation(
        raw,
-       noTypicalPeriods=8,
-       hoursPerPeriod=24,
+       no_typical_periods=8,
+       hours_per_period=24,
        segmentation=True,
-       noSegments=8,
-       representationMethod="distributionAndMinMaxRepresentation",
-       clusterMethod='hierarchical'
+       no_segments=8,
+       representation_method="distributionAndMinMaxRepresentation",
+       cluster_method='hierarchical'
    )
-   cluster_representatives = aggregation.createTypicalPeriods()
+   cluster_representatives = aggregation.create_typical_periods()
 
 
 **Additional Examples**
@@ -155,9 +155,11 @@ Key concepts used in the tsam API:
      - Time resolution of input data. Accepts float (hours) or pandas Timedelta strings (e.g., ``1.0``, ``'1h'``, ``'15min'``). If not provided, inferred from the datetime index.
    * - ``cluster_assignments``
      - Array mapping each original period to its cluster index (0 to n_clusters-1).
-   * - ``cluster_weights``
-     - Dictionary mapping cluster index to occurrence count (how many original periods each cluster represents).
+   * - ``cluster_counts``
+     - Dictionary mapping cluster index to occurrence count (how many original periods each cluster represents). May be fractional for partial periods.
    * - ``segment_durations``
      - Nested tuple with duration (in timesteps) for each segment in each typical period.
    * - ``cluster_representatives``
      - MultiIndex DataFrame with aggregated data. Index levels are (cluster, timestep) or (cluster, segment) if segmented.
+
+For a comprehensive glossary covering all internal pipeline concepts, naming conventions, and the mapping between legacy and new API names, see the `full glossary <glossary.md>`_.

@@ -35,6 +35,7 @@ In case you use tsam in a scientific publication, we kindly request you to cite 
     gettingStartedDoc
     examples
     structureOfTsamDoc
+    pipeline_guide
     mathematicalBackgroundDoc
     migrationGuideDoc
     newsDoc

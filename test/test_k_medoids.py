@@ -19,12 +19,12 @@ def test_k_medoids():
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24 * 7,
-        clusterMethod="k_medoids",
+        no_typical_periods=8,
+        hours_per_period=24 * 7,
+        cluster_method="k_medoids",
     )
 
-    typPeriods = aggregation.createTypicalPeriods()
+    typPeriods = aggregation.create_typical_periods()
 
     print("Clustering took " + str(time.time() - starttime))
 

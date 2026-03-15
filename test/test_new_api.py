@@ -23,7 +23,7 @@ class TestAggregate:
 
         assert result.cluster_representatives is not None
         assert result.n_clusters == 8
-        assert len(result.cluster_weights) == 8
+        assert len(result.cluster_counts) == 8
         assert result.accuracy is not None
 
     def test_with_cluster_config(self, sample_data):

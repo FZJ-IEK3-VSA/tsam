@@ -21,10 +21,10 @@ def test_subhourlyResolution():
     starttime = time.time()
 
     aggregation1 = tsam.TimeSeriesAggregation(
-        raw, noTypicalPeriods=8, hoursPerPeriod=24, clusterMethod="hierarchical"
+        raw, no_typical_periods=8, hours_per_period=24, cluster_method="hierarchical"
     )
 
-    typPeriods1 = aggregation1.createTypicalPeriods()
+    typPeriods1 = aggregation1.create_typical_periods()
 
     print("Clustering took " + str(time.time() - starttime))
 
@@ -33,12 +33,12 @@ def test_subhourlyResolution():
     # cluster dataframe with 15 min. intervals to six hours per period, which equals 24 time steps per period
     aggregation2 = tsam.TimeSeriesAggregation(
         rawSubhourlyInndex,
-        noTypicalPeriods=8,
-        hoursPerPeriod=6,
-        clusterMethod="hierarchical",
+        no_typical_periods=8,
+        hours_per_period=6,
+        cluster_method="hierarchical",
     )
 
-    typPeriods2 = aggregation2.createTypicalPeriods()
+    typPeriods2 = aggregation2.create_typical_periods()
 
     print("Clustering took " + str(time.time() - starttime))
 

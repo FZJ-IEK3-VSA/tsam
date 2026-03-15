@@ -40,7 +40,7 @@ class TestReconstructSameMeanSegmentation:
         self, result: AggregationResult, max_ratio: float = 1.5
     ):
         """Check that reconstructed values are within reasonable bounds."""
-        original = result._aggregation.timeSeries
+        original = result.original
         reconstructed = result.reconstructed
 
         orig_max = original.max()

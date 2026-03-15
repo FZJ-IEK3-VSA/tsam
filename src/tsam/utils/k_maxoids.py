@@ -89,24 +89,24 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         return X
 
-    def k_maxoids(self, X, k, numpasses=5, doLogarithmic=False, n_init=100):
-        X_old = X
+    def k_maxoids(self, X, k, n_passes=5, do_logarithmic=False, n_init=100):
+        x_old = X
         n, _m = X.shape
-        inertiaTempPrime = None
+        inertia_best = None
 
         for i in range(n_init):
             inds = rnd.permutation(np.arange(n))
 
             X = X[inds]
             M = np.copy(X[:k])
-            for t in range(numpasses):
+            for t in range(n_passes):
                 for j in range(n):
                     x = X[j]
                     D = np.sum((M - x) ** 2, axis=1)
                     i = np.argmin(D)
                     d = np.sum((M - M[i]) ** 2, axis=1)
 
-                    if doLogarithmic:
+                    if do_logarithmic:
                         D[i] = 1.0
                         d[i] = 1.0
                         valx = np.prod(D)
@@ -120,19 +120,19 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
                     if valx > valm:
                         M[i] = x
 
-            dTemp = self.distance_func(X_old, Y=list(M))
-            inertiaTemp = np.sum(np.min(dTemp, axis=1))
+            d_temp = self.distance_func(x_old, Y=list(M))
+            inertia_temp = np.sum(np.min(d_temp, axis=1))
 
-            if inertiaTempPrime is None:
-                mFinal = M
-                inertiaTempPrime = inertiaTemp
+            if inertia_best is None:
+                m_final = M
+                inertia_best = inertia_temp
             else:
-                if inertiaTemp < inertiaTempPrime:
-                    mFinal = M
-                    inertiaTempPrime = inertiaTemp
+                if inertia_temp < inertia_best:
+                    m_final = M
+                    inertia_best = inertia_temp
 
-        D = self.distance_func(X_old, Y=list(mFinal))
+        D = self.distance_func(x_old, Y=list(m_final))
 
         I = np.argmin(D, axis=1)
 
-        return list(mFinal), I
+        return list(m_final), I

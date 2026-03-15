@@ -51,13 +51,21 @@ class TestGoldenRegression:
 
     @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_update_golden(self, case: EquivalenceCase, update_golden):
-        """Save old-API reconstructed results as golden files (only with --update-golden)."""
+        """Save reconstructed results as golden files (only with --update-golden).
+
+        For configs with skip_equivalence (intentional old/new divergence),
+        golden is generated from the new API.  Otherwise from the old API.
+        """
         if not update_golden:
             pytest.skip("use --update-golden to regenerate")
 
         data = get_data(case.dataset)
-        _, old_agg = _run_old(data, case)
-        _save_golden(old_agg.predictOriginalData(), case)
+        if case.skip_equivalence:
+            new_result = _run_new(data, case)
+            _save_golden(new_result.reconstructed, case)
+        else:
+            _, old_agg = _run_old(data, case)
+            _save_golden(old_agg.predictOriginalData(), case)
 
     @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_new_api_matches_golden(self, case: EquivalenceCase, update_golden):
@@ -80,6 +88,7 @@ class TestGoldenRegression:
             golden,
             check_names=False,
             check_freq=False,
+            check_like=True,
             atol=1e-7,
         )
 
@@ -88,6 +97,8 @@ class TestGoldenRegression:
         """Old API reconstructed result must match stored golden CSV."""
         if update_golden:
             pytest.skip("updating golden files")
+        if case.skip_equivalence:
+            pytest.skip("golden generated from new API (intentional divergence)")
 
         path = _golden_path(case)
         if not path.exists():

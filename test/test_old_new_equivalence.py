@@ -341,6 +341,16 @@ _RTOL: dict[str, float] = {
     "kmeans_distribution": 1e-5,
 }
 
+# Configs where old and new APIs intentionally diverge.
+# The new API applies weights only for clustering distance, not baked into
+# the normalized data. With medoid representation this can select a different
+# medoid, causing different typical periods, reconstruction, and accuracy.
+# Cluster *assignments* still match.
+_SKIP_EQUIVALENCE: set[str] = {
+    "hierarchical_weighted",
+    "hierarchical_weighted_segmentation",
+}
+
 
 # ---------------------------------------------------------------------------
 # Build cross-product: BaseConfig x Dataset → EquivalenceCase
@@ -357,6 +367,7 @@ class EquivalenceCase:
     new_kwargs: dict
     seed: int | None = None
     rtol: float = 1e-10
+    skip_equivalence: bool = False
 
 
 def _build_cases() -> list[EquivalenceCase]:
@@ -382,6 +393,7 @@ def _build_cases() -> list[EquivalenceCase]:
                     new_kwargs=new_kw,
                     seed=base.seed,
                     rtol=_RTOL.get(base.id, 1e-10),
+                    skip_equivalence=base.id in _SKIP_EQUIVALENCE,
                 )
             )
     return cases
@@ -422,6 +434,8 @@ class TestOldNewEquivalence:
     @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_cluster_representatives(self, case: EquivalenceCase):
         """Typical-period DataFrames must be equal."""
+        if case.skip_equivalence:
+            pytest.skip("intentional old/new divergence (weight decoupling)")
         data = get_data(case.dataset)
         old_result, _ = _run_old(data, case)
         new_result = _run_new(data, case)
@@ -447,6 +461,8 @@ class TestOldNewEquivalence:
     @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_accuracy(self, case: EquivalenceCase):
         """RMSE and MAE must match within tolerance."""
+        if case.skip_equivalence:
+            pytest.skip("intentional old/new divergence (weight decoupling)")
         data = get_data(case.dataset)
         _, old_agg = _run_old(data, case)
         new_result = _run_new(data, case)
@@ -467,6 +483,8 @@ class TestOldNewEquivalence:
     @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_reconstruction(self, case: EquivalenceCase):
         """Reconstructed time series must match."""
+        if case.skip_equivalence:
+            pytest.skip("intentional old/new divergence (weight decoupling)")
         data = get_data(case.dataset)
         _, old_agg = _run_old(data, case)
         new_result = _run_new(data, case)

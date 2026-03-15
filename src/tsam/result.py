@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, cast
@@ -12,7 +13,6 @@ import pandas as pd
 if TYPE_CHECKING:
     from tsam.config import ClusteringResult
     from tsam.plot import ResultPlotAccessor
-    from tsam.timeseriesaggregation import TimeSeriesAggregation
 
 
 @dataclass
@@ -95,9 +95,10 @@ class AggregationResult:
         Length equals the number of original periods.
         Values are cluster indices (0 to n_clusters-1).
 
-    cluster_weights : dict[int, int]
+    cluster_counts : dict[int, float]
         How many original periods each cluster represents.
         Keys are cluster indices, values are occurrence counts.
+        Values can be fractional due to partial-period adjustment.
 
     n_clusters : int
         Number of clusters (typical periods).
@@ -133,7 +134,7 @@ class AggregationResult:
             1           0.15   0.42   0.82
     ...
 
-    >>> result.cluster_weights
+    >>> result.cluster_counts
     {0: 45, 1: 52, 2: 38, ...}
 
     >>> result.accuracy.rmse
@@ -144,21 +145,56 @@ class AggregationResult:
     """
 
     cluster_representatives: pd.DataFrame
-    cluster_weights: dict[int, int]
+    cluster_counts: dict[int, float]
     n_timesteps_per_period: int
     segment_durations: tuple[tuple[int, ...], ...] | None
-    accuracy: AccuracyMetrics
     clustering_duration: float
     clustering: ClusteringResult
     is_transferred: bool
-    _aggregation: TimeSeriesAggregation = field(repr=False, compare=False)
+    _original_data: pd.DataFrame = field(repr=False, compare=False)
+    _reconstructed_data: pd.DataFrame = field(repr=False, compare=False)
+    _time_index: pd.Index = field(repr=False, compare=False)
+    _accuracy_metrics: AccuracyMetrics | None = field(
+        default=None, repr=False, compare=False
+    )
+    _norm_values: pd.DataFrame | None = field(default=None, repr=False, compare=False)
+    _normalized_predicted: pd.DataFrame | None = field(
+        default=None, repr=False, compare=False
+    )
+    _rescale_deviations: pd.DataFrame = field(
+        default_factory=lambda: pd.DataFrame(
+            columns=["deviation_pct", "converged", "iterations"]
+        ),
+        repr=False,
+        compare=False,
+    )
+    _segmented_df: pd.DataFrame | None = field(default=None, repr=False, compare=False)
+
+    @cached_property
+    def accuracy(self) -> AccuracyMetrics:
+        """Accuracy metrics comparing reconstructed to original data.
+
+        Computed lazily on first access.
+        """
+        if self._accuracy_metrics is not None:
+            return self._accuracy_metrics
+        from tsam.pipeline.accuracy import compute_accuracy
+
+        assert self._norm_values is not None and self._normalized_predicted is not None
+        accuracy_df = compute_accuracy(self._norm_values, self._normalized_predicted)
+        return AccuracyMetrics(
+            rmse=accuracy_df["RMSE"],
+            mae=accuracy_df["MAE"],
+            rmse_duration=accuracy_df["RMSE_duration"],
+            rescale_deviations=self._rescale_deviations,
+        )
 
     @cached_property
     def n_clusters(self) -> int:
         """Number of clusters (typical periods).
 
         Derived from the cluster_representatives DataFrame index,
-        which is the authoritative source. Note: cluster_weights may
+        which is the authoritative source. Note: cluster_counts may
         have more entries than actual cluster IDs due to tsam quirks.
         """
         return self.cluster_representatives.index.get_level_values(0).nunique()
@@ -176,6 +212,16 @@ class AggregationResult:
         Values are cluster indices (0 to n_clusters-1).
         """
         return np.array(self.clustering.cluster_assignments)
+
+    @property
+    def cluster_weights(self) -> dict[int, float]:
+        """Deprecated: use cluster_counts instead."""
+        warnings.warn(
+            "'cluster_weights' is deprecated, use 'cluster_counts'.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self.cluster_counts
 
     def __repr__(self) -> str:
         seg_info = f", n_segments={self.n_segments}" if self.n_segments else ""
@@ -203,14 +249,13 @@ class AggregationResult:
         >>> result.original.shape == df.shape
         True
         """
-        return cast("pd.DataFrame", self._aggregation.timeSeries)
+        return self._original_data
 
     @cached_property
     def reconstructed(self) -> pd.DataFrame:
         """Reconstructed time series from typical periods.
 
         Each original period is replaced by its assigned cluster representative.
-        This is cached for performance since reconstruction can be expensive.
 
         Returns
         -------
@@ -223,7 +268,7 @@ class AggregationResult:
         >>> result.reconstructed.shape == df.shape
         True
         """
-        return cast("pd.DataFrame", self._aggregation.predictOriginalData())
+        return self._reconstructed_data
 
     @cached_property
     def residuals(self) -> pd.DataFrame:
@@ -241,7 +286,7 @@ class AggregationResult:
         >>> result = tsam.aggregate(df, n_clusters=8)
         >>> result.residuals.mean()  # Should be close to zero
         """
-        return self.original - self.reconstructed
+        return cast("pd.DataFrame", self.original - self.reconstructed)
 
     def to_dict(self) -> dict:
         """Export results as a dictionary for serialization.
@@ -254,7 +299,7 @@ class AggregationResult:
         return {
             "cluster_representatives": self.cluster_representatives.to_dict(),
             "cluster_assignments": self.cluster_assignments.tolist(),
-            "cluster_weights": self.cluster_weights,
+            "cluster_counts": self.cluster_counts,
             "n_clusters": self.n_clusters,
             "n_timesteps_per_period": self.n_timesteps_per_period,
             "n_segments": self.n_segments,
@@ -296,7 +341,7 @@ class AggregationResult:
         """
         return sorted(self.cluster_representatives.index.get_level_values(0).unique())
 
-    @property
+    @cached_property
     def assignments(self) -> pd.DataFrame:
         """Get timestep-level assignment information.
 
@@ -331,8 +376,6 @@ class AggregationResult:
         >>> # Save and reload assignments
         >>> result.assignments.to_csv("assignments.csv")
         """
-        agg = self._aggregation
-
         # Build period_idx and timestep_idx for each original timestep
         period_indices = []
         timestep_indices = []
@@ -350,21 +393,16 @@ class AggregationResult:
                 "timestep_idx": timestep_indices,
                 "cluster_idx": cluster_indices,
             },
-            index=agg.timeIndex,
+            index=self._time_index,
         )
 
         # Add segment_idx if segmentation was used
-        if self.n_segments is not None and hasattr(
-            agg, "segmentedNormalizedTypicalPeriods"
-        ):
+        if self.n_segments is not None and self._segmented_df is not None:
             segment_indices = []
             for cluster_idx in self.cluster_assignments:
-                # Get segment structure for this cluster's typical period
-                segment_data = agg.segmentedNormalizedTypicalPeriods.loc[cluster_idx]
-                # Segment Step is level 0, Segment Duration is level 1
+                segment_data = self._segmented_df.loc[cluster_idx]
                 segment_steps = segment_data.index.get_level_values(0)
                 segment_durations = segment_data.index.get_level_values(1)
-                # Repeat each segment index by its duration
                 segment_indices.extend(
                     np.repeat(segment_steps, segment_durations).tolist()
                 )
@@ -372,7 +410,7 @@ class AggregationResult:
 
         return result_df
 
-    @property
+    @cached_property
     def plot(self) -> ResultPlotAccessor:
         """Access plotting methods.
 

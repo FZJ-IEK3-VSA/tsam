@@ -21,14 +21,14 @@ def test_durationRepresentation():
 
     aggregation1 = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        sortValues=False,
-        clusterMethod="k_means",
-        rescaleClusterPeriods=False,
+        no_typical_periods=8,
+        hours_per_period=24,
+        sort_values=False,
+        cluster_method="k_means",
+        rescale_cluster_periods=False,
     )
 
-    predictedPeriods1 = aggregation1.predictOriginalData()
+    predictedPeriods1 = aggregation1.predict_original_data()
 
     print("Clustering took " + str(time.time() - starttime))
 
@@ -36,15 +36,15 @@ def test_durationRepresentation():
 
     aggregation2 = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        sortValues=False,
-        clusterMethod="k_means",
-        representationMethod="durationRepresentation",
-        rescaleClusterPeriods=False,
+        no_typical_periods=8,
+        hours_per_period=24,
+        sort_values=False,
+        cluster_method="k_means",
+        representation_method="durationRepresentation",
+        rescale_cluster_periods=False,
     )
 
-    predictedPeriods2 = aggregation2.predictOriginalData()
+    predictedPeriods2 = aggregation2.predict_original_data()
 
     print("Clustering took " + str(time.time() - starttime))
 
@@ -52,33 +52,33 @@ def test_durationRepresentation():
 
     aggregation3 = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        sortValues=False,
-        clusterMethod="k_means",
-        representationMethod="durationRepresentation",
-        distributionPeriodWise=False,
-        rescaleClusterPeriods=False,
+        no_typical_periods=8,
+        hours_per_period=24,
+        sort_values=False,
+        cluster_method="k_means",
+        representation_method="durationRepresentation",
+        distribution_period_wise=False,
+        rescale_cluster_periods=False,
     )
 
-    predictedPeriods3 = aggregation3.predictOriginalData()
+    predictedPeriods3 = aggregation3.predict_original_data()
 
     print("Clustering took " + str(time.time() - starttime))
 
     # make sure that the sum of the attribute specific RMSEs is smaller for the k-means clustering with centroid
     # representation than for the duration curve representation
     np.testing.assert_array_less(
-        aggregation1.accuracyIndicators().loc[:, "RMSE"].sum(),
-        aggregation3.accuracyIndicators().loc[:, "RMSE"].sum(),
-        aggregation2.accuracyIndicators().loc[:, "RMSE"].sum(),
+        aggregation1.accuracy_indicators().loc[:, "RMSE"].sum(),
+        aggregation3.accuracy_indicators().loc[:, "RMSE"].sum(),
+        aggregation2.accuracy_indicators().loc[:, "RMSE"].sum(),
     )
 
     # make sure that the sum of the attribute specific duration curve RMSEs is smaller for the k-means clustering with
     # duration curve representation than for the centroid representation
     np.testing.assert_array_less(
-        aggregation3.accuracyIndicators().loc[:, "RMSE_duration"].sum(),
-        aggregation2.accuracyIndicators().loc[:, "RMSE_duration"].sum(),
-        aggregation1.accuracyIndicators().loc[:, "RMSE_duration"].sum(),
+        aggregation3.accuracy_indicators().loc[:, "RMSE_duration"].sum(),
+        aggregation2.accuracy_indicators().loc[:, "RMSE_duration"].sum(),
+        aggregation1.accuracy_indicators().loc[:, "RMSE_duration"].sum(),
     )
 
 
@@ -87,18 +87,18 @@ def test_distributionMinMaxRepresentation():
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=24,
+        no_typical_periods=24,
         segmentation=True,
-        noSegments=8,
-        hoursPerPeriod=24,
-        sortValues=False,
-        clusterMethod="hierarchical",
-        representationMethod="distributionAndMinMaxRepresentation",
-        distributionPeriodWise=False,
-        rescaleClusterPeriods=False,
+        no_segments=8,
+        hours_per_period=24,
+        sort_values=False,
+        cluster_method="hierarchical",
+        representation_method="distributionAndMinMaxRepresentation",
+        distribution_period_wise=False,
+        rescale_cluster_periods=False,
     )
 
-    predictedPeriods = aggregation.predictOriginalData()
+    predictedPeriods = aggregation.predict_original_data()
 
     # make sure that max and min of the newly predicted time series are the same as
     #  from the original
@@ -119,18 +119,18 @@ def test_distributionRepresentation_keeps_mean():
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
+        no_typical_periods=8,
+        hours_per_period=24,
         segmentation=True,
-        noSegments=8,
-        sortValues=False,
-        clusterMethod="hierarchical",
-        representationMethod="distributionRepresentation",
-        distributionPeriodWise=False,
-        rescaleClusterPeriods=False,  # even without rescaling
+        no_segments=8,
+        sort_values=False,
+        cluster_method="hierarchical",
+        representation_method="distributionRepresentation",
+        distribution_period_wise=False,
+        rescale_cluster_periods=False,  # even without rescaling
     )
 
-    predictedPeriods = aggregation.predictOriginalData()
+    predictedPeriods = aggregation.predict_original_data()
 
     assert np.isclose(raw.mean(), predictedPeriods.mean(), atol=1e-4).all()
 
