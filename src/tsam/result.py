@@ -148,14 +148,46 @@ class AggregationResult:
     cluster_counts: dict[int, float]
     n_timesteps_per_period: int
     segment_durations: tuple[tuple[int, ...], ...] | None
-    accuracy: AccuracyMetrics
     clustering_duration: float
     clustering: ClusteringResult
     is_transferred: bool
     _original_data: pd.DataFrame = field(repr=False, compare=False)
     _reconstructed_data: pd.DataFrame = field(repr=False, compare=False)
     _time_index: pd.Index = field(repr=False, compare=False)
+    _accuracy_metrics: AccuracyMetrics | None = field(
+        default=None, repr=False, compare=False
+    )
+    _norm_values: pd.DataFrame | None = field(default=None, repr=False, compare=False)
+    _normalized_predicted: pd.DataFrame | None = field(
+        default=None, repr=False, compare=False
+    )
+    _rescale_deviations: pd.DataFrame = field(
+        default_factory=lambda: pd.DataFrame(
+            columns=["deviation_pct", "converged", "iterations"]
+        ),
+        repr=False,
+        compare=False,
+    )
     _segmented_df: pd.DataFrame | None = field(default=None, repr=False, compare=False)
+
+    @cached_property
+    def accuracy(self) -> AccuracyMetrics:
+        """Accuracy metrics comparing reconstructed to original data.
+
+        Computed lazily on first access.
+        """
+        if self._accuracy_metrics is not None:
+            return self._accuracy_metrics
+        from tsam.pipeline.accuracy import compute_accuracy
+
+        assert self._norm_values is not None and self._normalized_predicted is not None
+        accuracy_df = compute_accuracy(self._norm_values, self._normalized_predicted)
+        return AccuracyMetrics(
+            rmse=accuracy_df["RMSE"],
+            mae=accuracy_df["MAE"],
+            rmse_duration=accuracy_df["RMSE_duration"],
+            rescale_deviations=self._rescale_deviations,
+        )
 
     @cached_property
     def n_clusters(self) -> int:

@@ -13,7 +13,7 @@ from tsam.config import (
 )
 from tsam.pipeline import run_pipeline
 from tsam.pipeline.types import PipelineConfig
-from tsam.result import AccuracyMetrics, AggregationResult
+from tsam.result import AggregationResult
 from tsam.weights import validate_weights
 
 if TYPE_CHECKING:
@@ -294,13 +294,6 @@ def _build_aggregation_result(
             columns=["deviation_pct", "converged", "iterations"]
         )
 
-    accuracy = AccuracyMetrics(
-        rmse=result.accuracy_indicators["RMSE"],
-        mae=result.accuracy_indicators["MAE"],
-        rmse_duration=result.accuracy_indicators["RMSE_duration"],
-        rescale_deviations=rescale_deviations,
-    )
-
     # Get segment_durations from ClusteringResult
     segment_durations = result.clustering_result.segment_durations
 
@@ -309,13 +302,15 @@ def _build_aggregation_result(
         cluster_counts=result.cluster_counts,
         n_timesteps_per_period=result.n_timesteps_per_period,
         segment_durations=segment_durations,
-        accuracy=accuracy,
         clustering_duration=result.clustering_duration,
         clustering=result.clustering_result,
         is_transferred=is_transferred,
         _original_data=result.original_data,
         _reconstructed_data=result.reconstructed_data,
         _time_index=result.time_index,
+        _norm_values=result._norm_values,
+        _normalized_predicted=result._normalized_predicted,
+        _rescale_deviations=rescale_deviations,
         _segmented_df=result.segmented_df,
     )
 

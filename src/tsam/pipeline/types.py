@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -106,7 +107,7 @@ class FormattedOutput:
 
     typical_periods: pd.DataFrame
     reconstructed_data: pd.DataFrame
-    accuracy_df: pd.DataFrame
+    normalized_predicted: pd.DataFrame
     segmented_df: pd.DataFrame | None
     segment_center_indices: list | None
 
@@ -124,5 +125,12 @@ class PipelineResult:
     rescale_deviations: dict[str, dict]
     segmented_df: pd.DataFrame | None  # segmentedNormalizedTypicalPeriods
     reconstructed_data: pd.DataFrame
-    accuracy_indicators: pd.DataFrame
+    _norm_values: pd.DataFrame
+    _normalized_predicted: pd.DataFrame
     clustering_result: ClusteringResult
+
+    @cached_property
+    def accuracy_indicators(self) -> pd.DataFrame:
+        from tsam.pipeline.accuracy import compute_accuracy
+
+        return compute_accuracy(self._norm_values, self._normalized_predicted)

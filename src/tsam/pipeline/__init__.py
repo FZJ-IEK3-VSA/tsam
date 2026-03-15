@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from tsam.options import options
-from tsam.pipeline.accuracy import compute_accuracy, reconstruct
+from tsam.pipeline.accuracy import reconstruct
 from tsam.pipeline.clustering import (
     cluster_periods,
     cluster_sorted_periods,
@@ -424,11 +424,6 @@ def _format_and_reconstruct(
     if cfg.round_decimals is not None:
         reconstructed_data = reconstructed_data.round(decimals=cfg.round_decimals)
 
-    accuracy_df = compute_accuracy(
-        norm_data.values,
-        normalized_predicted,
-    )
-
     # Restore original column order
     typical_periods = typical_periods[prepared.original_column_order]
     reconstructed_data = reconstructed_data[prepared.original_column_order]
@@ -436,7 +431,7 @@ def _format_and_reconstruct(
     return FormattedOutput(
         typical_periods=typical_periods,
         reconstructed_data=reconstructed_data,
-        accuracy_df=accuracy_df,
+        normalized_predicted=normalized_predicted,
         segmented_df=segmented_df,
         segment_center_indices=segment_center_indices,
     )
@@ -480,7 +475,8 @@ def _assemble_result(
         rescale_deviations=clustered.rescale_deviations,
         segmented_df=formatted.segmented_df,
         reconstructed_data=formatted.reconstructed_data,
-        accuracy_indicators=formatted.accuracy_df,
+        _norm_values=prepared.norm_data.values,
+        _normalized_predicted=formatted.normalized_predicted,
         clustering_result=clustering_result,
     )
 
