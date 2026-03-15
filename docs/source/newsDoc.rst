@@ -44,7 +44,8 @@ Breaking Changes
   (the weighted distance matrix is mathematically equivalent).  With medoid or maxoid
   representation, the selected representative may differ in edge cases because the
   medoid is now chosen in the unweighted output space rather than the weighted
-  clustering space.  The legacy ``TimeSeriesAggregation`` class is unchanged.
+  clustering space.  This applies to both the new ``tsam.aggregate()`` API and the
+  legacy ``TimeSeriesAggregation`` class, which now uses the same pipeline internally.
 
 * **Output column order preserved**: ``cluster_representatives``, ``reconstructed``, and ``original``
   now return columns in the same order as the input DataFrame. Previously, columns were
