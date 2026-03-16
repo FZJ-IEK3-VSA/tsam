@@ -79,11 +79,6 @@ pythonpath = [
   "test",
 ] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
-filterwarnings = [
-  # Third-party library warnings outside of tsam's control
-  "ignore::RuntimeWarning:threadpoolctl",
-  "ignore:KMeans is known to have a memory leak:UserWarning:sklearn",
-]
 
 [tool.ruff]
 target-version = "py310"
