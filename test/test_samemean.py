@@ -11,6 +11,10 @@ from conftest import TESTDATA_CSV
 pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
 
 
+@pytest.mark.filterwarnings("ignore::RuntimeWarning:threadpoolctl")
+@pytest.mark.filterwarnings(
+    "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
+)
 def test_samemean():
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
     # get all columns as floats to avoid warning
