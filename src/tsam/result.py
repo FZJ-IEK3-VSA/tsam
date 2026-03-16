@@ -22,11 +22,16 @@ class AccuracyMetrics:
     Attributes
     ----------
     rmse : pd.Series
-        Root Mean Square Error per column.
+        Root Mean Square Error per column, comparing the original and
+        reconstructed time series point-by-point over time.
     mae : pd.Series
-        Mean Absolute Error per column.
+        Mean Absolute Error per column, comparing the original and
+        reconstructed time series point-by-point over time.
     rmse_duration : pd.Series
-        RMSE on duration curves (sorted values) per column.
+        RMSE on duration curves per column. Duration curves are created
+        by sorting values in descending order, so this metric captures
+        how well the aggregation preserves the overall value distribution
+        regardless of temporal ordering.
     rescale_deviations : pd.DataFrame
         Rescaling deviation information per column. Contains columns:
         - deviation_pct: Final deviation percentage after rescaling
@@ -241,7 +246,7 @@ class AggregationResult:
         >>> result = tsam.aggregate(df, n_clusters=8)
         >>> result.residuals.mean()  # Should be close to zero
         """
-        return self.original - self.reconstructed
+        return cast("pd.DataFrame", self.original - self.reconstructed)
 
     def to_dict(self) -> dict:
         """Export results as a dictionary for serialization.
@@ -389,6 +394,7 @@ class AggregationResult:
         >>> result.plot.compare()  # Compare original vs reconstructed
         >>> result.plot.residuals()  # View reconstruction errors
         >>> result.plot.cluster_representatives()
+        >>> result.plot.cluster_members()  # All periods per cluster
         >>> result.plot.cluster_weights()
         >>> result.plot.accuracy()
         """

@@ -64,10 +64,13 @@ New Features
 
 * **Integrated plotting** via ``result.plot`` accessor with Plotly (replaces matplotlib):
 
-  - ``result.plot.compare()``: Compare original vs reconstructed (duration curves)
-  - ``result.plot.residuals()``: Visualize reconstruction errors
-  - ``result.plot.heatmap()``: Heatmap of cluster representatives
-  - ``result.plot.cluster_assignments()``: Visualize period-to-cluster mapping
+  - ``result.plot.compare()``: Compare original vs reconstructed (overlay, side-by-side, or duration curves)
+  - ``result.plot.residuals()``: Visualize reconstruction errors (time series, histogram, by period, or by timestep)
+  - ``result.plot.cluster_representatives()``: Plot typical periods with cluster weights
+  - ``result.plot.cluster_members()``: All original periods per cluster with representative highlighted, interactive slider
+  - ``result.plot.cluster_weights()``: Cluster weight distribution
+  - ``result.plot.accuracy()``: Accuracy metrics (RMSE, MAE, duration RMSE) per column
+  - ``result.plot.segment_durations()``: Average segment durations (when using segmentation)
 
 * **Hyperparameter tuning module** ``tsam.tuning`` with:
 
