@@ -3,9 +3,17 @@ import time
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
+
+pytestmark = [
+    pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning"),
+    pytest.mark.filterwarnings(
+        "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
+    ),
+]
 
 
 def test_durationRepresentation():
@@ -82,6 +90,7 @@ def test_durationRepresentation():
     )
 
 
+@pytest.mark.filterwarnings("ignore:The cluster is too small:UserWarning")
 def test_distributionMinMaxRepresentation():
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
