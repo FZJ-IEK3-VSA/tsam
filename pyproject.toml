@@ -79,6 +79,9 @@ pythonpath = [
   "test",
 ] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
+filterwarnings = [
+  "ignore::tsam.exceptions.LegacyAPIWarning",
+]
 
 [tool.ruff]
 target-version = "py310"

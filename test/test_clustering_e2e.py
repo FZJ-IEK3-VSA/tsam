@@ -5,6 +5,8 @@ verifying results against expected CSV files and JSON metadata.
 """
 
 import json
+import warnings
+from contextlib import contextmanager
 from pathlib import Path
 from typing import NamedTuple
 
@@ -15,8 +17,32 @@ import pytest
 from conftest import TESTDATA_CSV
 from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
+)
+
 # Fixed seed for reproducible results with stochastic methods (kmeans)
 RANDOM_SEED = 42
+
+_WINDOWS_KMEANS_WARNING_CASE_IDS = {"kmeans_mean_8clusters"}
+
+
+@contextmanager
+def _suppress_windows_kmeans_warnings(case_id: str):
+    """Suppress known Windows-specific OpenMP/KMeans warnings for selected cases."""
+    with warnings.catch_warnings():
+        if case_id in _WINDOWS_KMEANS_WARNING_CASE_IDS:
+            warnings.filterwarnings(
+                "ignore",
+                category=RuntimeWarning,
+                module="threadpoolctl",
+            )
+            warnings.filterwarnings(
+                "ignore",
+                message="KMeans is known to have a memory leak on Windows with MKL.*",
+                category=UserWarning,
+            )
+        yield
 
 
 def set_random_seed():
@@ -218,7 +244,8 @@ class TestClusteringE2E:
         expected = pd.read_csv(expected_path, index_col=index_col)
 
         # Run aggregation
-        result = run_aggregation(input_data, test_case)
+        with _suppress_windows_kmeans_warnings(test_case.id):
+            result = run_aggregation(input_data, test_case)
         actual = result.cluster_representatives
 
         # Compare values directly (cluster order should be deterministic)
@@ -276,7 +303,8 @@ class TestClusteringE2E:
             metadata = json.load(f)
 
         # Run aggregation
-        result = run_aggregation(input_data, test_case)
+        with _suppress_windows_kmeans_warnings(test_case.id):
+            result = run_aggregation(input_data, test_case)
 
         # Check RMSE is within tolerance of expected
         expected_rmse = metadata["accuracy"]["rmse"]
@@ -375,7 +403,8 @@ class TestClusteringTransfer:
     )
     def test_reconstruction_shape(self, test_case: ClusteringTestCase, input_data):
         """Test that reconstructed data has same shape as input."""
-        result = run_aggregation(input_data, test_case)
+        with _suppress_windows_kmeans_warnings(test_case.id):
+            result = run_aggregation(input_data, test_case)
         reconstructed = result.reconstructed
 
         assert reconstructed.shape == input_data.shape, (

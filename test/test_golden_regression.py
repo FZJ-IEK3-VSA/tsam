@@ -33,9 +33,17 @@ from test_old_new_equivalence import (
     _run_old,
 )
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
+)
+
 # Cases where specific warnings are expected and should be suppressed.
 _EXPECT_CONVERGENCE = {"kmeans/constant"}
 _EXPECT_MAXVAL_WARNING = {"kmaxoids/wide", "hierarchical_distribution_minmax/wide"}
+_EXPECT_WINDOWS_KMEANS_WARNING = {
+    "kmeans/constant",
+    "kmeans_segmentation/testdata",
+}
 
 
 @contextmanager
@@ -46,6 +54,24 @@ def _expected_warnings(case: EquivalenceCase):
             warnings.filterwarnings("ignore", category=ConvergenceWarning)
         if case.id in _EXPECT_MAXVAL_WARNING:
             warnings.filterwarnings("ignore", "At least one maximal value")
+        yield
+
+
+@contextmanager
+def _expected_windows_kmeans_warnings(case: EquivalenceCase):
+    """Suppress known Windows-specific OpenMP/KMeans warnings for selected cases."""
+    with warnings.catch_warnings():
+        if case.id in _EXPECT_WINDOWS_KMEANS_WARNING:
+            warnings.filterwarnings(
+                "ignore",
+                category=RuntimeWarning,
+                module="threadpoolctl",
+            )
+            warnings.filterwarnings(
+                "ignore",
+                message="KMeans is known to have a memory leak on Windows with MKL.*",
+                category=UserWarning,
+            )
         yield
 
 
@@ -93,7 +119,8 @@ class TestGoldenRegression:
 
         data = get_data(case.dataset)
         with _expected_warnings(case):
-            new_result = _run_new(data, case)
+            with _expected_windows_kmeans_warnings(case):
+                new_result = _run_new(data, case)
         golden = _load_golden(case)
 
         pd.testing.assert_frame_equal(
@@ -118,7 +145,8 @@ class TestGoldenRegression:
 
         data = get_data(case.dataset)
         with _expected_warnings(case):
-            _, old_agg = _run_old(data, case)
+            with _expected_windows_kmeans_warnings(case):
+                _, old_agg = _run_old(data, case)
         golden = _load_golden(case)
 
         pd.testing.assert_frame_equal(
