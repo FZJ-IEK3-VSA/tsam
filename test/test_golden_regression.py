@@ -42,6 +42,7 @@ _EXPECT_CONVERGENCE = {"kmeans/constant"}
 _EXPECT_MAXVAL_WARNING = {"kmaxoids/wide", "hierarchical_distribution_minmax/wide"}
 _EXPECT_WINDOWS_KMEANS_WARNING = {
     "kmeans/constant",
+    "kmeans/wide",
     "kmeans_segmentation/testdata",
 }
 

@@ -74,7 +74,7 @@ def _validate_columns(
     valid = [c for c in requested if c in available]
     invalid = [c for c in requested if c not in available]
 
-    if invalid:
+    if invalid and valid:
         warnings.warn(
             f"Columns not found in {context} and will be ignored: {invalid}. "
             f"Available columns: {available}",
@@ -252,14 +252,14 @@ class ResultPlotAccessor:
         all_cluster_ids = sorted(set(assignments))
         if clusters is not None:
             invalid = [c for c in clusters if c not in all_cluster_ids]
-            if invalid:
+            cluster_ids = [c for c in clusters if c in all_cluster_ids]
+            if invalid and cluster_ids:
                 warnings.warn(
                     f"Cluster indices not found and will be ignored: {invalid}. "
                     f"Available clusters: {all_cluster_ids}",
                     UserWarning,
                     stacklevel=2,
                 )
-            cluster_ids = [c for c in clusters if c in all_cluster_ids]
             if not cluster_ids:
                 raise ValueError(
                     f"None of the requested clusters {clusters} exist. "

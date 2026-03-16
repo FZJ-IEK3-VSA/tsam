@@ -356,11 +356,12 @@ class TestClusteringTransfer:
         self, test_case: ClusteringTestCase, input_data
     ):
         """Test that applying clustering to same data produces identical results."""
-        # Run initial aggregation
-        result1 = run_aggregation(input_data, test_case)
+        with _suppress_windows_kmeans_warnings(test_case.id):
+            # Run initial aggregation
+            result1 = run_aggregation(input_data, test_case)
 
-        # Apply clustering to same data
-        result2 = result1.clustering.apply(input_data)
+            # Apply clustering to same data
+            result2 = result1.clustering.apply(input_data)
 
         # Results should be identical
         pd.testing.assert_frame_equal(
