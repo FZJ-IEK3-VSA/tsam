@@ -10,6 +10,8 @@ benchmarks/bench.py).  New-API kwargs are defined here in ``_NEW_KWARGS``.
 
 from __future__ import annotations
 
+import warnings
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 import numpy as np
@@ -34,6 +36,7 @@ from tsam import (
     SegmentConfig,
     aggregate,
 )
+from tsam.exceptions import LegacyAPIWarning
 
 # ---------------------------------------------------------------------------
 # New-API kwargs for each config ID
@@ -341,6 +344,17 @@ _RTOL: dict[str, float] = {
     "kmeans_distribution": 1e-5,
 }
 
+_WINDOWS_OPENMP_RUNTIME_WARNING_CASE_IDS = {
+    "kmeans_distribution/testdata",
+    "kmeans_segmentation/testdata",
+    "kmeans/constant",
+}
+_WINDOWS_KMEANS_MKL_WARNING_CASE_IDS = {
+    "kmeans_distribution/testdata",
+    "kmeans/constant",
+    "kmeans_segmentation/testdata",
+}
+
 
 # ---------------------------------------------------------------------------
 # Build cross-product: BaseConfig x Dataset → EquivalenceCase
@@ -399,8 +413,10 @@ def _run_old(data: pd.DataFrame, case: EquivalenceCase):
     """Run old API and return (result_df, agg_object)."""
     if case.seed is not None:
         np.random.seed(case.seed)
-    agg = old_tsam.TimeSeriesAggregation(timeSeries=data, **case.old_kwargs)
-    result = agg.createTypicalPeriods()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", LegacyAPIWarning)
+        agg = old_tsam.TimeSeriesAggregation(timeSeries=data, **case.old_kwargs)
+        result = agg.createTypicalPeriods()
     return result, agg
 
 
@@ -411,11 +427,35 @@ def _run_new(data: pd.DataFrame, case: EquivalenceCase):
     return aggregate(data, **case.new_kwargs)
 
 
+@contextmanager
+def _suppress_windows_kmeans_warnings(case: EquivalenceCase):
+    """Suppress known Windows-specific OpenMP/KMeans warnings for selected cases."""
+    with warnings.catch_warnings():
+        if case.id in _WINDOWS_OPENMP_RUNTIME_WARNING_CASE_IDS:
+            warnings.filterwarnings(
+                "ignore",
+                category=RuntimeWarning,
+                module="threadpoolctl",
+            )
+        if case.id in _WINDOWS_KMEANS_MKL_WARNING_CASE_IDS:
+            warnings.filterwarnings(
+                "ignore",
+                message="KMeans is known to have a memory leak on Windows with MKL.*",
+                category=UserWarning,
+            )
+        yield
+
+
 # ---------------------------------------------------------------------------
 # Parametrized test class
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+@pytest.mark.filterwarnings("ignore:At least one maximal value:UserWarning")
+@pytest.mark.filterwarnings(
+    "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
+)
 class TestOldNewEquivalence:
     """Parametrized comparison of old and new API across all configs x datasets."""
 
@@ -423,8 +463,9 @@ class TestOldNewEquivalence:
     def test_cluster_representatives(self, case: EquivalenceCase):
         """Typical-period DataFrames must be equal."""
         data = get_data(case.dataset)
-        old_result, _ = _run_old(data, case)
-        new_result = _run_new(data, case)
+        with _suppress_windows_kmeans_warnings(case):
+            old_result, _ = _run_old(data, case)
+            new_result = _run_new(data, case)
 
         pd.testing.assert_frame_equal(
             old_result,
@@ -436,8 +477,9 @@ class TestOldNewEquivalence:
     def test_cluster_assignments(self, case: EquivalenceCase):
         """Cluster order arrays must match."""
         data = get_data(case.dataset)
-        _, old_agg = _run_old(data, case)
-        new_result = _run_new(data, case)
+        with _suppress_windows_kmeans_warnings(case):
+            _, old_agg = _run_old(data, case)
+            new_result = _run_new(data, case)
 
         np.testing.assert_array_equal(
             old_agg.clusterOrder,
@@ -448,8 +490,9 @@ class TestOldNewEquivalence:
     def test_accuracy(self, case: EquivalenceCase):
         """RMSE and MAE must match within tolerance."""
         data = get_data(case.dataset)
-        _, old_agg = _run_old(data, case)
-        new_result = _run_new(data, case)
+        with _suppress_windows_kmeans_warnings(case):
+            _, old_agg = _run_old(data, case)
+            new_result = _run_new(data, case)
 
         old_acc = old_agg.accuracyIndicators()
 
@@ -468,8 +511,9 @@ class TestOldNewEquivalence:
     def test_reconstruction(self, case: EquivalenceCase):
         """Reconstructed time series must match."""
         data = get_data(case.dataset)
-        _, old_agg = _run_old(data, case)
-        new_result = _run_new(data, case)
+        with _suppress_windows_kmeans_warnings(case):
+            _, old_agg = _run_old(data, case)
+            new_result = _run_new(data, case)
 
         old_reconstructed = old_agg.predictOriginalData()
 

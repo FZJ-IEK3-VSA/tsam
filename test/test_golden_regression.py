@@ -18,8 +18,12 @@ Usage::
 
 from __future__ import annotations
 
+import warnings
+from contextlib import contextmanager
+
 import pandas as pd
 import pytest
+from sklearn.exceptions import ConvergenceWarning
 
 from _configs import GOLDEN_DIR, case_ids, get_data
 from test_old_new_equivalence import (
@@ -28,6 +32,48 @@ from test_old_new_equivalence import (
     _run_new,
     _run_old,
 )
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
+)
+
+# Cases where specific warnings are expected and should be suppressed.
+_EXPECT_CONVERGENCE = {"kmeans/constant"}
+_EXPECT_MAXVAL_WARNING = {"kmaxoids/wide", "hierarchical_distribution_minmax/wide"}
+_EXPECT_WINDOWS_KMEANS_WARNING = {
+    "kmeans/constant",
+    "kmeans/wide",
+    "kmeans_segmentation/testdata",
+}
+
+
+@contextmanager
+def _expected_warnings(case: EquivalenceCase):
+    """Suppress warnings that are expected for specific config/dataset combos."""
+    with warnings.catch_warnings():
+        if case.id in _EXPECT_CONVERGENCE:
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+        if case.id in _EXPECT_MAXVAL_WARNING:
+            warnings.filterwarnings("ignore", "At least one maximal value")
+        yield
+
+
+@contextmanager
+def _expected_windows_kmeans_warnings(case: EquivalenceCase):
+    """Suppress known Windows-specific OpenMP/KMeans warnings for selected cases."""
+    with warnings.catch_warnings():
+        if case.id in _EXPECT_WINDOWS_KMEANS_WARNING:
+            warnings.filterwarnings(
+                "ignore",
+                category=RuntimeWarning,
+                module="threadpoolctl",
+            )
+            warnings.filterwarnings(
+                "ignore",
+                message="KMeans is known to have a memory leak on Windows with MKL.*",
+                category=UserWarning,
+            )
+        yield
 
 
 def _golden_path(case: EquivalenceCase) -> str:
@@ -56,8 +102,9 @@ class TestGoldenRegression:
             pytest.skip("use --update-golden to regenerate")
 
         data = get_data(case.dataset)
-        _, old_agg = _run_old(data, case)
-        _save_golden(old_agg.predictOriginalData(), case)
+        with _expected_warnings(case):
+            _, old_agg = _run_old(data, case)
+            _save_golden(old_agg.predictOriginalData(), case)
 
     @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_new_api_matches_golden(self, case: EquivalenceCase, update_golden):
@@ -72,7 +119,9 @@ class TestGoldenRegression:
             )
 
         data = get_data(case.dataset)
-        new_result = _run_new(data, case)
+        with _expected_warnings(case):
+            with _expected_windows_kmeans_warnings(case):
+                new_result = _run_new(data, case)
         golden = _load_golden(case)
 
         pd.testing.assert_frame_equal(
@@ -96,7 +145,9 @@ class TestGoldenRegression:
             )
 
         data = get_data(case.dataset)
-        _, old_agg = _run_old(data, case)
+        with _expected_warnings(case):
+            with _expected_windows_kmeans_warnings(case):
+                _, old_agg = _run_old(data, case)
         golden = _load_golden(case)
 
         pd.testing.assert_frame_equal(
