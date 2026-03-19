@@ -89,6 +89,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install pandoc
+        run: sudo apt-get install -y pandoc
+
       - name: Install
         run: uv pip install --system ".[develop]"
 
