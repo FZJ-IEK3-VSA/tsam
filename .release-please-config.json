@@ -3,7 +3,7 @@
   "include-component-in-tag": false,
   "packages": {
     ".": {
-      "release-type": "python",
+      "release-type": "simple",
       "package-name": "tsam",
       "changelog-path": "CHANGELOG.md"
     }
