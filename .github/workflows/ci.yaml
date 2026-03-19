@@ -73,10 +73,32 @@ jobs:
           --nbval-cell-timeout=900000
           ${{ env.NOTEBOOKS }}
 
+  docs:
+    name: Build docs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: uv pip install --system ".[develop]"
+
+      - name: Build Sphinx docs
+        run: sphinx-build -W -b html docs/source docs/build/html
+
   ci-success:
     name: CI Success
     if: always()
-    needs: [lint, test]
+    needs: [lint, test, docs]
     runs-on: ubuntu-24.04
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
