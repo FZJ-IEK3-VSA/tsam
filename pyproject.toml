@@ -56,7 +56,6 @@ develop = [
   "nbsphinx",
   "twine",
   "nbval",
-  "pypandoc-binary",
   "ruff",
   "mypy",
   "pandas-stubs",

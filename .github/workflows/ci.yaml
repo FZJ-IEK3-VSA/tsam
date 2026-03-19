@@ -124,6 +124,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install pandoc
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pandoc
+
       - name: Install
         run: uv pip install --system ".[develop]"
 
