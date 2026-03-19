@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+src/tsam/_version.py
 *.py[cod]
 *$py.class
 *.so
