@@ -30,6 +30,11 @@ jobs:
       - uses: astral-sh/ruff-action@v3
       - run: ruff check --output-format=github --config=pyproject.toml
       - run: ruff format --diff --config=pyproject.toml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check environment.yml in sync with pyproject.toml
+        run: python scripts/sync_environment.py --check
 
   test:
     name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
