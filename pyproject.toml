@@ -68,6 +68,7 @@ notebooks = ["notebook>=7.5.0", "plotly>=5.0.0"]
 
 [tool.hatch.version]
 source = "vcs"
+fallback-version = "0.0.0.dev0"
 
 [tool.hatch.build.hooks.vcs]
 version-file = "src/tsam/_version.py"
