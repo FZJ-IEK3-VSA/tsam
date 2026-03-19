@@ -8,6 +8,7 @@ build:
     python: "mambaforge-22.9"
   apt_packages:
     - graphviz
+    - pandoc
   jobs:
     pre_build:
       - conda run --name $READTHEDOCS_VERSION pip install -e . --no-deps
