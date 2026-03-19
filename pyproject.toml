@@ -54,6 +54,7 @@ develop = [
   "sphinx-autobuild",
   "sphinx_book_theme",
   "nbsphinx",
+  "myst-parser",
   "twine",
   "nbval",
   "ruff",

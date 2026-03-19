@@ -37,7 +37,7 @@ In case you use tsam in a scientific publication, we kindly request you to cite 
     structureOfTsamDoc
     mathematicalBackgroundDoc
     migrationGuideDoc
-    newsDoc
+    changelog
     integratedSoftwareDoc
     legalNoticeDoc
     furtherReadingDoc

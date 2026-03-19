@@ -2,6 +2,13 @@
 tsam's Change Log
 ##################
 
+.. note::
+
+   The changelog is now maintained in `CHANGELOG.md <https://github.com/FZJ-IEK3-VSA/tsam/blob/master/CHANGELOG.md>`_
+   at the repository root. New entries are added automatically by release-please from conventional commit messages.
+
+   The history below is preserved for reference.
+
 *********************
 Release version 3.1.1
 *********************
