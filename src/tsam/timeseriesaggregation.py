@@ -1365,13 +1365,24 @@ class TimeSeriesAggregation:
             index=self.timeSeries.index,
             columns=self.timeSeries.columns,
         )
-        # Normalize again if sameMean=True to undo in-place modification from createTypicalPeriods.
-        # But NOT for segmentation - predictedSegmentedNormalizedTypicalPeriods wasn't modified in-place.
-        if self.sameMean and not self.segmentation:
-            self.normalizedPredictedData /= self._normalizedMean
-        self.predictedData = self._postProcessTimeSeries(
-            self.normalizedPredictedData, applyWeighting=False
-        )
+        # For the non-segmentation path, normalizedTypicalPeriods was already
+        # unweighted and sameMean-reversed in-place by createTypicalPeriods →
+        # _postProcessTimeSeries. We must undo the sameMean in-place change
+        # so _unnormalizeTimeSeries can re-apply it during inverse transform.
+        #
+        # For the segmentation path, predictedSegmentedNormalizedTypicalPeriods
+        # was NOT modified in-place, so it still carries weights and sameMean.
+        # We pass applyWeighting=True so _postProcessTimeSeries removes them.
+        if self.segmentation:
+            self.predictedData = self._postProcessTimeSeries(
+                self.normalizedPredictedData, applyWeighting=True
+            )
+        else:
+            if self.sameMean:
+                self.normalizedPredictedData /= self._normalizedMean
+            self.predictedData = self._postProcessTimeSeries(
+                self.normalizedPredictedData, applyWeighting=False
+            )
 
         return self.predictedData
 
