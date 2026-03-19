@@ -74,10 +74,10 @@ jobs:
           --nbval-cell-timeout=900000
           ${{ env.NOTEBOOKS }}
 
-  # Self-hosted for expensive min/max dependency boundary testing on PRs
+  # Self-hosted for expensive min/max dependency boundary testing before releases
   test-dependency-bounds:
     name: Test min/max deps
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.base_ref == 'master'
     runs-on: self-hosted
     strategy:
       fail-fast: false
