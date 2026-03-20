@@ -2,7 +2,7 @@
 
 **Basic Workflow**
 
-A small example how tsam can be used is described as follows:
+A small example how ETHOS.TSAM can be used is described as follows:
 
 ```python
 import pandas as pd
@@ -113,11 +113,11 @@ cluster_representatives = aggregation.createTypicalPeriods()
 
 **Additional Examples**
 
-More detailed examples can be found on the [GitHub page of tsam](https://github.com/FZJ-IEK3-VSA/tsam).
+More detailed examples can be found on the [GitHub page of ETHOS.TSAM](https://github.com/FZJ-IEK3-VSA/tsam).
 
 **Glossary**
 
-Key concepts used in the tsam API:
+Key concepts used in the ETHOS.TSAM API:
 
 | Concept | Description |
 |---------|-------------|

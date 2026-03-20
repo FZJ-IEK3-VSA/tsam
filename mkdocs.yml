@@ -1,4 +1,4 @@
-site_name: tsam Documentation
+site_name: ETHOS.TSAM Documentation
 site_url: https://fzj-iek3-vsa.github.io/tsam/
 repo_url: https://github.com/FZJ-IEK3-VSA/tsam
 repo_name: FZJ-IEK3-VSA/tsam
@@ -6,8 +6,12 @@ edit_uri: edit/develop/docs/
 
 theme:
   name: material
+  custom_dir: docs/overrides
   logo: assets/tsam-logo.png
   favicon: assets/logo.png
+  font:
+    text: Roboto
+    code: Roboto Mono
   features:
     - navigation.instant
     - navigation.instant.prefetch
@@ -30,12 +34,14 @@ theme:
     - toc.follow
   palette:
     - scheme: default
-      primary: blue
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: blue
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode

@@ -1,6 +1,6 @@
-# Migrating from tsam v2 to v3 { #migration-guide }
+# Migrating from ETHOS.TSAM v2 to v3 { #migration-guide }
 
-tsam v3 replaces the class-based API with a functional API.
+ETHOS.TSAM v3 replaces the class-based API with a functional API.
 The old `TimeSeriesAggregation` class still works but is deprecated
 and will be removed in a future release.
 
