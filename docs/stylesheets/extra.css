@@ -116,3 +116,54 @@
 [data-md-color-scheme="slate"] .jp-RenderedText pre {
   background: none;
 }
+
+/* -- Institutional footer ------------------------------------------------- */
+.footer-institutional {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.5rem 0;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.footer-institutional__logos {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-shrink: 0;
+}
+
+.footer-logo--fzj {
+  height: 48px;
+  width: auto;
+}
+
+.footer-logo--helmholtz {
+  height: 48px;
+  width: auto;
+}
+
+.footer-institutional__text {
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+.footer-institutional__text p {
+  margin: 0.2rem 0;
+}
+
+.footer-institutional__text a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+}
+
+.footer-institutional__text a:hover {
+  text-decoration-color: inherit;
+}
+
+/* Invert FZJ logo in dark footer */
+[data-md-color-scheme="slate"] .footer-logo--fzj {
+  filter: brightness(0) invert(1);
+}
