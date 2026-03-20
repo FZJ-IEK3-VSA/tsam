@@ -135,15 +135,15 @@
 }
 
 .footer-logo--jsa {
-  height: 40px;
+  height: 28px !important;
+  max-height: 28px;
   width: auto;
 }
 
 .footer-logo--helmholtz {
-  height: 40px;
+  height: 28px !important;
+  max-height: 28px;
   width: auto;
-  max-width: 150px;
-  object-fit: contain;
 }
 
 .footer-institutional__text {
