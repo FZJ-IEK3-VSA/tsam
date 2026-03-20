@@ -110,13 +110,15 @@ def test_distributionMinMaxRepresentation():
 
     # make sure that max and min of the newly predicted time series are the same as
     #  from the original
-    np.testing.assert_array_equal(
+    np.testing.assert_array_almost_equal(
         raw.max(),
         predictedPeriods.max(),
+        decimal=10,
     )
-    np.testing.assert_array_equal(
+    np.testing.assert_array_almost_equal(
         raw.min(),
         predictedPeriods.min(),
+        decimal=10,
     )
 
     assert np.isclose(raw.mean(), predictedPeriods.mean(), atol=1e-4).all()

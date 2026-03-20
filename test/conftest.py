@@ -17,8 +17,8 @@ TESTDATA_CSV = EXAMPLES_DIR / "testdata.csv"
 RESULTS_DIR = TEST_DATA_DIR  # Expected output CSV files for tests
 GOLDEN_DIR = TEST_DATA_DIR / "golden"
 
-# Truncate test data to 91 days (2184h) — must be divisible by 24 (hoursPerPeriod).
-MAX_TIMESTEPS = 2184
+# Truncate test data to 84 days (2016h) — divisible by 24, 48, and 168.
+MAX_TIMESTEPS = 2016
 
 
 def load_testdata(parse_dates: bool = False) -> pd.DataFrame:

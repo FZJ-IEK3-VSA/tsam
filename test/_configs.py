@@ -47,8 +47,8 @@ def _make_with_zero_column() -> pd.DataFrame:
     return df
 
 
-# Truncate test data to 91 days (2184h) — must be divisible by 24 (hoursPerPeriod).
-MAX_TIMESTEPS = 2184
+# Truncate test data to 84 days (2016h) — divisible by 24, 48, and 168.
+MAX_TIMESTEPS = 2016
 
 DATASETS = {
     "testdata": lambda: pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True).iloc[

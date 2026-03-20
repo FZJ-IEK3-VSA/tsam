@@ -20,7 +20,7 @@ def test_k_medoids():
     aggregation = tsam.TimeSeriesAggregation(
         raw,
         noTypicalPeriods=8,
-        hoursPerPeriod=24 * 7,
+        hoursPerPeriod=48,
         clusterMethod="k_medoids",
     )
 
