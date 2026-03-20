@@ -1,0 +1,99 @@
+site_name: tsam Documentation
+site_url: https://fzj-iek3-vsa.github.io/tsam/
+repo_url: https://github.com/FZJ-IEK3-VSA/tsam
+repo_name: FZJ-IEK3-VSA/tsam
+
+theme:
+  name: material
+  logo: assets/tsam-logo.png
+  favicon: assets/logo.png
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+  palette:
+    - scheme: default
+      primary: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Getting Started: getting-started.md
+  - Examples:
+    - Getting Started:
+      - notebooks/quickstart.ipynb
+      - notebooks/visualization.ipynb
+    - Clustering Methods:
+      - notebooks/clustering_methods.ipynb
+      - notebooks/representations.ipynb
+      - notebooks/k_maxoids.ipynb
+    - Advanced Features:
+      - notebooks/segmentation.ipynb
+      - notebooks/optimization_input.ipynb
+      - notebooks/clustering_transfer.ipynb
+    - Hyperparameter Tuning:
+      - notebooks/tuning.ipynb
+      - notebooks/pareto_optimization.ipynb
+      - notebooks/building_energy_system.ipynb
+  - API Reference: api/
+  - Mathematical Background: background/math.md
+  - Migration Guide: migration-guide.md
+  - Changelog: changelog.md
+  - Integrated Software: integrated-software.md
+  - Legal Notice: legal-notice.md
+  - Further Reading: further-reading.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_root_heading: true
+            members_order: source
+            docstring_style: auto
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+  - mkdocs-jupyter:
+      execute: false
+      kernel_name: python3
+      include_source: true
+      allow_errors: false
+  - gen-files:
+      scripts:
+        - docs/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - https://cdn.plot.ly/plotly-3.3.0.min.js
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
