@@ -495,6 +495,7 @@ class EquivalenceCase:
     new_kwargs: dict
     seed: int | None = None
     rtol: float = 1e-10
+    max_timesteps: int | None = None
 
 
 def _build_cases() -> list[EquivalenceCase]:
@@ -520,6 +521,7 @@ def _build_cases() -> list[EquivalenceCase]:
                     new_kwargs=new_kw,
                     seed=base.seed,
                     rtol=_RTOL.get(base.id, 1e-10),
+                    max_timesteps=base.max_timesteps,
                 )
             )
     return cases
