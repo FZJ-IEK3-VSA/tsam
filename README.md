@@ -1,7 +1,13 @@
 [![Version](https://img.shields.io/pypi/v/tsam.svg)](https://pypi.python.org/pypi/tsam) [![Conda Version](https://img.shields.io/conda/vn/conda-forge/tsam.svg)](https://anaconda.org/conda-forge/tsam) [![Documentation Status](https://readthedocs.org/projects/tsam/badge/?version=latest)](https://tsam.readthedocs.io/en/latest/) [![PyPI - License](https://img.shields.io/pypi/l/tsam)]((https://github.com/FZJ-IEK3-VSA/tsam/blob/master/LICENSE.txt)) [![codecov](https://codecov.io/gh/FZJ-IEK3-VSA/tsam/branch/master/graph/badge.svg)](https://codecov.io/gh/FZJ-IEK3-VSA/tsam)
 
 <p align="left">
-  <a href="https://tsam.readthedocs.io/en/latest/"><img src="docs/source/_static/logo-v7-expanded-light.svg" alt="ETHOS.TSAM Logo" height="80px"></a>
+  <a href="https://tsam.readthedocs.io/en/latest/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/tsam-logo-dark.svg">
+      <source media="(prefers-color-scheme: light)" srcset="docs/assets/tsam-logo-light.svg">
+      <img src="docs/assets/tsam-logo-light.svg" alt="ETHOS.TSAM Logo" height="80px">
+    </picture>
+  </a>
   <a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="docs/assets/JSA-Header.svg" alt="Jülich System Analysis Header" height="80px"></a>
 </p>
 

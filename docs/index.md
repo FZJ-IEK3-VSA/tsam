@@ -1,9 +1,9 @@
 <div class="landing-logos">
   <div class="tsam-logo-light">
-    <img src="source/_static/logo-v7-expanded-light.svg" alt="ETHOS.TSAM" width="500">
+    <img src="assets/tsam-logo-light.svg" alt="ETHOS.TSAM" width="500">
   </div>
   <div class="tsam-logo-dark">
-    <img src="source/_static/logo-v7-expanded-dark.svg" alt="ETHOS.TSAM" width="500">
+    <img src="assets/tsam-logo-dark.svg" alt="ETHOS.TSAM" width="500">
   </div>
   <div class="jsa-logo">
     <a href="https://www.fz-juelich.de/en/iek/iek-3">
