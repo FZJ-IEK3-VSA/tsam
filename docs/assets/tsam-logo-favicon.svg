@@ -1,35 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
-  <defs>
-    <clipPath id="rc">
-      <rect x="0" y="0" width="144" height="144" rx="12" ry="12"/>
-    </clipPath>
-  </defs>
-  <g clip-path="url(#rc)">
-    <rect x="0"    width="5.6" y="0" height="144" fill="#424086"/>
-    <rect x="5.6"  width="5.6" y="0" height="144" fill="#404688"/>
-    <rect x="11.2" width="5.6" y="0" height="144" fill="#472e7c"/>
-    <rect x="16.8" width="5.6" y="0" height="144" fill="#2e6f8e"/>
-    <rect x="22.4" width="5.6" y="0" height="144" fill="#2e6e8e"/>
-    <rect x="28"   width="5.6" y="0" height="144" fill="#3d4e8a"/>
-    <rect x="33.6" width="5.6" y="0" height="144" fill="#31688e"/>
-    <rect x="39.2" width="5.6" y="0" height="144" fill="#32648e"/>
-    <rect x="44.8" width="5.6" y="0" height="144" fill="#38598c"/>
-    <rect x="50.4" width="5.6" y="0" height="144" fill="#39558c"/>
-    <rect x="56"   width="5.6" y="0" height="144" fill="#277e8e"/>
-    <rect x="61.6" width="5.6" y="0" height="144" fill="#23a983"/>
-    <rect x="67.2" width="5.6" y="0" height="144" fill="#21918c"/>
-    <rect x="72.8" width="5.6" y="0" height="144" fill="#23888e"/>
-    <rect x="78.4" width="5.6" y="0" height="144" fill="#1f948c"/>
-    <rect x="84"   width="5.6" y="0" height="144" fill="#228d8d"/>
-    <rect x="89.6" width="5.6" y="0" height="144" fill="#2fb47c"/>
-    <rect x="95.2" width="5.6" y="0" height="144" fill="#44bf70"/>
-    <rect x="100.8" width="5.6" y="0" height="144" fill="#1f978b"/>
-    <rect x="106.4" width="5.6" y="0" height="144" fill="#38b977"/>
-    <rect x="112"  width="5.6" y="0" height="144" fill="#73d056"/>
-    <rect x="117.6" width="5.6" y="0" height="144" fill="#26ad81"/>
-    <rect x="123.2" width="5.6" y="0" height="144" fill="#3dbc74"/>
-    <rect x="128.8" width="5.6" y="0" height="144" fill="#20a386"/>
-    <rect x="134.4" width="5.6" y="0" height="144" fill="#20928c"/>
-    <rect x="140"  width="4"   y="0" height="144" fill="#27808e"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8.64 12.24 126.72 126.72">
+ <defs>
+  <clipPath id="fc">
+   <path d="M 14.4 138.96
+L 129.6 138.96
+Q 135.36 138.96 135.36 133.2
+L 135.36 18
+Q 135.36 12.24 129.6 12.24
+L 14.4 12.24
+Q 8.64 12.24 8.64 18
+L 8.64 133.2
+Q 8.64 138.96 14.4 138.96
+z"/>
+  </clipPath>
+ </defs>
+ <g clip-path="url(#fc)">
+  <rect x="14.4"  width="3.2" y="18" height="115.2" fill="#424086"/>
+  <rect x="17.6"  width="3.2" y="18" height="115.2" fill="#404688"/>
+  <rect x="20.8"  width="3.2" y="18" height="115.2" fill="#472e7c"/>
+  <rect x="24"    width="3.2" y="18" height="115.2" fill="#2e6f8e"/>
+  <rect x="27.2"  width="3.2" y="18" height="115.2" fill="#2e6e8e"/>
+  <rect x="30.4"  width="3.2" y="18" height="115.2" fill="#3d4e8a"/>
+  <rect x="33.6"  width="3.2" y="18" height="115.2" fill="#31688e"/>
+  <rect x="36.8"  width="3.2" y="18" height="115.2" fill="#32648e"/>
+  <rect x="40"    width="3.2" y="18" height="115.2" fill="#38598c"/>
+  <rect x="43.2"  width="3.2" y="18" height="115.2" fill="#39558c"/>
+  <rect x="46.4"  width="3.2" y="18" height="115.2" fill="#277e8e"/>
+  <rect x="49.6"  width="3.2" y="18" height="115.2" fill="#23a983"/>
+  <rect x="52.8"  width="3.2" y="18" height="115.2" fill="#21918c"/>
+  <rect x="56"    width="3.2" y="18" height="115.2" fill="#23888e"/>
+  <rect x="59.2"  width="3.2" y="18" height="115.2" fill="#1f948c"/>
+  <rect x="62.4"  width="3.2" y="18" height="115.2" fill="#228d8d"/>
+  <rect x="65.6"  width="3.2" y="18" height="115.2" fill="#2fb47c"/>
+  <rect x="68.8"  width="3.2" y="18" height="115.2" fill="#44bf70"/>
+  <rect x="72"    width="3.2" y="18" height="115.2" fill="#1f978b"/>
+  <rect x="75.2"  width="3.2" y="18" height="115.2" fill="#38b977"/>
+  <rect x="78.4"  width="3.2" y="18" height="115.2" fill="#73d056"/>
+  <rect x="81.6"  width="3.2" y="18" height="115.2" fill="#26ad81"/>
+  <rect x="84.8"  width="3.2" y="18" height="115.2" fill="#3dbc74"/>
+  <rect x="88"    width="3.2" y="18" height="115.2" fill="#20a386"/>
+  <rect x="91.2"  width="3.2" y="18" height="115.2" fill="#20928c"/>
+  <rect x="94.4"  width="3.2" y="18" height="115.2" fill="#27808e"/>
+  <rect x="97.6"  width="3.2" y="18" height="115.2" fill="#1f948c"/>
+  <rect x="100.8" width="3.2" y="18" height="115.2" fill="#1f948c"/>
+  <rect x="104"   width="3.2" y="18" height="115.2" fill="#355e8d"/>
+  <rect x="107.2" width="3.2" y="18" height="115.2" fill="#228d8d"/>
+  <rect x="110.4" width="3.2" y="18" height="115.2" fill="#27808e"/>
+  <rect x="113.6" width="3.2" y="18" height="115.2" fill="#3d4d8a"/>
+  <rect x="116.8" width="3.2" y="18" height="115.2" fill="#365c8d"/>
+  <rect x="120"   width="3.2" y="18" height="115.2" fill="#297a8e"/>
+  <rect x="123.2" width="3.2" y="18" height="115.2" fill="#3b528b"/>
+  <rect x="126.4" width="3.2" y="18" height="115.2" fill="#375a8c"/>
+ </g>
 </svg>

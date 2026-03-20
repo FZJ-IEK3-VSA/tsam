@@ -46,12 +46,30 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin-bottom: 1rem;
 }
 
+.landing-logos .tsam-logo-light,
+.landing-logos .tsam-logo-dark {
+  flex: 0 1 60%;
+}
+
+.landing-logos .tsam-logo-light img,
+.landing-logos .tsam-logo-dark img {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+}
+
+.landing-logos .jsa-logo {
+  flex: 0 1 35%;
+}
+
 .landing-logos .jsa-logo img {
-  max-width: 300px;
+  width: 100%;
+  max-width: 250px;
+  height: auto;
 }
 
 /* Invert JSA header in dark mode so it remains visible */

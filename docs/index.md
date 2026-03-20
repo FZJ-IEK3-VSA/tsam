@@ -1,13 +1,13 @@
 <div class="landing-logos">
   <div class="tsam-logo-light">
-    <img src="assets/tsam-logo-light.svg" alt="ETHOS.TSAM" width="500">
+    <img src="assets/tsam-logo-light.svg" alt="ETHOS.TSAM">
   </div>
   <div class="tsam-logo-dark">
-    <img src="assets/tsam-logo-dark.svg" alt="ETHOS.TSAM" width="500">
+    <img src="assets/tsam-logo-dark.svg" alt="ETHOS.TSAM">
   </div>
   <div class="jsa-logo">
     <a href="https://www.fz-juelich.de/en/iek/iek-3">
-      <img src="assets/JSA-Header.svg" alt="Jülich System Analysis" width="300">
+      <img src="assets/JSA-Header.svg" alt="Jülich System Analysis">
     </a>
   </div>
 </div>
