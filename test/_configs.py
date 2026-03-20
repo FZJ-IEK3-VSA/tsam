@@ -57,11 +57,14 @@ DATASETS = {
 _DATA_CACHE: dict[str, pd.DataFrame] = {}
 
 
-def get_data(name: str) -> pd.DataFrame:
-    """Return dataset by name, cached across calls."""
+def get_data(name: str, max_timesteps: int | None = None) -> pd.DataFrame:
+    """Return dataset by name, optionally truncated. Full data is cached."""
     if name not in _DATA_CACHE:
         _DATA_CACHE[name] = DATASETS[name]()
-    return _DATA_CACHE[name]
+    df = _DATA_CACHE[name]
+    if max_timesteps is not None:
+        return df.iloc[:max_timesteps]
+    return df
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +87,7 @@ class BaseConfig:
     old_kwargs: dict = field(default_factory=dict)
     seed: int | None = None
     only_datasets: set[str] = field(default_factory=set)
+    max_timesteps: int | None = None  # truncate data for slow methods
 
 
 CONFIGS: list[BaseConfig] = [
@@ -175,6 +179,7 @@ CONFIGS: list[BaseConfig] = [
         },
         seed=42,
         only_datasets={"testdata"},
+        max_timesteps=2016,
     ),
     BaseConfig(
         id="hierarchical_maxoid",
@@ -419,6 +424,7 @@ CONFIGS: list[BaseConfig] = [
         },
         seed=42,
         only_datasets={"testdata"},
+        max_timesteps=2016,
     ),
     BaseConfig(
         id="kmaxoids_segmentation",
@@ -583,6 +589,7 @@ class OldCase:
     dataset: str
     old_kwargs: dict
     seed: int | None = None
+    max_timesteps: int | None = None
 
 
 def build_old_cases(configs: list[BaseConfig] | None = None) -> list[OldCase]:
@@ -605,6 +612,7 @@ def build_old_cases(configs: list[BaseConfig] | None = None) -> list[OldCase]:
                     dataset=ds,
                     old_kwargs=kw,
                     seed=cfg.seed,
+                    max_timesteps=cfg.max_timesteps,
                 )
             )
     return cases
