@@ -38,7 +38,7 @@ A call to `tsam.aggregate()` produces an `AggregationResult` by running
   └──────┬───────┘
          ▼
   ┌─────────────┐
-  │  Cluster    │ Step 4 — group similar periods using weighted distance; represent from unweighted
+  │  Cluster    │ Step 4 — group similar periods using weighted candidates
   └──────┬───────┘
          ▼
   ┌─────────────┐
@@ -205,15 +205,15 @@ the last period is padded by repeating initial rows.
 
 If `ClusterConfig.weights` is provided, weights are baked directly into the
 candidates array via vectorized multiply (`np.repeat` + broadcast). The
-`weight_vector` (`np.ndarray`) is stored on `PreparedData` so step 5 can
-divide weights back out after clustering.
+`weight_vector` (`np.ndarray`) is stored on `PreparedData` for later
+unweighting.
 
 This means:
-- Weights influence *which* periods get grouped together (clustering distance)
-  and *which* period is chosen as representative (medoid/maxoid selection).
-- After clustering, representatives are unweighted (step 5) before
-  downstream steps (extremes, rescale, denormalization) which expect
-  unweighted data.
+- Weights influence *which* periods get grouped together (clustering distance),
+  *which* period is chosen as representative (medoid/maxoid selection), and
+  `new_cluster` extreme reassignment distances (step 6).
+- After extremes, all representatives are unweighted (step 6b) before
+  downstream steps (rescale, denormalization) which expect unweighted data.
 
 If no weights are provided, candidates pass through unchanged.
 
@@ -247,10 +247,9 @@ together.
 This is the core step. It groups the period profiles into `n_clusters`
 clusters and selects or computes a representative for each.
 
-When weights are active, clustering uses the **weighted** candidates for
-distance computation but computes representatives from the **unweighted**
-candidates. This is handled via the `representation_candidates` parameter
-in `aggregate_periods()`. The result: cluster assignments reflect weighted
+Candidates are already weighted (from step 2b). Representatives are
+computed from weighted candidates; unweighting happens later (step 6b).
+The result: cluster assignments reflect weighted
 importance, but typical-period values are in the original normalized space.
 
 **Clustering methods** (`ClusterConfig.method`):
@@ -293,11 +292,11 @@ reused as-is.
 
 ### Step 5: Trim augmented features
 
-Inline in `run_pipeline()`.
+Inline in `_cluster_and_postprocess()`.
 
 If period-sum features were added in step 3, the extra columns are
 stripped from each cluster center vector, restoring the original
-dimensionality.
+dimensionality. Representatives are still weighted at this point.
 
 ---
 
@@ -309,9 +308,24 @@ dimensionality.
 | **Function** | `add_extreme_periods()` |
 | **Config** | `ExtremeConfig` |
 
+Extremes run in **weighted space** (matching develop's behavior): when
+weights are active, `profiles_dataframe` is weighted before being passed
+to `add_extreme_periods()`. Extreme detection itself (per-column
+idxmax/idxmin) is weight-invariant, but the `new_cluster` method's
+distance-based reassignment respects weights. Extracted extreme profiles
+carry weights, which are removed uniformly in step 6b.
+
 Ensures that periods with extreme values (peak demand, minimum solar, etc.)
 are explicitly represented in the output rather than averaged away by
 clustering.
+
+### Step 6b: Unweight all representatives
+
+Inline in `_cluster_and_postprocess()`.
+
+Divides weights back out of all representatives (regular + extreme) using
+the stored `weight_vector`. After this point, all data is in unweighted
+normalized space for rescale, denormalization, and reconstruction.
 
 **Extreme types:**
 

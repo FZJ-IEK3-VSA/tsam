@@ -160,9 +160,9 @@ if cluster.weights:
 | **Output** | weighted `candidates` (in-place replacement), `weight_vector` stored on `PreparedData` |
 
 Applies per-column weights directly to candidates via vectorized multiply.
-The `weight_vector` (`np.ndarray`) is stored on `PreparedData` so step 5
-can divide weights back out after clustering. All downstream steps
-(extremes, rescale, denormalization) operate on unweighted representatives.
+The `weight_vector` (`np.ndarray`) is stored on `PreparedData` for later
+unweighting (step 6b, after extremes). Downstream steps (rescale,
+denormalization) operate on unweighted representatives.
 
 ### Step 3: Add period sum features (optional)
 
@@ -249,25 +249,38 @@ representative vectors.
 
 ```
 if extremes is not None:
-    add_extreme_periods(profiles_dataframe, cluster_periods_list,
-        cluster_order, extremes.method, extremes.max_value,
-        extremes.min_value, extremes.max_period, extremes.min_period,
-        columns)
+    profiles_for_extremes = weighted(profiles_dataframe) if weight_vector else profiles_dataframe
+    add_extreme_periods(profiles_for_extremes, cluster_periods_list,
+        cluster_order, extremes)
     → (cluster_periods_list, cluster_order, extreme_cluster_idx, extreme_periods_info)
 ```
 
 | Module | `pipeline/extremes.py` |
 |---|---|
 | **Gate** | `extremes is not None` |
-| **Input** | `period_profiles.profiles_dataframe`, `cluster_periods_list`, `cluster_order` |
+| **Input** | weighted `profiles_dataframe` (if weights active), `cluster_periods_list` (still weighted), `cluster_order` |
 | **From `ExtremeConfig`** | `method`, `max_value`, `min_value`, `max_period`, `min_period` |
-| **Derived** | `columns` = `list(norm_data.original_data.columns)` |
 | **Output** | mutated `cluster_periods_list`, `cluster_order`; new `extreme_cluster_idx`, `extreme_periods_info` |
+
+Extremes run in weighted space so that `new_cluster` distance reassignment
+respects column weights. Detection (idxmax/idxmin per column) is
+weight-invariant since weights are a positive scalar per column.
 
 Depending on `method`:
 - **append**: adds extreme periods as new clusters at the end
-- **new_cluster**: adds new clusters and reassigns nearby periods
+- **new_cluster**: adds new clusters and reassigns nearby periods (distance in weighted space)
 - **replace**: overwrites relevant columns of nearest existing cluster
+
+### Step 6b: Unweight all representatives
+
+```python
+if weight_vector is not None:
+    inv_tile = np.repeat(1.0 / weight_vector, n_timesteps_per_period)
+    cluster_periods_list = [center * inv_tile for center in cluster_periods_list]
+```
+
+Divides weights back out of all representatives (regular + extreme).
+After this point, all data is in unweighted normalized space.
 
 ### Step 7: Compute cluster weights
 
@@ -456,7 +469,7 @@ columns alphabetically internally), then packs everything into a
 
 After step 2b, `weights` are never read again — the weight information is
 baked into `candidates` and stored as `weight_vector` on `PreparedData`
-for unweighting in step 5. After step 1,
+for unweighting in step 6b. After step 1,
 `normalize_column_means` is accessed only through `NormalizedData`.
 
 After step 4, `method`, `solver`, `use_duration_curves`, and
@@ -506,7 +519,7 @@ Step 16  output reindex                 reads .original_data
 
 Note: `NormalizedData` no longer carries a `weights` field. Weights are
 baked directly into `candidates` in step 2b, with `weight_vector` stored
-on `PreparedData` for unweighting in step 5.
+on `PreparedData` for unweighting in step 6b.
 
 ### `PeriodProfiles` — created once, read by clustering and reshaping
 

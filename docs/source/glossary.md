@@ -36,8 +36,8 @@ For a quick overview of the most common terms, see the
 | **Denormalization** | Inverse of normalization: scaling from [0, 1] back to original units using the stored scaler. | `_unnormalizeTimeSeries()` | `denormalize()` |
 | **Scaler** | The fitted MinMaxScaler storing each column's min/max. Created once, used for both directions. | (not stored) | `scaler` |
 | **Mean Normalization** | Optional: dividing each column by its normalized mean so all columns contribute equally to distances regardless of value distribution. | `sameMean` | `normalize_column_means` |
-| **Column Weight** | A per-column multiplier baked directly into the candidate matrix for clustering. Higher weight = more influence on clustering distance and medoid/maxoid selection. Weights are divided back out after clustering (step 5) so downstream steps (extremes, rescale, denormalization) see unweighted data. Weight of 0 is replaced by `MIN_WEIGHT` (1e-6). | `weightDict` | `weights` |
-| **Weight Vector** | A `np.ndarray` aligned to column order, stored on `PreparedData`. Used to apply weights (step 2b) and remove them (step 5). `None` when all weights are 1.0. | `normalizedPeriodlyProfiles` (misleading — included weights in data) | `weight_vector` |
+| **Column Weight** | A per-column multiplier baked directly into the candidate matrix for clustering. Higher weight = more influence on clustering distance, medoid/maxoid selection, and `new_cluster` extreme reassignment. Weights are divided back out after extremes (step 6b) so downstream steps (rescale, denormalization) see unweighted data. Weight of 0 is replaced by `MIN_WEIGHT` (1e-6). | `weightDict` | `weights` |
+| **Weight Vector** | A `np.ndarray` aligned to column order, stored on `PreparedData`. Used to apply weights (step 2b) and remove them (step 6b). `None` when all weights are 1.0. | `normalizedPeriodlyProfiles` (misleading — included weights in data) | `weight_vector` |
 
 ## 4. Clustering
 
@@ -144,7 +144,7 @@ For a quick overview of the most common terms, see the
 | `clusterOrder` (not an ordering!) | `cluster_assignments` |
 | `clusterPeriodNoOccur` (double negative) | `cluster_counts` |
 | `typicalPeriods` vs `normalizedTypicalPeriods` | `representatives` (normalized internal) / `cluster_representatives` (denormalized output) |
-| `candidates` (candidates for what?) | `period_profiles`; `candidates` (weighted in-place if weights active, unweighted after step 5) |
+| `candidates` (candidates for what?) | `period_profiles`; `candidates` (weighted in-place if weights active, unweighted after step 6b) |
 | `sameMean` (cryptic bool) | `normalize_column_means` |
 | `sortValues` (sort what?) | `use_duration_curves` |
 | `evalSumPeriods` | `include_period_sums` |
