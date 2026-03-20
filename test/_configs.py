@@ -530,6 +530,97 @@ CONFIGS: list[BaseConfig] = [
         },
         only_datasets={"testdata"},
     ),
+    # --- Weight x feature interactions ---
+    BaseConfig(
+        id="kmeans_weighted",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_means",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="kmedoids_weighted",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_medoids",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="kmaxoids_weighted",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_maxoids",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_duration_curves",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "sortValues": True,
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_extremes",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["Load"],
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_samemean",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "sameMean": True,
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_rescale_exclude",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "rescaleExcludeColumns": ["GHI"],
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="kmeans_weighted_distribution",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_means",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "representationMethod": "durationRepresentation",
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
     # --- Cross-feature interactions ---
     BaseConfig(
         id="hierarchical_weighted_segmentation",
