@@ -273,31 +273,35 @@ def _cluster_and_postprocess(
     # Ensure cluster_order is always np.ndarray
     cluster_order = np.asarray(cluster_order)
 
-    # Step 5: Trim eval features from representatives
+    # Step 5: Trim eval features from representatives (still weighted)
     cluster_periods_list: list[np.ndarray] = [
         center[: prepared.n_feature_cols] for center in cluster_centers
     ]
 
-    # Unweight representatives — medoid/maxoid selection uses weighted
-    # distances (intentional: weights affect which period is "closest").
-    # Remove weights before downstream steps (extremes, rescale, denorm)
-    # which expect unweighted data.
-    if prepared.weight_vector is not None:
-        inv_tile = np.repeat(1.0 / prepared.weight_vector, cfg.n_timesteps_per_period)
-        cluster_periods_list = [center * inv_tile for center in cluster_periods_list]
-
     # Step 6: Add extreme periods if configured
+    # Extremes run in weighted space (matching develop): weighted profiles
+    # determine which period is extreme, and extracted profiles carry weights.
+    # Unweighting happens after, so all centers are treated uniformly.
     extreme_periods_info: dict[str, dict] = {}
     extreme_cluster_idx: list[int] = []
 
     if cfg.extremes is not None:
+        if prepared.weight_vector is not None:
+            profiles_for_extremes = period_profiles.profiles_dataframe.copy()
+            for col_name, w in zip(
+                profiles_for_extremes.columns.get_level_values(0).unique(),
+                prepared.weight_vector,
+            ):
+                profiles_for_extremes[col_name] *= w
+        else:
+            profiles_for_extremes = period_profiles.profiles_dataframe
         (
             cluster_periods_list,
             cluster_order,
             extreme_cluster_idx,
             extreme_periods_info,
         ) = add_extreme_periods(
-            period_profiles.profiles_dataframe,
+            profiles_for_extremes,
             cluster_periods_list,
             cluster_order,
             cfg.extremes,
@@ -306,6 +310,12 @@ def _cluster_and_postprocess(
     else:
         if cfg.predef is not None and cfg.predef.extreme_cluster_idx is not None:
             extreme_cluster_idx = list(cfg.predef.extreme_cluster_idx)
+
+    # Unweight all representatives (regular + extreme) — remove weights
+    # before downstream steps (rescale, denorm) which expect unweighted data.
+    if prepared.weight_vector is not None:
+        inv_tile = np.repeat(1.0 / prepared.weight_vector, cfg.n_timesteps_per_period)
+        cluster_periods_list = [center * inv_tile for center in cluster_periods_list]
 
     # Step 7: Compute cluster counts
     cluster_counts = _count_occurrences(cluster_order)
