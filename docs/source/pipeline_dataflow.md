@@ -148,9 +148,8 @@ of the period length.
 
 ```
 if cluster.weights:
-    _build_weight_vector(norm_data.values.columns, cluster.weights) → validated_weights
-    _weight_candidates(candidates, validated_weights, n_columns, n_timesteps)
-        → weighted_candidates
+    _build_weight_vector(norm_data.values.columns, cluster.weights) → weight_vector
+    candidates = candidates * np.repeat(weight_vector, n_timesteps_per_period)
 ```
 
 | Module | `pipeline/__init__.py` |
@@ -158,32 +157,30 @@ if cluster.weights:
 | **Gate** | `cluster.weights is not None` |
 | **Input** | `candidates` (from step 2) |
 | **From `ClusterConfig`** | `weights` |
-| **Output** | `weighted_candidates` (separate array, used only for clustering distance) |
+| **Output** | weighted `candidates` (in-place replacement), `weight_vector` stored on `PreparedData` |
 
-Creates a copy of the candidates array with per-column weight
-multiplication applied. The original `candidates` remain unweighted and
-are used for computing representations, rescaling, reconstruction, and
-accuracy. This ensures weights affect only which periods get grouped
-together, not the output values.
+Applies per-column weights directly to candidates via vectorized multiply.
+The `weight_vector` (`np.ndarray`) is stored on `PreparedData` so step 5
+can divide weights back out after clustering. All downstream steps
+(extremes, rescale, denormalization) operate on unweighted representatives.
 
 ### Step 3: Add period sum features (optional)
 
 ```
 if cluster.include_period_sums:
-    add_period_sum_features(profiles_dataframe, weighted_candidates or candidates)
+    add_period_sum_features(profiles_dataframe, candidates)
         → (augmented_candidates, n_extra)
 ```
 
 | Module | `pipeline/periods.py` |
 |---|---|
 | **Gate** | `cluster.include_period_sums` |
-| **Input** | `period_profiles.profiles_dataframe`, `weighted_candidates` (if weights active) or `candidates` |
+| **Input** | `period_profiles.profiles_dataframe`, `candidates` (already weighted if weights active) |
 | **Output** | augmented candidate array, count of extra features to trim later |
 
 Appends per-column period sums as extra columns to bias clustering toward
-preserving totals. When weights are active, sums are appended to the
-weighted copy (they are clustering features only). The extra features are
-trimmed off representatives in step 5.
+preserving totals. The extra features are trimmed off representatives in
+step 5 via `n_feature_cols`.
 
 ### Step 4: Cluster
 
@@ -210,31 +207,30 @@ use_predefined_assignments(candidates, predef.cluster_order,
 ```
 cluster_periods(candidates, n_clusters, cluster.method,
     cluster.solver, representation_method, representation_dict,
-    n_timesteps_per_period, weighted_candidates=weighted_candidates)
+    n_timesteps_per_period, n_feature_cols=n_feature_cols)
 ```
 
 | Module | `pipeline/clustering.py` |
 |---|---|
-| **Input** | `candidates` (unweighted), `weighted_candidates` (optional, for distance) |
+| **Input** | `candidates` (already weighted if weights active) |
 | **From `ClusterConfig`** | `method`, `solver`, `get_representation()` |
-| **Derived** | `representation_dict`, `n_clusters` |
+| **Derived** | `representation_dict`, `n_clusters`, `n_feature_cols` |
 
-When `weighted_candidates` is provided, clustering uses it for distance
-computation and passes `candidates` as `representation_candidates` to
-`aggregate_periods()`, so representations are computed from unweighted data.
+Candidates are already weighted. If period-sum features are appended
+(`candidates.shape[1] != n_feature_cols`), the non-augmented prefix is
+passed as `representation_candidates` to `aggregate_periods()`.
 
 #### Branch C: Duration curve clustering (`predef is None`, `use_duration_curves=True`)
 
 ```
-cluster_sorted_periods(candidates, profiles_values, n_columns,
+cluster_sorted_periods(candidates, period_profiles,
     n_clusters, cluster.method, cluster.solver,
-    representation_method, representation_dict, n_timesteps_per_period,
-    weighted_candidates=weighted_candidates)
+    representation_method, representation_dict, n_timesteps_per_period)
 ```
 
 | Module | `pipeline/clustering.py` |
 |---|---|
-| **Input** | `candidates` (unweighted), `period_profiles`, `weighted_candidates` (optional) |
+| **Input** | `candidates` (already weighted if weights active), `period_profiles` |
 | **From `ClusterConfig`** | `method`, `solver`, `get_representation()`, `use_duration_curves` (gate) |
 
 All three branches delegate to `period_aggregation.aggregate_periods()` and
@@ -452,14 +448,15 @@ columns alphabetically internally), then packs everything into a
 |---|---|---|---|
 | `method` | 4 | `cluster_periods()` / `cluster_sorted_periods()` | direct |
 | `representation` | 4, 11 (fallback) | clustering functions, `segment_typical_periods()` | `cluster.get_representation()` |
-| `weights` | 2b | `_weight_candidates()` | via `_build_weight_vector()`; creates separate `weighted_candidates` |
+| `weights` | 2b | inline vectorized multiply | via `_build_weight_vector()` → `weight_vector` on `PreparedData` |
 | `normalize_column_means` | 1 | `normalize()` | direct; then stored in `norm_data.normalize_column_means` |
 | `use_duration_curves` | 4 | branch gate in `run_pipeline()` | direct |
 | `include_period_sums` | 3 | `add_period_sum_features()` | direct |
 | `solver` | 4 | `cluster_periods()` / `cluster_sorted_periods()` | direct |
 
-After step 2b, `weights` are never read again — the `weighted_candidates`
-array carries the weight information into clustering. After step 1,
+After step 2b, `weights` are never read again — the weight information is
+baked into `candidates` and stored as `weight_vector` on `PreparedData`
+for unweighting in step 5. After step 1,
 `normalize_column_means` is accessed only through `NormalizedData`.
 
 After step 4, `method`, `solver`, `use_duration_curves`, and
@@ -496,7 +493,7 @@ Both fields are consumed exclusively in step 11.
 ```
 Step  1  normalize()                    creates NormalizedData
 Step  2  unstack_to_periods()           reads .values
-Step 2b  _weight_candidates()           reads .values.columns (for weight validation)
+Step 2b  _build_weight_vector()          reads .values.columns (for weight validation)
 Step  6  add_extreme_periods()          reads .original_data (for column list)
 Step  8  rescale_representatives()      reads .original_data, .normalize_column_means
 Step 12  denormalize()                  reads .normalize_column_means, .normalized_mean, .scaler
@@ -508,7 +505,8 @@ Step 16  output reindex                 reads .original_data
 ```
 
 Note: `NormalizedData` no longer carries a `weights` field. Weights are
-handled entirely via the separate `weighted_candidates` array in step 2b.
+baked directly into `candidates` in step 2b, with `weight_vector` stored
+on `PreparedData` for unweighting in step 5.
 
 ### `PeriodProfiles` — created once, read by clustering and reshaping
 

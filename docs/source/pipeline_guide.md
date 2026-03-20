@@ -200,24 +200,22 @@ the last period is padded by repeating initial rows.
 | | |
 |---|---|
 | **Module** | `pipeline/__init__.py` |
-| **Functions** | `_build_weight_vector()`, `_weight_candidates()` |
+| **Functions** | `_build_weight_vector()` |
 | **Config** | `ClusterConfig.weights` |
 
-If `ClusterConfig.weights` is provided, a **separate weighted copy** of the
-candidates array is created by multiplying each column's values by its
-weight factor. This weighted copy is used exclusively for clustering
-distance calculation in step 4. All other pipeline steps (rescaling,
-denormalization, reconstruction, accuracy) operate on the **unweighted**
-candidates from step 2.
+If `ClusterConfig.weights` is provided, weights are baked directly into the
+candidates array via vectorized multiply (`np.repeat` + broadcast). The
+`weight_vector` (`np.ndarray`) is stored on `PreparedData` so step 5 can
+divide weights back out after clustering.
 
-This separation means:
-- Weights influence *which* periods get grouped together.
-- Cluster *representatives* (medoid, mean, etc.) are computed from
-  unweighted data, so typical periods are in the original normalized space.
-- No downstream step needs to "undo" weights.
+This means:
+- Weights influence *which* periods get grouped together (clustering distance)
+  and *which* period is chosen as representative (medoid/maxoid selection).
+- After clustering, representatives are unweighted (step 5) before
+  downstream steps (extremes, rescale, denormalization) which expect
+  unweighted data.
 
-If no weights are provided, steps 2b and 3 are skipped and the unweighted
-candidates are passed directly to clustering.
+If no weights are provided, candidates pass through unchanged.
 
 ---
 
