@@ -89,7 +89,6 @@ plugins:
             show_signature_annotations: true
   - mkdocs-jupyter:
       execute: true
-      execute_timeout: 300
       kernel_name: python3
       include_source: true
       allow_errors: false
