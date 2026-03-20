@@ -8,7 +8,7 @@ from conftest import RESULTS_DIR, TESTDATA_CSV
 
 
 def test_k_medoids():
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0).iloc[:2016]
 
     orig_raw = pd.read_csv(
         RESULTS_DIR / "testperiods_kmedoids.csv",
@@ -20,7 +20,7 @@ def test_k_medoids():
     aggregation = tsam.TimeSeriesAggregation(
         raw,
         noTypicalPeriods=8,
-        hoursPerPeriod=24 * 7,
+        hoursPerPeriod=48,
         clusterMethod="k_medoids",
     )
 

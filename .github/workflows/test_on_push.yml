@@ -20,7 +20,6 @@ jobs:
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
-      examples_to_execute: "docs/notebooks/quickstart.ipynb docs/notebooks/clustering_methods.ipynb docs/notebooks/optimization_input.ipynb docs/notebooks/representations.ipynb docs/notebooks/segmentation.ipynb docs/notebooks/k_maxoids.ipynb docs/notebooks/clustering_transfer.ipynb"
       multiprocessing_pytest_string: "-n auto"
       multiprocessing_example_string: "-n auto"
   TestPullPyPIDev:
@@ -33,6 +32,16 @@ jobs:
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_pypi_test_uv.yml@main
     with:
       runner_tag: ${{ matrix.runner_tag }}
-      examples_to_execute: "docs/notebooks/quickstart.ipynb docs/notebooks/clustering_methods.ipynb docs/notebooks/optimization_input.ipynb docs/notebooks/representations.ipynb docs/notebooks/segmentation.ipynb docs/notebooks/k_maxoids.ipynb docs/notebooks/clustering_transfer.ipynb"
       python_version: ${{ needs.extract-python-versions.outputs.max_version }}
       optional_dependency_PyPI_tag: "[develop]"
+      multiprocessing_pytest_string: "-n auto"
+
+  TestNotebooks:
+    name: Run example notebooks
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    with:
+      runner_tag: "self-hosted"
+      requirements_file_name: environment.yml
+      examples_to_execute: "docs/notebooks/quickstart.ipynb docs/notebooks/clustering_methods.ipynb docs/notebooks/optimization_input.ipynb docs/notebooks/representations.ipynb docs/notebooks/segmentation.ipynb docs/notebooks/k_maxoids.ipynb docs/notebooks/clustering_transfer.ipynb"
+      multiprocessing_pytest_string: "--co -q"
+      multiprocessing_example_string: "-n auto"
