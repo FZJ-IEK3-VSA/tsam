@@ -10,3 +10,11 @@ window.MathJax = {
     processHtmlClass: "arithmatex",
   },
 };
+
+// Re-typeset on instant navigation (needed for navigation.instant)
+document$.subscribe(function () {
+  MathJax.startup.output.clearCache();
+  MathJax.typesetClear();
+  MathJax.texReset();
+  MathJax.typesetPromise();
+});

@@ -129,6 +129,9 @@ markdown_extensions:
       permalink: true
       toc_depth: 2
 
+extra_css:
+  - stylesheets/extra.css
+
 extra_javascript:
   - https://cdn.plot.ly/plotly-3.3.0.min.js
   - javascripts/mathjax.js
