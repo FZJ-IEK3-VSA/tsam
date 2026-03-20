@@ -92,6 +92,7 @@ plugins:
       include_source: true
       allow_errors: false
       include_requirejs: true
+      toc_depth: 3
   - gen-files:
       scripts:
         - docs/gen_ref_pages.py
