@@ -558,6 +558,7 @@ CONFIGS: list[BaseConfig] = [
         },
         seed=42,
         only_datasets={"testdata"},
+        max_timesteps=2016,
     ),
     BaseConfig(
         id="kmaxoids_weighted",
