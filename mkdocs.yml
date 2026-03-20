@@ -2,22 +2,32 @@ site_name: tsam Documentation
 site_url: https://fzj-iek3-vsa.github.io/tsam/
 repo_url: https://github.com/FZJ-IEK3-VSA/tsam
 repo_name: FZJ-IEK3-VSA/tsam
+edit_uri: edit/develop/docs/
 
 theme:
   name: material
   logo: assets/tsam-logo.png
   favicon: assets/logo.png
   features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
     - navigation.tabs
     - navigation.sections
     - navigation.indexes
     - navigation.top
     - navigation.path
+    - navigation.footer
+    - navigation.tracking
     - content.code.copy
     - content.code.annotate
     - content.tabs.link
+    - content.action.edit
+    - content.action.view
+    - content.tooltips
     - search.suggest
     - search.highlight
+    - search.share
     - toc.follow
   palette:
     - scheme: default
@@ -75,6 +85,8 @@ plugins:
             docstring_style: auto
             show_symbol_type_heading: true
             show_symbol_type_toc: true
+            separate_signature: true
+            show_signature_annotations: true
   - mkdocs-jupyter:
       execute: false
       kernel_name: python3
@@ -91,17 +103,31 @@ markdown_extensions:
       generic: true
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.superfences
+      line_spans: __span
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.mark
   - admonition
   - pymdownx.details
   - attr_list
   - md_in_html
   - tables
   - def_list
+  - footnotes
+  - abbr
   - toc:
       permalink: true
+      toc_depth: 2
 
 extra_javascript:
   - https://cdn.plot.ly/plotly-3.3.0.min.js
