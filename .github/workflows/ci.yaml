@@ -71,6 +71,73 @@ jobs:
           --nbval-cell-timeout=900000
           ${{ env.NOTEBOOKS }}
 
+  # Conda-forge testing on PRs to master
+  extract-python-versions:
+    if: github.base_ref == 'master' && github.actor != 'renovate[bot]'
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions.yml@main
+    with:
+      library_name: python
+      env_file: environment.yml
+
+  test-conda-forge:
+    name: Test conda-forge (Python ${{ matrix.python_version }}, ${{ matrix.runner_tag }})
+    needs: extract-python-versions
+    if: github.base_ref == 'master' && github.actor != 'renovate[bot]'
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        python_version: ${{ fromJSON(needs.extract-python-versions.outputs.versions) }}
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    with:
+      runner_tag: ${{ matrix.runner_tag }}
+      requirements_file_name: environment.yml
+      examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
+      library_name: "python"
+      library_version: ${{ matrix.python_version }}
+      dependency_position_env_file: ${{ needs.extract-python-versions.outputs.dependency_position }}
+      multiprocessing_pytest_string: "-n auto"
+      multiprocessing_example_string: "-n auto"
+
+  # Extended PyPI cross-platform testing on PRs to master
+  # (6 OS variants × all Python versions, matching original test_pull_request_master_python_versions.yml)
+  test-master:
+    name: Test master (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    if: github.base_ref == 'master'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-22.04, macos-latest, macos-15-intel, windows-latest, windows-2022]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: uv pip install --system ".[develop]"
+
+      - name: Run tests
+        run: pytest -n auto -vv
+
+      - name: Run notebooks
+        run: >-
+          pytest -n auto -vv
+          --dist loadscope
+          --nbval-lax
+          --nbval-current-env
+          --nbval-cell-timeout=900000
+          ${{ env.NOTEBOOKS }}
+
   # Min/max dependency boundary testing on PRs to master
   extract-versions:
     if: github.base_ref == 'master'
