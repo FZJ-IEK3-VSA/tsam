@@ -93,6 +93,7 @@ plugins:
       kernel_name: python3
       include_source: true
       allow_errors: false
+      include_requirejs: true
   - gen-files:
       scripts:
         - docs/gen_ref_pages.py
