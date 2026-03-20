@@ -134,14 +134,16 @@
   flex-shrink: 0;
 }
 
-.footer-logo--fzj {
-  height: 48px;
+.footer-logo--jsa {
+  height: 40px;
   width: auto;
 }
 
 .footer-logo--helmholtz {
-  height: 48px;
+  height: 40px;
   width: auto;
+  max-width: 150px;
+  object-fit: contain;
 }
 
 .footer-institutional__text {
@@ -163,7 +165,7 @@
   text-decoration-color: inherit;
 }
 
-/* Invert FZJ logo in dark footer */
-[data-md-color-scheme="slate"] .footer-logo--fzj {
+/* Invert JSA logo in dark footer */
+[data-md-color-scheme="slate"] .footer-logo--jsa {
   filter: brightness(0) invert(1);
 }
