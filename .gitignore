@@ -55,6 +55,7 @@ dmypy.json
 
 # Documentation
 docs/build/
+site/
 
 # OS
 .DS_Store
@@ -68,4 +69,4 @@ Thumbs.db
 trash/
 
 # Notebook output artifacts (regenerated when notebooks run)
-docs/source/examples_notebooks/results/
+docs/notebooks/results/

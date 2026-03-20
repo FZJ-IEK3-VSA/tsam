@@ -20,10 +20,12 @@ dependencies:
   - codecov
   - nbval
   # Documentation
-  - sphinx
-  - sphinx-autobuild
-  - nbsphinx
-  - sphinx-book-theme
+  - mkdocs >=1.6
+  - mkdocs-material >=9.5
+  - mkdocstrings-python >=0.27
+  - mkdocs-jupyter >=0.25
+  - mkdocs-gen-files >=0.5
+  - mkdocs-literate-nav >=0.6
   # Linting and formatting
   - ruff
   - mypy
