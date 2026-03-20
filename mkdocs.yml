@@ -8,11 +8,17 @@ theme:
   logo: assets/tsam-logo.png
   favicon: assets/logo.png
   features:
+    - navigation.tabs
     - navigation.sections
-    - navigation.expand
+    - navigation.indexes
     - navigation.top
+    - navigation.path
     - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - search.suggest
     - search.highlight
+    - toc.follow
   palette:
     - scheme: default
       primary: blue
@@ -26,9 +32,10 @@ theme:
         name: Switch to light mode
 
 nav:
-  - Home: index.md
-  - Installation: installation.md
-  - Getting Started: getting-started.md
+  - Home:
+    - index.md
+    - Installation: installation.md
+    - Getting Started: getting-started.md
   - Examples:
     - Getting Started:
       - notebooks/quickstart.ipynb
@@ -45,13 +52,15 @@ nav:
       - notebooks/tuning.ipynb
       - notebooks/pareto_optimization.ipynb
       - notebooks/building_energy_system.ipynb
+  - Learn:
+    - Mathematical Background: background/math.md
+    - Migration Guide: migration-guide.md
+    - Further Reading: further-reading.md
   - API Reference: api/
-  - Mathematical Background: background/math.md
-  - Migration Guide: migration-guide.md
-  - Changelog: changelog.md
-  - Integrated Software: integrated-software.md
-  - Legal Notice: legal-notice.md
-  - Further Reading: further-reading.md
+  - About:
+    - Changelog: changelog.md
+    - Integrated Software: integrated-software.md
+    - Legal Notice: legal-notice.md
 
 plugins:
   - search
@@ -90,6 +99,7 @@ markdown_extensions:
   - attr_list
   - md_in_html
   - tables
+  - def_list
   - toc:
       permalink: true
 

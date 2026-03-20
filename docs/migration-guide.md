@@ -8,49 +8,49 @@ This guide covers every change you need to make.
 
 ## Quick before-and-after
 
-**v2**:
+=== "v3 (new)"
 
-```python
-import tsam.timeseriesaggregation as tsam
+    ```python
+    import tsam
+    from tsam import ClusterConfig, SegmentConfig, ExtremeConfig
 
-agg = tsam.TimeSeriesAggregation(
-    df,
-    noTypicalPeriods=8,
-    hoursPerPeriod=24,
-    clusterMethod='hierarchical',
-    representationMethod='distributionAndMinMaxRepresentation',
-    segmentation=True,
-    noSegments=12,
-    rescaleClusterPeriods=True,
-    addPeakMax=['demand'],
-)
-representatives = agg.createTypicalPeriods()
-reconstructed = agg.predictOriginalData()
-accuracy = agg.accuracyIndicators()
-```
+    result = tsam.aggregate(
+        df,
+        n_clusters=8,
+        period_duration=24,
+        cluster=ClusterConfig(
+            method='hierarchical',
+            representation='distribution_minmax',
+        ),
+        segments=SegmentConfig(n_segments=12),
+        preserve_column_means=True,
+        extremes=ExtremeConfig(max_value=['demand']),
+    )
+    representatives = result.cluster_representatives
+    reconstructed = result.reconstructed
+    accuracy = result.accuracy.summary
+    ```
 
-**v3**:
+=== "v2 (old)"
 
-```python
-import tsam
-from tsam import ClusterConfig, SegmentConfig, ExtremeConfig
+    ```python
+    import tsam.timeseriesaggregation as tsam
 
-result = tsam.aggregate(
-    df,
-    n_clusters=8,
-    period_duration=24,
-    cluster=ClusterConfig(
-        method='hierarchical',
-        representation='distribution_minmax',
-    ),
-    segments=SegmentConfig(n_segments=12),
-    preserve_column_means=True,
-    extremes=ExtremeConfig(max_value=['demand']),
-)
-representatives = result.cluster_representatives
-reconstructed = result.reconstructed
-accuracy = result.accuracy.summary
-```
+    agg = tsam.TimeSeriesAggregation(
+        df,
+        noTypicalPeriods=8,
+        hoursPerPeriod=24,
+        clusterMethod='hierarchical',
+        representationMethod='distributionAndMinMaxRepresentation',
+        segmentation=True,
+        noSegments=12,
+        rescaleClusterPeriods=True,
+        addPeakMax=['demand'],
+    )
+    representatives = agg.createTypicalPeriods()
+    reconstructed = agg.predictOriginalData()
+    accuracy = agg.accuracyIndicators()
+    ```
 
 ## Parameter mapping
 
@@ -117,87 +117,87 @@ common cases.
 
 **Distribution with global scope** (`distributionPeriodWise=False`):
 
-*v2*:
+=== "v3 (new)"
 
-```python
-agg = tsam.TimeSeriesAggregation(
-    df,
-    noTypicalPeriods=8,
-    representationMethod='distributionRepresentation',
-    distributionPeriodWise=False,
-)
-```
+    ```python
+    from tsam import Distribution
 
-*v3*:
+    result = tsam.aggregate(
+        df,
+        n_clusters=8,
+        cluster=ClusterConfig(
+            representation=Distribution(scope="global"),
+        ),
+    )
+    ```
 
-```python
-from tsam import Distribution
+=== "v2 (old)"
 
-result = tsam.aggregate(
-    df,
-    n_clusters=8,
-    cluster=ClusterConfig(
-        representation=Distribution(scope="global"),
-    ),
-)
-```
+    ```python
+    agg = tsam.TimeSeriesAggregation(
+        df,
+        noTypicalPeriods=8,
+        representationMethod='distributionRepresentation',
+        distributionPeriodWise=False,
+    )
+    ```
 
 **Distribution with min/max preservation and global scope**:
 
-*v2*:
+=== "v3 (new)"
 
-```python
-agg = tsam.TimeSeriesAggregation(
-    df,
-    noTypicalPeriods=8,
-    representationMethod='distributionAndMinMaxRepresentation',
-    distributionPeriodWise=False,
-)
-```
+    ```python
+    from tsam import Distribution
 
-*v3*:
+    result = tsam.aggregate(
+        df,
+        n_clusters=8,
+        cluster=ClusterConfig(
+            representation=Distribution(scope="global", preserve_minmax=True),
+        ),
+    )
+    ```
 
-```python
-from tsam import Distribution
+=== "v2 (old)"
 
-result = tsam.aggregate(
-    df,
-    n_clusters=8,
-    cluster=ClusterConfig(
-        representation=Distribution(scope="global", preserve_minmax=True),
-    ),
-)
-```
+    ```python
+    agg = tsam.TimeSeriesAggregation(
+        df,
+        noTypicalPeriods=8,
+        representationMethod='distributionAndMinMaxRepresentation',
+        distributionPeriodWise=False,
+    )
+    ```
 
 **Per-column min/max/mean** (`representationDict`):
 
-*v2*:
+=== "v3 (new)"
 
-```python
-agg = tsam.TimeSeriesAggregation(
-    df,
-    noTypicalPeriods=8,
-    representationMethod='minmaxmeanRepresentation',
-    representationDict={'GHI': 'max', 'T': 'min', 'Wind': 'mean', 'Load': 'min'},
-)
-```
+    ```python
+    from tsam import MinMaxMean
 
-*v3*:
-
-```python
-from tsam import MinMaxMean
-
-result = tsam.aggregate(
-    df,
-    n_clusters=8,
-    cluster=ClusterConfig(
-        representation=MinMaxMean(
-            max_columns=['GHI'],
-            min_columns=['T', 'Load'],
+    result = tsam.aggregate(
+        df,
+        n_clusters=8,
+        cluster=ClusterConfig(
+            representation=MinMaxMean(
+                max_columns=['GHI'],
+                min_columns=['T', 'Load'],
+            ),
         ),
-    ),
-)
-```
+    )
+    ```
+
+=== "v2 (old)"
+
+    ```python
+    agg = tsam.TimeSeriesAggregation(
+        df,
+        noTypicalPeriods=8,
+        representationMethod='minmaxmeanRepresentation',
+        representationDict={'GHI': 'max', 'T': 'min', 'Wind': 'mean', 'Load': 'min'},
+    )
+    ```
 
 Columns not listed in `max_columns` or `min_columns` default to mean.
 
@@ -253,23 +253,34 @@ Reusing a clustering on new data used to require manually passing
 `predefClusterOrder`, `predefClusterCenterIndices`, etc.
 In v3 this is a single method call:
 
-```python
-# Cluster on one dataset
-result = tsam.aggregate(df_wind, n_clusters=8)
+=== "v3 (new)"
 
-# Apply same clustering to another dataset
-result_all = result.clustering.apply(df_all)
-```
+    ```python
+    # Cluster on one dataset
+    result = tsam.aggregate(df_wind, n_clusters=8)
 
-You can also save and load clusterings:
+    # Apply same clustering to another dataset
+    result_all = result.clustering.apply(df_all)
 
-```python
-result.clustering.to_json("clustering.json")
+    # Save and load clusterings
+    result.clustering.to_json("clustering.json")
 
-from tsam import ClusteringResult
-clustering = ClusteringResult.from_json("clustering.json")
-result = clustering.apply(df)
-```
+    from tsam import ClusteringResult
+    clustering = ClusteringResult.from_json("clustering.json")
+    result = clustering.apply(df)
+    ```
+
+=== "v2 (old)"
+
+    ```python
+    # Required manually passing multiple parameters
+    agg2 = tsam.TimeSeriesAggregation(
+        df_all,
+        predefClusterOrder=agg.clusterOrder,
+        predefClusterCenterIndices=agg.clusterCenterIndices,
+        ...
+    )
+    ```
 
 ## Plotting
 
@@ -292,68 +303,68 @@ The `HyperTunedAggregations` class is replaced by two functions in
 
 ### `identifyOptimalSegmentPeriodCombination` -> `find_optimal_combination`
 
-**v2**:
+=== "v3 (new)"
 
-```python
-from tsam.hyperparametertuning import HyperTunedAggregations
-import tsam.timeseriesaggregation as tsam_legacy
+    ```python
+    import tsam
+    from tsam import ClusterConfig
 
-agg = HyperTunedAggregations(
-    tsam_legacy.TimeSeriesAggregation(
+    result = tsam.tuning.find_optimal_combination(
         df,
-        hoursPerPeriod=24,
-        clusterMethod="hierarchical",
-        representationMethod="meanRepresentation",
-        segmentation=True,
+        data_reduction=0.01,
+        period_duration=24,
+        cluster=ClusterConfig(method="hierarchical"),
+        segment_representation="mean",
     )
-)
-segments, periods, rmse = agg.identifyOptimalSegmentPeriodCombination(
-    dataReduction=0.01,
-)
-```
+    segments = result.n_segments
+    periods = result.n_clusters
+    rmse = result.rmse
+    best = result.best_result          # AggregationResult
+    ```
 
-**v3**:
+=== "v2 (old)"
 
-```python
-import tsam
-from tsam import ClusterConfig
+    ```python
+    from tsam.hyperparametertuning import HyperTunedAggregations
+    import tsam.timeseriesaggregation as tsam_legacy
 
-result = tsam.tuning.find_optimal_combination(
-    df,
-    data_reduction=0.01,
-    period_duration=24,
-    cluster=ClusterConfig(method="hierarchical"),
-    segment_representation="mean",
-)
-segments = result.n_segments
-periods = result.n_clusters
-rmse = result.rmse
-best = result.best_result          # AggregationResult
-```
+    agg = HyperTunedAggregations(
+        tsam_legacy.TimeSeriesAggregation(
+            df,
+            hoursPerPeriod=24,
+            clusterMethod="hierarchical",
+            representationMethod="meanRepresentation",
+            segmentation=True,
+        )
+    )
+    segments, periods, rmse = agg.identifyOptimalSegmentPeriodCombination(
+        dataReduction=0.01,
+    )
+    ```
 
 ### `identifyParetoOptimalAggregation` -> `find_pareto_front`
 
-**v2**:
+=== "v3 (new)"
 
-```python
-agg.identifyParetoOptimalAggregation(untilTotalTimeSteps=500)
-for a in agg.aggregationHistory:
-    print(a.totalAccuracyIndicators()["RMSE"])
-```
+    ```python
+    pareto = tsam.tuning.find_pareto_front(
+        df,
+        period_duration=24,
+        max_timesteps=500,
+        cluster=ClusterConfig(method="hierarchical"),
+        segment_representation="mean",
+    )
+    print(pareto.summary)              # DataFrame of all tested configs
+    pareto.plot()                      # Interactive Plotly visualization
+    ```
 
-**v3**:
+=== "v2 (old)"
 
-```python
-pareto = tsam.tuning.find_pareto_front(
-    df,
-    period_duration=24,
-    max_timesteps=500,
-    cluster=ClusterConfig(method="hierarchical"),
-    segment_representation="mean",
-)
-print(pareto.summary)              # DataFrame of all tested configs
-pareto.plot()                      # Interactive Plotly visualization
-```
+    ```python
+    agg.identifyParetoOptimalAggregation(untilTotalTimeSteps=500)
+    for a in agg.aggregationHistory:
+        print(a.totalAccuracyIndicators()["RMSE"])
+    ```
 
 The `TuningResult` returned by both functions also supports
 `find_by_timesteps(target)` and `find_by_rmse(threshold)` for
@@ -390,61 +401,59 @@ pandas loops with vectorized numpy operations.
 | kmeans | 1.4x | 4x | 6x | 6x |
 | kmaxoids | 1.3x | 1.4x | 1.4x | 1.4x |
 
-Key optimizations:
+??? info "Key optimizations"
 
-- **`predictOriginalData()`**: Vectorized indexing replaces per-period
-  `.unstack()` loop (~290x function speedup).
-- **`durationRepresentation()`**: numpy 3D operations replace nested
-  pandas loops (~8x function speedup, contributing to the distribution
-  config gains above).
-- **`_rescaleClusterPeriods()`**: numpy 3D arrays replace pandas
-  MultiIndex operations (~11x function speedup).
+    - **`predictOriginalData()`**: Vectorized indexing replaces per-period
+      `.unstack()` loop (~290x function speedup).
+    - **`durationRepresentation()`**: numpy 3D operations replace nested
+      pandas loops (~8x function speedup, contributing to the distribution
+      config gains above).
+    - **`_rescaleClusterPeriods()`**: numpy 3D arrays replace pandas
+      MultiIndex operations (~11x function speedup).
 
-Iterative methods (kmeans, kmedoids, kmaxoids) show modest gains because
-the solver itself dominates runtime.
+    Iterative methods (kmeans, kmedoids, kmaxoids) show modest gains because
+    the solver itself dominates runtime.
 
-Use `benchmarks/bench.py` to run your own comparisons:
+    Use `benchmarks/bench.py` to run your own comparisons:
 
-```
-pytest benchmarks/bench.py --benchmark-save=my_run
-```
+    ```
+    pytest benchmarks/bench.py --benchmark-save=my_run
+    ```
 
 ## Result consistency and reproducibility
 
-### Cross-platform reproducibility
+??? info "Cross-platform reproducibility"
 
-v2.3.9 used numpy's default unstable sort (`introsort`) in
-`durationRepresentation()`, which does not guarantee a specific order
-for tied values. In practice, this caused different results on different
-platforms (macOS vs Linux vs Windows) for distribution representations.
+    v2.3.9 used numpy's default unstable sort (`introsort`) in
+    `durationRepresentation()`, which does not guarantee a specific order
+    for tied values. In practice, this caused different results on different
+    platforms (macOS vs Linux vs Windows) for distribution representations.
 
-v3 fixes this by using `kind="stable"` (mergesort) for all sorting
-operations and rounding floating-point means to 10 decimal places before
-tie-breaking. This guarantees **identical results across macOS, Linux,
-and Windows** for all configurations.
+    v3 fixes this by using `kind="stable"` (mergesort) for all sorting
+    operations and rounding floating-point means to 10 decimal places before
+    tie-breaking. This guarantees **identical results across macOS, Linux,
+    and Windows** for all configurations.
 
-### Consistency with v2.3.9
+??? info "Consistency with v2.3.9"
 
-As a consequence of the stable sort fix, 4 distribution-related
-configurations produce slightly different results compared to v2.3.9:
+    As a consequence of the stable sort fix, 4 distribution-related
+    configurations produce slightly different results compared to v2.3.9:
 
-- `hierarchical_distribution`
-- `hierarchical_distribution_minmax`
-- `distribution_global`
-- `distribution_minmax_global`
+    - `hierarchical_distribution`
+    - `hierarchical_distribution_minmax`
+    - `distribution_global`
+    - `distribution_minmax_global`
 
-The stable sort breaks ties by position rather than arbitrarily, and
-rounding absorbs ~1e-16 floating-point noise that previously created
-artificial ordering among effectively-equal means. This changes the
-assignment of representative values to time steps, but preserves all
-statistical properties (same distribution, same min/max, same weighted
-mean).
+    The stable sort breaks ties by position rather than arbitrarily, and
+    rounding absorbs ~1e-16 floating-point noise that previously created
+    artificial ordering among effectively-equal means. This changes the
+    assignment of representative values to time steps, but preserves all
+    statistical properties (same distribution, same min/max, same weighted
+    mean).
 
-All other 23 configurations (hierarchical with medoid/mean/maxoid,
-averaging, contiguous, kmeans, kmedoids, kmaxoids, minmaxmean,
-segmentation, extremes) are bit-for-bit identical to v2.3.9.
-
-### Going forward
+    All other 23 configurations (hierarchical with medoid/mean/maxoid,
+    averaging, contiguous, kmeans, kmedoids, kmaxoids, minmaxmean,
+    segmentation, extremes) are bit-for-bit identical to v2.3.9.
 
 Result stability is enforced by two test layers:
 
