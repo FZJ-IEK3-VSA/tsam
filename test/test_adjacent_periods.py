@@ -1,14 +1,13 @@
 import time
 
 import numpy as np
-import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
-from conftest import TESTDATA_CSV
+from conftest import load_testdata
 
 
 def test_adjacent_periods():
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    raw = load_testdata()
 
     noTypicalPeriods = 8
 

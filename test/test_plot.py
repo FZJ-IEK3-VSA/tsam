@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-import pandas as pd
 import plotly.graph_objects as go
 import pytest
 
+if TYPE_CHECKING:
+    import pandas as pd
+
 import tsam
-from conftest import TESTDATA_CSV
+from conftest import load_testdata
 from tsam.plot import ResultPlotAccessor, _validate_columns
 
 
 @pytest.fixture(scope="module")
 def sample_data() -> pd.DataFrame:
-    return pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True)
+    return load_testdata(parse_dates=True)
 
 
 @pytest.fixture(scope="module")

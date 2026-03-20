@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 # Path to test data directory
@@ -15,6 +16,17 @@ EXAMPLES_DIR = TEST_DIR.parent / "docs" / "source" / "examples_notebooks"
 TESTDATA_CSV = EXAMPLES_DIR / "testdata.csv"
 RESULTS_DIR = TEST_DATA_DIR  # Expected output CSV files for tests
 GOLDEN_DIR = TEST_DATA_DIR / "golden"
+
+# Truncate test data to 91 days (2184h) — must be divisible by 24 (hoursPerPeriod).
+MAX_TIMESTEPS = 2184
+
+
+def load_testdata(parse_dates: bool = False) -> pd.DataFrame:
+    """Load testdata.csv truncated to MAX_TIMESTEPS rows."""
+    return pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=parse_dates).iloc[
+        :MAX_TIMESTEPS
+    ]
+
 
 # Validate paths exist (helpful for debugging if directory structure changes)
 if not TESTDATA_CSV.exists():

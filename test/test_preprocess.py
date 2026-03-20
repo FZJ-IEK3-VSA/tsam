@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
-from conftest import RESULTS_DIR, TESTDATA_CSV
+from conftest import RESULTS_DIR, load_testdata
 
 
 def test_preprocess():
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    raw = load_testdata()
 
     raw_wind = raw.loc[:, "Wind"].to_frame()
 

@@ -6,19 +6,22 @@ import pandas as pd
 import pytest
 
 import tsam.timeseriesaggregation as tsam
-from conftest import TESTDATA_CSV
+from conftest import load_testdata
 
 pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
 
 
 def test_subhourlyResolution():
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    raw = load_testdata()
 
     rawSubhourlyInndex = copy.deepcopy(raw)
 
     # reset index of new dataframe to 15 min. intervals
     rawSubhourlyInndex.index = pd.date_range(
-        "2050-01-01 00:30:00", periods=8760, freq=(str(0.25) + "h"), tz="Europe/Berlin"
+        "2050-01-01 00:30:00",
+        periods=len(raw),
+        freq=(str(0.25) + "h"),
+        tz="Europe/Berlin",
     )
 
     starttime = time.time()

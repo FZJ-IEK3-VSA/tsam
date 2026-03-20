@@ -2,11 +2,10 @@ import os
 import time
 
 import numpy as np
-import pandas as pd
 import pytest
 
 import tsam.timeseriesaggregation as tsam
-from conftest import TESTDATA_CSV
+from conftest import load_testdata
 
 pytestmark = pytest.mark.filterwarnings(
     "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
@@ -14,7 +13,7 @@ pytestmark = pytest.mark.filterwarnings(
 
 
 def test_k_maxoids():
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    raw = load_testdata()
 
     starttime = time.time()
 

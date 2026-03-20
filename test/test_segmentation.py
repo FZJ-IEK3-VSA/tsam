@@ -5,13 +5,13 @@ import pandas as pd
 import pytest
 
 import tsam.timeseriesaggregation as tsam
-from conftest import RESULTS_DIR, TESTDATA_CSV
+from conftest import RESULTS_DIR, load_testdata
 
 pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
 
 
 def test_segmentation():
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    raw = load_testdata()
 
     orig_raw = pd.read_csv(
         RESULTS_DIR / "testperiods_segmentation.csv",

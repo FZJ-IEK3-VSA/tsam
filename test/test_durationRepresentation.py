@@ -2,11 +2,10 @@ import os
 import time
 
 import numpy as np
-import pandas as pd
 import pytest
 
 import tsam.timeseriesaggregation as tsam
-from conftest import TESTDATA_CSV
+from conftest import load_testdata
 
 pytestmark = [
     pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning"),
@@ -17,7 +16,7 @@ pytestmark = [
 
 
 def test_durationRepresentation():
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    raw = load_testdata()
 
     starttime = time.time()
 
@@ -92,7 +91,7 @@ def test_durationRepresentation():
 
 @pytest.mark.filterwarnings("ignore:The cluster is too small:UserWarning")
 def test_distributionMinMaxRepresentation():
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    raw = load_testdata()
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
@@ -124,7 +123,7 @@ def test_distributionMinMaxRepresentation():
 
 
 def test_distributionRepresentation_keeps_mean():
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    raw = load_testdata()
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,

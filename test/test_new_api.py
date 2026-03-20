@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 import tsam
-from conftest import TESTDATA_CSV
+from conftest import load_testdata
 from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
 
 pytestmark = pytest.mark.filterwarnings(
@@ -15,7 +15,7 @@ pytestmark = pytest.mark.filterwarnings(
 @pytest.fixture
 def sample_data():
     """Load sample time series data."""
-    return pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True)
+    return load_testdata(parse_dates=True)
 
 
 class TestAggregate:

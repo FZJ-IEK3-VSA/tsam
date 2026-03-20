@@ -7,7 +7,7 @@ import pytest
 # Old API
 import tsam.hyperparametertuning as old_tune
 import tsam.timeseriesaggregation as old_tsam
-from conftest import TESTDATA_CSV
+from conftest import load_testdata
 
 # New API
 from tsam import (
@@ -30,7 +30,7 @@ from tsam.tuning import (
 @pytest.fixture
 def sample_data():
     """Load sample time series data."""
-    return pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True)
+    return load_testdata(parse_dates=True)
 
 
 @pytest.fixture

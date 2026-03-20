@@ -4,11 +4,11 @@ import numpy as np
 import pandas as pd
 
 import tsam.timeseriesaggregation as tsam
-from conftest import RESULTS_DIR, TESTDATA_CSV
+from conftest import RESULTS_DIR, load_testdata
 
 
 def test_k_medoids():
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    raw = load_testdata()
 
     orig_raw = pd.read_csv(
         RESULTS_DIR / "testperiods_kmedoids.csv",

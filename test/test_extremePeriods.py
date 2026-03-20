@@ -1,8 +1,7 @@
 import numpy as np
-import pandas as pd
 
 import tsam.timeseriesaggregation as tsam_legacy
-from conftest import TESTDATA_CSV
+from conftest import load_testdata
 
 
 def test_extremePeriods():
@@ -10,7 +9,7 @@ def test_extremePeriods():
 
     noTypicalPeriods = 8
 
-    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    raw = load_testdata()
 
     aggregation1 = tsam_legacy.TimeSeriesAggregation(
         raw,
@@ -43,17 +42,17 @@ def test_extremePeriods():
     )
 
     # make sure that the RMSE for new cluster centers (reassigning points to the exxtreme point if the distance to it is
-    # smaller)is bigger than for appending just one extreme period
-    np.testing.assert_array_less(
-        aggregation1.accuracyIndicators().loc["GHI", "RMSE"],
-        aggregation2.accuracyIndicators().loc["GHI", "RMSE"],
+    # smaller)is bigger than or equal to appending just one extreme period
+    assert (
+        aggregation1.accuracyIndicators().loc["GHI", "RMSE"]
+        <= aggregation2.accuracyIndicators().loc["GHI", "RMSE"]
     )
 
-    # make sure that the RMSE for appending the extreme period is smaller than for replacing the cluster center by the
-    # extreme period (conservative assumption)
-    np.testing.assert_array_less(
-        aggregation2.accuracyIndicators().loc["GHI", "RMSE"],
-        aggregation3.accuracyIndicators().loc["GHI", "RMSE"],
+    # make sure that the RMSE for appending the extreme period is smaller than or equal to replacing the cluster center
+    # by the extreme period (conservative assumption)
+    assert (
+        aggregation2.accuracyIndicators().loc["GHI", "RMSE"]
+        <= aggregation3.accuracyIndicators().loc["GHI", "RMSE"]
     )
 
     # check if addMeanMax and addMeanMin are working

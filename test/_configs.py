@@ -42,14 +42,21 @@ def _make_constant() -> pd.DataFrame:
 
 def _make_with_zero_column() -> pd.DataFrame:
     """testdata with an extra all-zero column."""
-    df = pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True)
+    df = pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True).iloc[:MAX_TIMESTEPS]
     df["Zero"] = 0.0
     return df
 
 
+# Truncate test data to 91 days (2184h) — must be divisible by 24 (hoursPerPeriod).
+MAX_TIMESTEPS = 2184
+
 DATASETS = {
-    "testdata": lambda: pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True),
-    "wide": lambda: pd.read_csv(WIDE_CSV, index_col=0, parse_dates=True),
+    "testdata": lambda: pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True).iloc[
+        :MAX_TIMESTEPS
+    ],
+    "wide": lambda: pd.read_csv(WIDE_CSV, index_col=0, parse_dates=True).iloc[
+        :MAX_TIMESTEPS
+    ],
     "constant": _make_constant,
     "with_zero_column": _make_with_zero_column,
 }

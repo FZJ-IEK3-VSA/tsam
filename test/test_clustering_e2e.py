@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from conftest import TESTDATA_CSV
+from conftest import load_testdata
 from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
 
 pytestmark = pytest.mark.filterwarnings(
@@ -179,7 +179,7 @@ def get_test_ids():
 @pytest.fixture(scope="module")
 def input_data():
     """Load the input data used for all tests."""
-    return pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True)
+    return load_testdata(parse_dates=True)
 
 
 @pytest.fixture(scope="module")
@@ -479,7 +479,7 @@ def generate_fixtures(output_dir: Path | None = None):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load input data
-    input_data = pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True)
+    input_data = load_testdata(parse_dates=True)
 
     for test_case in TEST_CASES:
         print(f"Generating fixtures for {test_case.id}...")
