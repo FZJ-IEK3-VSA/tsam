@@ -1,0 +1,72 @@
+name: Benchmark mamba run overhead
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ["develop"]
+
+jobs:
+  benchmark:
+    name: Benchmark mamba run vs direct execution
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          activate-environment: test_env
+          environment-file: environment.yml
+
+      - name: "Benchmark: mamba run (10 iterations)"
+        run: |
+          echo "=== mamba run --name test_env python -c 'pass' ==="
+          for i in $(seq 1 10); do
+            start=$(date +%s%N)
+            mamba run --name test_env python -c "pass"
+            end=$(date +%s%N)
+            echo "Run $i: $(( (end - start) / 1000000 ))ms"
+          done
+
+      - name: "Benchmark: direct python (10 iterations)"
+        run: |
+          echo "=== python -c 'pass' (activated env) ==="
+          for i in $(seq 1 10); do
+            start=$(date +%s%N)
+            python -c "pass"
+            end=$(date +%s%N)
+            echo "Run $i: $(( (end - start) / 1000000 ))ms"
+          done
+
+      - name: "Benchmark: mamba run pytest --co (collect only)"
+        run: |
+          echo "=== mamba run --name test_env pytest --co -q ==="
+          start=$(date +%s%N)
+          mamba run --name test_env pytest --co -q
+          end=$(date +%s%N)
+          echo "mamba run pytest --co: $(( (end - start) / 1000000 ))ms"
+
+          echo ""
+          echo "=== pytest --co -q (direct) ==="
+          start=$(date +%s%N)
+          pytest --co -q
+          end=$(date +%s%N)
+          echo "direct pytest --co: $(( (end - start) / 1000000 ))ms"
+
+      - name: "Benchmark: mamba run pytest (actual test run)"
+        run: |
+          echo "=== mamba run --name test_env pytest -x -q --ignore=test/test_old_new_equivalence.py ==="
+          start=$(date +%s%N)
+          mamba run --name test_env pytest -x -q --ignore=test/test_old_new_equivalence.py
+          end=$(date +%s%N)
+          echo "mamba run pytest: $(( (end - start) / 1000000 ))ms"
+
+          echo ""
+          echo "=== pytest -x -q (direct) ==="
+          start=$(date +%s%N)
+          pytest -x -q --ignore=test/test_old_new_equivalence.py
+          end=$(date +%s%N)
+          echo "direct pytest: $(( (end - start) / 1000000 ))ms"
