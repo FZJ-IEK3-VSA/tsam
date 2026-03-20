@@ -5,68 +5,84 @@ on:
   pull_request:
     branches: ["develop"]
 
+# Match the reusable workflow: pwsh default shell
+defaults:
+  run:
+    shell: pwsh
+
 jobs:
   benchmark:
     name: Benchmark mamba run vs direct execution
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
+      # Identical setup to _run_single_conda_forge_test.yml
       - uses: conda-incubator/setup-miniconda@v3
         with:
-          miniforge-version: latest
-          activate-environment: test_env
-          environment-file: environment.yml
+          miniforge-version: 25.11.0-1
+          channels: conda-forge
+          activate-environment: "test_env"
+          conda-remove-defaults: "true"
+          auto-activate-base: false
 
-      - name: "Benchmark: mamba run (10 iterations)"
+      - name: Setup environment
+        run: |
+          mamba env create --name test_env --file=environment.yml
+          mamba run --name test_env pip install -e . --no-deps
+          echo "Environment ready"
+
+      - name: "Benchmark: python -c pass (10x each)"
+        shell: bash -l {0}
         run: |
           echo "=== mamba run --name test_env python -c 'pass' ==="
           for i in $(seq 1 10); do
             start=$(date +%s%N)
             mamba run --name test_env python -c "pass"
             end=$(date +%s%N)
-            echo "Run $i: $(( (end - start) / 1000000 ))ms"
+            echo "  mamba run $i: $(( (end - start) / 1000000 ))ms"
           done
 
-      - name: "Benchmark: direct python (10 iterations)"
-        run: |
-          echo "=== python -c 'pass' (activated env) ==="
+          echo ""
+          echo "=== conda activate + python -c 'pass' ==="
+          conda activate test_env
           for i in $(seq 1 10); do
             start=$(date +%s%N)
             python -c "pass"
             end=$(date +%s%N)
-            echo "Run $i: $(( (end - start) / 1000000 ))ms"
+            echo "  direct $i: $(( (end - start) / 1000000 ))ms"
           done
 
-      - name: "Benchmark: mamba run pytest --co (collect only)"
+      - name: "Benchmark: pytest --co (collect only)"
+        shell: bash -l {0}
         run: |
-          echo "=== mamba run --name test_env pytest --co -q ==="
+          echo "=== mamba run pytest --co -q ==="
           start=$(date +%s%N)
           mamba run --name test_env pytest --co -q
           end=$(date +%s%N)
-          echo "mamba run pytest --co: $(( (end - start) / 1000000 ))ms"
+          echo "mamba run: $(( (end - start) / 1000000 ))ms"
 
           echo ""
-          echo "=== pytest --co -q (direct) ==="
+          echo "=== direct pytest --co -q ==="
+          conda activate test_env
           start=$(date +%s%N)
           pytest --co -q
           end=$(date +%s%N)
-          echo "direct pytest --co: $(( (end - start) / 1000000 ))ms"
+          echo "direct: $(( (end - start) / 1000000 ))ms"
 
-      - name: "Benchmark: mamba run pytest (actual test run)"
+      - name: "Benchmark: full pytest run"
+        shell: bash -l {0}
         run: |
-          echo "=== mamba run --name test_env pytest -x -q --ignore=test/test_old_new_equivalence.py ==="
+          echo "=== mamba run pytest ==="
           start=$(date +%s%N)
-          mamba run --name test_env pytest -x -q --ignore=test/test_old_new_equivalence.py
+          mamba run --name test_env pytest -x -q
           end=$(date +%s%N)
-          echo "mamba run pytest: $(( (end - start) / 1000000 ))ms"
+          echo "mamba run: $(( (end - start) / 1000000 ))ms"
 
           echo ""
-          echo "=== pytest -x -q (direct) ==="
+          echo "=== direct pytest ==="
+          conda activate test_env
           start=$(date +%s%N)
-          pytest -x -q --ignore=test/test_old_new_equivalence.py
+          pytest -x -q
           end=$(date +%s%N)
-          echo "direct pytest: $(( (end - start) / 1000000 ))ms"
+          echo "direct: $(( (end - start) / 1000000 ))ms"
