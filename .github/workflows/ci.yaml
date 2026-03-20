@@ -2,8 +2,6 @@ name: CI
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["**"]
   pull_request:
     branches: [develop, master]
 
@@ -24,19 +22,19 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/ruff-action@v3
       - run: ruff check --output-format=github --config=pyproject.toml
       - run: ruff format --diff --config=pyproject.toml
+
   test:
     name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # GitHub-hosted for standard multi-version + cross-platform testing
         os: [ubuntu-24.04]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         include:
