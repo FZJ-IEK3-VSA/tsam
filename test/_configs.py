@@ -658,6 +658,72 @@ CONFIGS: list[BaseConfig] = [
         },
         only_datasets={"testdata"},
     ),
+    # --- Weight x segmentation x feature (three-way) ---
+    BaseConfig(
+        id="hierarchical_weighted_segmentation_extremes",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "segmentation": True,
+            "noSegments": 6,
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["Load"],
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_segmentation_samemean",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "segmentation": True,
+            "noSegments": 4,
+            "sameMean": True,
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_segmentation_distribution",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "segmentation": True,
+            "noSegments": 4,
+            "representationMethod": "durationRepresentation",
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="kmeans_weighted_segmentation",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_means",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "segmentation": True,
+            "noSegments": 8,
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    # --- Weight x no rescale ---
+    BaseConfig(
+        id="hierarchical_weighted_no_rescale",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "rescaleClusterPeriods": False,
+        },
+        only_datasets={"testdata"},
+    ),
 ]
 
 

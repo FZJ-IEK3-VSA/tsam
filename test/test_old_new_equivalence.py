@@ -402,6 +402,56 @@ _NEW_KWARGS: dict[str, dict] = {
         "extremes": ExtremeConfig(method="replace", max_value=["Load"]),
         "segments": SegmentConfig(n_segments=6),
     },
+    # --- Weight x segmentation x feature (three-way) ---
+    "hierarchical_weighted_segmentation_extremes": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="hierarchical",
+            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+        ),
+        "segments": SegmentConfig(n_segments=6),
+        "extremes": ExtremeConfig(method="append", max_value=["Load"]),
+    },
+    "hierarchical_weighted_segmentation_samemean": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="hierarchical",
+            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            normalize_column_means=True,
+        ),
+        "segments": SegmentConfig(n_segments=4),
+    },
+    "hierarchical_weighted_segmentation_distribution": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="hierarchical",
+            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            representation="distribution",
+        ),
+        "segments": SegmentConfig(n_segments=4),
+    },
+    "kmeans_weighted_segmentation": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="kmeans",
+            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+        ),
+        "segments": SegmentConfig(n_segments=8),
+    },
+    # --- Weight x no rescale ---
+    "hierarchical_weighted_no_rescale": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="hierarchical",
+            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+        ),
+        "preserve_column_means": False,
+    },
 }
 
 _RTOL: dict[str, float] = {
@@ -415,6 +465,7 @@ _RTOL: dict[str, float] = {
     "kmeans_weighted": 1e-5,
     "kmaxoids_weighted": 1e-5,
     "kmeans_weighted_distribution": 1e-5,
+    "kmeans_weighted_segmentation": 1e-5,
 }
 
 _WINDOWS_OPENMP_RUNTIME_WARNING_CASE_IDS = {
