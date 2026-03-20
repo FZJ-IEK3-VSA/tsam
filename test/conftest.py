@@ -9,7 +9,7 @@ TEST_DIR = Path(__file__).parent
 TEST_DATA_DIR = TEST_DIR / "data"
 
 # Path to examples directory (for testdata.csv which is shared with notebooks)
-EXAMPLES_DIR = TEST_DIR.parent / "docs" / "source" / "examples_notebooks"
+EXAMPLES_DIR = TEST_DIR.parent / "docs" / "notebooks"
 
 # Common test data paths
 TESTDATA_CSV = EXAMPLES_DIR / "testdata.csv"
