@@ -17,11 +17,6 @@ for Economic Affairs and Energy of Germany in the project METIS (project number 
   </a>
 </div>
 
-<div style="text-align: center">
-  <a href="http://www.metis-platform.net/metis-platform/EN/Home/_node.html">
-    <img src="http://www.metis-platform.net/SiteGlobals/StyleBundles/Bilder/NeuesLayout/metis-platform/logo.jpg?__blob=normal" width="200" alt="METIS Logo">
-  </a>
-</div>
 
 Further, this work was supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050 A Contribution of
 the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/).
