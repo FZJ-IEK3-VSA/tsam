@@ -79,6 +79,9 @@ pythonpath = [
   "test",
 ] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
 filterwarnings = [
   "ignore::tsam.exceptions.LegacyAPIWarning",
 ]

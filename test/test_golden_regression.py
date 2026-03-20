@@ -26,7 +26,7 @@ import pytest
 from sklearn.exceptions import ConvergenceWarning
 
 from _configs import GOLDEN_DIR, case_ids, get_data
-from test_old_new_equivalence import (
+from _old_new_equivalence import (
     CASES,
     EquivalenceCase,
     _run_new,

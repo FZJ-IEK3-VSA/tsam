@@ -35,3 +35,19 @@ def pytest_addoption(parser):
 @pytest.fixture
 def update_golden(request):
     return request.config.getoption("--update-golden")
+
+
+# ---------------------------------------------------------------------------
+# Slow test markers — k-medoids solver takes ~30-60s per run
+# ---------------------------------------------------------------------------
+
+SLOW_KEYWORDS = ["kmedoids"]
+
+
+def pytest_collection_modifyitems(items):
+    """Mark tests whose node ID contains a slow keyword."""
+    slow = pytest.mark.slow
+    for item in items:
+        node = item.nodeid.lower()
+        if any(kw in node for kw in SLOW_KEYWORDS):
+            item.add_marker(slow)
