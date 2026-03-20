@@ -100,32 +100,41 @@ def _warn_if_out_of_bounds(
             )
 
 
-def _weight_candidates(
-    candidates: np.ndarray,
-    weight_values: list[float],
-    n_timesteps: int,
-) -> np.ndarray:
-    """Apply per-column weights to the flat candidates array.
+def _apply_weights_df(
+    df: pd.DataFrame, weights: dict[str, float] | None
+) -> pd.DataFrame:
+    """Multiply DataFrame columns by weights for segmentation.
 
-    Each row of candidates has shape (n_columns * n_timesteps,) with columns
-    interleaved in the MultiIndex order (col0_t0, col0_t1, ..., col1_t0, ...).
-
-    ``weight_values`` must have exactly one entry per column, in the same
-    order as the columns in the candidates array.
+    Segmentation boundaries are determined in weighted space so that
+    high-weight columns have more influence on where segments fall.
     """
-    weighted: np.ndarray = candidates.copy()
-    for ci, w in enumerate(weight_values):
-        start = ci * n_timesteps
-        end = start + n_timesteps
-        weighted[:, start:end] *= w
-    return weighted
+    if not weights:
+        return df
+    out = df.copy()
+    for col, w in weights.items():
+        if col in out.columns:
+            out[col] *= w
+    return pd.DataFrame(out)
+
+
+def _remove_weights_df(
+    df: pd.DataFrame, weights: dict[str, float] | None
+) -> pd.DataFrame:
+    """Divide out weights after segmentation to restore unweighted values."""
+    if not weights:
+        return df
+    out = df.copy()
+    for col, w in weights.items():
+        if col in out.columns:
+            out[col] /= w
+    return pd.DataFrame(out)
 
 
 def _build_weight_vector(
     columns: pd.Index,
     weights: dict[str, float] | None,
-) -> list[float] | None:
-    """Build a weight list aligned to *columns*, defaulting unlisted columns to 1.0.
+) -> np.ndarray | None:
+    """Build a weight array aligned to *columns*, defaulting unlisted columns to 1.0.
 
     Returns ``None`` if all weights are 1.0 (no weighting needed).
     """
@@ -144,7 +153,7 @@ def _build_weight_vector(
         if w != 1.0:
             any_non_unit = True
         result.append(w)
-    return result if any_non_unit else None
+    return np.array(result) if any_non_unit else None
 
 
 def _build_representation_dict(
@@ -185,45 +194,30 @@ def _prepare_data(
     period_profiles = unstack_to_periods(norm_data.values, cfg.n_timesteps_per_period)
     candidates = period_profiles.profiles_dataframe.values
 
-    # Step 2b: Create weighted candidates for clustering distance
-    validated_weights = _build_weight_vector(norm_data.values.columns, cluster.weights)
-    weighted_candidates: np.ndarray | None = None
-    if validated_weights is not None:
-        weighted_candidates = _weight_candidates(
-            candidates,
-            validated_weights,
-            period_profiles.n_timesteps_per_period,
-        )
+    # Step 2b: Apply weights directly to candidates
+    weight_vector = _build_weight_vector(norm_data.values.columns, cluster.weights)
+    if weight_vector is not None:
+        weight_tile = np.repeat(weight_vector, period_profiles.n_timesteps_per_period)
+        candidates = candidates * weight_tile
 
     # Step 3: Add period sum features if requested
     # Period sums are extra columns appended for clustering distance only;
     # they must NOT reach representations() which expects original columns.
     n_feature_cols = candidates.shape[1]
-    has_period_sums = False
     if cluster.include_period_sums:
-        has_period_sums = True
-        if weighted_candidates is not None:
-            weighted_candidates, _n_extra = add_period_sum_features(
-                period_profiles.profiles_dataframe, weighted_candidates
-            )
-        else:
-            # Augmented matrix is used for clustering distance only;
-            # candidates stays unaugmented for representation.
-            augmented, _n_extra = add_period_sum_features(
-                period_profiles.profiles_dataframe, candidates
-            )
-            weighted_candidates = augmented
+        candidates, _n_extra = add_period_sum_features(
+            period_profiles.profiles_dataframe, candidates
+        )
 
     return PreparedData(
         norm_data=norm_data,
         period_profiles=period_profiles,
         candidates=candidates,
-        weighted_candidates=weighted_candidates,
         representation_dict=representation_dict,
         n_feature_cols=n_feature_cols,
         original_column_order=original_column_order,
         original_data=original_data,
-        has_period_sums=has_period_sums,
+        weight_vector=weight_vector,
     )
 
 
@@ -236,7 +230,6 @@ def _cluster_and_postprocess(
     cluster = cfg.cluster
     cluster_representation = cluster.get_representation()
     candidates = prepared.candidates
-    weighted_candidates = prepared.weighted_candidates
     period_profiles = prepared.period_profiles
 
     # Step 4: Cluster
@@ -262,29 +255,9 @@ def _cluster_and_postprocess(
                 cluster,
                 prepared.representation_dict,
                 cfg.n_timesteps_per_period,
-                weighted_candidates=weighted_candidates,
+                n_feature_cols=prepared.n_feature_cols,
             )
         else:
-            # Duration-curve clustering sorts profiles — period-sum features
-            # are not sortable columns, so don't pass them as weighted candidates.
-            dc_weighted = (
-                weighted_candidates
-                if weighted_candidates is not None and not prepared.has_period_sums
-                else None
-            )
-            if (
-                weighted_candidates is not None
-                and prepared.has_period_sums
-                and dc_weighted is None
-            ):
-                warnings.warn(
-                    "Column weights are ignored for duration-curve clustering when "
-                    "include_period_sums=True, because period-sum features cannot "
-                    "be sorted. Either disable include_period_sums or "
-                    "use_duration_curves to apply weights.",
-                    UserWarning,
-                    stacklevel=2,
-                )
             cluster_centers, cluster_center_indices, cluster_order = (
                 cluster_sorted_periods(
                     candidates,
@@ -293,7 +266,6 @@ def _cluster_and_postprocess(
                     cluster,
                     prepared.representation_dict,
                     cfg.n_timesteps_per_period,
-                    weighted_candidates=dc_weighted,
                 )
             )
         clustering_duration = time.time() - t_start
@@ -305,6 +277,14 @@ def _cluster_and_postprocess(
     cluster_periods_list: list[np.ndarray] = [
         center[: prepared.n_feature_cols] for center in cluster_centers
     ]
+
+    # Unweight representatives — medoid/maxoid selection uses weighted
+    # distances (intentional: weights affect which period is "closest").
+    # Remove weights before downstream steps (extremes, rescale, denorm)
+    # which expect unweighted data.
+    if prepared.weight_vector is not None:
+        inv_tile = np.repeat(1.0 / prepared.weight_vector, cfg.n_timesteps_per_period)
+        cluster_periods_list = [center * inv_tile for center in cluster_periods_list]
 
     # Step 6: Add extreme periods if configured
     extreme_periods_info: dict[str, dict] = {}
@@ -387,15 +367,22 @@ def _format_and_reconstruct(
     segment_center_indices = None
 
     if cfg.segments is not None:
+        # Segmentation runs in weighted space so that high-weight columns
+        # have more influence on segment boundaries. Weights are removed
+        # from the output before denormalization.
+        weights = cfg.cluster.weights
+        segmentation_input = _apply_weights_df(normalized_typical_periods, weights)
         segmented_df, predicted_segmented_df, segment_center_indices = (
             segment_typical_periods(
-                normalized_typical_periods,
+                segmentation_input,
                 cfg.n_timesteps_per_period,
                 cfg.segments,
                 prepared.representation_dict,
                 cfg.predef,
             )
         )
+        segmented_df = _remove_weights_df(segmented_df, weights)
+        predicted_segmented_df = _remove_weights_df(predicted_segmented_df, weights)
         segmented_normalized = segmented_df.reset_index(level=3, drop=True)
         denorm_source = segmented_normalized
         reconstruct_source = predicted_segmented_df

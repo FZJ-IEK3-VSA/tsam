@@ -15,7 +15,7 @@ import pytest
 
 from conftest import TESTDATA_CSV
 from tsam import ClusterConfig, ClusteringResult, aggregate
-from tsam.pipeline import _build_weight_vector, _weight_candidates
+from tsam.pipeline import _build_weight_vector
 from tsam.weights import MIN_WEIGHT, validate_weights
 
 
@@ -47,13 +47,13 @@ class TestBuildWeightVector:
     def test_full_weights(self):
         cols = pd.Index(["A", "B", "C"])
         result = _build_weight_vector(cols, {"A": 2.0, "B": 1.0, "C": 3.0})
-        assert result == [2.0, 1.0, 3.0]
+        np.testing.assert_array_equal(result, [2.0, 1.0, 3.0])
 
     def test_partial_weights_default_to_one(self):
         """Unlisted columns must default to 1.0, not be omitted."""
         cols = pd.Index(["A", "B", "C"])
         result = _build_weight_vector(cols, {"B": 2.0})
-        assert result == [1.0, 2.0, 1.0]
+        np.testing.assert_array_equal(result, [1.0, 2.0, 1.0])
 
     def test_min_weight_enforcement(self):
         cols = pd.Index(["A", "B"])
@@ -70,31 +70,7 @@ class TestBuildWeightVector:
         """Weights must follow the column order, not the dict order."""
         cols = pd.Index(["C", "A", "B"])
         result = _build_weight_vector(cols, {"A": 2.0, "B": 3.0, "C": 4.0})
-        assert result == [4.0, 2.0, 3.0]
-
-
-class TestWeightCandidates:
-    """Unit tests for _weight_candidates."""
-
-    def test_applies_weights_correctly(self):
-        # 2 periods, 3 columns, 2 timesteps each → shape (2, 6)
-        candidates = np.ones((2, 6))
-        weight_values = [1.0, 2.0, 3.0]
-        result = _weight_candidates(candidates, weight_values, n_timesteps=2)
-
-        expected = np.array(
-            [
-                [1.0, 1.0, 2.0, 2.0, 3.0, 3.0],
-                [1.0, 1.0, 2.0, 2.0, 3.0, 3.0],
-            ]
-        )
-        np.testing.assert_array_equal(result, expected)
-
-    def test_does_not_modify_original(self):
-        candidates = np.ones((2, 4))
-        original = candidates.copy()
-        _weight_candidates(candidates, [2.0, 3.0], n_timesteps=2)
-        np.testing.assert_array_equal(candidates, original)
+        np.testing.assert_array_equal(result, [4.0, 2.0, 3.0])
 
 
 # ---------------------------------------------------------------------------

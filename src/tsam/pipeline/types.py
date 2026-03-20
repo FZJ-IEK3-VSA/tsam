@@ -77,14 +77,13 @@ class PreparedData:
     norm_data: NormalizedData
     period_profiles: PeriodProfiles
     candidates: np.ndarray
-    weighted_candidates: np.ndarray | None
     representation_dict: dict[str, str]
     n_feature_cols: int
     original_column_order: list[str]
     original_data: (
         pd.DataFrame
     )  # original input data (for rescale, bounds, reconstruct)
-    has_period_sums: bool = False
+    weight_vector: np.ndarray | None = None
 
 
 @dataclass(frozen=True)

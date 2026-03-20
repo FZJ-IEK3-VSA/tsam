@@ -20,21 +20,24 @@ def cluster_periods(
     cluster: ClusterConfig,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
-    weighted_candidates: np.ndarray | None = None,
+    n_feature_cols: int,
 ) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
     """Run clustering via aggregate_periods.
 
-    If weighted_candidates is provided, clustering uses weighted data for
-    distance calculation but representations are computed from unweighted
-    candidates.
+    Candidates are already weighted (if weights exist). Period-sum columns
+    (if any) are stripped for representation via n_feature_cols.
 
     Returns (cluster_centers, cluster_center_indices, cluster_order).
     """
-    clustering_input = (
-        weighted_candidates if weighted_candidates is not None else candidates
-    )
+    # If period-sum features are appended, representations must run on
+    # the non-augmented prefix so period-sum columns don't leak into
+    # representatives.
+    rep_candidates: np.ndarray | None = None
+    if candidates.shape[1] != n_feature_cols:
+        rep_candidates = candidates[:, :n_feature_cols]
+
     centers, center_indices, order = aggregate_periods(
-        clustering_input,
+        candidates,
         n_clusters=n_clusters,
         n_iter=100,
         solver=cluster.solver,
@@ -42,9 +45,7 @@ def cluster_periods(
         representation_method=cluster.get_representation(),
         representation_dict=representation_dict,
         n_timesteps_per_period=n_timesteps_per_period,
-        representation_candidates=candidates
-        if weighted_candidates is not None
-        else None,
+        representation_candidates=rep_candidates,
     )
     return centers, center_indices, order
 
@@ -56,13 +57,11 @@ def cluster_sorted_periods(
     cluster: ClusterConfig,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
-    weighted_candidates: np.ndarray | None = None,
 ) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
     """Duration-curve clustering: sort descending, cluster, pick medoid from original.
 
-    If weighted_candidates is provided, the sorted profiles are weighted
-    before clustering distance computation, but medoids are picked from
-    the unweighted unsorted candidates.
+    Candidates are already weighted (if weights exist). Medoids are picked
+    from the (weighted) unsorted candidates.
 
     Returns (cluster_centers, cluster_center_indices, cluster_order).
     """
@@ -76,18 +75,8 @@ def cluster_sorted_periods(
     values_3d = profiles_values.copy().reshape(n_periods, n_columns, n_timesteps)
     sorted_values = (-np.sort(-values_3d, axis=2, kind="stable")).reshape(n_periods, -1)
 
-    # If weights are active, also sort the weighted profiles and cluster on those
-    if weighted_candidates is not None:
-        w_3d = weighted_candidates.copy().reshape(n_periods, n_columns, n_timesteps)
-        sorted_weighted = (-np.sort(-w_3d, axis=2, kind="stable")).reshape(
-            n_periods, -1
-        )
-        clustering_input = sorted_weighted
-    else:
-        clustering_input = sorted_values
-
     _, center_indices, cluster_order = aggregate_periods(
-        clustering_input,
+        sorted_values,
         n_clusters=n_clusters,
         n_iter=30,
         solver=cluster.solver,
@@ -95,12 +84,9 @@ def cluster_sorted_periods(
         representation_method=cluster.get_representation(),
         representation_dict=representation_dict,
         n_timesteps_per_period=n_timesteps_per_period,
-        representation_candidates=sorted_values
-        if weighted_candidates is not None
-        else None,
     )
 
-    # Pick medoid from original (unsorted, unweighted) candidates
+    # Pick medoid from unsorted candidates (already weighted).
     cluster_centers = []
     for cluster_num in np.unique(cluster_order):
         indices = np.where(cluster_order == cluster_num)[0]

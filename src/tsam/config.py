@@ -183,14 +183,29 @@ class ClusterConfig:
         - "maxoid" for kmaxoids
 
     weights : dict[str, float], optional
-        Per-column weights for clustering distance calculation.
-        Higher weight = more influence on clustering.
-        Example: {"demand": 2.0, "solar": 1.0}
+        Per-column importance factors for clustering. Higher weight = more
+        influence. Example: ``{"demand": 2.0, "solar": 1.0}``
 
-        Weights are applied to a separate copy of the candidate matrix used
-        only for clustering distance. They do not affect normalization,
-        rescaling, denormalization, reconstruction, or accuracy computation.
-        Columns not listed default to weight 1.0.
+        Weights scale the normalized data used for all clustering-related
+        decisions. They affect:
+
+        1. **Clustering distance**: Columns with higher weight contribute
+           more to the distance metric, so clusters form around patterns
+           in high-weight columns.
+        2. **Medoid/maxoid selection**: These representations pick an actual
+           period by cross-column distance. Weights change which period is
+           "closest to the centroid" or "farthest from other centroids."
+        3. **Segmentation**: Segment boundaries within typical periods are
+           determined in weighted space. High-weight columns have more
+           influence on where boundaries fall.
+
+        Other representations (mean, distribution, minmax_mean) are
+        **weight-invariant** — the weight multiplies in and divides back
+        out, producing the same result regardless of weight values.
+
+        Weights are removed before producing final outputs. They do not
+        affect normalization, rescaling, denormalization, reconstruction,
+        or accuracy computation. Columns not listed default to weight 1.0.
 
     scale_by_column_means : bool, default False
         Divide each column by its mean after MinMax normalization, so all
