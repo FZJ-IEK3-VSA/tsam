@@ -1,0 +1,50 @@
+/* Notebook styling — hide prompts, style code cells, dark mode support */
+
+/* Hide In [1]: / Out [1]: prompts */
+.jp-InputPrompt,
+.jp-OutputPrompt {
+  display: none !important;
+}
+
+/* Hide non-functional collapsers in static docs */
+.jp-Collapser {
+  display: none;
+}
+
+/* Code cell background */
+.jp-CodeCell .highlight-ipynb {
+  background: #f7f7f7;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 0.5em;
+}
+
+/* Ensure input/output areas use full width */
+.jp-InputArea,
+.jp-OutputArea {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Clean up text output styling */
+.jp-RenderedText pre {
+  background: none;
+  border: none;
+  padding: 0.5em 0;
+}
+
+/* Compact spacing for Plotly charts */
+.jp-OutputArea .js-plotly-plot {
+  margin: 0.25em 0 !important;
+}
+
+/* Dark mode */
+[data-md-color-scheme="slate"] .jp-CodeCell .highlight-ipynb {
+  background: #2b2b2b;
+  border-color: #404040;
+}
+
+[data-md-color-scheme="slate"] .jp-RenderedText pre {
+  background: none;
+}
