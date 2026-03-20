@@ -74,7 +74,7 @@ jobs:
 
   # Conda-forge testing on PRs to master
   extract-python-versions:
-    if: github.base_ref == 'master' && github.actor != 'renovate[bot]'
+    if: github.base_ref == 'master' && github.actor != 'renovate[bot]' && github.actor != 'release-please[bot]'
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions.yml@main
     with:
       library_name: python
@@ -83,7 +83,7 @@ jobs:
   test-conda-forge:
     name: Test conda-forge (Python ${{ matrix.python_version }}, ${{ matrix.runner_tag }})
     needs: extract-python-versions
-    if: github.base_ref == 'master' && github.actor != 'renovate[bot]'
+    if: github.base_ref == 'master' && github.actor != 'renovate[bot]' && github.actor != 'release-please[bot]'
     strategy:
       fail-fast: false
       matrix:
@@ -104,7 +104,7 @@ jobs:
   # (6 OS variants × all Python versions, matching original test_pull_request_master_python_versions.yml)
   test-master:
     name: Test master (Python ${{ matrix.python-version }}, ${{ matrix.os }})
-    if: github.base_ref == 'master'
+    if: github.base_ref == 'master' && github.actor != 'release-please[bot]'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -142,7 +142,7 @@ jobs:
 
   # Min/max dependency boundary testing on PRs to master
   extract-versions:
-    if: github.base_ref == 'master'
+    if: github.base_ref == 'master' && github.actor != 'release-please[bot]'
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@main
     with:
       libraries: "scikit-learn,pandas,numpy,pyomo,networkx,tqdm,highspy"
@@ -151,7 +151,7 @@ jobs:
 
   test-dependency-bounds:
     name: Test ${{ matrix.dependencies.library_name }} ${{ matrix.dependencies.version }} (${{ matrix.dependencies.version_type }})
-    if: github.base_ref == 'master'
+    if: github.base_ref == 'master' && github.actor != 'release-please[bot]'
     needs: extract-versions
     strategy:
       fail-fast: false
