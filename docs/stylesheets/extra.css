@@ -13,6 +13,15 @@
   --md-accent-fg-color--transparent: #21918c1a;
   --md-accent-bg-color: #ffffff;
   --md-accent-bg-color--light: #ffffffb3;
+  --md-typeset-a-color: #35b0ab;
+}
+
+.md-typeset a {
+  color: #35b0ab;
+}
+
+.md-typeset a:hover {
+  color: #21918c;
 }
 
 [data-md-color-scheme="slate"] {
@@ -23,6 +32,7 @@
   --md-primary-bg-color--light: #ffffffb3;
   --md-accent-fg-color: #35b0ab;
   --md-accent-fg-color--transparent: #35b0ab1a;
+  --md-typeset-a-color: #35b0ab;
 }
 
 /* -- Landing page hero logos (light/dark switching) ---------------------- */
