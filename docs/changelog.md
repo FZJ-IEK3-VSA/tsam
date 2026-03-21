@@ -1,8 +1,8 @@
-# tsam's Change Log
+# ETHOS.TSAM Change Log
 
 ## Release version 3.1.1
 
-tsam v3.1.1 is the first stable v3 release (versions 3.0.0 and 3.1.0 were yanked from PyPI).
+ETHOS.TSAM v3.1.1 is the first stable v3 release (versions 3.0.0 and 3.1.0 were yanked from PyPI).
 It introduces a modern functional API alongside significant improvements to performance,
 plotting, hyperparameter tuning, and overall code quality.
 

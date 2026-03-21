@@ -1,0 +1,76 @@
+{#-
+  Custom footer with FZJ / Helmholtz institutional branding
+-#}
+<footer class="md-footer">
+  {% if "navigation.footer" in features %}
+    {% if page.previous_page or page.next_page %}
+      {% if page.meta and page.meta.hide %}
+        {% set hidden = "hidden" if "footer" in page.meta.hide %}
+      {% endif %}
+      <nav class="md-footer__inner md-grid" aria-label="{{ lang.t('footer') }}" {{ hidden }}>
+        {% if page.previous_page %}
+          {% set direction = lang.t("footer.previous") %}
+          <a href="{{ page.previous_page.url | url }}" class="md-footer__link md-footer__link--prev" aria-label="{{ direction }}: {{ page.previous_page.title | e }}">
+            <div class="md-footer__button md-icon">
+              {% set icon = config.theme.icon.previous or "material/arrow-left" %}
+              {% include ".icons/" ~ icon ~ ".svg" %}
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                {{ direction }}
+              </span>
+              <div class="md-ellipsis">
+                {{ page.previous_page.title }}
+              </div>
+            </div>
+          </a>
+        {% endif %}
+        {% if page.next_page %}
+          {% set direction = lang.t("footer.next") %}
+          <a href="{{ page.next_page.url | url }}" class="md-footer__link md-footer__link--next" aria-label="{{ direction }}: {{ page.next_page.title | e }}">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                {{ direction }}
+              </span>
+              <div class="md-ellipsis">
+                {{ page.next_page.title }}
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              {% set icon = config.theme.icon.next or "material/arrow-right" %}
+              {% include ".icons/" ~ icon ~ ".svg" %}
+            </div>
+          </a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% endif %}
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="footer-institutional">
+        <div class="footer-institutional__logos">
+          <a href="https://www.fz-juelich.de/en/ice/ice-2" title="Jülich Systems Analysis (ICE-2)">
+            <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/main/JSA-Header.svg" alt="Jülich Systems Analysis" class="footer-logo footer-logo--jsa">
+          </a>
+          <a href="https://www.helmholtz.de/en/" title="Helmholtz Association">
+            <img src="https://www.helmholtz.de/fileadmin/user_upload/05_aktuelles/Marke_Design/logos/HG_LOGO_S_ENG_RGB.jpg" alt="Helmholtz Association" class="footer-logo footer-logo--helmholtz">
+          </a>
+        </div>
+        <div class="footer-institutional__text">
+          <p>
+            Developed at the
+            <a href="https://www.fz-juelich.de/en/ice/ice-2">Institute of Climate and Energy Systems – Jülich Systems Analysis (ICE-2)</a>,
+            <a href="https://www.fz-juelich.de/en">Forschungszentrum Jülich</a>,
+            a member of the <a href="https://www.helmholtz.de/en/">Helmholtz Association</a>.
+          </p>
+          <p>
+            <a href="https://github.com/FZJ-IEK3-VSA/tsam">GitHub</a> ·
+            <a href="https://github.com/FZJ-IEK3-VSA/tsam/blob/master/LICENSE.txt">MIT License</a> ·
+            <a href="https://www.fz-juelich.de/de/impressum">Imprint</a> ·
+            <a href="https://www.fz-juelich.de/de/datenschutz">Privacy Policy</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>

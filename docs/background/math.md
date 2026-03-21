@@ -1,12 +1,12 @@
 # Mathematical Description
 
-The description of tsam presented in the following is based on the review on time series aggregation methods by
+The description of ETHOS.TSAM presented in the following is based on the review on time series aggregation methods by
 [Hoffmann et al. (2020)](https://www.mdpi.com/1996-1073/13/3/641).
-tsam is aggregating time series by reducing the number of time steps. Generally, time series can also be aggregated by
-grouping similar time series as illustrated in the upper right part of the figure below. Instead, tsam is decreasing
+ETHOS.TSAM is aggregating time series by reducing the number of time steps. Generally, time series can also be aggregated by
+grouping similar time series as illustrated in the upper right part of the figure below. Instead, ETHOS.TSAM is decreasing
 the amount of time series data by merging adjacent time steps based on their similarity (segmentation) or forming time
 periods along the time axis and clustering those based on their similarity. This is shown in the middle right part and the
-lower part of the figure below. The number of attributes to be clustered is thus not changed and accordingly, tsam is also
+lower part of the figure below. The number of attributes to be clustered is thus not changed and accordingly, ETHOS.TSAM is also
 capable of clustering multi-dimensional time series without changing their dimensionality.
 
 <div style="text-align: center">
