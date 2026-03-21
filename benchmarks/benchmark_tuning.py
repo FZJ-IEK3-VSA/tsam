@@ -41,9 +41,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Load test data
-    data_path = (
-        Path(__file__).parent.parent / "docs/source/examples_notebooks/testdata.csv"
-    )
+    data_path = Path(__file__).parent.parent / "docs/notebooks/testdata.csv"
     if not data_path.exists():
         print(f"Error: Test data not found at {data_path}")
         print("Please ensure the examples_notebooks directory exists.")

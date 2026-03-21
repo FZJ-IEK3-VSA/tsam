@@ -1,0 +1,3 @@
+# tsam.periodAggregation
+
+::: tsam.periodAggregation

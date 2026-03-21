@@ -5,19 +5,13 @@ version: 2
 build:
   os: ubuntu-22.04
   tools:
-    python: "mambaforge-22.9"
+    python: "3.12"
   apt_packages:
-    - graphviz
     - pandoc
   jobs:
-    pre_build:
-      - conda run --name $READTHEDOCS_VERSION pip install -e . --no-deps
-      - conda run --name $READTHEDOCS_VERSION conda list
+    post_install:
+      - pip install -e ".[develop]"
 
-# Use conda environment
-conda:
-  environment: environment.yml
-
-# Build documentation with Sphinx
-sphinx:
-  configuration: docs/source/conf.py
+# Build documentation with MkDocs
+mkdocs:
+  configuration: mkdocs.yml
