@@ -56,7 +56,6 @@ develop = [
   "mkdocs-jupyter>=0.25",
   "mkdocs-gen-files>=0.5",
   "mkdocs-literate-nav>=0.6",
-  "twine",
   "nbval",
   "ruff",
   "mypy",

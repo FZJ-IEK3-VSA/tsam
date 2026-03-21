@@ -9,16 +9,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  NOTEBOOKS: >-
-    docs/source/examples_notebooks/quickstart.ipynb
-    docs/source/examples_notebooks/clustering_methods.ipynb
-    docs/source/examples_notebooks/optimization_input.ipynb
-    docs/source/examples_notebooks/representations.ipynb
-    docs/source/examples_notebooks/segmentation.ipynb
-    docs/source/examples_notebooks/k_maxoids.ipynb
-    docs/source/examples_notebooks/clustering_transfer.ipynb
-
 jobs:
   lint:
     name: Lint
@@ -62,16 +52,6 @@ jobs:
       - name: Run tests
         run: pytest -n auto -vv
 
-      - name: Run notebooks
-        if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04'
-        run: >-
-          pytest -n auto -vv
-          --dist loadscope
-          --nbval-lax
-          --nbval-current-env
-          --nbval-cell-timeout=900000
-          ${{ env.NOTEBOOKS }}
-
   # Conda-forge testing on PRs to master
   extract-python-versions:
     if: github.base_ref == 'master' && github.actor != 'renovate[bot]' && github.actor != 'release-please[bot]'
@@ -93,7 +73,7 @@ jobs:
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
-      examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
+      examples_to_execute: "docs/notebooks/quickstart.ipynb docs/notebooks/clustering_methods.ipynb docs/notebooks/optimization_input.ipynb docs/notebooks/representations.ipynb docs/notebooks/segmentation.ipynb docs/notebooks/k_maxoids.ipynb docs/notebooks/clustering_transfer.ipynb docs/notebooks/visualization.ipynb docs/notebooks/tuning.ipynb docs/notebooks/pareto_optimization.ipynb docs/notebooks/building_energy_system.ipynb"
       library_name: "python"
       library_version: ${{ matrix.python_version }}
       dependency_position_env_file: ${{ needs.extract-python-versions.outputs.dependency_position }}
@@ -130,16 +110,6 @@ jobs:
       - name: Run tests
         run: pytest -n auto -vv
 
-      - name: Run notebooks
-        if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest'
-        run: >-
-          pytest -n auto -vv
-          --dist loadscope
-          --nbval-lax
-          --nbval-current-env
-          --nbval-cell-timeout=900000
-          ${{ env.NOTEBOOKS }}
-
   # Min/max dependency boundary testing on PRs to master
   extract-versions:
     if: github.base_ref == 'master' && github.actor != 'release-please[bot]'
@@ -162,7 +132,7 @@ jobs:
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
-      examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
+      examples_to_execute: "docs/notebooks/quickstart.ipynb docs/notebooks/clustering_methods.ipynb docs/notebooks/optimization_input.ipynb docs/notebooks/representations.ipynb docs/notebooks/segmentation.ipynb docs/notebooks/k_maxoids.ipynb docs/notebooks/clustering_transfer.ipynb docs/notebooks/visualization.ipynb docs/notebooks/tuning.ipynb docs/notebooks/pareto_optimization.ipynb docs/notebooks/building_energy_system.ipynb"
       library_version: ${{ matrix.dependencies.version }}
       dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
       library_name: ${{ matrix.dependencies.library_name }}
@@ -200,7 +170,7 @@ jobs:
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
-      examples_to_execute: "docs/source/examples_notebooks/quickstart.ipynb docs/source/examples_notebooks/clustering_methods.ipynb docs/source/examples_notebooks/optimization_input.ipynb docs/source/examples_notebooks/representations.ipynb docs/source/examples_notebooks/segmentation.ipynb docs/source/examples_notebooks/k_maxoids.ipynb docs/source/examples_notebooks/clustering_transfer.ipynb"
+      examples_to_execute: "docs/notebooks/quickstart.ipynb docs/notebooks/clustering_methods.ipynb docs/notebooks/optimization_input.ipynb docs/notebooks/representations.ipynb docs/notebooks/segmentation.ipynb docs/notebooks/k_maxoids.ipynb docs/notebooks/clustering_transfer.ipynb docs/notebooks/visualization.ipynb docs/notebooks/tuning.ipynb docs/notebooks/pareto_optimization.ipynb docs/notebooks/building_energy_system.ipynb"
       library_name: ${{ matrix.dependencies.library_name }}
       library_version: ${{ matrix.dependencies.version }}
       dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
@@ -223,15 +193,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install pandoc
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq pandoc
-
       - name: Install
         run: uv pip install --system ".[develop]"
 
-      - name: Build Sphinx docs
-        # TODO: add -W flag once existing warnings are fixed
-        run: sphinx-build -b html docs/source docs/build/html
+      - name: Build MkDocs
+        run: mkdocs build --strict
 
   ci-success:
     name: CI Success
