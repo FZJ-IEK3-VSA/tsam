@@ -129,7 +129,7 @@ class TestValidation:
             aggregate(
                 sample_data,
                 n_clusters=8,
-                cluster=ClusterConfig(weights={"nonexistent": 1.0}),
+                weights={"nonexistent": 1.0},
             )
 
     def test_segments_exceeds_timesteps(self, sample_data):

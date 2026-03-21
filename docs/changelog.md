@@ -32,7 +32,7 @@ See the [migration guide](migration-guide.md) for a complete guide on upgrading 
 | `rescaleClusterPeriods` | `preserve_column_means` |
 | `sortValues` | `cluster=ClusterConfig(use_duration_curves=...)` |
 | `evalSumPeriods` | `cluster=ClusterConfig(include_period_sums=...)` |
-| `weightDict` | `cluster=ClusterConfig(weights=...)` |
+| `weightDict` | `weights` (top-level parameter) |
 | `addPeakMax/Min`, etc. | `extremes=ExtremeConfig(max_value=..., ...)` |
 
 ### New Features

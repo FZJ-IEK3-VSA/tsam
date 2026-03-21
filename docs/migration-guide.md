@@ -64,7 +64,7 @@ The table below maps every old parameter to its v3 equivalent.
 | `resolution` | `temporal_resolution` | Also accepts strings (`'1h'`, `'15min'`). |
 | `clusterMethod` | `ClusterConfig(method=...)` | See [cluster method values](#cluster-method-values). |
 | `representationMethod` | `ClusterConfig(representation=...)` | See [representation values](#representation-method-values). |
-| `weightDict` | `ClusterConfig(weights=...)` | |
+| `weightDict` | `weights` | Top-level kwarg of `aggregate()`. |
 | `sameMean` | `ClusterConfig(normalize_column_means=...)` | |
 | `sortValues` | `ClusterConfig(use_duration_curves=...)` | |
 | `evalSumPeriods` | `ClusterConfig(include_period_sums=...)` | |
