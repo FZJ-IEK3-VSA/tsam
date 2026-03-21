@@ -3,6 +3,16 @@ name: Release
 on:
   push:
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to create the release from
+        required: true
+        default: master
+      prerelease:
+        description: Create a pre-release
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -21,6 +31,8 @@ jobs:
         with:
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
+          target-branch: ${{ inputs.branch || github.ref_name }}
+          prerelease: ${{ inputs.prerelease || false }}
 
   publish:
     needs: [release-please]
