@@ -1,10 +1,10 @@
 # Installation
 
-It is recommended to install tsam within its own environment. If you are not familiar with python environments, please consider reading some [external documentation](https://realpython.com/python-virtual-environments-a-primer/).
+It is recommended to install ETHOS.TSAM within its own environment. If you are not familiar with python environments, please consider reading some [external documentation](https://realpython.com/python-virtual-environments-a-primer/).
 
 **Quick Install (Recommended)**
 
-The fastest way to install tsam is using [uv](https://docs.astral.sh/uv/):
+The fastest way to install ETHOS.TSAM is using [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv pip install tsam
@@ -69,7 +69,7 @@ pip install -e ".[develop]"
 
 ## Development Tools
 
-tsam uses modern Python development tools for code quality:
+ETHOS.TSAM uses modern Python development tools for code quality:
 
 **Linting and Formatting with Ruff**
 
@@ -126,7 +126,7 @@ uv run pytest test/ -n auto
 
 ## Installation of an Optimization Solver
 
-Some clustering algorithms in tsam are based on Mixed-Integer Linear Programming. An appropriate solver accessible by [Pyomo](https://github.com/Pyomo/pyomo/) is required.
+Some clustering algorithms in ETHOS.TSAM are based on Mixed-Integer Linear Programming. An appropriate solver accessible by [Pyomo](https://github.com/Pyomo/pyomo/) is required.
 
 **HiGHS (Default)**
 

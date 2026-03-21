@@ -1,6 +1,6 @@
-# Contributing to tsam
+# Contributing to ETHOS.TSAM
 
-Thank you for your interest in contributing to tsam! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to ETHOS.TSAM! This document provides guidelines and instructions for contributing.
 
 ## Development Setup
 
@@ -145,16 +145,15 @@ Write clear, concise commit messages that explain what changes were made and why
 
 ## Documentation
 
-Documentation is built using [Sphinx](https://www.sphinx-doc.org/) and hosted on [Read the Docs](https://tsam.readthedocs.io/).
+Documentation is built using [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfun.github.io/mkdocs-material/) and hosted on [Read the Docs](https://tsam.readthedocs.io/).
 
 ### Building Documentation Locally
 
 ```bash
-cd docs
-make html
+mkdocs serve
 ```
 
-The built documentation will be in `docs/build/html/`.
+The documentation will be available at `http://127.0.0.1:8000/`.
 
 ## Questions?
 
@@ -165,4 +164,4 @@ If you have questions, feel free to:
 
 ## License
 
-By contributing to tsam, you agree that your contributions will be licensed under the MIT License.
+By contributing to ETHOS.TSAM, you agree that your contributions will be licensed under the MIT License.
