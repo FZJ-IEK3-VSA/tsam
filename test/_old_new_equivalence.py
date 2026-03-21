@@ -137,10 +137,8 @@ _NEW_KWARGS: dict[str, dict] = {
     "hierarchical_weighted": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(
-            method="hierarchical",
-            weights={"Load": 2.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-        ),
+        "cluster": ClusterConfig(method="hierarchical"),
+        "weights": {"Load": 2.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
     },
     "segmentation_samemean": {
         "n_clusters": 8,
@@ -314,43 +312,35 @@ _NEW_KWARGS: dict[str, dict] = {
     "kmeans_weighted": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(
-            method="kmeans",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-        ),
+        "cluster": ClusterConfig(method="kmeans"),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
     },
     "kmedoids_weighted": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(
-            method="kmedoids",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-        ),
+        "cluster": ClusterConfig(method="kmedoids"),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
     },
     "kmaxoids_weighted": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(
-            method="kmaxoids",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-        ),
+        "cluster": ClusterConfig(method="kmaxoids"),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
     },
     "hierarchical_weighted_duration_curves": {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(
             method="hierarchical",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
             use_duration_curves=True,
         ),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
     },
     "hierarchical_weighted_extremes": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(
-            method="hierarchical",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-        ),
+        "cluster": ClusterConfig(method="hierarchical"),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         "extremes": ExtremeConfig(method="append", max_value=["Load"]),
     },
     "hierarchical_weighted_samemean": {
@@ -358,17 +348,15 @@ _NEW_KWARGS: dict[str, dict] = {
         "period_duration": 24,
         "cluster": ClusterConfig(
             method="hierarchical",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
             normalize_column_means=True,
         ),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
     },
     "hierarchical_weighted_rescale_exclude": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(
-            method="hierarchical",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-        ),
+        "cluster": ClusterConfig(method="hierarchical"),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         "rescale_exclude_columns": ["GHI"],
     },
     "kmeans_weighted_distribution": {
@@ -376,18 +364,16 @@ _NEW_KWARGS: dict[str, dict] = {
         "period_duration": 24,
         "cluster": ClusterConfig(
             method="kmeans",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
             representation="distribution",
         ),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
     },
     # --- Cross-feature interactions ---
     "hierarchical_weighted_segmentation": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(
-            method="hierarchical",
-            weights={"Load": 2.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-        ),
+        "cluster": ClusterConfig(method="hierarchical"),
+        "weights": {"Load": 2.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         "segments": SegmentConfig(n_segments=8),
     },
     "kmeans_distribution": {
@@ -406,10 +392,8 @@ _NEW_KWARGS: dict[str, dict] = {
     "hierarchical_weighted_segmentation_extremes": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(
-            method="hierarchical",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-        ),
+        "cluster": ClusterConfig(method="hierarchical"),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         "segments": SegmentConfig(n_segments=6),
         "extremes": ExtremeConfig(method="append", max_value=["Load"]),
     },
@@ -418,9 +402,9 @@ _NEW_KWARGS: dict[str, dict] = {
         "period_duration": 24,
         "cluster": ClusterConfig(
             method="hierarchical",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
             normalize_column_means=True,
         ),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         "segments": SegmentConfig(n_segments=4),
     },
     "hierarchical_weighted_segmentation_distribution": {
@@ -428,28 +412,24 @@ _NEW_KWARGS: dict[str, dict] = {
         "period_duration": 24,
         "cluster": ClusterConfig(
             method="hierarchical",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
             representation="distribution",
         ),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         "segments": SegmentConfig(n_segments=4),
     },
     "kmeans_weighted_segmentation": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(
-            method="kmeans",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-        ),
+        "cluster": ClusterConfig(method="kmeans"),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         "segments": SegmentConfig(n_segments=8),
     },
     # --- Weight x no rescale ---
     "hierarchical_weighted_no_rescale": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(
-            method="hierarchical",
-            weights={"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-        ),
+        "cluster": ClusterConfig(method="hierarchical"),
+        "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         "preserve_column_means": False,
     },
 }

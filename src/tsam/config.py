@@ -193,9 +193,10 @@ class ClusterConfig:
         - "maxoid" for kmaxoids
 
     weights : dict[str, float], optional
-        Per-column weights for clustering distance calculation.
-        Higher weight = more influence on clustering.
-        Example: {"demand": 2.0, "solar": 1.0}
+        .. deprecated::
+            Pass ``weights`` as a top-level parameter to
+            :func:`~tsam.aggregate` instead. Weights affect all pipeline
+            stages, not just clustering.
 
     normalize_column_means : bool, default False
         Normalize all columns to the same mean before clustering.
@@ -216,11 +217,21 @@ class ClusterConfig:
 
     method: ClusterMethod = "hierarchical"
     representation: Representation | None = None
-    weights: dict[str, float] | None = None
+    weights: dict[str, float] | None = field(default=None, repr=False)
     normalize_column_means: bool = False
     use_duration_curves: bool = False
     include_period_sums: bool = False
     solver: Solver = "highs"
+
+    def __post_init__(self) -> None:
+        if self.weights is not None:
+            warnings.warn(
+                "Passing weights via ClusterConfig is deprecated. "
+                "Pass weights as a top-level parameter to aggregate() instead, "
+                "e.g. aggregate(data, n_clusters=8, weights={...}).",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
     def get_representation(self) -> Representation:
         """Get the representation, using default if not specified."""
@@ -420,6 +431,7 @@ class ClusteringResult:
     segment_representation: Representation | None = None
     temporal_resolution: float | None = None
     extreme_cluster_indices: tuple[int, ...] | None = None
+    weights: dict[str, float] | None = None
 
     # === Reference fields (for documentation, not used by apply()) ===
     cluster_config: ClusterConfig | None = None
@@ -558,6 +570,8 @@ class ClusteringResult:
             result["temporal_resolution"] = self.temporal_resolution
         if self.extreme_cluster_indices is not None:
             result["extreme_cluster_indices"] = list(self.extreme_cluster_indices)
+        if self.weights is not None:
+            result["weights"] = self.weights
         # Reference fields (optional, for documentation)
         if self.cluster_config is not None:
             result["cluster_config"] = self.cluster_config.to_dict()
@@ -600,6 +614,8 @@ class ClusteringResult:
             kwargs["temporal_resolution"] = data["temporal_resolution"]
         if "extreme_cluster_indices" in data:
             kwargs["extreme_cluster_indices"] = tuple(data["extreme_cluster_indices"])
+        if "weights" in data:
+            kwargs["weights"] = data["weights"]
         # Reference fields
         if "cluster_config" in data:
             kwargs["cluster_config"] = ClusterConfig.from_dict(data["cluster_config"])
@@ -784,11 +800,13 @@ class ClusteringResult:
             )
 
         # Build minimal ClusterConfig with just the representation.
-        # We intentionally ignore stored cluster_config.weights since:
-        # 1. Weights were only used to compute the original assignments
-        # 2. Assignments are now fixed, so weights are irrelevant
-        # 3. New data may have different columns than the original
         cluster = ClusterConfig(representation=self.representation)
+
+        # Validate weight columns exist in new data
+        if self.weights is not None:
+            missing = set(self.weights.keys()) - set(data.columns)
+            if missing:
+                raise ValueError(f"Weight columns not found in data: {missing}")
 
         # Use stored segment config if available, otherwise build from transfer fields
         segments: SegmentConfig | None = None
@@ -818,6 +836,7 @@ class ClusteringResult:
             else None,
             round_decimals=round_decimals,
             numerical_tolerance=numerical_tolerance,
+            weights=self.weights,
             # Predefined values from this ClusteringResult
             predef_cluster_assignments=self.cluster_assignments,
             predef_cluster_centers=self.cluster_centers,
@@ -869,6 +888,7 @@ class ClusteringResult:
             cluster_config=cluster,
             segment_config=segments,
             extremes_config=self.extremes_config,
+            weights=self.weights,
             preserve_column_means=self.preserve_column_means,
             rescale_exclude_columns=list(self.rescale_exclude_columns)
             if self.rescale_exclude_columns
