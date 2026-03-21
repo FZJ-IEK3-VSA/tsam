@@ -73,11 +73,9 @@ jobs:
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
-      examples_to_execute: "docs/notebooks/quickstart.ipynb docs/notebooks/clustering_methods.ipynb docs/notebooks/optimization_input.ipynb docs/notebooks/representations.ipynb docs/notebooks/segmentation.ipynb docs/notebooks/k_maxoids.ipynb docs/notebooks/clustering_transfer.ipynb docs/notebooks/visualization.ipynb docs/notebooks/tuning.ipynb docs/notebooks/pareto_optimization.ipynb docs/notebooks/building_energy_system.ipynb"
       library_name: "python"
       library_version: ${{ matrix.python_version }}
       dependency_position_env_file: ${{ needs.extract-python-versions.outputs.dependency_position }}
-      multiprocessing_pytest_string: "-n auto"
       multiprocessing_example_string: "-n auto"
 
   # Extended PyPI cross-platform testing on PRs to master
@@ -132,11 +130,9 @@ jobs:
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
-      examples_to_execute: "docs/notebooks/quickstart.ipynb docs/notebooks/clustering_methods.ipynb docs/notebooks/optimization_input.ipynb docs/notebooks/representations.ipynb docs/notebooks/segmentation.ipynb docs/notebooks/k_maxoids.ipynb docs/notebooks/clustering_transfer.ipynb docs/notebooks/visualization.ipynb docs/notebooks/tuning.ipynb docs/notebooks/pareto_optimization.ipynb docs/notebooks/building_energy_system.ipynb"
       library_version: ${{ matrix.dependencies.version }}
       dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
       library_name: ${{ matrix.dependencies.library_name }}
-      multiprocessing_pytest_string: "-n auto"
       multiprocessing_example_string: "-n auto"
 
   # Renovate: test max versions of changed dependencies
@@ -170,11 +166,9 @@ jobs:
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
-      examples_to_execute: "docs/notebooks/quickstart.ipynb docs/notebooks/clustering_methods.ipynb docs/notebooks/optimization_input.ipynb docs/notebooks/representations.ipynb docs/notebooks/segmentation.ipynb docs/notebooks/k_maxoids.ipynb docs/notebooks/clustering_transfer.ipynb docs/notebooks/visualization.ipynb docs/notebooks/tuning.ipynb docs/notebooks/pareto_optimization.ipynb docs/notebooks/building_energy_system.ipynb"
       library_name: ${{ matrix.dependencies.library_name }}
       library_version: ${{ matrix.dependencies.version }}
       dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
-      multiprocessing_pytest_string: "-n auto"
       multiprocessing_example_string: "-n auto"
 
   docs:
