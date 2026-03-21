@@ -51,6 +51,7 @@ nav:
     - index.md
     - Installation: installation.md
     - Getting Started: getting-started.md
+    - Migration Guide: migration-guide.md
   - Examples:
     - Getting Started:
       - notebooks/quickstart.ipynb
@@ -69,7 +70,6 @@ nav:
       - notebooks/building_energy_system.ipynb
   - Learn:
     - Mathematical Background: background/math.md
-    - Migration Guide: migration-guide.md
     - Further Reading: further-reading.md
   - API Reference: api/
   - About:
