@@ -52,6 +52,7 @@ nav:
     - Installation: installation.md
     - Getting Started: getting-started.md
     - Migration Guide: migration-guide.md
+    - Glossary: glossary.md
   - Examples:
     - Getting Started:
       - notebooks/quickstart.ipynb
