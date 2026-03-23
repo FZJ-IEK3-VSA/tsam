@@ -41,6 +41,7 @@ class _AggregateOpts(TypedDict):
     cluster: ClusterConfig
     segment_representation: RepresentationMethod
     extremes: ExtremeConfig | None
+    weights: dict[str, float] | None
     preserve_column_means: bool
     round_decimals: int | None
     numerical_tolerance: float
@@ -90,6 +91,7 @@ def _test_single_config_file(
             cluster=cluster,
             segments=segments,
             extremes=extremes,
+            weights=opts.get("weights"),
             preserve_column_means=opts["preserve_column_means"],
             round_decimals=opts["round_decimals"],
             numerical_tolerance=opts["numerical_tolerance"],
@@ -151,6 +153,7 @@ def _parallel_context(
             if aggregate_opts["extremes"] is not None
             else None
         ),
+        "weights": aggregate_opts["weights"],
         "preserve_column_means": aggregate_opts["preserve_column_means"],
         "round_decimals": aggregate_opts["round_decimals"],
         "numerical_tolerance": aggregate_opts["numerical_tolerance"],
@@ -230,6 +233,7 @@ def _test_configs(
                     cluster=aggregate_opts["cluster"],
                     segments=segments,
                     extremes=aggregate_opts["extremes"],
+                    weights=aggregate_opts["weights"],
                     preserve_column_means=aggregate_opts["preserve_column_means"],
                     round_decimals=aggregate_opts["round_decimals"],
                     numerical_tolerance=aggregate_opts["numerical_tolerance"],
@@ -476,6 +480,7 @@ def find_optimal_combination(
     cluster: ClusterConfig | None = None,
     segment_representation: RepresentationMethod = "mean",
     extremes: ExtremeConfig | None = None,
+    weights: dict[str, float] | None = None,
     preserve_column_means: bool = True,
     round_decimals: int | None = None,
     numerical_tolerance: float = 1e-13,
@@ -510,6 +515,8 @@ def find_optimal_combination(
         How to represent each segment: "mean" or "medoid".
     extremes : ExtremeConfig, optional
         Configuration for preserving extreme periods.
+    weights : dict[str, float], optional
+        Per-column weights that influence all pipeline stages.
     preserve_column_means : bool, default True
         Whether to rescale results to preserve original column means.
     round_decimals : int, optional
@@ -599,6 +606,7 @@ def find_optimal_combination(
         "cluster": cluster,
         "segment_representation": segment_representation,
         "extremes": extremes,
+        "weights": weights,
         "preserve_column_means": preserve_column_means,
         "round_decimals": round_decimals,
         "numerical_tolerance": numerical_tolerance,
@@ -657,6 +665,7 @@ def find_pareto_front(
     cluster: ClusterConfig | None = None,
     segment_representation: RepresentationMethod = "mean",
     extremes: ExtremeConfig | None = None,
+    weights: dict[str, float] | None = None,
     preserve_column_means: bool = True,
     round_decimals: int | None = None,
     numerical_tolerance: float = 1e-13,
@@ -696,6 +705,8 @@ def find_pareto_front(
         How to represent each segment: "mean" or "medoid".
     extremes : ExtremeConfig, optional
         Configuration for preserving extreme periods.
+    weights : dict[str, float], optional
+        Per-column weights that influence all pipeline stages.
     preserve_column_means : bool, default True
         Whether to rescale results to preserve original column means.
     round_decimals : int, optional
@@ -768,6 +779,7 @@ def find_pareto_front(
         "cluster": cluster,
         "segment_representation": segment_representation,
         "extremes": extremes,
+        "weights": weights,
         "preserve_column_means": preserve_column_means,
         "round_decimals": round_decimals,
         "numerical_tolerance": numerical_tolerance,

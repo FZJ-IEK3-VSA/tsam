@@ -60,6 +60,7 @@ def aggregate(
     cluster: ClusterConfig | None = None,
     segments: SegmentConfig | None = None,
     extremes: ExtremeConfig | None = None,
+    weights: dict[str, float] | None = None,
     preserve_column_means: bool = True,
     rescale_exclude_columns: list[str] | None = None,
     round_decimals: int | None = None,
@@ -105,6 +106,12 @@ def aggregate(
     extremes : ExtremeConfig, optional
         Configuration for preserving extreme periods.
         If not provided, no extreme period handling is applied.
+
+    weights : dict[str, float], optional
+        Per-column weights that influence all pipeline stages
+        (clustering, segmentation, representation, rescaling).
+        Higher weight = more influence on distance calculations.
+        Example: {"demand": 2.0, "solar": 1.0}
 
     preserve_column_means : bool, default True
         Rescale typical periods so each column's weighted mean matches
@@ -250,9 +257,19 @@ def aggregate(
         if missing:
             raise ValueError(f"Extreme period columns not found in data: {missing}")
 
-    # Validate weight columns exist
+    # Resolve weights: top-level takes precedence, ClusterConfig.weights is deprecated
+    if cluster.weights is not None and weights is not None:
+        raise ValueError(
+            "weights specified both as top-level parameter and in ClusterConfig. "
+            "Use only the top-level weights parameter."
+        )
     if cluster.weights is not None:
-        missing = set(cluster.weights.keys()) - set(data.columns)
+        # Deprecation warning already emitted by ClusterConfig.__post_init__
+        weights = cluster.weights
+
+    # Validate weight columns exist
+    if weights is not None:
+        missing = set(weights.keys()) - set(data.columns)
         if missing:
             raise ValueError(f"Weight columns not found in data: {missing}")
 
@@ -265,6 +282,7 @@ def aggregate(
         cluster=cluster,
         segments=segments,
         extremes=extremes,
+        weights=weights,
         preserve_column_means=preserve_column_means,
         rescale_exclude_columns=rescale_exclude_columns,
         round_decimals=round_decimals,
@@ -311,6 +329,7 @@ def aggregate(
         cluster_config=cluster,
         segment_config=segments,
         extremes_config=extremes,
+        weights=weights,
         preserve_column_means=preserve_column_means,
         rescale_exclude_columns=rescale_exclude_columns,
         temporal_resolution=temporal_resolution,
@@ -350,9 +369,10 @@ def _build_clustering_result(
     cluster_config: ClusterConfig,
     segment_config: SegmentConfig | None,
     extremes_config: ExtremeConfig | None,
-    preserve_column_means: bool,
-    rescale_exclude_columns: list[str] | None,
-    temporal_resolution: float | None,
+    weights: dict[str, float] | None = None,
+    preserve_column_means: bool = True,
+    rescale_exclude_columns: list[str] | None = None,
+    temporal_resolution: float | None = None,
 ) -> ClusteringResult:
     """Build ClusteringResult from a TimeSeriesAggregation object."""
     # Get cluster centers (convert to Python ints for JSON serialization)
@@ -438,6 +458,7 @@ def _build_clustering_result(
         temporal_resolution=temporal_resolution,
         n_timesteps_per_period=agg.timeStepsPerPeriod,
         extreme_cluster_indices=extreme_cluster_indices,
+        weights=weights,
         cluster_config=cluster_config,
         segment_config=segment_config,
         extremes_config=extremes_config,
@@ -495,6 +516,7 @@ def _build_old_params(
     rescale_exclude_columns: list[str] | None,
     round_decimals: int | None,
     numerical_tolerance: float,
+    weights: dict[str, float] | None = None,
     *,
     # Predefined parameters (used internally by ClusteringResult.apply())
     predef_cluster_assignments: tuple[int, ...] | None = None,
@@ -536,8 +558,8 @@ def _build_old_params(
     params["evalSumPeriods"] = cluster.include_period_sums
     params["solver"] = cluster.solver
 
-    if cluster.weights is not None:
-        params["weightDict"] = cluster.weights
+    if weights is not None:
+        params["weightDict"] = weights
 
     if predef_cluster_assignments is not None:
         params["predefClusterOrder"] = list(predef_cluster_assignments)
