@@ -48,6 +48,9 @@ jobs:
 
       - name: Run tests
         run: pytest -n auto -vv
+        
+      - name: Run Examples
+        run: python -m pytest -n auto -vv --dist loadscope --nbval-lax --nbval-current-env --nbval-cell-timeout=900000 --durations=20 docs/notebooks/
 
   # Conda-forge testing
   extract-python-versions:
@@ -74,6 +77,8 @@ jobs:
       library_version: ${{ matrix.python_version }}
       dependency_position_env_file: ${{ needs.extract-python-versions.outputs.dependency_position }}
       multiprocessing_example_string: "-n auto"
+      multiprocessing_pytest_string: "-n auto"
+      ipynb_example_folder: docs/notebooks/
 
   # Min/max dependency boundary testing
   extract-versions:
@@ -101,6 +106,8 @@ jobs:
       dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
       library_name: ${{ matrix.dependencies.library_name }}
       multiprocessing_example_string: "-n auto"
+      multiprocessing_pytest_string: "-n auto"
+      ipynb_example_folder: docs/notebooks/
 
   docs:
     name: Build docs
