@@ -1,0 +1,121 @@
+name: CI (develop)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v3
+      - run: ruff check --output-format=github --config=pyproject.toml
+      - run: ruff format --diff --config=pyproject.toml
+
+  test:
+    name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [self-hosted]
+        python-version: ["3.10", "3.14"]
+        include:
+          - os: macos-latest
+            python-version: "3.12"
+          - os: windows-latest
+            python-version: "3.12"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: uv pip install --system ".[develop]"
+
+      - name: Run tests
+        run: pytest -n auto -vv
+        
+
+  # Renovate: test max versions of changed dependencies
+  detect-renovate-changes:
+    name: Detect changed dependencies
+    if: startsWith(github.head_ref, 'renovate/')
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_detect_renovate_changed_libraries.yml@main
+    with:
+      files: "environment.yml pyproject.toml"
+
+  extract-renovate-versions:
+    name: Extract max versions of changed libraries
+    needs: detect-renovate-changes
+    if: startsWith(github.head_ref, 'renovate/') && needs.detect-renovate-changes.outputs.libraries != ''
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@main
+    with:
+      libraries: ${{ needs.detect-renovate-changes.outputs.libraries }}
+      version_type: max
+      env_file: environment.yml
+
+  test-renovate:
+    name: Test ${{ matrix.dependencies.library_name }} ${{ matrix.dependencies.version }} (max)
+    needs: extract-renovate-versions
+    if: startsWith(github.head_ref, 'renovate/')
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_tag: ["self-hosted"]
+        dependencies: ${{ fromJSON(needs.extract-renovate-versions.outputs.matrix) }}
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    with:
+      runner_tag: ${{ matrix.runner_tag }}
+      requirements_file_name: environment.yml
+      library_name: ${{ matrix.dependencies.library_name }}
+      library_version: ${{ matrix.dependencies.version }}
+      dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
+      multiprocessing_pytest_string: "-n auto"
+      
+
+  docs:
+    name: Build docs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: uv pip install --system ".[develop]"
+
+      - name: Build MkDocs
+        run: mkdocs build --strict
+
+  ci-success:
+    name: CI Success
+    if: always()
+    needs: [lint, test, docs]
+    runs-on: ubuntu-24.04
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

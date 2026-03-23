@@ -175,7 +175,8 @@ class TestImports:
     def test_version(self):
         """Test that version is defined."""
         assert hasattr(tsam, "__version__")
-        assert tsam.__version__ == "3.0.0"
+        assert isinstance(tsam.__version__, str)
+        assert len(tsam.__version__) > 0
 
 
 class TestAssignments:
