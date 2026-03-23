@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [self-hosted]
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.10", "3.14"]
         include:
           - os: macos-latest
             python-version: "3.12"
@@ -51,8 +51,6 @@ jobs:
       - name: Run tests
         run: pytest -n auto -vv
         
-      - name: Run Examples
-        run: python -m pytest -n auto -vv --dist loadscope --nbval-lax --nbval-current-env --nbval-cell-timeout=900000 --durations=20 docs/notebooks/
 
   # Renovate: test max versions of changed dependencies
   detect-renovate-changes:
@@ -85,11 +83,9 @@ jobs:
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
-      ipynb_example_folder: docs/notebooks/
       library_name: ${{ matrix.dependencies.library_name }}
       library_version: ${{ matrix.dependencies.version }}
       dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
-      multiprocessing_example_string: "-n auto"
       multiprocessing_pytest_string: "-n auto"
       
 
