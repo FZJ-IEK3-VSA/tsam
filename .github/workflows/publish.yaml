@@ -1,17 +1,17 @@
 name: Publish
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release tag to publish (e.g. v4.0.0)'
-        required: true
-        type: string
+  push:
+    tags: ["v*"]
   workflow_call:
     inputs:
       tag:
         required: true
         type: string
+
+permissions:
+  contents: write
+  id-token: write
 
 jobs:
   publish:
@@ -21,12 +21,10 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/project/tsam
-    permissions:
-      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ inputs.tag || github.ref_name }}
           fetch-depth: 0
 
       - uses: astral-sh/setup-uv@v7
@@ -41,3 +39,23 @@ jobs:
         run: uv build
 
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: Create GitHub Release
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Create GitHub Release
+        run: |
+          if [[ "$TAG" == *-* ]]; then
+            gh release create "$TAG" --generate-notes --prerelease
+          else
+            gh release create "$TAG" --generate-notes
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
