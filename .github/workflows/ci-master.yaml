@@ -1,9 +1,9 @@
-name: CI
+name: CI (master)
 
 on:
   workflow_dispatch:
   pull_request:
-    branches: [develop, master]
+    branches: [master]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,70 +19,11 @@ jobs:
       - run: ruff check --output-format=github --config=pyproject.toml
       - run: ruff format --diff --config=pyproject.toml
 
+  # Extended PyPI cross-platform testing
+  # (6 OS variants × all Python versions)
   test:
     name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
-    if: github.base_ref != 'master'
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-        include:
-          - os: macos-latest
-            python-version: "3.12"
-          - os: windows-latest
-            python-version: "3.12"
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install
-        run: uv pip install --system ".[develop]"
-
-      - name: Run tests
-        run: pytest -n auto -vv
-
-  # Conda-forge testing on PRs to master
-  extract-python-versions:
-    if: github.base_ref == 'master' && github.actor != 'renovate[bot]' && github.actor != 'release-please[bot]'
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions.yml@main
-    with:
-      library_name: python
-      env_file: environment.yml
-
-  test-conda-forge:
-    name: Test conda-forge (Python ${{ matrix.python_version }}, ${{ matrix.runner_tag }})
-    needs: extract-python-versions
-    if: github.base_ref == 'master' && github.actor != 'renovate[bot]' && github.actor != 'release-please[bot]'
-    strategy:
-      fail-fast: false
-      matrix:
-        runner_tag: ["self-hosted"]
-        python_version: ${{ fromJSON(needs.extract-python-versions.outputs.versions) }}
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
-    with:
-      runner_tag: ${{ matrix.runner_tag }}
-      requirements_file_name: environment.yml
-      library_name: "python"
-      library_version: ${{ matrix.python_version }}
-      dependency_position_env_file: ${{ needs.extract-python-versions.outputs.dependency_position }}
-      multiprocessing_example_string: "-n auto"
-
-  # Extended PyPI cross-platform testing on PRs to master
-  # (6 OS variants × all Python versions, matching original test_pull_request_master_python_versions.yml)
-  test-master:
-    name: Test master (Python ${{ matrix.python-version }}, ${{ matrix.os }})
-    if: github.base_ref == 'master' && github.actor != 'release-please[bot]'
+    if: github.actor != 'release-please[bot]'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -108,9 +49,35 @@ jobs:
       - name: Run tests
         run: pytest -n auto -vv
 
-  # Min/max dependency boundary testing on PRs to master
+  # Conda-forge testing
+  extract-python-versions:
+    if: github.actor != 'renovate[bot]' && github.actor != 'release-please[bot]'
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions.yml@main
+    with:
+      library_name: python
+      env_file: environment.yml
+
+  test-conda-forge:
+    name: Test conda-forge (Python ${{ matrix.python_version }}, ${{ matrix.runner_tag }})
+    needs: extract-python-versions
+    if: github.actor != 'renovate[bot]' && github.actor != 'release-please[bot]'
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_tag: ["self-hosted"]
+        python_version: ${{ fromJSON(needs.extract-python-versions.outputs.versions) }}
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    with:
+      runner_tag: ${{ matrix.runner_tag }}
+      requirements_file_name: environment.yml
+      library_name: "python"
+      library_version: ${{ matrix.python_version }}
+      dependency_position_env_file: ${{ needs.extract-python-versions.outputs.dependency_position }}
+      multiprocessing_example_string: "-n auto"
+
+  # Min/max dependency boundary testing
   extract-versions:
-    if: github.base_ref == 'master' && github.actor != 'release-please[bot]'
+    if: github.actor != 'release-please[bot]'
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@main
     with:
       libraries: "scikit-learn,pandas,numpy,pyomo,networkx,tqdm,highspy"
@@ -119,7 +86,7 @@ jobs:
 
   test-dependency-bounds:
     name: Test ${{ matrix.dependencies.library_name }} ${{ matrix.dependencies.version }} (${{ matrix.dependencies.version_type }})
-    if: github.base_ref == 'master' && github.actor != 'release-please[bot]'
+    if: github.actor != 'release-please[bot]'
     needs: extract-versions
     strategy:
       fail-fast: false
@@ -133,42 +100,6 @@ jobs:
       library_version: ${{ matrix.dependencies.version }}
       dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
       library_name: ${{ matrix.dependencies.library_name }}
-      multiprocessing_example_string: "-n auto"
-
-  # Renovate: test max versions of changed dependencies
-  detect-renovate-changes:
-    name: Detect changed dependencies
-    if: startsWith(github.head_ref, 'renovate/')
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_detect_renovate_changed_libraries.yml@main
-    with:
-      files: "environment.yml pyproject.toml"
-
-  extract-renovate-versions:
-    name: Extract max versions of changed libraries
-    needs: detect-renovate-changes
-    if: startsWith(github.head_ref, 'renovate/') && needs.detect-renovate-changes.outputs.libraries != ''
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@main
-    with:
-      libraries: ${{ needs.detect-renovate-changes.outputs.libraries }}
-      version_type: max
-      env_file: environment.yml
-
-  test-renovate:
-    name: Test ${{ matrix.dependencies.library_name }} ${{ matrix.dependencies.version }} (max)
-    needs: extract-renovate-versions
-    if: startsWith(github.head_ref, 'renovate/')
-    strategy:
-      fail-fast: false
-      matrix:
-        runner_tag: ["self-hosted"]
-        dependencies: ${{ fromJSON(needs.extract-renovate-versions.outputs.matrix) }}
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
-    with:
-      runner_tag: ${{ matrix.runner_tag }}
-      requirements_file_name: environment.yml
-      library_name: ${{ matrix.dependencies.library_name }}
-      library_version: ${{ matrix.dependencies.version }}
-      dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
       multiprocessing_example_string: "-n auto"
 
   docs:
@@ -196,7 +127,7 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [lint, test, test-master, docs]
+    needs: [lint, test, docs]
     runs-on: ubuntu-24.04
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
