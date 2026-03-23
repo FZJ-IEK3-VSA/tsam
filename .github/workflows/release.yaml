@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-24.04
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.release_created
+    permissions:
+      id-token: write
+      contents: write
+    uses: ./.github/workflows/publish.yaml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+
+  sync-develop:
+    name: Sync develop with master
+    needs: release-please
+    if: needs.release-please.outputs.release_created
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Open PR to merge master into develop
+        run: |
+          gh pr create \
+            --base develop \
+            --head master \
+            --title "chore: sync develop with master after ${{ needs.release-please.outputs.tag_name }}" \
+            --body "Automated PR to merge release ${{ needs.release-please.outputs.tag_name }} back into develop." \
+          || echo "PR already exists or branches are already in sync"
+        env:
+          GH_TOKEN: ${{ github.token }}

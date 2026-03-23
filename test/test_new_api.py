@@ -7,6 +7,10 @@ import tsam
 from conftest import TESTDATA_CSV
 from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
+)
+
 
 @pytest.fixture
 def sample_data():
@@ -125,7 +129,7 @@ class TestValidation:
             aggregate(
                 sample_data,
                 n_clusters=8,
-                cluster=ClusterConfig(weights={"nonexistent": 1.0}),
+                weights={"nonexistent": 1.0},
             )
 
     def test_segments_exceeds_timesteps(self, sample_data):
@@ -171,7 +175,8 @@ class TestImports:
     def test_version(self):
         """Test that version is defined."""
         assert hasattr(tsam, "__version__")
-        assert tsam.__version__ == "3.0.0"
+        assert isinstance(tsam.__version__, str)
+        assert len(tsam.__version__) > 0
 
 
 class TestAssignments:

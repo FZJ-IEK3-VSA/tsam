@@ -1,0 +1,34 @@
+name: PR Title
+
+on:
+  push:
+    branches: ['release-please--**']
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  validate:
+    name: Validate conventional commit format
+    runs-on: ubuntu-24.04
+    steps:
+      - if: ${{ github.event_name != 'push' }}
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            refactor
+            test
+            docs
+            chore
+            ci
+            perf
+            build
+          requireScope: false
+          subjectPattern: ^.+$
+          subjectPatternError: "PR title must have a description after the type"
+
+      - if: ${{ github.event_name == 'push' }}
+        run: echo "Release Please PRs always use valid conventional commit format"

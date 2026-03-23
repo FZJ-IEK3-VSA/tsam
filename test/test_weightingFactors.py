@@ -1,8 +1,11 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
+
+pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
 
 
 def test_weightingFactors():
@@ -58,6 +61,53 @@ def test_weightingFactors():
         aggregation1.accuracyIndicators().loc[["Load", "T", "Wind"], "RMSE"],
         aggregation3.accuracyIndicators().loc[["Load", "T", "Wind"], "RMSE"],
     )
+
+
+def test_uniform_weights_equal_no_weights():
+    """Uniform scaling produces identical typicalPeriods and predictOriginalData()."""
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+
+    agg_none = tsam.TimeSeriesAggregation(
+        raw.copy(), noTypicalPeriods=8, hoursPerPeriod=24, clusterMethod="hierarchical"
+    )
+    agg_uniform = tsam.TimeSeriesAggregation(
+        raw.copy(),
+        noTypicalPeriods=8,
+        hoursPerPeriod=24,
+        clusterMethod="hierarchical",
+        weightDict={"GHI": 1.0, "T": 1.0, "Wind": 1.0, "Load": 1.0},
+    )
+
+    tp_none = agg_none.createTypicalPeriods()
+    tp_uniform = agg_uniform.createTypicalPeriods()
+
+    pd.testing.assert_frame_equal(tp_none, tp_uniform)
+    pd.testing.assert_frame_equal(
+        agg_none.predictOriginalData(), agg_uniform.predictOriginalData()
+    )
+
+
+def test_reconstructed_within_original_range():
+    """Reconstructed values stay within original data range with non-uniform weights."""
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+
+    agg = tsam.TimeSeriesAggregation(
+        raw.copy(),
+        noTypicalPeriods=8,
+        hoursPerPeriod=24,
+        clusterMethod="hierarchical",
+        weightDict={"GHI": 5.0, "T": 1.0, "Wind": 1.0, "Load": 1.0},
+    )
+    agg.createTypicalPeriods()
+    reconstructed = agg.predictOriginalData()
+
+    for col in raw.columns:
+        assert reconstructed[col].min() >= raw[col].min() - 1e-6, (
+            f"{col} reconstructed min below original"
+        )
+        assert reconstructed[col].max() <= raw[col].max() + 1e-6, (
+            f"{col} reconstructed max above original"
+        )
 
 
 if __name__ == "__main__":

@@ -81,6 +81,10 @@ class TestAggregateEquivalence:
             rtol=1e-10,
         )
 
+    @pytest.mark.filterwarnings("ignore::RuntimeWarning:threadpoolctl")
+    @pytest.mark.filterwarnings(
+        "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
+    )
     def test_kmeans(self, sample_data):
         """Test k-means clustering."""
         # Set seed for deterministic k-means results
@@ -163,7 +167,8 @@ class TestAggregateEquivalence:
             sample_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(method="hierarchical", weights=weights),
+            cluster=ClusterConfig(method="hierarchical"),
+            weights=weights,
         )
 
         pd.testing.assert_frame_equal(

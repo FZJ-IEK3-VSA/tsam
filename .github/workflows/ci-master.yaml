@@ -1,0 +1,138 @@
+name: CI (master)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v3
+      - run: ruff check --output-format=github --config=pyproject.toml
+      - run: ruff format --diff --config=pyproject.toml
+
+  # Extended PyPI cross-platform testing
+  # (6 OS variants × all Python versions)
+  test:
+    name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    if: github.actor != 'release-please[bot]'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-22.04, macos-latest, macos-15-intel, windows-latest, windows-2022]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: uv pip install --system ".[develop]"
+
+      - name: Run tests
+        run: pytest -n auto -vv
+        
+
+  # Conda-forge testing
+  extract-python-versions:
+    if: github.actor != 'renovate[bot]' && github.actor != 'release-please[bot]'
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions.yml@main
+    with:
+      library_name: python
+      env_file: environment.yml
+
+  test-conda-forge:
+    name: Test conda-forge (Python ${{ matrix.python_version }}, ${{ matrix.runner_tag }})
+    needs: extract-python-versions
+    if: github.actor != 'renovate[bot]' && github.actor != 'release-please[bot]'
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_tag: ["self-hosted"]
+        python_version: ${{ fromJSON(needs.extract-python-versions.outputs.versions) }}
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    with:
+      runner_tag: ${{ matrix.runner_tag }}
+      requirements_file_name: environment.yml
+      library_name: "python"
+      library_version: ${{ matrix.python_version }}
+      dependency_position_env_file: ${{ needs.extract-python-versions.outputs.dependency_position }}
+      multiprocessing_example_string: "-n auto"
+
+
+  # Min/max dependency boundary testing
+  extract-versions:
+    if: github.actor != 'release-please[bot]'
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@main
+    with:
+      libraries: "scikit-learn,pandas,numpy,pyomo,networkx,tqdm,highspy"
+      version_type: both
+      env_file: environment.yml
+
+  test-dependency-bounds:
+    name: Test ${{ matrix.dependencies.library_name }} ${{ matrix.dependencies.version }} (${{ matrix.dependencies.version_type }})
+    if: github.actor != 'release-please[bot]'
+    needs: extract-versions
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_tag: ["self-hosted"]
+        dependencies: ${{ fromJSON(needs.extract-versions.outputs.matrix) }}
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    with:
+      runner_tag: ${{ matrix.runner_tag }}
+      requirements_file_name: environment.yml
+      library_version: ${{ matrix.dependencies.version }}
+      dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
+      library_name: ${{ matrix.dependencies.library_name }}
+      multiprocessing_example_string: "-n auto"
+      multiprocessing_pytest_string: "-n auto"
+      ipynb_example_folder: docs/notebooks/
+
+  docs:
+    name: Build docs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: uv pip install --system ".[develop]"
+
+      - name: Build MkDocs
+        run: mkdocs build --strict
+
+  ci-success:
+    name: CI Success
+    if: always()
+    needs: [lint, test, docs]
+    runs-on: ubuntu-24.04
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

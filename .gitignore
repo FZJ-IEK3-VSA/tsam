@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+src/tsam/_version.py
 *.py[cod]
 *$py.class
 *.so
@@ -55,6 +56,7 @@ dmypy.json
 
 # Documentation
 docs/build/
+site/
 
 # OS
 .DS_Store
@@ -68,4 +70,4 @@ Thumbs.db
 trash/
 
 # Notebook output artifacts (regenerated when notebooks run)
-docs/source/examples_notebooks/results/
+docs/notebooks/results/
