@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+## [3.2.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.1.3...v3.2.0) (2026-03-23)
+
+
+### Features
+
+* Improve animated notebook ([#3](https://github.com/FZJ-IEK3-VSA/tsam/issues/3)) ([a21805d](https://github.com/FZJ-IEK3-VSA/tsam/commit/a21805dac4b882249bca73f18712615c28b14649))
+* Interactive cluster member visualization ([#159](https://github.com/FZJ-IEK3-VSA/tsam/issues/159)) ([61c6296](https://github.com/FZJ-IEK3-VSA/tsam/commit/61c6296e2a9c616b36af42ad8d22181652d5d291))
+* missing representation objects, bugfixes and new tests ([16b7e12](https://github.com/FZJ-IEK3-VSA/tsam/commit/16b7e1235df4e53b7250ecf33f7009029d9e2d6e))
+* Move weights to top-level aggregate() parameter ([#195](https://github.com/FZJ-IEK3-VSA/tsam/issues/195)) ([4f177d0](https://github.com/FZJ-IEK3-VSA/tsam/commit/4f177d0792e06373c23ab1eefc2f0794c7990675))
+* Parallelization ([#2](https://github.com/FZJ-IEK3-VSA/tsam/issues/2)) ([f3891cf](https://github.com/FZJ-IEK3-VSA/tsam/commit/f3891cf2b4510723935301ebf0b5eb326c884c35))
+* Pareto exploring sparsly ([#4](https://github.com/FZJ-IEK3-VSA/tsam/issues/4)) ([a73efc3](https://github.com/FZJ-IEK3-VSA/tsam/commit/a73efc33f51fde65e711aa1b76756214ae70d15e))
+* Transfer Segments ([#7](https://github.com/FZJ-IEK3-VSA/tsam/issues/7)) ([ed1ed6a](https://github.com/FZJ-IEK3-VSA/tsam/commit/ed1ed6a8ca909015cea08d8df73f44f95efbe323))
+
+
+### Bug Fixes
+
+* **deps:** update dependency pyomo to &gt;=6.4.8,&lt;=6.10.0 ([a21bd3b](https://github.com/FZJ-IEK3-VSA/tsam/commit/a21bd3b6664e7d5b551cfa84c04ff0601926172b))
+* **deps:** update dependency pyomo to &gt;=6.4.8,&lt;=6.10.0 ([72d0309](https://github.com/FZJ-IEK3-VSA/tsam/commit/72d0309d1705fd4be9eb839b00e1d16d6ead4946))
+* Missed catchwarnings for apply() ([d1e97e8](https://github.com/FZJ-IEK3-VSA/tsam/commit/d1e97e877d486183c9092bcc38aa4d14e28b29e5))
+* **renovate:** correct fileMatch to managerFilePatterns for pep621 configuration ([8bd3462](https://github.com/FZJ-IEK3-VSA/tsam/commit/8bd346275de0aa219e92e7b7f7dbd2c6c18e9fe2))
+* **renovate:** move config to .github and fix malformed JSON ([4b66d23](https://github.com/FZJ-IEK3-VSA/tsam/commit/4b66d2385ddfc9e4453ec77d83beeb3c06be51c0))
+* rescaling with segmentation applied rescaling twice ([0d09eb2](https://github.com/FZJ-IEK3-VSA/tsam/commit/0d09eb291ba69595cb60e334484c6e555f9599b2))
+
+
+### Performance Improvements
+
+* _countExtremePeriods ([1d57949](https://github.com/FZJ-IEK3-VSA/tsam/commit/1d5794907b26ab44cbbfe779346d3af2736d4820))
+* Vectorize duration curve sorting for 2x speedup ([#21](https://github.com/FZJ-IEK3-VSA/tsam/issues/21)) ([8a040e0](https://github.com/FZJ-IEK3-VSA/tsam/commit/8a040e05dc46480f6463fb2e937d627eaabf5a88))
+* Vectorize duration representation for 5x speedup ([#22](https://github.com/FZJ-IEK3-VSA/tsam/issues/22)) ([7a20494](https://github.com/FZJ-IEK3-VSA/tsam/commit/7a20494ca3199cf04fdd711c6ba077da4f57dc42))
+* Vectorize predictOriginalData() for 35x workflow speedup ([#19](https://github.com/FZJ-IEK3-VSA/tsam/issues/19)) ([6266cca](https://github.com/FZJ-IEK3-VSA/tsam/commit/6266cca42770ed338bcc11566126cc879f09179b))
+
 ## [3.1.1](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v3.1.1)
 
 ETHOS.TSAM v3.1.1 is the first stable v3 release (versions 3.0.0 and 3.1.0 were yanked from PyPI).
