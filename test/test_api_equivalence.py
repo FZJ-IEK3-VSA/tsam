@@ -167,7 +167,8 @@ class TestAggregateEquivalence:
             sample_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(method="hierarchical", weights=weights),
+            cluster=ClusterConfig(method="hierarchical"),
+            weights=weights,
         )
 
         pd.testing.assert_frame_equal(
