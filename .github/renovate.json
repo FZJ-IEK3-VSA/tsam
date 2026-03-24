@@ -10,6 +10,7 @@
         "before 5am on monday"
     ],
     "timezone": "Europe/Berlin",
+    "commitMessagePrefix": "chore(deps):",
     "rangeStrategy": "widen",
     "enabledManagers": [
         "pep621",
