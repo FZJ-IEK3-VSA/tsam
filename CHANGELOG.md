@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+## [3.2.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.1.2...v3.2.0) (2026-03-24)
+
+
+### Features
+
+* Interactive cluster member visualization ([#159](https://github.com/FZJ-IEK3-VSA/tsam/issues/159)) ([61c6296](https://github.com/FZJ-IEK3-VSA/tsam/commit/61c6296e2a9c616b36af42ad8d22181652d5d291))
+* Move weights to top-level aggregate() parameter ([#195](https://github.com/FZJ-IEK3-VSA/tsam/issues/195)) ([4f177d0](https://github.com/FZJ-IEK3-VSA/tsam/commit/4f177d0792e06373c23ab1eefc2f0794c7990675))
+
+
+### Bug Fixes
+
+* **build:** pin mkdocs-jupyter&lt;0.26 (packaging bug) ([b007dd6](https://github.com/FZJ-IEK3-VSA/tsam/commit/b007dd6bc0b865ad55df3a1f77c35b8577edb957))
+* **ci:** fix release-please config and pin mkdocs-jupyter ([ee003a2](https://github.com/FZJ-IEK3-VSA/tsam/commit/ee003a24c51fdb209de539691a6a0758a467bc69))
+* **ci:** fix release-please manifest version and release type ([f256b07](https://github.com/FZJ-IEK3-VSA/tsam/commit/f256b07243bd4cb0296c4dda4aa4d87e5e9db1c4))
+* **ci:** set release-please target-branch to master ([50f4d81](https://github.com/FZJ-IEK3-VSA/tsam/commit/50f4d81b0c07e35ab465ba37a802f7c66e51b91d))
+* **deps:** update dependency numpy to v2.4.3 ([#212](https://github.com/FZJ-IEK3-VSA/tsam/issues/212)) ([aae058c](https://github.com/FZJ-IEK3-VSA/tsam/commit/aae058ce96cfaa0f8a5c33b1cffef213a1278e68))
+
+
+### Documentation
+
+* Add ETHOS.TSAM branding, FZJ theme, and documentation update ([#194](https://github.com/FZJ-IEK3-VSA/tsam/issues/194)) ([d24a0a3](https://github.com/FZJ-IEK3-VSA/tsam/commit/d24a0a39971c8cf0c597956a9a3c4b64bc263e1d))
+* extract glossary into standalone file ([d24a0a3](https://github.com/FZJ-IEK3-VSA/tsam/commit/d24a0a39971c8cf0c597956a9a3c4b64bc263e1d))
+* improve codeblock in Getting Started: ([d24a0a3](https://github.com/FZJ-IEK3-VSA/tsam/commit/d24a0a39971c8cf0c597956a9a3c4b64bc263e1d))
+* remove integrated software section and update legal notice ([#218](https://github.com/FZJ-IEK3-VSA/tsam/issues/218)) ([4c9cc71](https://github.com/FZJ-IEK3-VSA/tsam/commit/4c9cc71621b2fa9fd690211f6186b7bf5d9d2444))
+* update images to README_assets v1.0.0 and add missing publication ([#215](https://github.com/FZJ-IEK3-VSA/tsam/issues/215)) ([e56a686](https://github.com/FZJ-IEK3-VSA/tsam/commit/e56a686ab621cdc14e3837a1095c678e7c4ec19f))
+
 ## [3.1.1](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v3.1.1)
 
 ETHOS.TSAM v3.1.1 is the first stable v3 release (versions 3.0.0 and 3.1.0 were yanked from PyPI).
