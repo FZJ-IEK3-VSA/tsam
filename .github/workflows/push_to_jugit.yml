@@ -1,0 +1,28 @@
+name: Mirror to JuGit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+      - master
+
+jobs:
+  mirror:
+    name: Push ${{ github.ref_name }} to JuGit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mask token
+        run: echo "::add-mask::${{ secrets.JUGIT_ACCESS_TOKEN }}"
+
+      - name: Push to JuGit
+        run: |
+          git config user.name "${{ github.event.head_commit.author.name }}"
+          git config user.email "${{ github.event.head_commit.author.email }}"
+          git push --force \
+            https://push_to_jugit:${{ secrets.JUGIT_ACCESS_TOKEN }}@jugit.fz-juelich.de/iek-3/shared-code/tsam.git \
+            ${{ github.ref_name }}
