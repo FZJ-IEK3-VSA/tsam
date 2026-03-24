@@ -78,6 +78,12 @@ nav:
     - Integrated Software: integrated-software.md
     - Legal Notice: legal-notice.md
 
+# gen_ref_pages.py lives in docs/ because gen-files requires scripts to be
+# relative to the project root, but mkdocs-jupyter would otherwise pick it up
+# and try to execute it as a notebook, crashing the build.
+exclude_docs: |
+  gen_ref_pages.py
+
 plugins:
   - search
   - mkdocstrings:
