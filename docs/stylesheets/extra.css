@@ -173,8 +173,8 @@
   text-decoration-color: inherit;
 }
 
-/* Invert JSA logo in dark footer */
-[data-md-color-scheme="slate"] .footer-logo--jsa {
+/* Footer is always dark — always show JSA logo in white */
+.footer-logo--jsa {
   filter: brightness(0) invert(1);
 }
 
