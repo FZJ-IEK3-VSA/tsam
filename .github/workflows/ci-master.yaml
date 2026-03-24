@@ -12,6 +12,7 @@ concurrency:
 jobs:
   lint:
     name: Lint
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -23,7 +24,7 @@ jobs:
   # (6 OS variants × all Python versions)
   test:
     name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
-    if: github.actor != 'release-please[bot]'
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -48,11 +49,11 @@ jobs:
 
       - name: Run tests
         run: pytest -n auto -vv
-        
+
 
   # Conda-forge testing
   extract-python-versions:
-    if: github.actor != 'renovate[bot]' && github.actor != 'release-please[bot]'
+    if: ${{ github.actor != 'renovate[bot]' && !startsWith(github.head_ref, 'release-please--') }}
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions.yml@main
     with:
       library_name: python
@@ -61,7 +62,7 @@ jobs:
   test-conda-forge:
     name: Test conda-forge (Python ${{ matrix.python_version }}, ${{ matrix.runner_tag }})
     needs: extract-python-versions
-    if: github.actor != 'renovate[bot]' && github.actor != 'release-please[bot]'
+    if: ${{ github.actor != 'renovate[bot]' && !startsWith(github.head_ref, 'release-please--') }}
     strategy:
       fail-fast: false
       matrix:
@@ -79,7 +80,7 @@ jobs:
 
   # Min/max dependency boundary testing
   extract-versions:
-    if: github.actor != 'release-please[bot]'
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@main
     with:
       libraries: "scikit-learn,pandas,numpy,pyomo,networkx,tqdm,highspy"
@@ -88,7 +89,7 @@ jobs:
 
   test-dependency-bounds:
     name: Test ${{ matrix.dependencies.library_name }} ${{ matrix.dependencies.version }} (${{ matrix.dependencies.version_type }})
-    if: github.actor != 'release-please[bot]'
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     needs: extract-versions
     strategy:
       fail-fast: false
@@ -108,6 +109,7 @@ jobs:
 
   docs:
     name: Build docs
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -130,7 +132,7 @@ jobs:
 
   ci-success:
     name: CI Success
-    if: always()
+    if: ${{ always() && !startsWith(github.head_ref, 'release-please--') }}
     needs: [lint, test, docs]
     runs-on: ubuntu-24.04
     steps:

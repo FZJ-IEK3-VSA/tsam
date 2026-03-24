@@ -27,6 +27,15 @@ jobs:
             perf
             build
           requireScope: false
+          # Prevent e.g. "fix(ci):" — use "ci:" as the type instead.
+          # These types are hidden from the changelog, but only when used
+          # as the type, not as a scope on another type like "fix".
+          disallowScopes: |
+            ci
+            build
+            chore
+            test
+            refactor
           subjectPattern: ^.+$
           subjectPatternError: "PR title must have a description after the type"
 
