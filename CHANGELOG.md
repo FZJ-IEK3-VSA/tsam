@@ -6,21 +6,13 @@ New entries are automatically added by [release-please](https://github.com/googl
 
 ## [3.2.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.1.2...v3.2.0) (2026-03-24)
 
+This release moves the `weights` argument out of `ClusterConfig`and into `aggregate` (and similar methods), while deprecating the old usage inside `ClusterConfig`. The Parameter affects all aggregation steps and is now placed accordingly. Further, we added a new plotting method that allows you to inspect cluster members and their representation.
+
 
 ### Features
 
 * Interactive cluster member visualization ([#159](https://github.com/FZJ-IEK3-VSA/tsam/issues/159)) ([61c6296](https://github.com/FZJ-IEK3-VSA/tsam/commit/61c6296e2a9c616b36af42ad8d22181652d5d291))
 * Move weights to top-level aggregate() parameter ([#195](https://github.com/FZJ-IEK3-VSA/tsam/issues/195)) ([4f177d0](https://github.com/FZJ-IEK3-VSA/tsam/commit/4f177d0792e06373c23ab1eefc2f0794c7990675))
-
-
-### Bug Fixes
-
-* **build:** pin mkdocs-jupyter&lt;0.26 (packaging bug) ([b007dd6](https://github.com/FZJ-IEK3-VSA/tsam/commit/b007dd6bc0b865ad55df3a1f77c35b8577edb957))
-* **ci:** fix release-please config and pin mkdocs-jupyter ([ee003a2](https://github.com/FZJ-IEK3-VSA/tsam/commit/ee003a24c51fdb209de539691a6a0758a467bc69))
-* **ci:** fix release-please manifest version and release type ([f256b07](https://github.com/FZJ-IEK3-VSA/tsam/commit/f256b07243bd4cb0296c4dda4aa4d87e5e9db1c4))
-* **ci:** set release-please target-branch to master ([50f4d81](https://github.com/FZJ-IEK3-VSA/tsam/commit/50f4d81b0c07e35ab465ba37a802f7c66e51b91d))
-* **deps:** update dependency numpy to v2.4.3 ([#212](https://github.com/FZJ-IEK3-VSA/tsam/issues/212)) ([aae058c](https://github.com/FZJ-IEK3-VSA/tsam/commit/aae058ce96cfaa0f8a5c33b1cffef213a1278e68))
-
 
 ### Documentation
 
