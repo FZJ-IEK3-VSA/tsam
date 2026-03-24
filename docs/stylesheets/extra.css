@@ -178,13 +178,3 @@
   filter: brightness(0) invert(1);
 }
 
-/* Helmholtz logo: show dark-blue variant in light mode, white variant in dark mode */
-.footer-logo--helmholtz-dark {
-  display: none !important;
-}
-[data-md-color-scheme="slate"] .footer-logo--helmholtz-light {
-  display: none !important;
-}
-[data-md-color-scheme="slate"] .footer-logo--helmholtz-dark {
-  display: inline !important;
-}
