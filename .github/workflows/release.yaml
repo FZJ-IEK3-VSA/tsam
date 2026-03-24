@@ -23,16 +23,6 @@ jobs:
           manifest-file: .release-please-manifest.json
           target-branch: master
 
-  publish:
-    needs: release-please
-    if: needs.release-please.outputs.release_created
-    permissions:
-      id-token: write
-      contents: write
-    uses: ./.github/workflows/publish.yaml
-    with:
-      tag: ${{ needs.release-please.outputs.tag_name }}
-
   sync-develop:
     name: Sync develop with master
     needs: release-please
