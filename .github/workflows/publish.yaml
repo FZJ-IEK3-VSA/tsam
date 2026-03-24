@@ -3,11 +3,6 @@ name: Publish
 on:
   push:
     tags: ["v*"]
-  workflow_call:
-    inputs:
-      tag:
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -24,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
 
       - uses: astral-sh/setup-uv@v7
