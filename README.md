@@ -155,14 +155,10 @@ The example time series are based on a department [publication](https://www.mdpi
 
 ## License
 
-MIT License
+[MIT License](LICENSE.txt)
 
-Copyright (C) 2017-2025 Leander Kotzur (FZJ IEK-3), Maximilian Hoffmann (FZJ IEK-3), Peter Markewitz (FZJ IEK-3), Martin Robinius (FZJ IEK-3), Detlef Stolten (FZJ IEK-3)
+Copyright (C) 2017-2025 Leander Kotzur (FZJ ICE-2), Maximilian Hoffmann (FZJ ICE-2), Peter Markewitz (FZJ ICE-2), Martin Robinius (FZJ ICE-2), Detlef Stolten (FZJ ICE-2)
 
-You should have received a copy of the MIT License along with this program.
-If not, see https://opensource.org/licenses/MIT
-
-The core developer team sits in the [Institute of Energy and Climate Research - Techno-Economic Energy Systems Analysis (IEK-3)](https://www.fz-juelich.de/iek/iek-3/EN/Home/home_node.html) belonging to the [Forschungszentrum Jülich](https://www.fz-juelich.de/).
 
 ## Citing and further reading
 
@@ -190,6 +186,15 @@ The publications about time series aggregation for energy system optimization mo
 [**Impact of different time series aggregation methods on optimal energy system design**](https://www.sciencedirect.com/science/article/abs/pii/S0960148117309783)\
 (open access manuscript to be found [**here**](https://arxiv.org/abs/1708.00420))
 
+
+## About Us 
+
+We are the <a href="https://www.fz-juelich.de/en/ice/ice-2">Institute of Climate and Energy Systems – Jülich Systems Analysis (ICE-2)</a> at the <a href="https://www.fz-juelich.de/en"> Forschungszentrum Jülich</a>.
+Our work focuses on independent, interdisciplinary research in energy, bioeconomy, infrastructure, and sustainability. We support a just, greenhouse gas–neutral transformation through open models and policy-relevant science.
+
+
+## Code of Conduct
+Please respect our [code of conduct](https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/CODE_CONDUCT.md).
 
 
 ## Acknowledgement
