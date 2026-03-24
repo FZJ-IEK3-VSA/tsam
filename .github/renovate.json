@@ -10,14 +10,37 @@
         "before 5am on monday"
     ],
     "timezone": "Europe/Berlin",
+    "rangeStrategy": "widen",
+    "enabledManagers": [
+        "pep621",
+        "custom.regex",
+        "github-actions"
+    ],
+    "pep621": {
+        "managerFilePatterns": [
+            "/(^|/)pyproject\\.toml$/"
+        ]
+    },
+    "customManagers": [
+        {
+            "customType": "regex",
+            "managerFilePatterns": [
+                "/(^|/)environment\\.yml$/"
+            ],
+            "matchStrings": [
+                "- (?<depName>[a-zA-Z0-9_.-]+)[^\\n]*?(?<currentValue><=\\d[^\\n,]*)"
+            ],
+            "packageNameTemplate": "conda-forge/{{{depName}}}",
+            "datasourceTemplate": "conda",
+            "versioningTemplate": "pep440"
+        }
+    ],
     "packageRules": [
         {
             "description": "Group all Python dependency updates together",
             "matchManagers": [
-                "pip_requirements",
-                "pip_setup",
                 "pep621",
-                "conda"
+                "custom.regex"
             ],
             "groupName": "python-dependencies",
             "groupSlug": "python-deps",
@@ -32,12 +55,6 @@
             "commitMessageTopic": "GitHub Actions"
         }
     ],
-    "pep621": {
-        "enabled": true,
-        "managerFilePatterns": [
-            "/(^|/)pyproject\\.toml$/"
-        ]
-    },
     "vulnerabilityAlerts": {
         "enabled": true,
         "labels": [
@@ -45,6 +62,5 @@
         ]
     },
     "prConcurrentLimit": 5,
-    "prHourlyLimit": 2,
-    "rangeStrategy": "widen"
+    "prHourlyLimit": 2
 }
