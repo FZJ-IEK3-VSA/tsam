@@ -4,8 +4,6 @@
 
 [MIT License](https://opensource.org/licenses/MIT)
 
-Copyright (C) 2016-2022 Leander Kotzur, Maximilian Hoffmann, Peter Markewitz, Martin Robinius, Detlef Stolten
-
 ## Acknowledgement
 
 The development of this software is currently supported by The authors acknowledge the financial support by the Federal Ministry
