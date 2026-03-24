@@ -180,11 +180,11 @@
 
 /* Helmholtz logo: show dark-blue variant in light mode, white variant in dark mode */
 .footer-logo--helmholtz-dark {
-  display: none;
+  display: none !important;
 }
 [data-md-color-scheme="slate"] .footer-logo--helmholtz-light {
-  display: none;
+  display: none !important;
 }
 [data-md-color-scheme="slate"] .footer-logo--helmholtz-dark {
-  display: inline;
+  display: inline !important;
 }
