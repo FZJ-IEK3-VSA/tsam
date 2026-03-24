@@ -75,7 +75,6 @@ nav:
   - API Reference: api/
   - About:
     - Changelog: changelog.md
-    - Integrated Software: integrated-software.md
     - Legal Notice: legal-notice.md
 
 # gen_ref_pages.py lives in docs/ because gen-files requires scripts to be
