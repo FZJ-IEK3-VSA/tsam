@@ -2,9 +2,8 @@
 
 ## License
 
-[MIT License](https://opensource.org/licenses/MIT)
+ETHOS.TSAM is published under the [MIT License](https://opensource.org/licenses/MIT).
 
-Copyright (C) 2016-2022 Leander Kotzur, Maximilian Hoffmann, Peter Markewitz, Martin Robinius, Detlef Stolten
 
 ## Acknowledgement
 
