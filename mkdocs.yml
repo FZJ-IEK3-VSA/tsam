@@ -78,6 +78,9 @@ nav:
     - Integrated Software: integrated-software.md
     - Legal Notice: legal-notice.md
 
+exclude_docs: |
+  gen_ref_pages.py
+
 plugins:
   - search
   - mkdocstrings:
