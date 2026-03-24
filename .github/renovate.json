@@ -37,14 +37,12 @@
     ],
     "packageRules": [
         {
-            "description": "Group all Python dependency updates together",
+            "description": "One PR per dependency, grouping updates across pyproject.toml and environment.yml",
             "matchManagers": [
                 "pep621",
                 "custom.regex"
             ],
-            "groupName": "python-dependencies",
-            "groupSlug": "python-deps",
-            "commitMessageTopic": "Python dependencies"
+            "groupName": "{{depName}}"
         },
         {
             "description": "Group GitHub Actions updates",
@@ -61,6 +59,6 @@
             "security"
         ]
     },
-    "prConcurrentLimit": 5,
-    "prHourlyLimit": 2
+    "prConcurrentLimit": 20,
+    "prHourlyLimit": 10
 }
