@@ -12,11 +12,15 @@ The publications about time series aggregation for energy system optimization mo
 
 * Kotzur et al. (2018):
   [Impact of different time series aggregation methods on optimal energy system design](https://www.sciencedirect.com/science/article/abs/pii/S0960148117309783)
+  (open access: [arXiv:1708.00420](https://arxiv.org/abs/1708.00420))
 * Kotzur et al. (2018):
   [Time series aggregation for energy system design: Modeling seasonal storage](https://www.sciencedirect.com/science/article/pii/S0306261918300242)
+  (open access: [arXiv:1710.07593](https://arxiv.org/abs/1710.07593))
 * Kannengiesser et al. (2019):
   [Reducing Computational Load for Mixed Integer Linear Programming: An Example for a District and an Island Energy System](https://www.mdpi.com/1996-1073/12/14/2825)
 * Hoffmann et al. (2020):
   [A Review on Time Series Aggregation Methods for Energy System Models](https://www.mdpi.com/1996-1073/13/3/641)
+* Hoffmann et al. (2021):
+  [Typical periods or typical time steps? A multi-model analysis to determine the optimal temporal aggregation for energy system models](https://www.sciencedirect.com/science/article/abs/pii/S0306261921011545)
 * Hoffmann et al. (2022):
   [The Pareto-Optimal Temporal Aggregation of Energy System Models](https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342)
