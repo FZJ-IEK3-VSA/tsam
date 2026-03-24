@@ -2,9 +2,8 @@
 
 ## License
 
-[MIT License](https://opensource.org/licenses/MIT)
+ETHOS.TSAM is published under the [MIT License](https://opensource.org/licenses/MIT).
 
-Copyright (C) 2016-2022 Leander Kotzur, Maximilian Hoffmann, Peter Markewitz, Martin Robinius, Detlef Stolten
 
 ## Acknowledgement
 
@@ -23,6 +22,6 @@ the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_s
 
 <div style="text-align: center">
   <a href="https://www.helmholtz.de/en/">
-    <img src="https://www.helmholtz.de/fileadmin/user_upload/05_aktuelles/Marke_Design/logos/HG_LOGO_S_ENG_RGB.jpg" width="200" alt="Helmholtz Logo">
+    <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg" width="200" alt="Helmholtz Logo">
   </a>
 </div>
