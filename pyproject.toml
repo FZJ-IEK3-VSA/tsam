@@ -45,24 +45,24 @@ requires-python = ">=3.10,<3.15"
 
 [project.optional-dependencies]
 develop = [
-  "pytest",
-  "pytest-cov",
-  "pytest-xdist",
-  "pytest-benchmark",
-  "codecov",
-  "mkdocs>=1.6",
-  "mkdocs-material>=9.5",
-  "mkdocstrings[python]>=0.27",
-  "mkdocs-jupyter>=0.25,<0.26",  # 0.26.0 has packaging bug (mkdocs-jupyter#269)
-  "mkdocs-gen-files>=0.5",
-  "mkdocs-literate-nav>=0.6",
-  "nbval",
-  "ruff",
-  "mypy",
-  "pandas-stubs",
-  "pre-commit",
-  "plotly>=5.0.0",
-  "notebook>=7.5.0",
+  "pytest<=9.0.2",
+  "pytest-cov<=7.1.0",
+  "pytest-xdist<=3.8.0",
+  "pytest-benchmark<=5.2.3",
+  "codecov<=2.1.13",
+  "mkdocs>=1.6,<=1.6.1",
+  "mkdocs-material>=9.5,<=9.7.6",
+  "mkdocstrings[python]>=0.27,<=1.0.3",
+  "mkdocs-jupyter>=0.25,<0.26", # 0.26.0 has packaging bug (mkdocs-jupyter#269)
+  "mkdocs-gen-files>=0.5,<=0.6.1",
+  "mkdocs-literate-nav>=0.6,<=0.6.3",
+  "nbval<=0.11.0",
+  "ruff<=0.15.7",
+  "mypy<=1.19.1",
+  "pandas-stubs<=3.0.0.260204",
+  "pre-commit<=4.5.1",
+  "plotly>=5.0.0,<=6.6.0",
+  "notebook>=7.5.0,<=7.5.5",
 ]
 plot = ["plotly>=5.0.0"]
 notebooks = ["notebook>=7.5.0", "plotly>=5.0.0"]
