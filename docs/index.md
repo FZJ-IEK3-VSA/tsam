@@ -7,7 +7,7 @@
   </div>
   <div class="jsa-logo">
     <a href="https://www.fz-juelich.de/en/iek/iek-3">
-      <img src="assets/JSA-Header.svg" alt="Jülich System Analysis">
+      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg" alt="Jülich System Analysis">
     </a>
   </div>
 </div>
