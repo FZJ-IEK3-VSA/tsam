@@ -8,7 +8,7 @@
       <img src="docs/assets/tsam-logo-light.svg" alt="ETHOS.TSAM Logo" height="80px">
     </picture>
   </a>
-  <a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="docs/assets/JSA-Header.svg" alt="Jülich System Analysis Header" height="80px"></a>
+  <a href="https://www.fz-juelich.de/en/ice/ice-2"><img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg" alt="Jülich System Analysis Header" height="80px"></a>
 </p>
 
 # ETHOS.TSAM - Time Series Aggregation Module
