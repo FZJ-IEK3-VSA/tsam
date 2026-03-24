@@ -157,8 +157,6 @@ The example time series are based on a department [publication](https://www.mdpi
 
 [MIT License](LICENSE.txt)
 
-Copyright (C) 2017-2025 Leander Kotzur (FZJ ICE-2), Maximilian Hoffmann (FZJ ICE-2), Peter Markewitz (FZJ ICE-2), Martin Robinius (FZJ ICE-2), Detlef Stolten (FZJ ICE-2)
-
 
 ## Citing and further reading
 
