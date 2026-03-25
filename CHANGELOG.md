@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+## [3.2.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.1.2...v3.2.0) (2026-03-24)
+
+This release moves the `weights` argument out of `ClusterConfig`and into `aggregate` (and similar methods), while deprecating the old usage inside `ClusterConfig`. The Parameter affects all aggregation steps and is now placed accordingly. Further, we added a new plotting method that allows you to inspect cluster members and their representation.
+
+
+### Features
+
+* Interactive cluster member visualization ([#159](https://github.com/FZJ-IEK3-VSA/tsam/issues/159)) ([61c6296](https://github.com/FZJ-IEK3-VSA/tsam/commit/61c6296e2a9c616b36af42ad8d22181652d5d291))
+* Move weights to top-level aggregate() parameter ([#195](https://github.com/FZJ-IEK3-VSA/tsam/issues/195)) ([4f177d0](https://github.com/FZJ-IEK3-VSA/tsam/commit/4f177d0792e06373c23ab1eefc2f0794c7990675))
+
+### Documentation
+
+* Add ETHOS.TSAM branding, FZJ theme, and documentation update ([#194](https://github.com/FZJ-IEK3-VSA/tsam/issues/194)) ([d24a0a3](https://github.com/FZJ-IEK3-VSA/tsam/commit/d24a0a39971c8cf0c597956a9a3c4b64bc263e1d))
+* extract glossary into standalone file ([d24a0a3](https://github.com/FZJ-IEK3-VSA/tsam/commit/d24a0a39971c8cf0c597956a9a3c4b64bc263e1d))
+* improve codeblock in Getting Started: ([d24a0a3](https://github.com/FZJ-IEK3-VSA/tsam/commit/d24a0a39971c8cf0c597956a9a3c4b64bc263e1d))
+* remove integrated software section and update legal notice ([#218](https://github.com/FZJ-IEK3-VSA/tsam/issues/218)) ([4c9cc71](https://github.com/FZJ-IEK3-VSA/tsam/commit/4c9cc71621b2fa9fd690211f6186b7bf5d9d2444))
+* update images to README_assets v1.0.0 and add missing publication ([#215](https://github.com/FZJ-IEK3-VSA/tsam/issues/215)) ([e56a686](https://github.com/FZJ-IEK3-VSA/tsam/commit/e56a686ab621cdc14e3837a1095c678e7c4ec19f))
+
 ## [3.1.1](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v3.1.1)
 
 ETHOS.TSAM v3.1.1 is the first stable v3 release (versions 3.0.0 and 3.1.0 were yanked from PyPI).
