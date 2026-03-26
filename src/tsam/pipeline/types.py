@@ -84,6 +84,7 @@ class PreparedData:
         pd.DataFrame
     )  # original input data (for rescale, bounds, reconstruct)
     weight_vector: np.ndarray | None = None
+    weighted_profiles_df: pd.DataFrame | None = None
 
 
 @dataclass(frozen=True)

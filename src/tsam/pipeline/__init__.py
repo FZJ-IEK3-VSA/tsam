@@ -196,9 +196,18 @@ def _prepare_data(
 
     # Step 2b: Apply weights directly to candidates
     weight_vector = _build_weight_vector(norm_data.values.columns, cluster.weights)
+    weighted_profiles_df: pd.DataFrame | None = None
     if weight_vector is not None:
         weight_tile = np.repeat(weight_vector, period_profiles.n_timesteps_per_period)
         candidates = candidates * weight_tile
+        # Keep a weighted DataFrame for extremes/segmentation (need column labels).
+        wpdf = period_profiles.profiles_dataframe.copy()
+        for col_name, w in zip(
+            wpdf.columns.get_level_values(0).unique(),
+            weight_vector,
+        ):
+            wpdf[col_name] *= w
+        weighted_profiles_df = wpdf
 
     # Step 3: Add period sum features if requested
     # Period sums are extra columns appended for clustering distance only;
@@ -218,6 +227,7 @@ def _prepare_data(
         original_column_order=original_column_order,
         original_data=original_data,
         weight_vector=weight_vector,
+        weighted_profiles_df=weighted_profiles_df,
     )
 
 
@@ -248,6 +258,12 @@ def _cluster_and_postprocess(
         )
     else:
         t_start = time.time()
+        # When period-sum features are appended, representations must run
+        # on the non-augmented prefix so period-sum columns don't leak in.
+        rep_candidates: np.ndarray | None = None
+        if candidates.shape[1] != prepared.n_feature_cols:
+            rep_candidates = candidates[:, : prepared.n_feature_cols]
+
         if not cluster.use_duration_curves:
             cluster_centers, cluster_center_indices, cluster_order = cluster_periods(
                 candidates,
@@ -255,13 +271,13 @@ def _cluster_and_postprocess(
                 cluster,
                 prepared.representation_dict,
                 cfg.n_timesteps_per_period,
-                n_feature_cols=prepared.n_feature_cols,
+                representation_candidates=rep_candidates,
             )
         else:
             cluster_centers, cluster_center_indices, cluster_order = (
                 cluster_sorted_periods(
                     candidates,
-                    period_profiles,
+                    period_profiles.n_columns,
                     cfg.n_clusters,
                     cluster,
                     prepared.representation_dict,
@@ -286,15 +302,11 @@ def _cluster_and_postprocess(
     extreme_cluster_idx: list[int] = []
 
     if cfg.extremes is not None:
-        if prepared.weight_vector is not None:
-            profiles_for_extremes = period_profiles.profiles_dataframe.copy()
-            for col_name, w in zip(
-                profiles_for_extremes.columns.get_level_values(0).unique(),
-                prepared.weight_vector,
-            ):
-                profiles_for_extremes[col_name] *= w
-        else:
-            profiles_for_extremes = period_profiles.profiles_dataframe
+        profiles_for_extremes = (
+            prepared.weighted_profiles_df
+            if prepared.weighted_profiles_df is not None
+            else period_profiles.profiles_dataframe
+        )
         (
             cluster_periods_list,
             cluster_order,

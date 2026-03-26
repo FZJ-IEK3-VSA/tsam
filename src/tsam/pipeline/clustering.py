@@ -11,7 +11,7 @@ from tsam.representations import representations
 
 if TYPE_CHECKING:
     from tsam.config import ClusterConfig, Distribution, MinMaxMean
-    from tsam.pipeline.types import PeriodProfiles, PredefParams
+    from tsam.pipeline.types import PredefParams
 
 
 def cluster_periods(
@@ -20,22 +20,18 @@ def cluster_periods(
     cluster: ClusterConfig,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
-    n_feature_cols: int,
+    representation_candidates: np.ndarray | None,
 ) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
     """Run clustering via aggregate_periods.
 
-    Candidates are already weighted (if weights exist). Period-sum columns
-    (if any) are stripped for representation via n_feature_cols.
+    Candidates are already weighted (if weights exist).
+
+    If *representation_candidates* is provided, representations are computed
+    from those columns instead of from *candidates* (used when period-sum
+    features are appended for clustering distance only).
 
     Returns (cluster_centers, cluster_center_indices, cluster_order).
     """
-    # If period-sum features are appended, representations must run on
-    # the non-augmented prefix so period-sum columns don't leak into
-    # representatives.
-    rep_candidates: np.ndarray | None = None
-    if candidates.shape[1] != n_feature_cols:
-        rep_candidates = candidates[:, :n_feature_cols]
-
     centers, center_indices, order = aggregate_periods(
         candidates,
         n_clusters=n_clusters,
@@ -45,14 +41,14 @@ def cluster_periods(
         representation_method=cluster.get_representation(),
         representation_dict=representation_dict,
         n_timesteps_per_period=n_timesteps_per_period,
-        representation_candidates=rep_candidates,
+        representation_candidates=representation_candidates,
     )
     return centers, center_indices, order
 
 
 def cluster_sorted_periods(
     candidates: np.ndarray,
-    period_profiles: PeriodProfiles,
+    n_columns: int,
     n_clusters: int,
     cluster: ClusterConfig,
     representation_dict: dict | None,
@@ -65,7 +61,6 @@ def cluster_sorted_periods(
 
     Returns (cluster_centers, cluster_center_indices, cluster_order).
     """
-    n_columns = period_profiles.n_columns
 
     # Sort each period's timesteps descending for all columns.
     # Use candidates (already weighted) so that clustering distance respects
