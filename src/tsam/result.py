@@ -44,6 +44,35 @@ class AccuracyMetrics:
     mae: pd.Series
     rmse_duration: pd.Series
     rescale_deviations: pd.DataFrame
+    weights: dict[str, float] = field(default_factory=dict, repr=False)
+
+    def _weighted_aggregate(self, per_column: pd.Series) -> float:
+        """Compute weighted root-mean-square aggregate of per-column values."""
+        squared = per_column**2
+        if self.weights:
+            w = pd.Series(self.weights).reindex(squared.index, fill_value=1.0)
+            return float(np.sqrt((squared * w).sum() / w.sum()))
+        return float(np.sqrt(squared.mean()))
+
+    @cached_property
+    def weighted_rmse(self) -> float:
+        """Weighted aggregate RMSE across columns.
+
+        When weights are provided, columns with higher weight contribute
+        more to the aggregate. With default weights (all 1), collapses
+        to unweighted root-mean-square.
+        """
+        return self._weighted_aggregate(self.rmse)
+
+    @cached_property
+    def weighted_mae(self) -> float:
+        """Weighted aggregate MAE across columns."""
+        return self._weighted_aggregate(self.mae)
+
+    @cached_property
+    def weighted_rmse_duration(self) -> float:
+        """Weighted aggregate RMSE on duration curves across columns."""
+        return self._weighted_aggregate(self.rmse_duration)
 
     @property
     def summary(self) -> pd.DataFrame:
@@ -73,11 +102,12 @@ class AccuracyMetrics:
             if n_failed > 0:
                 max_dev = self.rescale_deviations["deviation_pct"].max()
                 rescale_info = f",\n  rescale_failures={n_failed} (max {max_dev:.2f}%)"
+        label = "weighted" if self.weights else "mean"
         return (
             f"AccuracyMetrics(\n"
-            f"  rmse={self.rmse.mean():.4f} (mean),\n"
-            f"  mae={self.mae.mean():.4f} (mean),\n"
-            f"  rmse_duration={self.rmse_duration.mean():.4f} (mean){rescale_info}\n"
+            f"  rmse={self.weighted_rmse:.4f} ({label}),\n"
+            f"  mae={self.weighted_mae:.4f} ({label}),\n"
+            f"  rmse_duration={self.weighted_rmse_duration:.4f} ({label}){rescale_info}\n"
             f")"
         )
 
@@ -270,6 +300,7 @@ class AggregationResult:
                 "mae": self.accuracy.mae.to_dict(),
                 "rmse_duration": self.accuracy.rmse_duration.to_dict(),
                 "rescale_deviations": self.accuracy.rescale_deviations.to_dict(),
+                "weights": self.accuracy.weights,
             },
             "clustering_duration": self.clustering_duration,
         }

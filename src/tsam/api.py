@@ -320,6 +320,7 @@ def aggregate(
         mae=accuracy_df["MAE"],
         rmse_duration=accuracy_df["RMSE_duration"],
         rescale_deviations=rescale_deviations,
+        weights=weights or {},
     )
 
     # Build ClusteringResult

@@ -59,12 +59,11 @@ def _compute_rmse(
     When weights are provided, columns with higher weight contribute more
     to the aggregate metric — matching the priority expressed by the user
     during clustering.
+
+    Delegates to ``AccuracyMetrics.weighted_rmse`` which is pre-computed
+    at construction time with the same weights.
     """
-    per_col_rmse_sq = result.accuracy.rmse**2
-    if weights:
-        w = pd.Series(weights).reindex(per_col_rmse_sq.index, fill_value=1.0)
-        return float(np.sqrt((per_col_rmse_sq * w).sum() / w.sum()))
-    return float(np.sqrt(per_col_rmse_sq.mean()))
+    return result.accuracy.weighted_rmse
 
 
 def _test_single_config_file(
