@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+## [3.2.1](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.2.0...v3.2.1) (2026-03-25)
+
+### Bug Fixes
+
+* use column weights in tuning RMSE objective ([#227](https://github.com/FZJ-IEK3-VSA/tsam/issues/227)) ([1ceee5c](https://github.com/FZJ-IEK3-VSA/tsam/commit/1ceee5c69856b61aed9eae3f5d5f713be8ac85e9)), closes [#226](https://github.com/FZJ-IEK3-VSA/tsam/issues/226)
 
 ## [3.2.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.1.2...v3.2.0) (2026-03-24)
 
