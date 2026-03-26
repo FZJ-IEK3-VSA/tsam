@@ -4,46 +4,6 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
-## [4.0.0] (unreleased)
-
-### Architecture
-
-* **Pipeline rewrite**: The monolithic `TimeSeriesAggregation` internals have been
-  replaced with a stateless pipeline of pure functions in `src/tsam/pipeline/`.
-  Both `tsam.aggregate()` and the legacy `TimeSeriesAggregation` class now delegate
-  to the same `run_pipeline()` orchestrator.
-
-* **snake_case identifiers**: All internal identifiers have been renamed from camelCase
-  to snake_case. The legacy `TimeSeriesAggregation` class retains its original
-  parameter names (both camelCase and snake_case accepted) for backward compatibility.
-
-### Breaking Changes
-
-* **Decoupled column weights from data pipeline**: `weights` now affects **only** the
-  clustering distance calculation. Previously, weights were multiplied into the normalized
-  data during preprocessing. This simplifies the pipeline and eliminates a class of
-  weight-related bugs. Cluster *assignments* are identical to v3. The **only** configuration
-  that produces different output is `hierarchical_weighted` — non-uniform weights with
-  medoid representation.
-
-* **Output column order preserved**: `cluster_representatives`, `reconstructed`, and `original`
-  now return columns in the same order as the input DataFrame. Previously, columns were
-  alphabetically sorted. (The legacy class preserves alphabetical sorting for backward compat.)
-
-* **Renamed `cluster_weights` to `cluster_counts`**: `AggregationResult.cluster_weights`
-  has been renamed to `cluster_counts` to avoid confusion with per-column clustering weights.
-  The old name remains as a deprecated property emitting `FutureWarning`.
-
-### Improvements
-
-* **Versioned clustering JSON**: `ClusteringResult.to_json()` now includes a
-  `"version"` field recording the tsam version that created the file.
-
-* **Deterministic extreme period assignment**: The `new_cluster` extreme method now
-  picks the closest extreme period by distance (deterministic) instead of the previous
-  last-match-wins loop order.
-
-See the [v3 to v4 migration guide](migration-guide.md#migration-v3-to-v4) for upgrade instructions.
 
 ## [3.2.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.1.2...v3.2.0) (2026-03-24)
 
