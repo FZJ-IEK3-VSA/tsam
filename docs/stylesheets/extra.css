@@ -1,0 +1,180 @@
+/* ==========================================================================
+   ETHOS.TSAM — Forschungszentrum Jülich Brand Theme
+   ========================================================================== */
+
+/* -- FZJ Brand Colors ---------------------------------------------------- */
+:root {
+  --md-primary-fg-color: #023d6b;
+  --md-primary-fg-color--light: #0a5a9e;
+  --md-primary-fg-color--dark: #012845;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffffb3;
+  --md-accent-fg-color: #21918c;
+  --md-accent-fg-color--transparent: #21918c1a;
+  --md-accent-bg-color: #ffffff;
+  --md-accent-bg-color--light: #ffffffb3;
+  --md-typeset-a-color: #35b0ab;
+}
+
+.md-typeset a {
+  color: #35b0ab;
+}
+
+.md-typeset a:hover {
+  color: #21918c;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #023d6b;
+  --md-primary-fg-color--light: #0a5a9e;
+  --md-primary-fg-color--dark: #012845;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffffb3;
+  --md-accent-fg-color: #35b0ab;
+  --md-accent-fg-color--transparent: #35b0ab1a;
+  --md-typeset-a-color: #35b0ab;
+}
+
+/* -- Landing page hero logos (light/dark switching) ---------------------- */
+.tsam-logo-light {
+  display: block;
+}
+.tsam-logo-dark {
+  display: none;
+}
+
+[data-md-color-scheme="slate"] .tsam-logo-light {
+  display: none;
+}
+[data-md-color-scheme="slate"] .tsam-logo-dark {
+  display: block;
+}
+
+/* -- Landing page logo row (TSAM + JSA side by side) --------------------- */
+.landing-logos {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2rem;
+  flex-wrap: nowrap;
+  margin-bottom: 1rem;
+}
+
+.landing-logos .tsam-logo-light img,
+.landing-logos .tsam-logo-dark img {
+  max-width: 400px;
+  height: auto;
+}
+
+.landing-logos .jsa-logo img {
+  max-width: 250px;
+  height: auto;
+}
+
+/* Invert JSA header in dark mode so it remains visible */
+[data-md-color-scheme="slate"] .landing-logos .jsa-logo img {
+  filter: brightness(0) invert(1);
+}
+
+/* -- Notebook styling — hide prompts, style code cells, dark mode -------- */
+
+/* Hide In [1]: / Out [1]: prompts */
+.jp-InputPrompt,
+.jp-OutputPrompt {
+  display: none !important;
+}
+
+/* Hide non-functional collapsers in static docs */
+.jp-Collapser {
+  display: none;
+}
+
+/* Code cell background */
+.jp-CodeCell .highlight-ipynb {
+  background: #f7f7f7;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 0.5em;
+}
+
+/* Ensure input/output areas use full width */
+.jp-InputArea,
+.jp-OutputArea {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Clean up text output styling */
+.jp-RenderedText pre {
+  background: none;
+  border: none;
+  padding: 0.5em 0;
+}
+
+/* Compact spacing for Plotly charts */
+.jp-OutputArea .js-plotly-plot {
+  margin: 0.25em 0 !important;
+}
+
+/* Dark mode */
+[data-md-color-scheme="slate"] .jp-CodeCell .highlight-ipynb {
+  background: #2b2b2b;
+  border-color: #404040;
+}
+
+[data-md-color-scheme="slate"] .jp-RenderedText pre {
+  background: none;
+}
+
+/* -- Institutional footer ------------------------------------------------- */
+.footer-institutional {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.5rem 0;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.footer-institutional__logos {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-shrink: 0;
+}
+
+.footer-logo--jsa {
+  width: 200px;
+  height: auto;
+}
+
+.footer-logo--helmholtz {
+  width: 120px;
+  height: auto;
+}
+
+.footer-institutional__text {
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+.footer-institutional__text p {
+  margin: 0.2rem 0;
+}
+
+.footer-institutional__text a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+}
+
+.footer-institutional__text a:hover {
+  text-decoration-color: inherit;
+}
+
+/* Footer is always dark — always show JSA logo in white */
+.footer-logo--jsa {
+  filter: brightness(0) invert(1);
+}
+

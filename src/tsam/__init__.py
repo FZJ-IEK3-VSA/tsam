@@ -67,7 +67,10 @@ from tsam.result import AccuracyMetrics, AggregationResult
 # Legacy imports for backward compatibility
 from tsam.timeseriesaggregation import TimeSeriesAggregation, unstackToPeriods
 
-__version__ = "3.0.0"
+try:
+    from tsam._version import __version__
+except ImportError:
+    __version__ = "0.0.0.dev0"
 
 __all__ = [
     "AccuracyMetrics",

@@ -1,0 +1,154 @@
+site_name: ETHOS.TSAM Documentation
+site_url: https://fzj-iek3-vsa.github.io/tsam/
+repo_url: https://github.com/FZJ-IEK3-VSA/tsam
+repo_name: FZJ-IEK3-VSA/tsam
+edit_uri: edit/develop/docs/
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  logo: assets/tsam-logo-favicon.svg
+  favicon: assets/tsam-logo-favicon.svg
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.path
+    - navigation.tracking
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+    - content.action.view
+    - content.tooltips
+    - search.suggest
+    - search.highlight
+    - search.share
+    - toc.follow
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Home:
+    - index.md
+    - Installation: installation.md
+    - Getting Started: getting-started.md
+    - Migration Guide: migration-guide.md
+    - Glossary: glossary.md
+  - Examples:
+    - Getting Started:
+      - notebooks/quickstart.ipynb
+      - notebooks/visualization.ipynb
+    - Clustering Methods:
+      - notebooks/clustering_methods.ipynb
+      - notebooks/representations.ipynb
+      - notebooks/k_maxoids.ipynb
+    - Advanced Features:
+      - notebooks/segmentation.ipynb
+      - notebooks/optimization_input.ipynb
+      - notebooks/clustering_transfer.ipynb
+    - Hyperparameter Tuning:
+      - notebooks/tuning.ipynb
+      - notebooks/pareto_optimization.ipynb
+      - notebooks/building_energy_system.ipynb
+  - Learn:
+    - Mathematical Background: background/math.md
+    - Further Reading: further-reading.md
+  - API Reference: api/
+  - About:
+    - Changelog: changelog.md
+    - Legal Notice: legal-notice.md
+
+# gen_ref_pages.py lives in docs/ because gen-files requires scripts to be
+# relative to the project root, but mkdocs-jupyter would otherwise pick it up
+# and try to execute it as a notebook, crashing the build.
+exclude_docs: |
+  gen_ref_pages.py
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_root_heading: true
+            members_order: source
+            docstring_style: auto
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            separate_signature: true
+            show_signature_annotations: true
+  - mkdocs-jupyter:
+      execute: true
+      kernel_name: python3
+      include_source: true
+      allow_errors: false
+      include_requirejs: true
+      toc_depth: 3
+  - gen-files:
+      scripts:
+        - docs/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.mark
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - tables
+  - def_list
+  - footnotes
+  - abbr
+  - toc:
+      permalink: true
+      toc_depth: 2
+
+extra:
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - https://cdn.plot.ly/plotly-3.3.0.min.js
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
