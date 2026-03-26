@@ -26,7 +26,7 @@ import pytest
 from sklearn.exceptions import ConvergenceWarning
 
 from _configs import GOLDEN_DIR, case_ids, get_data
-from test_old_new_equivalence import (
+from _old_new_equivalence import (
     CASES,
     EquivalenceCase,
     _run_new,
@@ -105,7 +105,7 @@ class TestGoldenRegression:
         if not update_golden:
             pytest.skip("use --update-golden to regenerate")
 
-        data = get_data(case.dataset)
+        data = get_data(case.dataset, max_timesteps=case.max_timesteps)
         if case.skip_equivalence:
             new_result = _run_new(data, case)
             _save_golden(new_result.reconstructed, case)
@@ -126,7 +126,7 @@ class TestGoldenRegression:
                 f"golden file missing: {path.relative_to(GOLDEN_DIR.parent.parent)}"
             )
 
-        data = get_data(case.dataset)
+        data = get_data(case.dataset, max_timesteps=case.max_timesteps)
         with _expected_warnings(case):
             with _expected_windows_kmeans_warnings(case):
                 new_result = _run_new(data, case)
@@ -155,7 +155,7 @@ class TestGoldenRegression:
                 f"golden file missing: {path.relative_to(GOLDEN_DIR.parent.parent)}"
             )
 
-        data = get_data(case.dataset)
+        data = get_data(case.dataset, max_timesteps=case.max_timesteps)
         with _expected_warnings(case):
             with _expected_windows_kmeans_warnings(case):
                 _, old_agg = _run_old(data, case)

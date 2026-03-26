@@ -1,6 +1,6 @@
-# Contributing to tsam
+# Contributing to ETHOS.TSAM
 
-Thank you for your interest in contributing to tsam! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to ETHOS.TSAM! This document provides guidelines and instructions for contributing.
 
 ## Development Setup
 
@@ -122,11 +122,21 @@ uv run pytest test/ -k "test_k_means"
 
 ### Commit Messages
 
-Write clear, concise commit messages that explain what changes were made and why:
+We use [Conventional Commits](https://www.conventionalcommits.org/). PR titles are validated against this format and used to generate the changelog.
 
-- Use the imperative mood ("Add feature" not "Added feature")
-- Keep the first line under 50 characters
-- Add more detail in the body if needed
+Common prefixes:
+
+| Prefix | When to use | Example |
+|---|---|---|
+| `feat:` | New feature | `feat: add hourly resolution support` |
+| `fix:` | Bug fix | `fix: correct weight normalization` |
+| `docs:` | Documentation only | `docs: update installation guide` |
+| `build:` | Build system / dependencies | `build: bump pandas to 2.2` |
+| `ci:` | CI configuration | `ci: add Python 3.13 to matrix` |
+| `refactor:` | Code change that neither fixes a bug nor adds a feature | `refactor: extract clustering logic` |
+| `test:` | Adding or updating tests | `test: add segmentation edge cases` |
+
+Use `!` after the prefix (e.g. `feat!:`) for breaking changes.
 
 ### Pull Request Guidelines
 
@@ -145,16 +155,48 @@ Write clear, concise commit messages that explain what changes were made and why
 
 ## Documentation
 
-Documentation is built using [Sphinx](https://www.sphinx-doc.org/) and hosted on [Read the Docs](https://tsam.readthedocs.io/).
+Documentation is built using [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfun.github.io/mkdocs-material/) and hosted on [Read the Docs](https://tsam.readthedocs.io/).
 
 ### Building Documentation Locally
 
 ```bash
-cd docs
-make html
+mkdocs serve
 ```
 
-The built documentation will be in `docs/build/html/`.
+The documentation will be available at `http://127.0.0.1:8000/`.
+
+## Releasing
+
+Releases are automated via [release-please](https://github.com/googleapis/release-please) and GitHub Actions.
+
+### Regular releases
+
+1. Merge (squash) PRs with conventional commit titles into `develop`
+2. Merge (merge) `develop` into `master`
+3. release-please automatically opens a PR with version bump + CHANGELOG update
+4. Merge the release-please PR → a git tag is created → package is published to PyPI
+
+### Pre-releases
+
+Pre-releases can be published from any branch by pushing a tag:
+
+```bash
+git tag v4.1.0-rc.1
+git push origin v4.1.0-rc.1
+```
+
+This creates a GitHub Release marked as pre-release and publishes to PyPI.
+
+### Hotfix / manual releases
+
+Tag any commit and push it to trigger a release:
+
+```bash
+git tag v4.0.1
+git push origin v4.0.1
+```
+
+Note: manual releases skip the CHANGELOG update (which is managed by release-please).
 
 ## Questions?
 
@@ -165,4 +207,4 @@ If you have questions, feel free to:
 
 ## License
 
-By contributing to tsam, you agree that your contributions will be licensed under the MIT License.
+By contributing to ETHOS.TSAM, you agree that your contributions will be licensed under the MIT License.

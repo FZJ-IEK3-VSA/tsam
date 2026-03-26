@@ -53,6 +53,7 @@ def aggregate(
     cluster: ClusterConfig | None = None,
     segments: SegmentConfig | None = None,
     extremes: ExtremeConfig | None = None,
+    weights: dict[str, float] | None = None,
     preserve_column_means: bool = True,
     rescale_exclude_columns: list[str] | None = None,
     round_decimals: int | None = None,
@@ -98,6 +99,12 @@ def aggregate(
     extremes : ExtremeConfig, optional
         Configuration for preserving extreme periods.
         If not provided, no extreme period handling is applied.
+
+    weights : dict[str, float], optional
+        Per-column weights that influence all pipeline stages
+        (clustering, segmentation, representation, rescaling).
+        Higher weight = more influence on distance calculations.
+        Example: {"demand": 2.0, "solar": 1.0}
 
     preserve_column_means : bool, default True
         Rescale typical periods so each column's weighted mean matches
@@ -241,8 +248,17 @@ def aggregate(
         if missing:
             raise ValueError(f"Extreme period columns not found in data: {missing}")
 
+    # Resolve weights: top-level takes precedence, ClusterConfig.weights is deprecated
+    if cluster.weights is not None and weights is not None:
+        raise ValueError(
+            "weights specified both as top-level parameter and in ClusterConfig. "
+            "Use only the top-level weights parameter."
+        )
+    if cluster.weights is not None:
+        weights = cluster.weights
+
     # Validate and normalize weights
-    validated = validate_weights(data.columns, cluster.weights)
+    validated = validate_weights(data.columns, weights)
     if validated is not cluster.weights:
         cluster = ClusterConfig(
             method=cluster.method,

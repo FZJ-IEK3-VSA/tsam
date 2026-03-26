@@ -66,6 +66,7 @@ class ClusteringTestCase(NamedTuple):
     n_segments: int | None = None
     extreme_method: str | None = None
     extreme_columns: list[str] | None = None
+    max_timesteps: int | None = None  # truncate data for slow methods
 
 
 # Define all test configurations
@@ -85,6 +86,7 @@ TEST_CASES = [
         id="kmedoids_medoid_8clusters",
         method="kmedoids",
         representation="medoid",
+        max_timesteps=2016,
     ),
     ClusteringTestCase(
         id="kmaxoids_maxoid_8clusters",
@@ -190,6 +192,9 @@ def fixtures_dir():
 
 def run_aggregation(data: pd.DataFrame, test_case: ClusteringTestCase):
     """Run aggregation with the specified test case configuration."""
+    if test_case.max_timesteps is not None:
+        data = data.iloc[: test_case.max_timesteps]
+
     # Set seed for reproducibility with stochastic methods (kmeans, kmaxoids)
     if test_case.method in ("kmeans", "kmaxoids"):
         set_random_seed()

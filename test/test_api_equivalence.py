@@ -173,7 +173,8 @@ class TestAggregateEquivalence:
             sample_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(method="hierarchical", weights=weights),
+            cluster=ClusterConfig(method="hierarchical"),
+            weights=weights,
         )
 
         # Cluster assignments must be identical (same weighted distance)

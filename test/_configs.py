@@ -24,7 +24,7 @@ TEST_DIR = Path(__file__).parent
 TEST_DATA_DIR = TEST_DIR / "data"
 GOLDEN_DIR = TEST_DATA_DIR / "golden"
 
-EXAMPLES_DIR = TEST_DIR.parent / "docs" / "source" / "examples_notebooks"
+EXAMPLES_DIR = TEST_DIR.parent / "docs" / "notebooks"
 TESTDATA_CSV = EXAMPLES_DIR / "testdata.csv"
 WIDE_CSV = TEST_DATA_DIR / "wide.csv"
 
@@ -57,11 +57,14 @@ DATASETS = {
 _DATA_CACHE: dict[str, pd.DataFrame] = {}
 
 
-def get_data(name: str) -> pd.DataFrame:
-    """Return dataset by name, cached across calls."""
+def get_data(name: str, max_timesteps: int | None = None) -> pd.DataFrame:
+    """Return dataset by name, optionally truncated. Full data is cached."""
     if name not in _DATA_CACHE:
         _DATA_CACHE[name] = DATASETS[name]()
-    return _DATA_CACHE[name]
+    df = _DATA_CACHE[name]
+    if max_timesteps is not None:
+        return df.iloc[:max_timesteps]
+    return df
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +87,7 @@ class BaseConfig:
     old_kwargs: dict = field(default_factory=dict)
     seed: int | None = None
     only_datasets: set[str] = field(default_factory=set)
+    max_timesteps: int | None = None  # truncate data for slow methods
 
 
 CONFIGS: list[BaseConfig] = [
@@ -175,6 +179,7 @@ CONFIGS: list[BaseConfig] = [
         },
         seed=42,
         only_datasets={"testdata"},
+        max_timesteps=2016,
     ),
     BaseConfig(
         id="hierarchical_maxoid",
@@ -419,6 +424,7 @@ CONFIGS: list[BaseConfig] = [
         },
         seed=42,
         only_datasets={"testdata"},
+        max_timesteps=2016,
     ),
     BaseConfig(
         id="kmaxoids_segmentation",
@@ -530,6 +536,98 @@ CONFIGS: list[BaseConfig] = [
         },
         only_datasets={"testdata"},
     ),
+    # --- Weight x feature interactions ---
+    BaseConfig(
+        id="kmeans_weighted",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_means",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="kmedoids_weighted",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_medoids",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+        },
+        seed=42,
+        only_datasets={"testdata"},
+        max_timesteps=2016,
+    ),
+    BaseConfig(
+        id="kmaxoids_weighted",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_maxoids",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_duration_curves",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "sortValues": True,
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_extremes",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["Load"],
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_samemean",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "sameMean": True,
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_rescale_exclude",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "rescaleExcludeColumns": ["GHI"],
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="kmeans_weighted_distribution",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_means",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "representationMethod": "durationRepresentation",
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
     # --- Cross-feature interactions ---
     BaseConfig(
         id="hierarchical_weighted_segmentation",
@@ -567,6 +665,72 @@ CONFIGS: list[BaseConfig] = [
         },
         only_datasets={"testdata"},
     ),
+    # --- Weight x segmentation x feature (three-way) ---
+    BaseConfig(
+        id="hierarchical_weighted_segmentation_extremes",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "segmentation": True,
+            "noSegments": 6,
+            "extremePeriodMethod": "append",
+            "addPeakMax": ["Load"],
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_segmentation_samemean",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "segmentation": True,
+            "noSegments": 4,
+            "sameMean": True,
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="hierarchical_weighted_segmentation_distribution",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "segmentation": True,
+            "noSegments": 4,
+            "representationMethod": "durationRepresentation",
+        },
+        only_datasets={"testdata"},
+    ),
+    BaseConfig(
+        id="kmeans_weighted_segmentation",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "k_means",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "segmentation": True,
+            "noSegments": 8,
+        },
+        seed=42,
+        only_datasets={"testdata"},
+    ),
+    # --- Weight x no rescale ---
+    BaseConfig(
+        id="hierarchical_weighted_no_rescale",
+        old_kwargs={
+            "noTypicalPeriods": 8,
+            "hoursPerPeriod": 24,
+            "clusterMethod": "hierarchical",
+            "weightDict": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
+            "rescaleClusterPeriods": False,
+        },
+        only_datasets={"testdata"},
+    ),
 ]
 
 
@@ -583,6 +747,7 @@ class OldCase:
     dataset: str
     old_kwargs: dict
     seed: int | None = None
+    max_timesteps: int | None = None
 
 
 def build_old_cases(configs: list[BaseConfig] | None = None) -> list[OldCase]:
@@ -605,6 +770,7 @@ def build_old_cases(configs: list[BaseConfig] | None = None) -> list[OldCase]:
                     dataset=ds,
                     old_kwargs=kw,
                     seed=cfg.seed,
+                    max_timesteps=cfg.max_timesteps,
                 )
             )
     return cases

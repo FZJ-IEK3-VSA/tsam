@@ -183,6 +183,10 @@ class ClusterConfig:
         - "maxoid" for kmaxoids
 
     weights : dict[str, float], optional
+        .. deprecated::
+            Pass ``weights`` as a top-level parameter to
+            :func:`~tsam.aggregate` instead.
+
         Per-column importance factors for clustering. Higher weight = more
         influence. Example: ``{"demand": 2.0, "solar": 1.0}``
 
@@ -263,6 +267,14 @@ class ClusterConfig:
                 stacklevel=2,
             )
             scale_by_column_means = normalize_column_means
+        if weights is not None:
+            warnings.warn(
+                "Passing weights via ClusterConfig is deprecated. "
+                "Pass weights as a top-level parameter to aggregate() instead, "
+                "e.g. aggregate(data, n_clusters=8, weights={...}).",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         object.__setattr__(self, "method", method)
         object.__setattr__(self, "representation", representation)
         object.__setattr__(self, "weights", weights)
@@ -505,7 +517,7 @@ class ClusteringResult:
     segment_representation: Representation | None = None
     temporal_resolution: float | None = None
     extreme_cluster_indices: tuple[int, ...] | None = None
-    column_weights: tuple[tuple[str, float], ...] | None = None
+    weights: dict[str, float] | None = None
 
     # === Reference fields (for documentation, not used by apply()) ===
     cluster_config: ClusterConfig | None = None
@@ -611,9 +623,7 @@ class ClusteringResult:
             temporal_resolution=temporal_resolution,
             n_timesteps_per_period=n_timesteps_per_period,
             extreme_cluster_indices=extreme_cluster_indices_tuple,
-            column_weights=tuple(sorted(cluster_config.weights.items()))
-            if cluster_config.weights
-            else None,
+            weights=dict(cluster_config.weights) if cluster_config.weights else None,
             cluster_config=cluster_config,
             segment_config=segment_config,
             extremes_config=extremes_config,
@@ -772,8 +782,8 @@ class ClusteringResult:
             result["temporal_resolution"] = self.temporal_resolution
         if self.extreme_cluster_indices is not None:
             result["extreme_cluster_indices"] = list(self.extreme_cluster_indices)
-        if self.column_weights is not None:
-            result["column_weights"] = {k: v for k, v in self.column_weights}
+        if self.weights is not None:
+            result["weights"] = self.weights
         # Reference fields (optional, for documentation)
         if self.cluster_config is not None:
             result["cluster_config"] = self.cluster_config.to_dict()
@@ -817,8 +827,8 @@ class ClusteringResult:
             kwargs["temporal_resolution"] = data["temporal_resolution"]
         if "extreme_cluster_indices" in data:
             kwargs["extreme_cluster_indices"] = tuple(data["extreme_cluster_indices"])
-        if "column_weights" in data:
-            kwargs["column_weights"] = tuple(sorted(data["column_weights"].items()))
+        if "weights" in data:
+            kwargs["weights"] = data["weights"]
         # Reference fields
         if "cluster_config" in data:
             kwargs["cluster_config"] = ClusterConfig.from_dict(data["cluster_config"])
@@ -996,11 +1006,14 @@ class ClusteringResult:
                 f"but clustering expects {self.n_original_periods} periods"
             )
 
-        # Build ClusterConfig with representation and column weights.
-        cluster = ClusterConfig(
-            representation=self.representation,
-            weights=dict(self.column_weights) if self.column_weights else None,
-        )
+        # Build minimal ClusterConfig with just the representation.
+        cluster = ClusterConfig(representation=self.representation)
+
+        # Validate weight columns exist in new data
+        if self.weights is not None:
+            missing = set(self.weights.keys()) - set(data.columns)
+            if missing:
+                raise ValueError(f"Weight columns not found in data: {missing}")
 
         # Use stored segment config if available, otherwise build from transfer fields
         segments: SegmentConfig | None = None
