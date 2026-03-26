@@ -110,6 +110,7 @@ result = tsam.aggregate(
     cluster=ClusterConfig(),  # clustering options
     segments=SegmentConfig(n_segments=8),  # optional intra-period segmentation
     extremes=ExtremeConfig(max_value=["demand"]),  # optional extremes
+    weights={"demand": 2.0},       # per-column clustering weights (optional)
     preserve_column_means=True,    # rescale so totals match
     rescale_exclude_columns=None,  # columns to skip during rescaling
     round_decimals=None,           # optional output rounding
@@ -201,9 +202,9 @@ the last period is padded by repeating initial rows.
 |---|---|
 | **Module** | `pipeline/__init__.py` |
 | **Functions** | `_build_weight_vector()` |
-| **Config** | `ClusterConfig.weights` |
+| **Config** | `weights` (top-level parameter) |
 
-If `ClusterConfig.weights` is provided, weights are baked directly into the
+If `weights` is provided, weights are baked directly into the
 candidates array via vectorized multiply (`np.repeat` + broadcast). The
 `weight_vector` (`np.ndarray`) is stored on `PreparedData` for later
 unweighting.
@@ -567,8 +568,7 @@ from tsam import ClusterConfig
 cluster = ClusterConfig(
     method="hierarchical",        # clustering algorithm
     representation="medoid",      # how to compute cluster centers
-    weights=None,                 # per-column weights, e.g. {"solar": 2.0}
-    normalize_column_means=False, # divide by column mean before clustering
+    scale_by_column_means=False,  # divide by column mean before clustering
     use_duration_curves=False,    # sort values within periods before clustering
     include_period_sums=False,    # add period sums as extra clustering features
     solver="highs",               # MILP solver (for kmedoids only)
@@ -601,6 +601,54 @@ extremes = ExtremeConfig(
 ```
 
 ---
+
+## Developer reference
+
+??? info "`run_pipeline()` parameter sources"
+
+    | Parameter | Source: `aggregate()` | Source: `apply()` |
+    |---|---|---|
+    | `data` | user input | user input |
+    | `n_clusters` | user input | derived from assignments |
+    | `n_timesteps_per_period` | `period_duration / resolution` | stored value |
+    | `cluster` | user input or `ClusterConfig()` | `ClusterConfig(representation=...)` |
+    | `extremes` | user input or `None` | `None` (handled via `predef`) |
+    | `segments` | user input or `None` | reconstructed from stored fields |
+    | `rescale_cluster_periods` | `preserve_column_means` | stored value |
+    | `rescale_exclude_columns` | user input | stored value |
+    | `predef` | `None` | built from stored assignments |
+
+??? info "Config field consumption map"
+
+    **ClusterConfig:**
+
+    | Field | Step | Function |
+    |---|---|---|
+    | `method` | 4 | `cluster_periods()` |
+    | `representation` | 4, 11 (fallback) | clustering, `segment_typical_periods()` |
+    | `weights` | 2b | vectorized multiply → `weight_vector` |
+    | `normalize_column_means` | 1 | `normalize()` |
+    | `use_duration_curves` | 4 | branch gate |
+    | `include_period_sums` | 3 | `add_period_sum_features()` |
+    | `solver` | 4 | `cluster_periods()` |
+
+    **ExtremeConfig:** All fields consumed exclusively in step 6 by `add_extreme_periods()`.
+
+    **SegmentConfig:** Both fields consumed exclusively in step 11 by `segment_typical_periods()`.
+
+??? info "Output assembly: PipelineResult → AggregationResult"
+
+    | PipelineResult field | AggregationResult property |
+    |---|---|
+    | `typical_periods` | `cluster_representatives` |
+    | `cluster_counts` | `cluster_counts` |
+    | `original_data` | `.original` |
+    | `reconstructed_data` | `.reconstructed` |
+    | `accuracy_indicators` | `.accuracy` (RMSE, MAE, duration RMSE) |
+    | `clustering_result` | `.clustering` (for transfer/serialization) |
+    | `segmented_df` | `.assignments` (segment_idx column) |
+
+    Derived properties: `n_clusters`, `n_segments`, `cluster_assignments`, `residuals`, `plot`.
 
 ## Source file map
 

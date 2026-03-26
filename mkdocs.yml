@@ -72,7 +72,6 @@ nav:
   - Learn:
     - Mathematical Background: background/math.md
     - Pipeline Guide: background/pipeline_guide.md
-    - Pipeline Data Flow: background/pipeline_dataflow.md
     - Further Reading: further-reading.md
   - API Reference: api/
   - About:
