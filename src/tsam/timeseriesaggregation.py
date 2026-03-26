@@ -44,7 +44,7 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
         Use :func:`tsam.unstack_to_periods` instead.
     """
     warnings.warn(
-        "unstackToPeriods is deprecated. Use tsam.unstack_to_periods() instead.",
+        "unstackToPeriods will be removed in tsam v4.0. Use tsam.unstack_to_periods() instead.",
         LegacyAPIWarning,
         stacklevel=2,
     )
@@ -289,7 +289,7 @@ class TimeSeriesAggregation:
         :type addMeanMax: list
         """
         warnings.warn(
-            "TimeSeriesAggregation is deprecated and will be removed in a future version. "
+            "TimeSeriesAggregation will be removed in tsam v4.0. "
             "Use tsam.aggregate() instead. See the migration guide in the documentation.",
             LegacyAPIWarning,
             stacklevel=2,

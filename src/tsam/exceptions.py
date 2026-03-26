@@ -1,7 +1,7 @@
 """Custom exceptions and warnings for tsam."""
 
 
-class LegacyAPIWarning(DeprecationWarning):
+class LegacyAPIWarning(FutureWarning):
     """Warning for deprecated tsam legacy API usage.
 
     This warning is raised when using the old class-based API
