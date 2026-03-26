@@ -65,14 +65,15 @@ def cluster_sorted_periods(
 
     Returns (cluster_centers, cluster_center_indices, cluster_order).
     """
-    profiles_values = period_profiles.profiles_dataframe.values
     n_columns = period_profiles.n_columns
 
-    # Sort each period's timesteps descending for all columns
-    n_periods, n_total = profiles_values.shape
+    # Sort each period's timesteps descending for all columns.
+    # Use candidates (already weighted) so that clustering distance respects
+    # column weights — matching v3 behaviour.
+    n_periods, n_total = candidates.shape
     n_timesteps = n_total // n_columns
 
-    values_3d = profiles_values.copy().reshape(n_periods, n_columns, n_timesteps)
+    values_3d = candidates.copy().reshape(n_periods, n_columns, n_timesteps)
     sorted_values = (-np.sort(-values_3d, axis=2, kind="stable")).reshape(n_periods, -1)
 
     _, center_indices, cluster_order = aggregate_periods(

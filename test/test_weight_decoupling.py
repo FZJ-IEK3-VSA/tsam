@@ -196,8 +196,8 @@ class TestWeightRoundTrip:
         loaded = ClusteringResult.from_json(str(json_path))
 
         # Verify weights survived
-        assert loaded.column_weights is not None
-        restored = dict(loaded.column_weights)
+        assert loaded.weights is not None
+        restored = dict(loaded.weights)
         assert restored == weights
 
         # Apply and verify identical assignments
