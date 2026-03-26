@@ -33,20 +33,7 @@ def aggregate_periods(
 ) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
     """
     Clusters the data based on one of the cluster methods:
-    'averaging', 'kmeans', 'kmedoids' or 'hierarchical'
-
-    :param candidates: Dissimilarity matrix where each row represents a candidate. required
-    :type candidates: np.ndarray
-
-    :param n_clusters: Number of aggregated cluster. optional (default: 8)
-    :type n_clusters: integer
-
-    :param n_iter: Only required for the number of starts of the k-mean algorithm. optional (default: 10)
-    :type n_iter: integer
-
-    :param cluster_method: Chosen clustering algorithm. Possible values are
-        'averaging','kmeans','kmedoids' or 'hierarchical'. optional (default: 'kmeans')
-    :type cluster_method: string
+    'averaging', 'kmeans', 'kmedoids' or 'hierarchical'.
     """
     # Normalize old names to new names
     cluster_method = _METHOD_ALIASES.get(cluster_method, cluster_method)

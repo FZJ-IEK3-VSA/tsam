@@ -101,14 +101,7 @@ def maxoid_representation(
 ) -> tuple[list[np.ndarray], list[int]]:
     """
     Represents the candidates of a given cluster group (cluster_order)
-    by its medoid, measured with the euclidean distance.
-
-    :param candidates: Dissimilarity matrix where each row represents a candidate. required
-    :type candidates: np.ndarray
-
-    :param cluster_order: Integer array where the index refers to the candidate and the
-        Integer entry to the group. required
-    :type cluster_order: np.array
+    by its maxoid, measured with the euclidean distance.
     """
     # set cluster member that is farthest away from the points of the other clusters as maxoid
     cluster_centers = []
@@ -130,13 +123,6 @@ def medoid_representation(
     """
     Represents the candidates of a given cluster group (cluster_order)
     by its medoid, measured with the euclidean distance.
-
-    :param candidates: Dissimilarity matrix where each row represents a candidate. required
-    :type candidates: np.ndarray
-
-    :param cluster_order: Integer array where the index refers to the candidate and the
-        Integer entry to the group. required
-    :type cluster_order: np.array
     """
     # set cluster center as medoid
     cluster_centers = []
@@ -158,13 +144,6 @@ def mean_representation(
     """
     Represents the candidates of a given cluster group (cluster_order)
     by its mean.
-
-    :param candidates: Dissimilarity matrix where each row represents a candidate. required
-    :type candidates: np.ndarray
-
-    :param cluster_order: Integer array where the index refers to the candidate and the
-        Integer entry to the group. required
-    :type cluster_order: np.array
     """
     # set cluster centers as means of the group candidates
     cluster_centers = []
@@ -185,21 +164,6 @@ def minmax_mean_representation(
     Represents the candidates of a given cluster group (cluster_order)
     by either the minimum, the maximum or the mean values of each time step for
     all periods in that cluster depending on the command for each attribute.
-
-    :param candidates: Dissimilarity matrix where each row represents a candidate. required
-    :type candidates: np.ndarray
-
-    :param cluster_order: Integer array where the index refers to the candidate and the
-        Integer entry to the group. required
-    :type cluster_order: np.array
-
-    :param representation_dict: A dictionary which defines for each attribute whether the typical
-        period should be represented by the minimum or maximum values within each cluster.
-        optional (default: None)
-    :type representation_dict: dictionary
-
-    :param n_timesteps_per_period: The number of discrete timesteps which describe one period. required
-    :type n_timesteps_per_period: integer
     """
     cluster_centers = []
     rep_values = list(representation_dict.values())

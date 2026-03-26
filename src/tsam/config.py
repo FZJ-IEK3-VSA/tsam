@@ -289,6 +289,13 @@ class ClusterConfig:
     def __delattr__(self, name: str) -> None:
         raise AttributeError("ClusterConfig is immutable")
 
+    def __getstate__(self) -> dict:
+        return {s: getattr(self, s) for s in self.__slots__}
+
+    def __setstate__(self, state: dict) -> None:
+        for key, value in state.items():
+            object.__setattr__(self, key, value)
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ClusterConfig):
             return NotImplemented
