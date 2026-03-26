@@ -9,7 +9,17 @@ from typing import TYPE_CHECKING, Any, Literal
 import pandas as pd
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from tsam.result import AggregationResult
+
+
+def _infer_resolution(data: pd.DataFrame) -> float:
+    """Infer temporal resolution from data index."""
+    if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
+        return (data.index[1] - data.index[0]).total_seconds() / 3600
+    return 1.0
+
 
 # Type aliases for clarity
 ClusterMethod = Literal[
@@ -113,25 +123,6 @@ class MinMaxMean:
 Representation = RepresentationMethod | Distribution | MinMaxMean
 
 
-def _resolve_representation(rep: Representation) -> Representation:
-    """Normalize a string representation shortcut to an object when needed.
-
-    Returns the input unchanged for objects and simple string methods
-    (mean, medoid, maxoid). Converts distribution/distribution_minmax/minmax_mean
-    strings to their corresponding objects.
-    """
-    if isinstance(rep, (Distribution, MinMaxMean)):
-        return rep
-    if rep == "distribution":
-        return Distribution()
-    if rep == "distribution_minmax":
-        return Distribution(preserve_minmax=True)
-    if rep == "minmax_mean":
-        return MinMaxMean()
-    # Simple string methods: mean, medoid, maxoid
-    return rep
-
-
 def _representation_to_dict(rep: Representation) -> str | dict[str, Any]:
     """Serialize a representation value to a JSON-compatible format."""
     if isinstance(rep, (Distribution, MinMaxMean)):
@@ -152,7 +143,6 @@ def _representation_from_dict(data: str | dict) -> Representation:
     raise ValueError(f"Unknown representation type: {rep_type!r}")
 
 
-@dataclass(frozen=True)
 class ClusterConfig:
     """Configuration for the clustering algorithm.
 
@@ -195,12 +185,37 @@ class ClusterConfig:
     weights : dict[str, float], optional
         .. deprecated::
             Pass ``weights`` as a top-level parameter to
-            :func:`~tsam.aggregate` instead. Weights affect all pipeline
-            stages, not just clustering.
+            :func:`~tsam.aggregate` instead.
 
-    normalize_column_means : bool, default False
-        Normalize all columns to the same mean before clustering.
+        Per-column importance factors for clustering. Higher weight = more
+        influence. Example: ``{"demand": 2.0, "solar": 1.0}``
+
+        Weights scale the normalized data used for all clustering-related
+        decisions. They affect:
+
+        1. **Clustering distance**: Columns with higher weight contribute
+           more to the distance metric, so clusters form around patterns
+           in high-weight columns.
+        2. **Medoid/maxoid selection**: These representations pick an actual
+           period by cross-column distance. Weights change which period is
+           "closest to the centroid" or "farthest from other centroids."
+        3. **Segmentation**: Segment boundaries within typical periods are
+           determined in weighted space. High-weight columns have more
+           influence on where boundaries fall.
+
+        Other representations (mean, distribution, minmax_mean) are
+        **weight-invariant** — the weight multiplies in and divides back
+        out, producing the same result regardless of weight values.
+
+        Weights are removed before producing final outputs. They do not
+        affect normalization, rescaling, denormalization, reconstruction,
+        or accuracy computation. Columns not listed default to weight 1.0.
+
+    scale_by_column_means : bool, default False
+        Divide each column by its mean after MinMax normalization, so all
+        columns have equal mean before clustering.
         Useful when columns have very different scales.
+        (Previously called ``normalize_column_means``.)
 
     use_duration_curves : bool, default False
         Sort values within each period before clustering.
@@ -215,16 +230,44 @@ class ClusterConfig:
         Options: "highs" (default, open source), "cbc", "gurobi", "cplex"
     """
 
-    method: ClusterMethod = "hierarchical"
-    representation: Representation | None = None
-    weights: dict[str, float] | None = field(default=None, repr=False)
-    normalize_column_means: bool = False
-    use_duration_curves: bool = False
-    include_period_sums: bool = False
-    solver: Solver = "highs"
+    method: ClusterMethod
+    representation: Representation | None
+    weights: dict[str, float] | None
+    scale_by_column_means: bool
+    use_duration_curves: bool
+    include_period_sums: bool
+    solver: Solver
 
-    def __post_init__(self) -> None:
-        if self.weights is not None:
+    __slots__ = (
+        "include_period_sums",
+        "method",
+        "representation",
+        "scale_by_column_means",
+        "solver",
+        "use_duration_curves",
+        "weights",
+    )
+
+    def __init__(
+        self,
+        method: ClusterMethod = "hierarchical",
+        representation: Representation | None = None,
+        weights: dict[str, float] | None = None,
+        scale_by_column_means: bool = False,
+        use_duration_curves: bool = False,
+        include_period_sums: bool = False,
+        solver: Solver = "highs",
+        # Backward compat alias
+        normalize_column_means: bool | None = None,
+    ) -> None:
+        if normalize_column_means is not None:
+            warnings.warn(
+                "'normalize_column_means' is deprecated, use 'scale_by_column_means'.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            scale_by_column_means = normalize_column_means
+        if weights is not None:
             warnings.warn(
                 "Passing weights via ClusterConfig is deprecated. "
                 "Pass weights as a top-level parameter to aggregate() instead, "
@@ -232,6 +275,43 @@ class ClusterConfig:
                 DeprecationWarning,
                 stacklevel=2,
             )
+        object.__setattr__(self, "method", method)
+        object.__setattr__(self, "representation", representation)
+        object.__setattr__(self, "weights", weights)
+        object.__setattr__(self, "scale_by_column_means", scale_by_column_means)
+        object.__setattr__(self, "use_duration_curves", use_duration_curves)
+        object.__setattr__(self, "include_period_sums", include_period_sums)
+        object.__setattr__(self, "solver", solver)
+
+    def __setattr__(self, name: str, value: object) -> None:
+        raise AttributeError("ClusterConfig is immutable")
+
+    def __delattr__(self, name: str) -> None:
+        raise AttributeError("ClusterConfig is immutable")
+
+    def __getstate__(self) -> dict:
+        return {s: getattr(self, s) for s in self.__slots__}
+
+    def __setstate__(self, state: dict) -> None:
+        for key, value in state.items():
+            object.__setattr__(self, key, value)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ClusterConfig):
+            return NotImplemented
+        return all(getattr(self, s) == getattr(other, s) for s in self.__slots__)
+
+    def __hash__(self) -> int:
+        return hash(tuple(getattr(self, s) for s in self.__slots__))
+
+    def __repr__(self) -> str:
+        parts = ", ".join(f"{s}={getattr(self, s)!r}" for s in self.__slots__)
+        return f"ClusterConfig({parts})"
+
+    @property
+    def normalize_column_means(self) -> bool:
+        """Deprecated alias for ``scale_by_column_means``."""
+        return self.scale_by_column_means
 
     def get_representation(self) -> Representation:
         """Get the representation, using default if not specified."""
@@ -256,8 +336,8 @@ class ClusterConfig:
             result["representation"] = _representation_to_dict(self.representation)
         if self.weights is not None:
             result["weights"] = self.weights
-        if self.normalize_column_means:
-            result["normalize_column_means"] = self.normalize_column_means
+        if self.scale_by_column_means:
+            result["scale_by_column_means"] = self.scale_by_column_means
         if self.use_duration_curves:
             result["use_duration_curves"] = self.use_duration_curves
         if self.include_period_sums:
@@ -277,7 +357,10 @@ class ClusterConfig:
             method=data.get("method", "hierarchical"),
             representation=representation,
             weights=data.get("weights"),
-            normalize_column_means=data.get("normalize_column_means", False),
+            scale_by_column_means=data.get(
+                "scale_by_column_means",
+                data.get("normalize_column_means", False),
+            ),
             use_duration_curves=data.get("use_duration_curves", False),
             include_period_sums=data.get("include_period_sums", False),
             solver=data.get("solver", "highs"),
@@ -332,6 +415,16 @@ class SegmentConfig:
             n_segments=data["n_segments"],
             representation=_representation_from_dict(rep_data),
         )
+
+
+def _get_version() -> str:
+    """Get tsam version string for ClusteringResult."""
+    import importlib.metadata
+
+    try:
+        return importlib.metadata.version("tsam")
+    except importlib.metadata.PackageNotFoundError:
+        return "unknown"
 
 
 @dataclass(frozen=True)
@@ -438,6 +531,9 @@ class ClusteringResult:
     segment_config: SegmentConfig | None = None
     extremes_config: ExtremeConfig | None = None
 
+    # === Format version ===
+    version: str | None = None
+
     def __post_init__(self) -> None:
         if self.segment_assignments is not None and self.segment_durations is None:
             raise ValueError(
@@ -451,6 +547,128 @@ class ClusteringResult:
             raise ValueError(
                 "segment_assignments must be provided when segment_centers is specified"
             )
+
+    @classmethod
+    def from_pipeline(
+        cls,
+        *,
+        cluster_center_indices: list | None,
+        extreme_periods_info: dict,
+        extremes_config: ExtremeConfig | None,
+        cluster_order: list | np.ndarray,
+        segmented_df: pd.DataFrame | None,
+        segment_center_indices: list | None,
+        n_timesteps_per_period: int,
+        temporal_resolution: float | None,
+        original_data: pd.DataFrame,
+        cluster_config: ClusterConfig,
+        segment_config: SegmentConfig | None,
+        rescale_cluster_periods: bool,
+        rescale_exclude_columns: list[str] | None,
+        extreme_cluster_idx: list[int],
+    ) -> ClusteringResult:
+        """Build a ClusteringResult from pipeline intermediate data."""
+        # Get cluster centers
+        cluster_centers: tuple[int, ...] | None = None
+        if cluster_center_indices is not None:
+            center_indices = [int(x) for x in cluster_center_indices]
+
+            if (
+                extreme_periods_info
+                and extremes_config is not None
+                and extremes_config.method in ("new_cluster", "append")
+            ):
+                for period_type in extreme_periods_info:
+                    center_indices.append(
+                        int(extreme_periods_info[period_type]["step_no"])
+                    )
+
+            cluster_centers = tuple(center_indices)
+
+        # Compute segment data if segmentation was used
+        segment_assignments: tuple[tuple[int, ...], ...] | None = None
+        segment_durations: tuple[tuple[int, ...], ...] | None = None
+        segment_centers: tuple[tuple[int, ...], ...] | None = None
+
+        if segment_config is not None and segmented_df is not None:
+            segment_assignments, segment_durations, segment_centers = (
+                cls._extract_segment_data(segmented_df, segment_center_indices)
+            )
+
+        # Extract representation from configs
+        representation = cluster_config.get_representation()
+        segment_representation = (
+            segment_config.representation if segment_config else None
+        )
+
+        # Extract extreme cluster indices
+        extreme_cluster_indices_tuple: tuple[int, ...] | None = None
+        if extreme_cluster_idx:
+            extreme_cluster_indices_tuple = tuple(int(x) for x in extreme_cluster_idx)
+
+        # Compute period_duration
+        effective_resolution = (
+            temporal_resolution
+            if temporal_resolution is not None
+            else _infer_resolution(original_data)
+        )
+        period_duration = n_timesteps_per_period * effective_resolution
+
+        return cls(
+            period_duration=period_duration,
+            cluster_assignments=tuple(int(x) for x in cluster_order),
+            cluster_centers=cluster_centers,
+            segment_assignments=segment_assignments,
+            segment_durations=segment_durations,
+            segment_centers=segment_centers,
+            preserve_column_means=rescale_cluster_periods,
+            rescale_exclude_columns=tuple(rescale_exclude_columns)
+            if rescale_exclude_columns
+            else None,
+            representation=representation,
+            segment_representation=segment_representation,
+            temporal_resolution=temporal_resolution,
+            n_timesteps_per_period=n_timesteps_per_period,
+            extreme_cluster_indices=extreme_cluster_indices_tuple,
+            weights=dict(cluster_config.weights) if cluster_config.weights else None,
+            cluster_config=cluster_config,
+            segment_config=segment_config,
+            extremes_config=extremes_config,
+            version=_get_version(),
+        )
+
+    @staticmethod
+    def _extract_segment_data(
+        segmented_df: pd.DataFrame,
+        segment_center_indices: list | None,
+    ) -> tuple[
+        tuple[tuple[int, ...], ...],
+        tuple[tuple[int, ...], ...],
+        tuple[tuple[int, ...], ...] | None,
+    ]:
+        """Extract segment assignments, durations, and centers from a segmented DataFrame."""
+        assignments_list = []
+        durations_list = []
+
+        for period_idx in segmented_df.index.get_level_values(0).unique():
+            period_data = segmented_df.loc[period_idx]
+            assignments = []
+            durations = []
+            for seg_step, seg_dur, _orig_start in period_data.index:
+                assignments.extend([int(seg_step)] * int(seg_dur))
+                durations.append(int(seg_dur))
+            assignments_list.append(tuple(assignments))
+            durations_list.append(tuple(durations))
+
+        centers: tuple[tuple[int, ...], ...] | None = None
+        if segment_center_indices is not None:
+            if all(pc is not None for pc in segment_center_indices):
+                centers = tuple(
+                    tuple(int(x) for x in period_centers)
+                    for period_centers in segment_center_indices
+                )
+
+        return tuple(assignments_list), tuple(durations_list), centers
 
     @property
     def n_clusters(self) -> int:
@@ -546,6 +764,7 @@ class ClusteringResult:
         """Convert to dictionary for JSON serialization."""
         # Transfer fields (always included)
         result: dict[str, Any] = {
+            "version": self.version or _get_version(),
             "period_duration": self.period_duration,
             "cluster_assignments": list(self.cluster_assignments),
             "n_timesteps_per_period": self.n_timesteps_per_period,
@@ -593,6 +812,7 @@ class ClusteringResult:
             "n_timesteps_per_period": data["n_timesteps_per_period"],
             "preserve_column_means": data.get("preserve_column_means", True),
             "representation": _representation_from_dict(rep_data),
+            "version": data.get("version"),
         }
         if "cluster_centers" in data:
             kwargs["cluster_centers"] = tuple(data["cluster_centers"])
@@ -744,11 +964,9 @@ class ClusteringResult:
         >>> clustering = ClusteringResult.from_json("clustering.json")
         >>> result = clustering.apply(df)
         """
-        # Import here to avoid circular imports
-        from tsam.api import _build_old_params
-        from tsam.exceptions import LegacyAPIWarning
-        from tsam.result import AccuracyMetrics, AggregationResult
-        from tsam.timeseriesaggregation import TimeSeriesAggregation
+        from tsam.api import _build_aggregation_result
+        from tsam.pipeline import run_pipeline
+        from tsam.pipeline.types import PipelineConfig, PredefParams
 
         # Warn if using replace extreme method (transfer is not exact)
         if (
@@ -774,12 +992,8 @@ class ClusteringResult:
         )
 
         # Validate n_timesteps_per_period matches data
-        # Infer timestep duration from data if not provided
         if effective_temporal_resolution is None:
-            if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
-                inferred = (data.index[1] - data.index[0]).total_seconds() / 3600
-            else:
-                inferred = 1.0  # Default to hourly
+            inferred = _infer_resolution(data)
         else:
             inferred = effective_temporal_resolution
 
@@ -810,104 +1024,51 @@ class ClusteringResult:
 
         # Use stored segment config if available, otherwise build from transfer fields
         segments: SegmentConfig | None = None
-        n_segments: int | None = None
         if self.segment_assignments is not None and self.segment_durations is not None:
-            n_segments = len(self.segment_durations[0])
+            n_segments_val = len(self.segment_durations[0])
             segments = self.segment_config or SegmentConfig(
-                n_segments=n_segments,
+                n_segments=n_segments_val,
                 representation=self.segment_representation or "mean",
             )
 
-        # Build old API parameters, passing predefined values directly
-        # Note: Don't pass extremes config - extreme clusters are handled via
-        # extreme_cluster_indices and representations are computed from
-        # the periods assigned to those clusters in cluster_assignments
-        old_params = _build_old_params(
-            data=data,
+        # Run pipeline with predefined parameters
+        predef = PredefParams(
+            cluster_order=list(self.cluster_assignments),
+            cluster_center_indices=list(self.cluster_centers)
+            if self.cluster_centers
+            else None,
+            extreme_cluster_idx=list(self.extreme_cluster_indices)
+            if self.extreme_cluster_indices
+            else None,
+            segment_order=[list(s) for s in self.segment_assignments]
+            if self.segment_assignments
+            else None,
+            segment_durations=[list(s) for s in self.segment_durations]
+            if self.segment_durations
+            else None,
+            segment_centers=[list(s) for s in self.segment_centers]
+            if self.segment_centers
+            else None,
+        )
+
+        cfg = PipelineConfig(
             n_clusters=self.n_clusters,
-            period_duration=self.period_duration,
-            temporal_resolution=effective_temporal_resolution,
+            n_timesteps_per_period=self.n_timesteps_per_period,
             cluster=cluster,
             segments=segments,
-            extremes=None,
-            preserve_column_means=self.preserve_column_means,
+            rescale_cluster_periods=self.preserve_column_means,
             rescale_exclude_columns=list(self.rescale_exclude_columns)
             if self.rescale_exclude_columns
             else None,
             round_decimals=round_decimals,
             numerical_tolerance=numerical_tolerance,
-            weights=self.weights,
-            # Predefined values from this ClusteringResult
-            predef_cluster_assignments=self.cluster_assignments,
-            predef_cluster_centers=self.cluster_centers,
-            predef_extreme_cluster_indices=self.extreme_cluster_indices,
-            predef_segment_assignments=self.segment_assignments,
-            predef_segment_durations=self.segment_durations,
-            predef_segment_centers=self.segment_centers,
-        )
-
-        # Run aggregation using old implementation (suppress deprecation warning)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", LegacyAPIWarning)
-            agg = TimeSeriesAggregation(**old_params)
-            cluster_representatives = agg.createTypicalPeriods()
-
-        # Rename index levels for consistency with new API terminology
-        cluster_representatives = cluster_representatives.rename_axis(
-            index={"PeriodNum": "cluster", "TimeStep": "timestep"}
-        )
-
-        # Build accuracy metrics
-        accuracy_df = agg.accuracyIndicators()
-
-        # Build rescale deviations DataFrame
-        rescale_deviations_dict = getattr(agg, "_rescaleDeviations", {})
-        if rescale_deviations_dict:
-            rescale_deviations = pd.DataFrame.from_dict(
-                rescale_deviations_dict, orient="index"
-            )
-            rescale_deviations.index.name = "column"
-        else:
-            rescale_deviations = pd.DataFrame(
-                columns=["deviation_pct", "converged", "iterations"]
-            )
-
-        accuracy = AccuracyMetrics(
-            rmse=accuracy_df["RMSE"],
-            mae=accuracy_df["MAE"],
-            rmse_duration=accuracy_df["RMSE_duration"],
-            rescale_deviations=rescale_deviations,
-        )
-
-        # Build ClusteringResult - preserve stored values
-        from tsam.api import _build_clustering_result
-
-        clustering_result = _build_clustering_result(
-            agg=agg,
-            n_segments=n_segments,
-            cluster_config=cluster,
-            segment_config=segments,
-            extremes_config=self.extremes_config,
-            weights=self.weights,
-            preserve_column_means=self.preserve_column_means,
-            rescale_exclude_columns=list(self.rescale_exclude_columns)
-            if self.rescale_exclude_columns
-            else None,
             temporal_resolution=effective_temporal_resolution,
+            predef=predef,
         )
 
-        # Build result object
-        return AggregationResult(
-            cluster_representatives=cluster_representatives,
-            cluster_weights=dict(agg.clusterPeriodNoOccur),
-            n_timesteps_per_period=agg.timeStepsPerPeriod,
-            segment_durations=self.segment_durations,
-            accuracy=accuracy,
-            clustering_duration=getattr(agg, "clusteringDuration", 0.0),
-            clustering=clustering_result,
-            is_transferred=True,
-            _aggregation=agg,
-        )
+        result = run_pipeline(data=data, cfg=cfg)
+
+        return _build_aggregation_result(result, is_transferred=True)
 
 
 @dataclass(frozen=True)
@@ -941,7 +1102,6 @@ class ExtremeConfig:
     min_period : list[str], optional
         Column names where the period with minimum total should be preserved.
         Example: ["wind_generation"] to preserve lowest wind day.
-
     """
 
     method: ExtremeMethod = "append"
@@ -981,29 +1141,3 @@ class ExtremeConfig:
             max_period=data.get("max_period", []),
             min_period=data.get("min_period", []),
         )
-
-
-# Mapping from new API names to old API names
-METHOD_MAPPING: dict[ClusterMethod, str] = {
-    "averaging": "averaging",
-    "kmeans": "k_means",
-    "kmedoids": "k_medoids",
-    "kmaxoids": "k_maxoids",
-    "hierarchical": "hierarchical",
-    "contiguous": "adjacent_periods",
-}
-
-REPRESENTATION_MAPPING: dict[RepresentationMethod, str] = {
-    "mean": "meanRepresentation",
-    "medoid": "medoidRepresentation",
-    "maxoid": "maxoidRepresentation",
-    "distribution": "distributionRepresentation",
-    "distribution_minmax": "distributionAndMinMaxRepresentation",
-    "minmax_mean": "minmaxmeanRepresentation",
-}
-
-EXTREME_METHOD_MAPPING: dict[ExtremeMethod, str] = {
-    "append": "append",
-    "replace": "replace_cluster_center",
-    "new_cluster": "new_cluster_center",
-}

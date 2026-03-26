@@ -448,6 +448,16 @@ _RTOL: dict[str, float] = {
     "kmeans_weighted_segmentation": 1e-5,
 }
 
+# Configs where old and new APIs intentionally diverge.
+# The new API applies weights only for clustering distance, not baked into
+# the normalized data. With medoid representation this can select a different
+# medoid, causing different typical periods, reconstruction, and accuracy.
+# Cluster *assignments* still match.
+_SKIP_EQUIVALENCE: set[str] = {
+    "hierarchical_weighted",
+    "hierarchical_weighted_segmentation",
+}
+
 _WINDOWS_OPENMP_RUNTIME_WARNING_CASE_IDS = {
     "kmeans_distribution/testdata",
     "kmeans_segmentation/testdata",
@@ -475,6 +485,7 @@ class EquivalenceCase:
     new_kwargs: dict
     seed: int | None = None
     rtol: float = 1e-10
+    skip_equivalence: bool = False
     max_timesteps: int | None = None
 
 
@@ -501,6 +512,7 @@ def _build_cases() -> list[EquivalenceCase]:
                     new_kwargs=new_kw,
                     seed=base.seed,
                     rtol=_RTOL.get(base.id, 1e-10),
+                    skip_equivalence=base.id in _SKIP_EQUIVALENCE,
                     max_timesteps=base.max_timesteps,
                 )
             )
@@ -568,6 +580,8 @@ class TestOldNewEquivalence:
     @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_cluster_representatives(self, case: EquivalenceCase):
         """Typical-period DataFrames must be equal."""
+        if case.skip_equivalence:
+            pytest.skip("intentional old/new divergence (weight decoupling)")
         data = get_data(case.dataset)
         with _suppress_windows_kmeans_warnings(case):
             old_result, _ = _run_old(data, case)
@@ -595,6 +609,8 @@ class TestOldNewEquivalence:
     @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_accuracy(self, case: EquivalenceCase):
         """RMSE and MAE must match within tolerance."""
+        if case.skip_equivalence:
+            pytest.skip("intentional old/new divergence (weight decoupling)")
         data = get_data(case.dataset)
         with _suppress_windows_kmeans_warnings(case):
             _, old_agg = _run_old(data, case)
@@ -616,6 +632,8 @@ class TestOldNewEquivalence:
     @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
     def test_reconstruction(self, case: EquivalenceCase):
         """Reconstructed time series must match."""
+        if case.skip_equivalence:
+            pytest.skip("intentional old/new divergence (weight decoupling)")
         data = get_data(case.dataset)
         with _suppress_windows_kmeans_warnings(case):
             _, old_agg = _run_old(data, case)

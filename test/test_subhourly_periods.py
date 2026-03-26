@@ -21,14 +21,14 @@ def test_subhourly_periods():
 
     aggregation = tsam.TimeSeriesAggregation(
         testData,
-        noTypicalPeriods=8,
-        hoursPerPeriod=0.25,
-        clusterMethod="hierarchical",
+        no_typical_periods=8,
+        hours_per_period=0.25,
+        cluster_method="hierarchical",
         segmentation=True,
-        noSegments=1,
+        no_segments=1,
     )
 
-    results = aggregation.predictOriginalData()
+    results = aggregation.predict_original_data()
 
     print("Clustering took " + str(time.time() - starttime))
 

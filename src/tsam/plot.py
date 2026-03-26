@@ -159,7 +159,7 @@ class ResultPlotAccessor:
         go.Figure
         """
         typ = self._result.cluster_representatives
-        weights = self._result.cluster_weights
+        weights = self._result.cluster_counts
 
         available_columns = [c for c in typ.columns if c not in ["cluster", "timestep"]]
         columns = _validate_columns(
@@ -457,7 +457,7 @@ class ResultPlotAccessor:
         -------
         go.Figure
         """
-        weights = self._result.cluster_weights
+        weights = self._result.cluster_counts
         df = pd.DataFrame(
             {
                 "Period": [f"Period {p}" for p in weights],

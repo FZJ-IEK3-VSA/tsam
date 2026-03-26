@@ -11,7 +11,7 @@ import shutil
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
@@ -89,9 +89,9 @@ def _test_single_config_file(
         )
 
         # Reconstruct configs from serialized dicts
-        cluster = ClusterConfig(**opts["cluster_dict"])
+        cluster = ClusterConfig.from_dict(opts["cluster_dict"])
         extremes = (
-            ExtremeConfig(**opts["extremes_dict"])
+            ExtremeConfig.from_dict(opts["extremes_dict"])
             if opts["extremes_dict"] is not None
             else None
         )
@@ -163,10 +163,10 @@ def _parallel_context(
     serialized_opts = {
         "period_duration": aggregate_opts["period_duration"],
         "temporal_resolution": aggregate_opts["temporal_resolution"],
-        "cluster_dict": asdict(aggregate_opts["cluster"]),
+        "cluster_dict": aggregate_opts["cluster"].to_dict(),
         "segment_representation": aggregate_opts["segment_representation"],
         "extremes_dict": (
-            asdict(aggregate_opts["extremes"])
+            aggregate_opts["extremes"].to_dict()
             if aggregate_opts["extremes"] is not None
             else None
         ),

@@ -1,88 +1,139 @@
 import copy
-import time
 import warnings
 
 import numpy as np
 import pandas as pd
-from sklearn import preprocessing
-from sklearn.metrics import mean_absolute_error, mean_squared_error
 
+from tsam.config import (
+    ClusterConfig,
+    Distribution,
+    ExtremeConfig,
+    MinMaxMean,
+    SegmentConfig,
+)
 from tsam.exceptions import LegacyAPIWarning
-from tsam.periodAggregation import aggregatePeriods
-from tsam.representations import representations
+from tsam.period_aggregation import aggregate_periods  # noqa: F401 (re-exported)
+from tsam.pipeline import run_pipeline
+from tsam.pipeline.types import PipelineConfig, PredefParams
+from tsam.representations import representations  # noqa: F401 (re-exported)
+from tsam.weights import validate_weights
 
 pd.set_option("mode.chained_assignment", None)
 
-# max iterator while resacling cluster profiles
-MAX_ITERATOR = 20
 
-# tolerance while rescaling cluster periods to meet the annual sum of the original profile
-TOLERANCE = 1e-6
-
-
-# minimal weight that overwrites a weighting of zero in order to carry the profile through the aggregation process
-MIN_WEIGHT = 1e-6
-
-
-def unstackToPeriods(timeSeries, timeStepsPerPeriod):
+def unstack_to_periods(time_series, time_steps_per_period):
     """
     Extend the timeseries to an integer multiple of the period length and
     groups the time series to the periods.
 
-    :param timeSeries:
-    :type timeSeries: pandas DataFrame
+    :param time_series:
+    :type time_series: pandas DataFrame
 
-    :param timeStepsPerPeriod: The number of discrete timesteps which describe one period. required
-    :type timeStepsPerPeriod: integer
+    :param time_steps_per_period: The number of discrete timesteps which describe one period. required
+    :type time_steps_per_period: integer
 
-    :returns: - **unstackedTimeSeries** (pandas DataFrame) -- is stacked such that each row represents a
+    :returns: - **unstacked_time_series** (pandas DataFrame) -- is stacked such that each row represents a
                 candidate period
-              - **timeIndex** (pandas Series index) -- is the modification of the original
+              - **time_index** (pandas Series index) -- is the modification of the original
                 timeseriesindex in case an integer multiple was created
-
-    .. deprecated::
-        Use :func:`tsam.unstack_to_periods` instead.
     """
-    warnings.warn(
-        "unstackToPeriods is deprecated. Use tsam.unstack_to_periods() instead.",
-        LegacyAPIWarning,
-        stacklevel=2,
-    )
     # init new grouped timeindex
-    unstackedTimeSeries = timeSeries.copy()
+    unstacked_time_series = time_series.copy()
 
     # initialize new indices
-    periodIndex = []
-    stepIndex = []
+    period_index = []
+    step_index = []
 
-    # extend to inger multiple of period length
-    if len(timeSeries) % timeStepsPerPeriod == 0:
+    # extend to integer multiple of period length
+    if len(time_series) % time_steps_per_period == 0:
         attached_timesteps = 0
     else:
         # calculate number of timesteps which get attached
-        attached_timesteps = timeStepsPerPeriod - len(timeSeries) % timeStepsPerPeriod
+        attached_timesteps = (
+            time_steps_per_period - len(time_series) % time_steps_per_period
+        )
 
         # take these from the head of the original time series
-        rep_data = unstackedTimeSeries.head(attached_timesteps)
+        rep_data = unstacked_time_series.head(attached_timesteps)
 
         # append them at the end of the time series
-        unstackedTimeSeries = pd.concat([unstackedTimeSeries, rep_data])
+        unstacked_time_series = pd.concat([unstacked_time_series, rep_data])
 
     # create period and step index
-    for ii in range(0, len(unstackedTimeSeries)):
-        periodIndex.append(int(ii / timeStepsPerPeriod))
-        stepIndex.append(ii - int(ii / timeStepsPerPeriod) * timeStepsPerPeriod)
+    for ii in range(0, len(unstacked_time_series)):
+        period_index.append(int(ii / time_steps_per_period))
+        step_index.append(ii - int(ii / time_steps_per_period) * time_steps_per_period)
 
     # save old index
-    timeIndex = copy.deepcopy(unstackedTimeSeries.index)
+    time_index = copy.deepcopy(unstacked_time_series.index)
 
     # create new double index and unstack the time series
-    unstackedTimeSeries.index = pd.MultiIndex.from_arrays(
-        [stepIndex, periodIndex], names=["TimeStep", "PeriodNum"]
+    unstacked_time_series.index = pd.MultiIndex.from_arrays(
+        [step_index, period_index], names=["TimeStep", "PeriodNum"]
     )
-    unstackedTimeSeries = unstackedTimeSeries.unstack(level="TimeStep")
+    unstacked_time_series = unstacked_time_series.unstack(level="TimeStep")
 
-    return unstackedTimeSeries, timeIndex
+    return unstacked_time_series, time_index
+
+
+# Legacy alias
+unstackToPeriods = unstack_to_periods
+
+
+_PARAM_ALIASES = {
+    "timeSeries": "time_series",
+    "noTypicalPeriods": "no_typical_periods",
+    "noSegments": "no_segments",
+    "hoursPerPeriod": "hours_per_period",
+    "clusterMethod": "cluster_method",
+    "evalSumPeriods": "eval_sum_periods",
+    "sortValues": "sort_values",
+    "sameMean": "same_mean",
+    "rescaleClusterPeriods": "rescale_cluster_periods",
+    "rescaleExcludeColumns": "rescale_exclude_columns",
+    "weightDict": "weight_dict",
+    "extremePeriodMethod": "extreme_period_method",
+    "representationMethod": "representation_method",
+    "representationDict": "representation_dict",
+    "distributionPeriodWise": "distribution_period_wise",
+    "segmentRepresentationMethod": "segment_representation_method",
+    "predefClusterOrder": "predef_cluster_order",
+    "predefClusterCenterIndices": "predef_cluster_center_indices",
+    "predefExtremeClusterIdx": "predef_extreme_cluster_idx",
+    "predefSegmentOrder": "predef_segment_order",
+    "predefSegmentDurations": "predef_segment_durations",
+    "predefSegmentCenters": "predef_segment_centers",
+    "numericalTolerance": "numerical_tolerance",
+    "roundOutput": "round_output",
+    "addPeakMin": "add_peak_min",
+    "addPeakMax": "add_peak_max",
+    "addMeanMin": "add_mean_min",
+    "addMeanMax": "add_mean_max",
+}
+
+
+# Translation maps from old API names to new API names
+_CLUSTER_METHOD_MAP = {
+    "k_means": "kmeans",
+    "k_medoids": "kmedoids",
+    "k_maxoids": "kmaxoids",
+    "adjacent_periods": "contiguous",
+    "averaging": "averaging",
+    "hierarchical": "hierarchical",
+}
+
+_REPR_METHOD_MAP = {
+    "meanRepresentation": "mean",
+    "medoidRepresentation": "medoid",
+    "maxoidRepresentation": "maxoid",
+}
+
+_EXTREME_METHOD_MAP = {
+    "None": None,
+    "append": "append",
+    "new_cluster_center": "new_cluster",
+    "replace_cluster_center": "replace",
+}
 
 
 class TimeSeriesAggregation:
@@ -118,309 +169,317 @@ class TimeSeriesAggregation:
 
     def __init__(
         self,
-        timeSeries,
+        time_series=None,
         resolution=None,
-        noTypicalPeriods=10,
-        noSegments=10,
-        hoursPerPeriod=24,
-        clusterMethod="hierarchical",
-        evalSumPeriods=False,
-        sortValues=False,
-        sameMean=False,
-        rescaleClusterPeriods=True,
-        rescaleExcludeColumns=None,
-        weightDict=None,
+        no_typical_periods=10,
+        no_segments=10,
+        hours_per_period=24,
+        cluster_method="hierarchical",
+        eval_sum_periods=False,
+        sort_values=False,
+        same_mean=False,
+        rescale_cluster_periods=True,
+        rescale_exclude_columns=None,
+        weight_dict=None,
         segmentation=False,
-        extremePeriodMethod="None",
-        representationMethod=None,
-        representationDict=None,
-        distributionPeriodWise=True,
-        segmentRepresentationMethod=None,
-        predefClusterOrder=None,
-        predefClusterCenterIndices=None,
-        predefExtremeClusterIdx=None,
-        predefSegmentOrder=None,
-        predefSegmentDurations=None,
-        predefSegmentCenters=None,
+        extreme_period_method="None",
+        representation_method=None,
+        representation_dict=None,
+        distribution_period_wise=True,
+        segment_representation_method=None,
+        predef_cluster_order=None,
+        predef_cluster_center_indices=None,
+        predef_extreme_cluster_idx=None,
+        predef_segment_order=None,
+        predef_segment_durations=None,
+        predef_segment_centers=None,
         solver="highs",
-        numericalTolerance=1e-13,
-        roundOutput=None,
-        addPeakMin=None,
-        addPeakMax=None,
-        addMeanMin=None,
-        addMeanMax=None,
+        numerical_tolerance=1e-13,
+        round_output=None,
+        add_peak_min=None,
+        add_peak_max=None,
+        add_mean_min=None,
+        add_mean_max=None,
+        **kwargs,
     ):
         """
         Initialize the periodly clusters.
 
-        :param timeSeries: DataFrame with the datetime as index and the relevant
+        :param time_series: DataFrame with the datetime as index and the relevant
             time series parameters as columns. required
-        :type timeSeries: pandas.DataFrame() or dict
+        :type time_series: pandas.DataFrame() or dict
 
-        :param resolution: Resolution of the time series in hours [h]. If timeSeries is a
+        :param resolution: Resolution of the time series in hours [h]. If time_series is a
             pandas.DataFrame() the resolution is derived from the datetime
-            index. optional, default: delta_T in timeSeries
+            index. optional, default: delta_T in time_series
         :type resolution: float
 
-        :param hoursPerPeriod: Value which defines the length of a cluster period. optional, default: 24
-        :type hoursPerPeriod: integer
+        :param hours_per_period: Value which defines the length of a cluster period. optional, default: 24
+        :type hours_per_period: integer
 
-        :param noTypicalPeriods: Number of typical Periods - equivalent to the number of clusters. optional, default: 10
-        :type noTypicalPeriods: integer
+        :param no_typical_periods: Number of typical Periods - equivalent to the number of clusters. optional, default: 10
+        :type no_typical_periods: integer
 
-        :param noSegments: Number of segments in which the typical periods shoul be subdivided - equivalent to the
+        :param no_segments: Number of segments in which the typical periods should be subdivided - equivalent to the
             number of inner-period clusters. optional, default: 10
-        :type noSegments: integer
+        :type no_segments: integer
 
-        :param clusterMethod: Chosen clustering method. optional, default: 'hierarchical'
-            |br| Options are:
+        :param cluster_method: Chosen clustering method. optional, default: 'hierarchical'
+        :type cluster_method: string
 
-            * 'averaging'
-            * 'k_means'
-            * 'k_medoids'
-            * 'k_maxoids'
-            * 'hierarchical'
-            * 'adjacent_periods'
-        :type clusterMethod: string
-
-        :param evalSumPeriods: Boolean if in the clustering process also the averaged periodly values
+        :param eval_sum_periods: Boolean if in the clustering process also the averaged periodly values
             shall be integrated additional to the periodly profiles as parameters. optional, default: False
-        :type evalSumPeriods: boolean
+        :type eval_sum_periods: boolean
 
-        :param sameMean: Boolean which is used in the normalization procedure. If true, all time series get normalized
+        :param same_mean: Boolean which is used in the normalization procedure. If true, all time series get normalized
             such that they have the same mean value. optional, default: False
-        :type sameMean: boolean
+        :type same_mean: boolean
 
-        :param sortValues: Boolean if the clustering should be done by the periodly duration
+        :param sort_values: Boolean if the clustering should be done by the periodly duration
             curves (true) or the original shape of the data. optional (default: False)
-        :type sortValues: boolean
+        :type sort_values: boolean
 
-        :param rescaleClusterPeriods: Decides if the cluster Periods shall get rescaled such that their
+        :param rescale_cluster_periods: Decides if the cluster Periods shall get rescaled such that their
             weighted mean value fits the mean value of the original time series. optional (default: True)
-        :type rescaleClusterPeriods: boolean
+        :type rescale_cluster_periods: boolean
 
-        :param weightDict: Dictionary which weights the profiles. It is done by scaling
-            the time series while the normalization process. Normally all time
-            series have a scale from 0 to 1. By scaling them, the values get
-            different distances to each other and with this, they are
-            differently evaluated while the clustering process. optional (default: None )
-        :type weightDict: dict
+        :param weight_dict: Dictionary which weights the profiles. optional (default: None)
+        :type weight_dict: dict
 
-        :param segmentation: Boolean if time steps in periods should be aggregated to segments. optional (default: False)
-        :type segmentation: boolean
+        :param extreme_period_method: Method how to integrate extreme Periods. optional, default: 'None'
+        :type extreme_period_method: string
 
-        :param extremePeriodMethod: Method how to integrate extreme Periods (peak demand, lowest temperature etc.)
-            into to the typical period profiles. optional, default: 'None'
-            |br| Options are:
+        :param representation_method: Chosen representation. optional
+        :type representation_method: string
 
-            * None: No integration at all.
-            * 'append': append typical Periods to cluster centers
-            * 'new_cluster_center': add the extreme period as additional cluster center. It is checked then for all
-              Periods if they fit better to the this new center or their original cluster center.
-            * 'replace_cluster_center': replaces the cluster center of the
-              cluster where the extreme period belongs to with the periodly profile of the extreme period. (Worst
-              case system design)
-        :type extremePeriodMethod: string
+        :param representation_dict: Dictionary which states for each attribute whether the profiles in each cluster
+            should be represented by the minimum value or maximum value of each time step.
+        :type representation_dict: dict
 
-        :param representationMethod: Chosen representation. If specified, the clusters are represented in the chosen
-            way. Otherwise, each clusterMethod has its own commonly used default representation method.
-            |br| Options are:
-
-            * 'meanRepresentation' (default of 'averaging' and 'k_means')
-            * 'medoidRepresentation' (default of 'k_medoids', 'hierarchical' and 'adjacent_periods')
-            * 'minmaxmeanRepresentation'
-            * 'durationRepresentation'/ 'distributionRepresentation'
-            * 'distribtionAndMinMaxRepresentation'
-        :type representationMethod: string
-
-        :param representationDict: Dictionary which states for each attribute whether the profiles in each cluster
-            should be represented by the minimum value or maximum value of each time step. This enables estimations
-            to the safe side. This dictionary is needed when 'minmaxmeanRepresentation' is chosen. If not specified, the
-            dictionary is set to containing 'mean' values only.
-        :type representationDict: dict
-
-        :param distributionPeriodWise: If durationRepresentation is chosen, you can choose whether the distribution of
+        :param distribution_period_wise: If duration representation is chosen, you can choose whether the distribution of
             each cluster should be separately preserved or that of the original time series only (default: True)
-        :type distributionPeriodWise:
+        :type distribution_period_wise: boolean
 
-        :param segmentRepresentationMethod: Chosen representation for the segments. If specified, the segments are
-            represented in the chosen way. Otherwise, it is inherited from the representationMethod.
-            |br| Options are:
+        :param numerical_tolerance: Tolerance for numerical issues. optional (default: 1e-13)
+        :type numerical_tolerance: float
 
-            * 'meanRepresentation' (default of 'averaging' and 'k_means')
-            * 'medoidRepresentation' (default of 'k_medoids', 'hierarchical' and 'adjacent_periods')
-            * 'minmaxmeanRepresentation'
-            * 'durationRepresentation'/ 'distributionRepresentation'
-            * 'distribtionAndMinMaxRepresentation'
-        :type segmentRepresentationMethod: string
+        :param round_output: Decimals to what the output time series get round. optional (default: None)
+        :type round_output: integer
 
-        :param predefClusterOrder: Instead of aggregating a time series, a predefined grouping is taken
-            which is given by this list. optional (default: None)
-        :type predefClusterOrder: list or array
+        :param add_peak_min: List of column names which's minimal value shall be added. optional, default: []
+        :type add_peak_min: list
 
-        :param predefClusterCenterIndices: If predefClusterOrder is give, this list can define the representative
-            cluster candidates. Otherwise the medoid is taken. optional (default: None)
-        :type predefClusterCenterIndices: list or array
+        :param add_peak_max: List of column names which's maximal value shall be added. optional, default: []
+        :type add_peak_max: list
 
-        :param solver: Solver that is used for k_medoids clustering. optional (default: 'cbc' )
-        :type solver: string
+        :param add_mean_min: List of column names where the period with the cumulative minimal value
+            shall be added. optional, default: []
+        :type add_mean_min: list
 
-        :param numericalTolerance: Tolerance for numerical issues. Silences the warning for exceeding upper or lower bounds
-            of the time series. optional (default: 1e-13 )
-        :type numericalTolerance: float
-
-        :param roundOutput: Decimals to what the output time series get round. optional (default: None )
-        :type roundOutput: integer
-
-        :param addPeakMin: List of column names which's minimal value shall be added to the
-            typical periods. E.g.: ['Temperature']. optional, default: []
-        :type addPeakMin: list
-
-        :param addPeakMax: List of column names which's maximal value shall be added to the
-            typical periods. E.g. ['EDemand', 'HDemand']. optional, default: []
-        :type addPeakMax: list
-
-        :param addMeanMin: List of column names where the period with the cumulative minimal value
-            shall be added to the typical periods. E.g. ['Photovoltaic']. optional, default: []
-        :type addMeanMin: list
-
-        :param addMeanMax: List of column names where the period with the cumulative maximal value
-            shall be added to the typical periods. optional, default: []
-        :type addMeanMax: list
+        :param add_mean_max: List of column names where the period with the cumulative maximal value
+            shall be added. optional, default: []
+        :type add_mean_max: list
         """
+        # Translate deprecated camelCase kwargs to snake_case
+        for old_name, new_name in _PARAM_ALIASES.items():
+            if old_name in kwargs:
+                warnings.warn(
+                    f"'{old_name}' is deprecated, use '{new_name}'.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+                if new_name in kwargs:
+                    raise TypeError(
+                        f"Cannot specify both '{old_name}' and '{new_name}'"
+                    )
+                kwargs[new_name] = kwargs.pop(old_name)
+
+        # Apply translated kwargs as overrides
+        time_series = kwargs.pop("time_series", time_series)
+        resolution = kwargs.pop("resolution", resolution)
+        no_typical_periods = kwargs.pop("no_typical_periods", no_typical_periods)
+        no_segments = kwargs.pop("no_segments", no_segments)
+        hours_per_period = kwargs.pop("hours_per_period", hours_per_period)
+        cluster_method = kwargs.pop("cluster_method", cluster_method)
+        eval_sum_periods = kwargs.pop("eval_sum_periods", eval_sum_periods)
+        sort_values = kwargs.pop("sort_values", sort_values)
+        same_mean = kwargs.pop("same_mean", same_mean)
+        rescale_cluster_periods = kwargs.pop(
+            "rescale_cluster_periods", rescale_cluster_periods
+        )
+        rescale_exclude_columns = kwargs.pop(
+            "rescale_exclude_columns", rescale_exclude_columns
+        )
+        weight_dict = kwargs.pop("weight_dict", weight_dict)
+        segmentation = kwargs.pop("segmentation", segmentation)
+        extreme_period_method = kwargs.pop(
+            "extreme_period_method", extreme_period_method
+        )
+        representation_method = kwargs.pop(
+            "representation_method", representation_method
+        )
+        representation_dict = kwargs.pop("representation_dict", representation_dict)
+        distribution_period_wise = kwargs.pop(
+            "distribution_period_wise", distribution_period_wise
+        )
+        segment_representation_method = kwargs.pop(
+            "segment_representation_method", segment_representation_method
+        )
+        predef_cluster_order = kwargs.pop("predef_cluster_order", predef_cluster_order)
+        predef_cluster_center_indices = kwargs.pop(
+            "predef_cluster_center_indices", predef_cluster_center_indices
+        )
+        predef_extreme_cluster_idx = kwargs.pop(
+            "predef_extreme_cluster_idx", predef_extreme_cluster_idx
+        )
+        predef_segment_order = kwargs.pop("predef_segment_order", predef_segment_order)
+        predef_segment_durations = kwargs.pop(
+            "predef_segment_durations", predef_segment_durations
+        )
+        predef_segment_centers = kwargs.pop(
+            "predef_segment_centers", predef_segment_centers
+        )
+        solver = kwargs.pop("solver", solver)
+        numerical_tolerance = kwargs.pop("numerical_tolerance", numerical_tolerance)
+        round_output = kwargs.pop("round_output", round_output)
+        add_peak_min = kwargs.pop("add_peak_min", add_peak_min)
+        add_peak_max = kwargs.pop("add_peak_max", add_peak_max)
+        add_mean_min = kwargs.pop("add_mean_min", add_mean_min)
+        add_mean_max = kwargs.pop("add_mean_max", add_mean_max)
+
+        if kwargs:
+            raise TypeError(f"Unexpected keyword arguments: {set(kwargs)}")
+
         warnings.warn(
             "TimeSeriesAggregation is deprecated and will be removed in a future version. "
             "Use tsam.aggregate() instead. See the migration guide in the documentation.",
             LegacyAPIWarning,
             stacklevel=2,
         )
-        if addMeanMin is None:
-            addMeanMin = []
-        if addMeanMax is None:
-            addMeanMax = []
-        if addPeakMax is None:
-            addPeakMax = []
-        if addPeakMin is None:
-            addPeakMin = []
-        if weightDict is None:
-            weightDict = {}
-        self.timeSeries = timeSeries
+        if add_mean_min is None:
+            add_mean_min = []
+        if add_mean_max is None:
+            add_mean_max = []
+        if add_peak_max is None:
+            add_peak_max = []
+        if add_peak_min is None:
+            add_peak_min = []
+        if weight_dict is None:
+            weight_dict = {}
+        self.time_series = time_series
 
         self.resolution = resolution
 
-        self.hoursPerPeriod = hoursPerPeriod
+        self.hours_per_period = hours_per_period
 
-        self.noTypicalPeriods = noTypicalPeriods
+        self.no_typical_periods = no_typical_periods
 
-        self.noSegments = noSegments
+        self.no_segments = no_segments
 
-        self.clusterMethod = clusterMethod
+        self.cluster_method = cluster_method
 
-        self.extremePeriodMethod = extremePeriodMethod
+        self.extreme_period_method = extreme_period_method
 
-        self.evalSumPeriods = evalSumPeriods
+        self.eval_sum_periods = eval_sum_periods
 
-        self.sortValues = sortValues
+        self.sort_values = sort_values
 
-        self.sameMean = sameMean
+        self.same_mean = same_mean
 
-        self.rescaleClusterPeriods = rescaleClusterPeriods
+        self.rescale_cluster_periods = rescale_cluster_periods
 
-        self.rescaleExcludeColumns = rescaleExcludeColumns or []
+        self.rescale_exclude_columns = rescale_exclude_columns or []
 
-        self.weightDict = weightDict
+        self.weight_dict = weight_dict
 
-        self.representationMethod = representationMethod
+        self.representation_method = representation_method
 
-        self.representationDict = representationDict
+        self.representation_dict = representation_dict
 
-        self.distributionPeriodWise = distributionPeriodWise
+        self.distribution_period_wise = distribution_period_wise
 
-        self.segmentRepresentationMethod = segmentRepresentationMethod
+        self.segment_representation_method = segment_representation_method
 
-        self.predefClusterOrder = predefClusterOrder
+        self.predef_cluster_order = predef_cluster_order
 
-        self.predefClusterCenterIndices = predefClusterCenterIndices
+        self.predef_cluster_center_indices = predef_cluster_center_indices
 
-        self.predefExtremeClusterIdx = predefExtremeClusterIdx
+        self.predef_extreme_cluster_idx = predef_extreme_cluster_idx
 
-        self.predefSegmentOrder = predefSegmentOrder
+        self.predef_segment_order = predef_segment_order
 
-        self.predefSegmentDurations = predefSegmentDurations
+        self.predef_segment_durations = predef_segment_durations
 
-        self.predefSegmentCenters = predefSegmentCenters
+        self.predef_segment_centers = predef_segment_centers
 
         self.solver = solver
 
-        self.numericalTolerance = numericalTolerance
+        self.numerical_tolerance = numerical_tolerance
 
         self.segmentation = segmentation
 
-        self.roundOutput = roundOutput
+        self.round_output = round_output
 
-        self.addPeakMin = addPeakMin
+        self.add_peak_min = add_peak_min
 
-        self.addPeakMax = addPeakMax
+        self.add_peak_max = add_peak_max
 
-        self.addMeanMin = addMeanMin
+        self.add_mean_min = add_mean_min
 
-        self.addMeanMax = addMeanMax
+        self.add_mean_max = add_mean_max
 
         self._check_init_args()
-
-        # internal attributes
-        self._normalizedMean = None
 
         return
 
     def _check_init_args(self):
-        # check timeSeries and set it as pandas DataFrame
-        if not isinstance(self.timeSeries, pd.DataFrame):
-            if isinstance(self.timeSeries, dict) or isinstance(
-                self.timeSeries, np.ndarray
+        # check time_series and set it as pandas DataFrame
+        if not isinstance(self.time_series, pd.DataFrame):
+            if isinstance(self.time_series, dict) or isinstance(
+                self.time_series, np.ndarray
             ):
-                self.timeSeries = pd.DataFrame(self.timeSeries)
+                self.time_series = pd.DataFrame(self.time_series)
             else:
                 raise ValueError(
-                    "timeSeries has to be of type pandas.DataFrame() "
+                    "time_series has to be of type pandas.DataFrame() "
                     + "or of type np.array() "
                     "in initialization of object of class " + type(self).__name__
                 )
 
         # check if extreme periods exist in the dataframe
-        for peak in self.addPeakMin:
-            if peak not in self.timeSeries.columns:
+        for peak in self.add_peak_min:
+            if peak not in self.time_series.columns:
                 raise ValueError(
                     peak
-                    + ' listed in "addPeakMin"'
-                    + " does not occur as timeSeries column"
+                    + ' listed in "add_peak_min"'
+                    + " does not occur as time_series column"
                 )
-        for peak in self.addPeakMax:
-            if peak not in self.timeSeries.columns:
+        for peak in self.add_peak_max:
+            if peak not in self.time_series.columns:
                 raise ValueError(
                     peak
-                    + ' listed in "addPeakMax"'
-                    + " does not occur as timeSeries column"
+                    + ' listed in "add_peak_max"'
+                    + " does not occur as time_series column"
                 )
-        for peak in self.addMeanMin:
-            if peak not in self.timeSeries.columns:
+        for peak in self.add_mean_min:
+            if peak not in self.time_series.columns:
                 raise ValueError(
                     peak
-                    + ' listed in "addMeanMin"'
-                    + " does not occur as timeSeries column"
+                    + ' listed in "add_mean_min"'
+                    + " does not occur as time_series column"
                 )
-        for peak in self.addMeanMax:
-            if peak not in self.timeSeries.columns:
+        for peak in self.add_mean_max:
+            if peak not in self.time_series.columns:
                 raise ValueError(
                     peak
-                    + ' listed in "addMeanMax"'
-                    + " does not occur as timeSeries column"
+                    + ' listed in "add_mean_max"'
+                    + " does not occur as time_series column"
                 )
 
         # derive resolution from date time index if not provided
         if self.resolution is None:
             try:
-                timedelta = self.timeSeries.index[1] - self.timeSeries.index[0]
+                timedelta = self.time_series.index[1] - self.time_series.index[0]
                 self.resolution = float(timedelta.total_seconds()) / 3600
             except AttributeError as exc:
                 raise ValueError(
@@ -429,8 +488,8 @@ class TimeSeriesAggregation:
                 ) from exc
             except TypeError:
                 try:
-                    self.timeSeries.index = pd.to_datetime(self.timeSeries.index)
-                    timedelta = self.timeSeries.index[1] - self.timeSeries.index[0]
+                    self.time_series.index = pd.to_datetime(self.time_series.index)
+                    timedelta = self.time_series.index[1] - self.time_series.index[0]
                     self.resolution = float(timedelta.total_seconds()) / 3600
                 except Exception as exc:
                     raise ValueError(
@@ -441,1037 +500,474 @@ class TimeSeriesAggregation:
         if not (isinstance(self.resolution, int) or isinstance(self.resolution, float)):
             raise ValueError("resolution has to be nonnegative float or int")
 
-        # check hoursPerPeriod
-        if self.hoursPerPeriod is None or self.hoursPerPeriod <= 0:
-            raise ValueError("hoursPerPeriod has to be nonnegative float or int")
+        # check hours_per_period
+        if self.hours_per_period is None or self.hours_per_period <= 0:
+            raise ValueError("hours_per_period has to be nonnegative float or int")
 
         # check typical Periods
         if (
-            self.noTypicalPeriods is None
-            or self.noTypicalPeriods <= 0
-            or not isinstance(self.noTypicalPeriods, int)
+            self.no_typical_periods is None
+            or self.no_typical_periods <= 0
+            or not isinstance(self.no_typical_periods, int)
         ):
-            raise ValueError("noTypicalPeriods has to be nonnegative integer")
-        self.timeStepsPerPeriod = int(self.hoursPerPeriod / self.resolution)
-        if not self.timeStepsPerPeriod == self.hoursPerPeriod / self.resolution:
+            raise ValueError("no_typical_periods has to be nonnegative integer")
+        self.time_steps_per_period = int(self.hours_per_period / self.resolution)
+        if not self.time_steps_per_period == self.hours_per_period / self.resolution:
             raise ValueError(
-                "The combination of hoursPerPeriod and the "
-                + "resulution does not result in an integer "
+                "The combination of hours_per_period and the "
+                + "resolution does not result in an integer "
                 + "number of time steps per period"
             )
         if self.segmentation:
-            if self.noSegments > self.timeStepsPerPeriod:
+            if self.no_segments > self.time_steps_per_period:
                 warnings.warn(
                     "The number of segments must be less than or equal to the number of time steps per period. "
                     "Segment number is decreased to number of time steps per period."
                 )
-                self.noSegments = self.timeStepsPerPeriod
+                self.no_segments = self.time_steps_per_period
 
-        # check clusterMethod
-        if self.clusterMethod not in self.CLUSTER_METHODS:
+        # check cluster_method
+        if self.cluster_method not in self.CLUSTER_METHODS:
             raise ValueError(
-                "clusterMethod needs to be one of "
+                "cluster_method needs to be one of "
                 + "the following: "
                 + f"{self.CLUSTER_METHODS}"
             )
 
-        # check representationMethod
+        # check representation_method
         if (
-            self.representationMethod is not None
-            and self.representationMethod not in self.REPRESENTATION_METHODS
+            self.representation_method is not None
+            and self.representation_method not in self.REPRESENTATION_METHODS
         ):
             raise ValueError(
-                "If specified, representationMethod needs to be one of "
+                "If specified, representation_method needs to be one of "
                 + "the following: "
                 + f"{self.REPRESENTATION_METHODS}"
             )
 
-        # check representationMethod
-        if self.segmentRepresentationMethod is None:
-            self.segmentRepresentationMethod = self.representationMethod
+        # check segment_representation_method
+        if self.segment_representation_method is None:
+            self.segment_representation_method = self.representation_method
         else:
-            if self.segmentRepresentationMethod not in self.REPRESENTATION_METHODS:
+            if self.segment_representation_method not in self.REPRESENTATION_METHODS:
                 raise ValueError(
-                    "If specified, segmentRepresentationMethod needs to be one of "
+                    "If specified, segment_representation_method needs to be one of "
                     + "the following: "
                     + f"{self.REPRESENTATION_METHODS}"
                 )
 
-        # if representationDict None, represent by maximum time steps in each cluster
-        if self.representationDict is None:
-            self.representationDict = dict.fromkeys(
-                list(self.timeSeries.columns), "mean"
+        # if representation_dict None, represent by maximum time steps in each cluster
+        if self.representation_dict is None:
+            self.representation_dict = dict.fromkeys(
+                list(self.time_series.columns), "mean"
             )
-        # sort representationDict alphabetically to make sure that the min, max or mean function is applied to the right
+        # sort representation_dict alphabetically to make sure that the min, max or mean function is applied to the right
         # column
-        self.representationDict = (
-            pd.Series(self.representationDict).sort_index(axis=0).to_dict()
+        self.representation_dict = (
+            pd.Series(self.representation_dict).sort_index(axis=0).to_dict()
         )
 
-        # check extremePeriods
-        if self.extremePeriodMethod not in self.EXTREME_PERIOD_METHODS:
+        # check extreme_periods
+        if self.extreme_period_method not in self.EXTREME_PERIOD_METHODS:
             raise ValueError(
-                "extremePeriodMethod needs to be one of "
+                "extreme_period_method needs to be one of "
                 + "the following: "
                 + f"{self.EXTREME_PERIOD_METHODS}"
             )
 
-        # check evalSumPeriods
-        if not isinstance(self.evalSumPeriods, bool):
-            raise ValueError("evalSumPeriods has to be boolean")
-        # check sortValues
-        if not isinstance(self.sortValues, bool):
-            raise ValueError("sortValues has to be boolean")
-        # check sameMean
-        if not isinstance(self.sameMean, bool):
-            raise ValueError("sameMean has to be boolean")
-        # check rescaleClusterPeriods
-        if not isinstance(self.rescaleClusterPeriods, bool):
-            raise ValueError("rescaleClusterPeriods has to be boolean")
+        # check eval_sum_periods
+        if not isinstance(self.eval_sum_periods, bool):
+            raise ValueError("eval_sum_periods has to be boolean")
+        # check sort_values
+        if not isinstance(self.sort_values, bool):
+            raise ValueError("sort_values has to be boolean")
+        # check same_mean
+        if not isinstance(self.same_mean, bool):
+            raise ValueError("same_mean has to be boolean")
+        # check rescale_cluster_periods
+        if not isinstance(self.rescale_cluster_periods, bool):
+            raise ValueError("rescale_cluster_periods has to be boolean")
 
-        # check predefClusterOrder
-        if self.predefClusterOrder is not None:
-            if not isinstance(self.predefClusterOrder, (list, np.ndarray)):
-                raise ValueError("predefClusterOrder has to be an array or list")
-            if self.predefClusterCenterIndices is not None:
-                # check predefClusterCenterIndices
-                if not isinstance(self.predefClusterCenterIndices, (list, np.ndarray)):
+        # check predef_cluster_order
+        if self.predef_cluster_order is not None:
+            if not isinstance(self.predef_cluster_order, (list, np.ndarray)):
+                raise ValueError("predef_cluster_order has to be an array or list")
+            if self.predef_cluster_center_indices is not None:
+                # check predef_cluster_center_indices
+                if not isinstance(
+                    self.predef_cluster_center_indices, (list, np.ndarray)
+                ):
                     raise ValueError(
-                        "predefClusterCenterIndices has to be an array or list"
+                        "predef_cluster_center_indices has to be an array or list"
                     )
-        elif self.predefClusterCenterIndices is not None:
+        elif self.predef_cluster_center_indices is not None:
             raise ValueError(
-                'If "predefClusterCenterIndices" is defined, "predefClusterOrder" needs to be defined as well'
+                'If "predef_cluster_center_indices" is defined, "predef_cluster_order" needs to be defined as well'
             )
 
-        # check predefSegmentOrder
-        if self.predefSegmentOrder is not None:
-            if not isinstance(self.predefSegmentOrder, (list, tuple)):
-                raise ValueError("predefSegmentOrder has to be a list or tuple")
-            if self.predefSegmentDurations is None:
+        # check predef_segment_order
+        if self.predef_segment_order is not None:
+            if not isinstance(self.predef_segment_order, (list, tuple)):
+                raise ValueError("predef_segment_order has to be a list or tuple")
+            if self.predef_segment_durations is None:
                 raise ValueError(
-                    'If "predefSegmentOrder" is defined, "predefSegmentDurations" '
+                    'If "predef_segment_order" is defined, "predef_segment_durations" '
                     "needs to be defined as well"
                 )
-            if not isinstance(self.predefSegmentDurations, (list, tuple)):
-                raise ValueError("predefSegmentDurations has to be a list or tuple")
-        elif self.predefSegmentDurations is not None:
+            if not isinstance(self.predef_segment_durations, (list, tuple)):
+                raise ValueError("predef_segment_durations has to be a list or tuple")
+        elif self.predef_segment_durations is not None:
             raise ValueError(
-                'If "predefSegmentDurations" is defined, "predefSegmentOrder" '
+                'If "predef_segment_durations" is defined, "predef_segment_order" '
                 "needs to be defined as well"
             )
 
-        if self.predefSegmentCenters is not None:
-            if self.predefSegmentOrder is None:
+        if self.predef_segment_centers is not None:
+            if self.predef_segment_order is None:
                 raise ValueError(
-                    'If "predefSegmentCenters" is defined, "predefSegmentOrder" '
+                    'If "predef_segment_centers" is defined, "predef_segment_order" '
                     "needs to be defined as well"
                 )
-            if not isinstance(self.predefSegmentCenters, (list, tuple)):
-                raise ValueError("predefSegmentCenters has to be a list or tuple")
+            if not isinstance(self.predef_segment_centers, (list, tuple)):
+                raise ValueError("predef_segment_centers has to be a list or tuple")
 
         return
 
-    def _normalizeTimeSeries(self, sameMean=False):
-        """
-        Normalizes each time series independently.
-
-        :param sameMean: Decides if the time series should have all the same mean value.
-            Relevant for weighting time series. optional (default: False)
-        :type sameMean: boolean
-
-        :returns: normalized time series
-        """
-        min_max_scaler = preprocessing.MinMaxScaler()
-        normalizedTimeSeries = pd.DataFrame(
-            min_max_scaler.fit_transform(self.timeSeries),
-            columns=self.timeSeries.columns,
-            index=self.timeSeries.index,
-        )
-
-        self._normalizedMean = normalizedTimeSeries.mean()
-        if sameMean:
-            normalizedTimeSeries /= self._normalizedMean
-
-        return normalizedTimeSeries
-
-    def _unnormalizeTimeSeries(self, normalizedTimeSeries, sameMean=False):
-        """
-        Equivalent to '_normalizeTimeSeries'. Just does the back
-        transformation.
-
-        :param normalizedTimeSeries: Time series which should get back transformated. required
-        :type normalizedTimeSeries: pandas.DataFrame()
-
-        :param sameMean: Has to have the same value as in _normalizeTimeSeries. optional (default: False)
-        :type sameMean: boolean
-
-        :returns: unnormalized time series
-        """
-        from sklearn import preprocessing
-
-        min_max_scaler = preprocessing.MinMaxScaler()
-        min_max_scaler.fit(self.timeSeries)
-
-        if sameMean:
-            normalizedTimeSeries *= self._normalizedMean
-
-        unnormalizedTimeSeries = pd.DataFrame(
-            min_max_scaler.inverse_transform(normalizedTimeSeries),
-            columns=normalizedTimeSeries.columns,
-            index=normalizedTimeSeries.index,
-        )
-
-        return unnormalizedTimeSeries
-
-    def _preProcessTimeSeries(self):
-        """
-        Normalize the time series, weight them based on the weight dict and
-        puts them into the correct matrix format.
-        """
-        # first sort the time series in order to avoid bug mention in #18
-        self.timeSeries.sort_index(axis=1, inplace=True)
-
-        # convert the dataframe to floats
-        self.timeSeries = self.timeSeries.astype(float)
-
-        # normalize the time series and group them to periodly profiles
-        self.normalizedTimeSeries = self._normalizeTimeSeries(sameMean=self.sameMean)
-
-        for column in self.weightDict:
-            if self.weightDict[column] < MIN_WEIGHT:
-                print(
-                    'weight of "'
-                    + str(column)
-                    + '" set to the minmal tolerable weighting'
-                )
-                self.weightDict[column] = MIN_WEIGHT
-            self.normalizedTimeSeries[column] = (
-                self.normalizedTimeSeries[column] * self.weightDict[column]
+    def _translate_representation(self, method=None):
+        """Map old representation_method to new API representation."""
+        if method is None:
+            method = self.representation_method
+        if method is None:
+            return None
+        if method in ("distributionRepresentation", "durationRepresentation"):
+            return Distribution(
+                scope="cluster" if self.distribution_period_wise else "global"
             )
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", LegacyAPIWarning)
-            self.normalizedPeriodlyProfiles, self.timeIndex = unstackToPeriods(
-                self.normalizedTimeSeries, self.timeStepsPerPeriod
+        if method == "distributionAndMinMaxRepresentation":
+            return Distribution(
+                scope="cluster" if self.distribution_period_wise else "global",
+                preserve_minmax=True,
             )
+        if method == "minmaxmeanRepresentation":
+            max_cols = [c for c, r in self.representation_dict.items() if r == "max"]
+            min_cols = [c for c, r in self.representation_dict.items() if r == "min"]
+            return MinMaxMean(max_columns=max_cols, min_columns=min_cols)
+        return _REPR_METHOD_MAP.get(method)
 
-        # check if no NaN is in the resulting profiles
-        if self.normalizedPeriodlyProfiles.isnull().values.any():
-            raise ValueError(
-                "Pre processed data includes NaN. Please check the timeSeries input data."
-            )
-
-    def _postProcessTimeSeries(self, normalizedTimeSeries, applyWeighting=True):
-        """
-        Neutralizes the weighting the time series back and unnormalizes them.
-        """
-        if applyWeighting:
-            for column in self.weightDict:
-                normalizedTimeSeries[column] = (
-                    normalizedTimeSeries[column] / self.weightDict[column]
-                )
-
-        unnormalizedTimeSeries = self._unnormalizeTimeSeries(
-            normalizedTimeSeries, sameMean=self.sameMean
-        )
-
-        if self.roundOutput is not None:
-            unnormalizedTimeSeries = unnormalizedTimeSeries.round(
-                decimals=self.roundOutput
-            )
-
-        return unnormalizedTimeSeries
-
-    def _addExtremePeriods(
-        self,
-        groupedSeries,
-        clusterCenters,
-        clusterOrder,
-        extremePeriodMethod="new_cluster_center",
-        addPeakMin=None,
-        addPeakMax=None,
-        addMeanMin=None,
-        addMeanMax=None,
-    ):
-        """
-        Adds different extreme periods based on the to the clustered data,
-        decribed by the clusterCenters and clusterOrder.
-
-        :param groupedSeries: periodly grouped groupedSeries on which basis it should be decided,
-            which period is an extreme period. required
-        :type groupedSeries: pandas.DataFrame()
-
-        :param clusterCenters: Output from clustering with sklearn. required
-        :type clusterCenters: dict
-
-        :param clusterOrder: Output from clsutering with sklearn. required
-        :type clusterOrder: dict
-
-        :param extremePeriodMethod: Chosen extremePeriodMethod. The method. optional(default: 'new_cluster_center' )
-        :type extremePeriodMethod: string
-
-        :returns: - **newClusterCenters** -- The new cluster centers extended with the extreme periods.
-                  - **newClusterOrder** -- The new cluster order including the extreme periods.
-                  - **extremeClusterIdx** -- A list of indices where in the newClusterCenters are the extreme
-                    periods located.
-        """
-
-        # init required dicts and lists
-        self.extremePeriods = {}
-        extremePeriodNo = []
-
-        ccList = [center.tolist() for center in clusterCenters]
-
-        # check which extreme periods exist in the profile and add them to
-        # self.extremePeriods dict
-        for column in self.timeSeries.columns:
-            if column in addPeakMax:
-                stepNo = groupedSeries[column].max(axis=1).idxmax()
-                # add only if stepNo is not already in extremePeriods
-                # if it is not already a cluster center
-                if (
-                    stepNo not in extremePeriodNo
-                    and groupedSeries.loc[stepNo, :].values.tolist() not in ccList
-                ):
-                    max_col = self._append_col_with(column, " max.")
-                    self.extremePeriods[max_col] = {
-                        "stepNo": stepNo,
-                        "profile": groupedSeries.loc[stepNo, :].values,
-                        "column": column,
-                    }
-                    extremePeriodNo.append(stepNo)
-
-            if column in addPeakMin:
-                stepNo = groupedSeries[column].min(axis=1).idxmin()
-                # add only if stepNo is not already in extremePeriods
-                # if it is not already a cluster center
-                if (
-                    stepNo not in extremePeriodNo
-                    and groupedSeries.loc[stepNo, :].values.tolist() not in ccList
-                ):
-                    min_col = self._append_col_with(column, " min.")
-                    self.extremePeriods[min_col] = {
-                        "stepNo": stepNo,
-                        "profile": groupedSeries.loc[stepNo, :].values,
-                        "column": column,
-                    }
-                    extremePeriodNo.append(stepNo)
-
-            if column in addMeanMax:
-                stepNo = groupedSeries[column].mean(axis=1).idxmax()
-                # add only if stepNo is not already in extremePeriods
-                # if it is not already a cluster center
-                if (
-                    stepNo not in extremePeriodNo
-                    and groupedSeries.loc[stepNo, :].values.tolist() not in ccList
-                ):
-                    mean_max_col = self._append_col_with(column, " daily max.")
-                    self.extremePeriods[mean_max_col] = {
-                        "stepNo": stepNo,
-                        "profile": groupedSeries.loc[stepNo, :].values,
-                        "column": column,
-                    }
-                    extremePeriodNo.append(stepNo)
-
-            if column in addMeanMin:
-                stepNo = groupedSeries[column].mean(axis=1).idxmin()
-                # add only if stepNo is not already in extremePeriods and
-                # if it is not already a cluster center
-                if (
-                    stepNo not in extremePeriodNo
-                    and groupedSeries.loc[stepNo, :].values.tolist() not in ccList
-                ):
-                    mean_min_col = self._append_col_with(column, " daily min.")
-                    self.extremePeriods[mean_min_col] = {
-                        "stepNo": stepNo,
-                        "profile": groupedSeries.loc[stepNo, :].values,
-                        "column": column,
-                    }
-                    extremePeriodNo.append(stepNo)
-
-        for periodType in self.extremePeriods:
-            # get current related clusters of extreme periods
-            self.extremePeriods[periodType]["clusterNo"] = clusterOrder[
-                self.extremePeriods[periodType]["stepNo"]
-            ]
-
-            # init new cluster structure
-        newClusterCenters = []
-        newClusterOrder = clusterOrder
-        extremeClusterIdx = []
-
-        # integrate extreme periods to clusters
-        if extremePeriodMethod == "append":
-            # attach extreme periods to cluster centers
-            for i, cluster_center in enumerate(clusterCenters):
-                newClusterCenters.append(cluster_center)
-            for i, periodType in enumerate(self.extremePeriods):
-                extremeClusterIdx.append(len(newClusterCenters))
-                newClusterCenters.append(self.extremePeriods[periodType]["profile"])
-                newClusterOrder[self.extremePeriods[periodType]["stepNo"]] = i + len(
-                    clusterCenters
-                )
-
-        elif extremePeriodMethod == "new_cluster_center":
-            for i, cluster_center in enumerate(clusterCenters):
-                newClusterCenters.append(cluster_center)
-            # attach extrem periods to cluster centers and consider for all periods
-            # if the fit better to the cluster or the extrem period
-            for i, periodType in enumerate(self.extremePeriods):
-                extremeClusterIdx.append(len(newClusterCenters))
-                newClusterCenters.append(self.extremePeriods[periodType]["profile"])
-                self.extremePeriods[periodType]["newClusterNo"] = i + len(
-                    clusterCenters
-                )
-
-            for i, cPeriod in enumerate(newClusterOrder):
-                # caclulate euclidean distance to cluster center
-                cluster_dist = sum(
-                    (groupedSeries.iloc[i].values - clusterCenters[cPeriod]) ** 2
-                )
-                for ii, extremPeriodType in enumerate(self.extremePeriods):
-                    # exclude other extreme periods from adding to the new
-                    # cluster center
-                    isOtherExtreme = False
-                    for otherExPeriod in self.extremePeriods:
-                        if (
-                            i == self.extremePeriods[otherExPeriod]["stepNo"]
-                            and otherExPeriod != extremPeriodType
-                        ):
-                            isOtherExtreme = True
-                    # calculate distance to extreme periods
-                    extperiod_dist = sum(
-                        (
-                            groupedSeries.iloc[i].values
-                            - self.extremePeriods[extremPeriodType]["profile"]
-                        )
-                        ** 2
-                    )
-                    # choose new cluster relation
-                    if extperiod_dist < cluster_dist and not isOtherExtreme:
-                        newClusterOrder[i] = self.extremePeriods[extremPeriodType][
-                            "newClusterNo"
-                        ]
-
-        elif extremePeriodMethod == "replace_cluster_center":
-            # Worst Case Clusterperiods
-            newClusterCenters = clusterCenters
-            for periodType in self.extremePeriods:
-                index = groupedSeries.columns.get_loc(
-                    self.extremePeriods[periodType]["column"]
-                )
-                newClusterCenters[self.extremePeriods[periodType]["clusterNo"]][
-                    index
-                ] = self.extremePeriods[periodType]["profile"][index]
-                if (
-                    self.extremePeriods[periodType]["clusterNo"]
-                    not in extremeClusterIdx
-                ):
-                    extremeClusterIdx.append(
-                        self.extremePeriods[periodType]["clusterNo"]
-                    )
-
-        return newClusterCenters, newClusterOrder, extremeClusterIdx
-
-    def _append_col_with(self, column, append_with=" max."):
-        """Appends a string to the column name. For MultiIndexes, which turn out to be
-        tuples when this method is called, only last level is changed"""
-        if isinstance(column, str):
-            return column + append_with
-        elif isinstance(column, tuple):
-            col = list(column)
-            col[-1] = col[-1] + append_with
-            return tuple(col)
-
-    def _rescaleClusterPeriods(self, clusterOrder, clusterPeriods, extremeClusterIdx):
-        """
-        Rescale the values of the clustered Periods such that mean of each time
-        series in the typical Periods fits the mean value of the original time
-        series, without changing the values of the extremePeriods.
-        """
-        # Initialize dict to store rescaling deviations per column
-        self._rescaleDeviations = {}
-
-        weightingVec = pd.Series(self._clusterPeriodNoOccur).values
-        columns = list(self.timeSeries.columns)
-        n_clusters = len(self.clusterPeriods)
-        n_cols = len(columns)
-        n_timesteps = self.timeStepsPerPeriod
-
-        # Convert to 3D numpy array for fast operations: (n_clusters, n_cols, n_timesteps)
-        arr = np.array(self.clusterPeriods).reshape(n_clusters, n_cols, n_timesteps)
-
-        # Indices for non-extreme clusters
-        idx_wo_peak = np.delete(np.arange(n_clusters), extremeClusterIdx)
-        extremeClusterIdx_arr = np.array(extremeClusterIdx, dtype=int)
-
-        for ci, column in enumerate(columns):
-            # Skip columns excluded from rescaling
-            if column in self.rescaleExcludeColumns:
-                continue
-
-            col_data = arr[:, ci, :]  # (n_clusters, n_timesteps)
-            sum_raw = self.normalizedPeriodlyProfiles[column].sum().sum()
-
-            # Sum of extreme periods (weighted)
-            if len(extremeClusterIdx_arr) > 0:
-                sum_peak = np.sum(
-                    weightingVec[extremeClusterIdx_arr]
-                    * col_data[extremeClusterIdx_arr, :].sum(axis=1)
-                )
-            else:
-                sum_peak = 0.0
-
-            sum_clu_wo_peak = np.sum(
-                weightingVec[idx_wo_peak] * col_data[idx_wo_peak, :].sum(axis=1)
-            )
-
-            # define the upper scale dependent on the weighting of the series
-            scale_ub = 1.0
-            if self.sameMean:
-                scale_ub = (
-                    scale_ub
-                    * self.timeSeries[column].max()
-                    / self.timeSeries[column].mean()
-                )
-            if column in self.weightDict:
-                scale_ub = scale_ub * self.weightDict[column]
-
-            # difference between predicted and original sum
-            diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
-
-            # use while loop to rescale cluster periods
-            a = 0
-            while diff > sum_raw * TOLERANCE and a < MAX_ITERATOR:
-                # rescale values (only non-extreme clusters)
-                arr[idx_wo_peak, ci, :] *= (sum_raw - sum_peak) / sum_clu_wo_peak
-
-                # reset values higher than the upper scale or less than zero
-                arr[:, ci, :] = np.clip(arr[:, ci, :], 0, scale_ub)
-
-                # Handle NaN (replace with 0)
-                np.nan_to_num(arr[:, ci, :], copy=False, nan=0.0)
-
-                # calc new sum and new diff to orig data
-                col_data = arr[:, ci, :]
-                sum_clu_wo_peak = np.sum(
-                    weightingVec[idx_wo_peak] * col_data[idx_wo_peak, :].sum(axis=1)
-                )
-                diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
-                a += 1
-
-            # Calculate and store final deviation
-            deviation_pct = (diff / sum_raw) * 100 if sum_raw != 0 else 0.0
-            converged = a < MAX_ITERATOR
-            self._rescaleDeviations[column] = {
-                "deviation_pct": deviation_pct,
-                "converged": converged,
-                "iterations": a,
-            }
-
-            if not converged and deviation_pct > 0.01:
-                warnings.warn(
-                    'Max iteration number reached for "'
-                    + str(column)
-                    + '" while rescaling the cluster periods.'
-                    + " The integral of the aggregated time series deviates by: "
-                    + str(round(deviation_pct, 2))
-                    + "%"
-                )
-
-        # Reshape back to 2D: (n_clusters, n_cols * n_timesteps)
-        return arr.reshape(n_clusters, -1)
-
-    def _clusterSortedPeriods(
-        self, candidates, n_init=20, n_clusters=None, delClusterParams=None
-    ):
-        """
-        Runs the clustering algorithms for the sorted profiles within the period
-        instead of the original profiles. (Duration curve clustering)
-        """
-        # Strip extra evaluation columns for representation
-        repr_candidates = (
-            candidates[:, :delClusterParams] if delClusterParams else candidates
-        )
-
-        # Vectorized sort: reshape to 3D (periods x columns x timesteps), sort, reshape back
-        values = self.normalizedPeriodlyProfiles.values.copy()
-        n_periods, n_total = values.shape
-        n_cols = len(self.timeSeries.columns)
-        n_timesteps = n_total // n_cols
-
-        # Sort each period's timesteps descending for all columns at once
-        # Use stable sort for deterministic tie-breaking across environments
-        values_3d = values.reshape(n_periods, n_cols, n_timesteps)
-        sortedClusterValues = (-np.sort(-values_3d, axis=2, kind="stable")).reshape(
-            n_periods, -1
-        )
-
-        if n_clusters is None:
-            n_clusters = self.noTypicalPeriods
-
-        (
-            _altClusterCenters,
-            self.clusterCenterIndices,
-            clusterOrders_C,
-        ) = aggregatePeriods(
-            sortedClusterValues,
-            n_clusters=n_clusters,
-            n_iter=30,
+    def _build_pipeline_config(self) -> PipelineConfig:
+        """Build PipelineConfig from old-API parameters."""
+        cluster = ClusterConfig(
+            method=_CLUSTER_METHOD_MAP[self.cluster_method],  # type: ignore[arg-type]
+            representation=self._translate_representation(),
+            weights=self.weight_dict if self.weight_dict else None,
+            scale_by_column_means=self.same_mean,
+            use_duration_curves=self.sort_values,
+            include_period_sums=self.eval_sum_periods,
             solver=self.solver,
-            clusterMethod=self.clusterMethod,
-            representationMethod=self.representationMethod,
-            representationDict=self.representationDict,
-            distributionPeriodWise=self.distributionPeriodWise,
-            timeStepsPerPeriod=self.timeStepsPerPeriod,
         )
 
-        clusterCenters_C = []
+        extremes = None
+        if self.extreme_period_method != "None":
+            extremes = ExtremeConfig(
+                method=_EXTREME_METHOD_MAP[self.extreme_period_method],  # type: ignore[arg-type]
+                max_value=list(self.add_peak_max),
+                min_value=list(self.add_peak_min),
+                max_period=list(self.add_mean_max),
+                min_period=list(self.add_mean_min),
+            )
+            if not extremes.has_extremes():
+                extremes = None
 
-        # take the clusters and determine the most representative sorted
-        # period as cluster center
-        for clusterNum in np.unique(clusterOrders_C):
-            indice = np.where(clusterOrders_C == clusterNum)[0]
-            if len(indice) > 1:
-                # mean value for each time step for each time series over
-                # all Periods in the cluster
-                currentMean_C = sortedClusterValues[indice].mean(axis=0)
-                # index of the period with the lowest distance to the cluster
-                # center
-                mindistIdx_C = np.argmin(
-                    np.square(sortedClusterValues[indice] - currentMean_C).sum(axis=1)
-                )
-                # append original time series of this period (without extra eval columns)
-                medoid_C = repr_candidates[indice][mindistIdx_C]
+        segments = None
+        if self.segmentation:
+            seg_repr = self._translate_representation(
+                self.segment_representation_method
+            )
+            segments = SegmentConfig(
+                n_segments=self.no_segments,
+                representation=seg_repr if seg_repr is not None else "mean",
+            )
 
-                # append to cluster center
-                clusterCenters_C.append(medoid_C)
+        predef = None
+        if self.predef_cluster_order is not None:
+            predef = PredefParams(
+                cluster_order=list(self.predef_cluster_order),
+                cluster_center_indices=(
+                    list(self.predef_cluster_center_indices)
+                    if self.predef_cluster_center_indices is not None
+                    else None
+                ),
+                extreme_cluster_idx=(
+                    list(self.predef_extreme_cluster_idx)
+                    if self.predef_extreme_cluster_idx is not None
+                    else None
+                ),
+                segment_order=(
+                    [list(s) for s in self.predef_segment_order]
+                    if self.predef_segment_order is not None
+                    else None
+                ),
+                segment_durations=(
+                    [list(s) for s in self.predef_segment_durations]
+                    if self.predef_segment_durations is not None
+                    else None
+                ),
+                segment_centers=(
+                    [list(s) for s in self.predef_segment_centers]
+                    if self.predef_segment_centers is not None
+                    else None
+                ),
+            )
 
-            else:
-                # if only on period is part of the cluster, add this index
-                clusterCenters_C.append(repr_candidates[indice][0])
+        return PipelineConfig(
+            n_clusters=self.no_typical_periods,
+            n_timesteps_per_period=self.time_steps_per_period,
+            cluster=cluster,
+            extremes=extremes,
+            segments=segments,
+            rescale_cluster_periods=self.rescale_cluster_periods,
+            rescale_exclude_columns=self.rescale_exclude_columns or None,
+            round_decimals=self.round_output,
+            numerical_tolerance=self.numerical_tolerance,
+            temporal_resolution=self.resolution,
+            predef=predef,
+        )
 
-        return clusterCenters_C, clusterOrders_C
-
-    def createTypicalPeriods(self):
+    def create_typical_periods(self):
         """
         Clusters the Periods.
 
-        :returns: **self.typicalPeriods** --  All typical Periods in scaled form.
+        :returns: **self.typical_periods** --  All typical Periods in scaled form.
         """
-        self._preProcessTimeSeries()
+        # Sort + cast (matches old _pre_process_time_series)
+        self.time_series.sort_index(axis=1, inplace=True)
+        self.time_series = self.time_series.astype(float)
 
-        # Compute effective number of clusters for the clustering algorithm
-        effective_n_clusters = self.noTypicalPeriods
-
-        # check for additional cluster parameters
-        if self.evalSumPeriods:
-            evaluationValues = (
-                self.normalizedPeriodlyProfiles.stack(future_stack=True, level=0)
-                .sum(axis=1)
-                .unstack(level=1)
-            )
-            # how many values have to get deleted later
-            delClusterParams = -len(evaluationValues.columns)
-            candidates = np.concatenate(
-                (self.normalizedPeriodlyProfiles.values, evaluationValues.values),
-                axis=1,
-            )
-        else:
-            delClusterParams = None
-            candidates = self.normalizedPeriodlyProfiles.values
-
-        # skip aggregation procedure for the case of a predefined cluster sequence and get only the correct representation
-        if self.predefClusterOrder is not None:
-            self._clusterOrder = self.predefClusterOrder
-            # check if representatives are defined
-            if self.predefClusterCenterIndices is not None:
-                self.clusterCenterIndices = self.predefClusterCenterIndices
-                repr_candidates = (
-                    candidates[:, :delClusterParams] if delClusterParams else candidates
-                )
-                self.clusterCenters = repr_candidates[self.predefClusterCenterIndices]
-            else:
-                # otherwise take the medoids (strip extra eval columns)
-                repr_candidates = (
-                    candidates[:, :delClusterParams] if delClusterParams else candidates
-                )
-                self.clusterCenters, self.clusterCenterIndices = representations(
-                    repr_candidates,
-                    self._clusterOrder,
-                    default="medoidRepresentation",
-                    representationMethod=self.representationMethod,
-                    representationDict=self.representationDict,
-                    timeStepsPerPeriod=self.timeStepsPerPeriod,
-                )
-        else:
-            cluster_duration = time.time()
-            if not self.sortValues:
-                # cluster the data
-                (
-                    self.clusterCenters,
-                    self.clusterCenterIndices,
-                    self._clusterOrder,
-                ) = aggregatePeriods(
-                    candidates,
-                    n_clusters=effective_n_clusters,
-                    n_iter=100,
-                    solver=self.solver,
-                    clusterMethod=self.clusterMethod,
-                    representationMethod=self.representationMethod,
-                    representationDict=self.representationDict,
-                    distributionPeriodWise=self.distributionPeriodWise,
-                    timeStepsPerPeriod=self.timeStepsPerPeriod,
-                    n_extra_columns=-delClusterParams if delClusterParams else 0,
-                )
-            else:
-                self.clusterCenters, self._clusterOrder = self._clusterSortedPeriods(
-                    candidates,
-                    n_clusters=effective_n_clusters,
-                    delClusterParams=delClusterParams,
-                )
-            self.clusteringDuration = time.time() - cluster_duration
-
-        # All paths now produce cluster centers without extra evaluation columns,
-        # so no stripping is needed.
-        self.clusterPeriods = list(self.clusterCenters)
-
-        if not self.extremePeriodMethod == "None":
-            (
-                self.clusterPeriods,
-                self._clusterOrder,
-                self.extremeClusterIdx,
-            ) = self._addExtremePeriods(
-                self.normalizedPeriodlyProfiles,
-                self.clusterPeriods,
-                self._clusterOrder,
-                extremePeriodMethod=self.extremePeriodMethod,
-                addPeakMin=self.addPeakMin,
-                addPeakMax=self.addPeakMax,
-                addMeanMin=self.addMeanMin,
-                addMeanMax=self.addMeanMax,
-            )
-        else:
-            # Use predefined extreme cluster indices if provided (for transfer/apply)
-            if self.predefExtremeClusterIdx is not None:
-                self.extremeClusterIdx = list(self.predefExtremeClusterIdx)
-            else:
-                self.extremeClusterIdx = []
-
-        # get number of appearance of the the typical periods
-        nums, counts = np.unique(self._clusterOrder, return_counts=True)
-        self._clusterPeriodNoOccur = {num: counts[ii] for ii, num in enumerate(nums)}
-
-        if self.rescaleClusterPeriods:
-            self.clusterPeriods = self._rescaleClusterPeriods(
-                self._clusterOrder, self.clusterPeriods, self.extremeClusterIdx
+        # NaN check (must happen before pipeline, same error message)
+        if self.time_series.isnull().values.any():
+            raise ValueError(
+                "Pre processed data includes NaN. Please check the time_series input data."
             )
 
-        # if additional time steps have been added, reduce the number of occurrence of the typical period
-        # which is related to these time steps
-        if not len(self.timeSeries) % self.timeStepsPerPeriod == 0:
-            self._clusterPeriodNoOccur[self._clusterOrder[-1]] -= (
-                1
-                - float(len(self.timeSeries) % self.timeStepsPerPeriod)
-                / self.timeStepsPerPeriod
-            )
+        # Validate weights before pipeline
+        validated = validate_weights(self.time_series.columns, self.weight_dict or None)
+        if validated is not None:
+            self.weight_dict = validated
 
-        # put the clustered data in pandas format and scale back
-        self.normalizedTypicalPeriods = (
-            pd.concat(
-                [
-                    pd.Series(s, index=self.normalizedPeriodlyProfiles.columns)
-                    for s in self.clusterPeriods
-                ],
-                axis=1,
-            )
-            .unstack("TimeStep")
-            .T
+        # Run pipeline
+        cfg = self._build_pipeline_config()
+        result = run_pipeline(data=self.time_series, cfg=cfg)
+
+        # Extract state for properties and other methods
+        self._pipeline_result = result
+        self._cluster_order = np.array(result.clustering_result.cluster_assignments)
+        self._cluster_period_no_occur = result.cluster_counts
+        self.cluster_center_indices = (
+            list(result.clustering_result.cluster_centers)
+            if result.clustering_result.cluster_centers is not None
+            else None
         )
+        self.extreme_cluster_idx = (
+            list(result.clustering_result.extreme_cluster_indices)
+            if result.clustering_result.extreme_cluster_indices is not None
+            else []
+        )
+        self.clustering_duration = result.clustering_duration
+        self.time_index = result.time_index
 
-        if self.segmentation:
-            from tsam.utils.segmentation import segmentation
+        # Segmentation data
+        if self.segmentation and result.segmented_df is not None:
+            self.segmented_normalized_typical_periods = result.segmented_df
 
-            (
-                self.segmentedNormalizedTypicalPeriods,
-                self.predictedSegmentedNormalizedTypicalPeriods,
-                self.segmentCenterIndices,
-            ) = segmentation(
-                self.normalizedTypicalPeriods,
-                self.noSegments,
-                self.timeStepsPerPeriod,
-                representationMethod=self.segmentRepresentationMethod,
-                representationDict=self.representationDict,
-                distributionPeriodWise=self.distributionPeriodWise,
-                predefSegmentOrder=self.predefSegmentOrder,
-                predefSegmentDurations=self.predefSegmentDurations,
-                predefSegmentCenters=self.predefSegmentCenters,
-            )
-            self.normalizedTypicalPeriods = (
-                self.segmentedNormalizedTypicalPeriods.reset_index(level=3, drop=True)
-            )
+        # typical_periods: alphabetically sorted columns (old API contract)
+        self.typical_periods = result.typical_periods.sort_index(axis=1)
 
-        self.typicalPeriods = self._postProcessTimeSeries(self.normalizedTypicalPeriods)
+        return self.typical_periods
 
-        # check if original time series boundaries are not exceeded
-        exceeds_max = self.typicalPeriods.max(axis=0) > self.timeSeries.max(axis=0)
-        if exceeds_max.any():
-            diff = self.typicalPeriods.max(axis=0) - self.timeSeries.max(axis=0)
-            exceeding_diff = diff[exceeds_max]
-            if exceeding_diff.max() > self.numericalTolerance:
-                warnings.warn(
-                    "At least one maximal value of the "
-                    + "aggregated time series exceeds the maximal value "
-                    + "the input time series for: "
-                    + f"{exceeding_diff.to_dict()}"
-                    + ". To silence the warning set the 'numericalTolerance' to a higher value."
-                )
-        below_min = self.typicalPeriods.min(axis=0) < self.timeSeries.min(axis=0)
-        if below_min.any():
-            diff = self.timeSeries.min(axis=0) - self.typicalPeriods.min(axis=0)
-            exceeding_diff = diff[below_min]
-            if exceeding_diff.max() > self.numericalTolerance:
-                warnings.warn(
-                    "Something went wrong... At least one minimal value of the "
-                    + "aggregated time series exceeds the minimal value "
-                    + "the input time series for: "
-                    + f"{exceeding_diff.to_dict()}"
-                    + ". To silence the warning set the 'numericalTolerance' to a higher value."
-                )
-        return self.typicalPeriods
-
-    def prepareEnersysInput(self):
+    def prepare_enersys_input(self):
         """
         Creates all dictionaries and lists which are required for the energy system
         optimization input.
         """
         warnings.warn(
-            '"prepareEnersysInput" is deprecated, since the created attributes can be directly accessed as properties',
+            '"prepare_enersys_input" is deprecated, since the created attributes can be directly accessed as properties',
             DeprecationWarning,
         )
         return
 
     @property
-    def stepIdx(self):
+    def step_idx(self):
         """
         Index inside a single cluster
         """
         if self.segmentation:
-            return [ix for ix in range(0, self.noSegments)]
+            return [ix for ix in range(0, self.no_segments)]
         else:
-            return [ix for ix in range(0, self.timeStepsPerPeriod)]
+            return [ix for ix in range(0, self.time_steps_per_period)]
 
     @property
-    def clusterPeriodIdx(self):
+    def cluster_period_idx(self):
         """
         Index of the clustered periods
         """
-        if not hasattr(self, "clusterOrder"):
-            self.createTypicalPeriods()
-        return np.sort(np.unique(self._clusterOrder))
+        if not hasattr(self, "_cluster_order"):
+            self.create_typical_periods()
+        return np.sort(np.unique(self._cluster_order))
 
     @property
-    def clusterOrder(self):
+    def cluster_order(self):
         """
         The sequence/order of the typical period to represent
         the original time series
         """
-        if not hasattr(self, "_clusterOrder"):
-            self.createTypicalPeriods()
-        return self._clusterOrder
+        if not hasattr(self, "_cluster_order"):
+            self.create_typical_periods()
+        return self._cluster_order
 
     @property
-    def clusterPeriodNoOccur(self):
+    def cluster_period_no_occur(self):
         """
         How often does a typical period occur in the original time series
         """
-        if not hasattr(self, "clusterOrder"):
-            self.createTypicalPeriods()
-        return self._clusterPeriodNoOccur
+        if not hasattr(self, "_cluster_order"):
+            self.create_typical_periods()
+        return self._cluster_period_no_occur
 
     @property
-    def clusterPeriodDict(self):
+    def cluster_period_dict(self):
         """
         Time series data for each period index as dictionary
         """
-        if not hasattr(self, "_clusterOrder"):
-            self.createTypicalPeriods()
-        if not hasattr(self, "_clusterPeriodDict"):
-            self._clusterPeriodDict = {}
-            for column in self.typicalPeriods:
-                self._clusterPeriodDict[column] = self.typicalPeriods[column].to_dict()
-        return self._clusterPeriodDict
+        if not hasattr(self, "_cluster_order"):
+            self.create_typical_periods()
+        if not hasattr(self, "_cluster_period_dict"):
+            self._cluster_period_dict = {}
+            for column in self.typical_periods:
+                self._cluster_period_dict[column] = self.typical_periods[
+                    column
+                ].to_dict()
+        return self._cluster_period_dict
 
     @property
-    def segmentDurationDict(self):
+    def segment_duration_dict(self):
         """
         Segment duration in time steps for each period index as dictionary
         """
-        if not hasattr(self, "_clusterOrder"):
-            self.createTypicalPeriods()
-        if not hasattr(self, "_segmentDurationDict"):
+        if not hasattr(self, "_cluster_order"):
+            self.create_typical_periods()
+        if not hasattr(self, "_segment_duration_dict"):
             if self.segmentation:
-                self._segmentDurationDict = (
-                    self.segmentedNormalizedTypicalPeriods.drop(
-                        self.segmentedNormalizedTypicalPeriods.columns, axis=1
+                self._segment_duration_dict = (
+                    self.segmented_normalized_typical_periods.drop(
+                        self.segmented_normalized_typical_periods.columns, axis=1
                     )
                     .reset_index(level=3, drop=True)
                     .reset_index(2)
                     .to_dict()
                 )
             else:
-                self._segmentDurationDict = self.typicalPeriods.drop(
-                    self.typicalPeriods.columns, axis=1
+                self._segment_duration_dict = self.typical_periods.drop(
+                    self.typical_periods.columns, axis=1
                 )
-                self._segmentDurationDict["Segment Duration"] = 1
-                self._segmentDurationDict = self._segmentDurationDict.to_dict()
+                self._segment_duration_dict["Segment Duration"] = 1
+                self._segment_duration_dict = self._segment_duration_dict.to_dict()
                 warnings.warn(
                     "Segmentation is turned off. All segments are consistent the time steps."
                 )
-        return self._segmentDurationDict
+        return self._segment_duration_dict
 
-    def predictOriginalData(self):
+    def predict_original_data(self):
         """
         Predicts the overall time series if every period would be placed in the
         related cluster center
 
-        :returns: **predictedData** (pandas.DataFrame) -- DataFrame which has the same shape as the original one.
+        :returns: **predicted_data** (pandas.DataFrame) -- DataFrame which has the same shape as the original one.
         """
-        if not hasattr(self, "_clusterOrder"):
-            self.createTypicalPeriods()
-
-        # Select typical periods source based on segmentation
-        if self.segmentation:
-            typical = self.predictedSegmentedNormalizedTypicalPeriods
-        else:
-            typical = self.normalizedTypicalPeriods
-
-        # Unstack once, then use vectorized indexing to select periods by cluster order
-        typical_unstacked = typical.unstack()
-        reconstructed = typical_unstacked.loc[list(self._clusterOrder)].values
-
-        # Back in matrix form
-        clustered_data_df = pd.DataFrame(
-            reconstructed,
-            columns=self.normalizedPeriodlyProfiles.columns,
-            index=self.normalizedPeriodlyProfiles.index,
+        if not hasattr(self, "_pipeline_result"):
+            self.create_typical_periods()
+        self.predicted_data = self._pipeline_result.reconstructed_data.sort_index(
+            axis=1
         )
-        clustered_data_df = clustered_data_df.stack(future_stack=True, level="TimeStep")
+        return self.predicted_data
 
-        # back in form
-        self.normalizedPredictedData = pd.DataFrame(
-            clustered_data_df.values[: len(self.timeSeries)],
-            index=self.timeSeries.index,
-            columns=self.timeSeries.columns,
-        )
-        # For the non-segmentation path, normalizedTypicalPeriods was already
-        # unweighted and sameMean-reversed in-place by createTypicalPeriods →
-        # _postProcessTimeSeries. We must undo the sameMean in-place change
-        # so _unnormalizeTimeSeries can re-apply it during inverse transform.
-        #
-        # For the segmentation path, predictedSegmentedNormalizedTypicalPeriods
-        # was NOT modified in-place, so it still carries weights and sameMean.
-        # We pass applyWeighting=True so _postProcessTimeSeries removes them.
-        if self.segmentation:
-            self.predictedData = self._postProcessTimeSeries(
-                self.normalizedPredictedData, applyWeighting=True
-            )
-        else:
-            if self.sameMean:
-                self.normalizedPredictedData /= self._normalizedMean
-            self.predictedData = self._postProcessTimeSeries(
-                self.normalizedPredictedData, applyWeighting=False
-            )
-
-        return self.predictedData
-
-    def indexMatching(self):
+    def index_matching(self):
         """
         Relates the index of the original time series with the indices
         represented by the clusters
 
-        :returns: **timeStepMatching** (pandas.DataFrame) -- DataFrame which has the same shape as the original one.
+        :returns: **time_step_matching** (pandas.DataFrame) -- DataFrame which has the same shape as the original one.
         """
-        if not hasattr(self, "_clusterOrder"):
-            self.createTypicalPeriods()
+        if not hasattr(self, "_cluster_order"):
+            self.create_typical_periods()
 
         # create aggregated period and time step index lists
-        periodIndex = []
-        stepIndex = []
-        for label in self._clusterOrder:
-            for step in range(self.timeStepsPerPeriod):
-                periodIndex.append(label)
-                stepIndex.append(step)
+        period_index = []
+        step_index = []
+        for label in self._cluster_order:
+            for step in range(self.time_steps_per_period):
+                period_index.append(label)
+                step_index.append(step)
 
         # create a dataframe
-        timeStepMatching = pd.DataFrame(
-            [periodIndex, stepIndex],
+        time_step_matching = pd.DataFrame(
+            [period_index, step_index],
             index=["PeriodNum", "TimeStep"],
-            columns=self.timeIndex,
+            columns=self.time_index,
         ).T
 
         # if segmentation is chosen, append another column stating which
         if self.segmentation:
-            segmentIndex = []
-            for label in self._clusterOrder:
-                segmentIndex.extend(
+            segment_index = []
+            for label in self._cluster_order:
+                segment_index.extend(
                     np.repeat(
-                        self.segmentedNormalizedTypicalPeriods.loc[
+                        self.segmented_normalized_typical_periods.loc[
                             label, :
                         ].index.get_level_values(0),
-                        self.segmentedNormalizedTypicalPeriods.loc[
+                        self.segmented_normalized_typical_periods.loc[
                             label, :
                         ].index.get_level_values(1),
                     ).values
                 )
-            timeStepMatching = pd.DataFrame(
-                [periodIndex, stepIndex, segmentIndex],
+            time_step_matching = pd.DataFrame(
+                [period_index, step_index, segment_index],
                 index=["PeriodNum", "TimeStep", "SegmentIndex"],
-                columns=self.timeIndex,
+                columns=self.time_index,
             ).T
 
-        return timeStepMatching
+        return time_step_matching
 
-    def accuracyIndicators(self):
+    def accuracy_indicators(self):
         """
         Compares the predicted data with the original time series.
 
-        :returns: **pd.DataFrame(indicatorRaw)** (pandas.DataFrame) -- Dataframe containing indicators evaluating the
-                    accuracy of the
-                    aggregation
+        :returns: **pd.DataFrame(indicator_raw)** (pandas.DataFrame) -- Dataframe containing indicators evaluating the
+                    accuracy of the aggregation
         """
-        if not hasattr(self, "predictedData"):
-            self.predictOriginalData()
+        if not hasattr(self, "_pipeline_result"):
+            self.create_typical_periods()
+        return self._pipeline_result.accuracy_indicators
 
-        indicatorRaw = {
-            "RMSE": {},
-            "RMSE_duration": {},
-            "MAE": {},
-        }  # 'Silhouette score':{},
-
-        for column in self.normalizedTimeSeries.columns:
-            if self.weightDict:
-                origTS = self.normalizedTimeSeries[column] / self.weightDict[column]
-            else:
-                origTS = self.normalizedTimeSeries[column]
-            predTS = self.normalizedPredictedData[column]
-            indicatorRaw["RMSE"][column] = np.sqrt(mean_squared_error(origTS, predTS))
-            indicatorRaw["RMSE_duration"][column] = np.sqrt(
-                mean_squared_error(
-                    origTS.sort_values(ascending=False).reset_index(drop=True),
-                    predTS.sort_values(ascending=False).reset_index(drop=True),
-                )
-            )
-            indicatorRaw["MAE"][column] = mean_absolute_error(origTS, predTS)
-
-        return pd.DataFrame(indicatorRaw)
-
-    def totalAccuracyIndicators(self):
+    def total_accuracy_indicators(self):
         """
         Derives the accuracy indicators over all time series
         """
         return np.sqrt(
-            self.accuracyIndicators().pow(2).sum()
-            / len(self.normalizedTimeSeries.columns)
+            self.accuracy_indicators().pow(2).sum() / len(self.time_series.columns)
         )
+
+    # Backward-compatible method aliases (deprecated)
+    createTypicalPeriods = create_typical_periods
+    predictOriginalData = predict_original_data
+    accuracyIndicators = accuracy_indicators
+    totalAccuracyIndicators = total_accuracy_indicators
+    prepareEnersysInput = prepare_enersys_input
+    indexMatching = index_matching
+
+    # Backward-compatible property aliases (deprecated)
+    stepIdx = step_idx
+    clusterPeriodIdx = cluster_period_idx
+    clusterOrder = cluster_order
+    clusterPeriodNoOccur = cluster_period_no_occur
+    clusterPeriodDict = cluster_period_dict
+    segmentDurationDict = segment_duration_dict

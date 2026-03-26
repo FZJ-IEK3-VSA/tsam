@@ -22,15 +22,15 @@ def test_segmentation():
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=20,
-        hoursPerPeriod=24,
-        clusterMethod="hierarchical",
-        representationMethod="meanRepresentation",
+        no_typical_periods=20,
+        hours_per_period=24,
+        cluster_method="hierarchical",
+        representation_method="meanRepresentation",
         segmentation=True,
-        noSegments=12,
+        no_segments=12,
     )
 
-    typPeriods = aggregation.createTypicalPeriods()
+    typPeriods = aggregation.create_typical_periods()
 
     print("Clustering took " + str(time.time() - starttime))
 
@@ -59,7 +59,7 @@ def test_segmentation():
 
 
 def test_representation_in_segmentation():
-    segmentationCandidates = np.array(
+    segmentation_candidates = np.array(
         [
             [0.0, 0.38936961, 0.27539063, 0.25],
             [0.0, 0.35591778, 0.26841518, 0.25],
@@ -88,29 +88,29 @@ def test_representation_in_segmentation():
         ]
     )
 
-    clusterOrder = np.array(
+    cluster_order = np.array(
         [5, 5, 5, 5, 5, 7, 3, 2, 2, 2, 2, 0, 0, 0, 0, 1, 1, 1, 1, 1, 6, 6, 4, 4]
     )
 
-    clusterCenters_mean, _clusterCenterIndices = tsam.representations(
-        segmentationCandidates,
-        clusterOrder,
+    cluster_centers_mean, _cluster_center_indices = tsam.representations(
+        segmentation_candidates,
+        cluster_order,
         default="meanRepresentation",
-        representationMethod="meanRepresentation",
-        distributionPeriodWise=False,
-        timeStepsPerPeriod=1,
+        representation_method="meanRepresentation",
+        distribution_period_wise=False,
+        n_timesteps_per_period=1,
     )
 
-    clusterCenters_dist, _clusterCenterIndices = tsam.representations(
-        segmentationCandidates,
-        clusterOrder,
+    cluster_centers_dist, _cluster_center_indices = tsam.representations(
+        segmentation_candidates,
+        cluster_order,
         default="meanRepresentation",
-        representationMethod="distributionRepresentation",
-        distributionPeriodWise=True,
-        timeStepsPerPeriod=1,
+        representation_method="distributionRepresentation",
+        distribution_period_wise=True,
+        n_timesteps_per_period=1,
     )
 
-    assert np.isclose(clusterCenters_mean, clusterCenters_dist).all()
+    assert np.isclose(cluster_centers_mean, cluster_centers_dist).all()
 
 
 if __name__ == "__main__":

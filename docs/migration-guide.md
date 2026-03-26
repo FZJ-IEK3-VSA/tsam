@@ -1,4 +1,62 @@
-# Migrating from ETHOS.TSAM v2 to v3 { #migration-guide }
+# Migration Guide { #migration-guide }
+
+## Migrating from v3 to v4 { #migration-v3-to-v4 }
+
+tsam v4 is a pipeline rewrite of the internals. The `tsam.aggregate()` API
+and the legacy `TimeSeriesAggregation` class both still work, but there are
+behavioral changes that may affect your results.
+
+### Weight semantics
+
+`weights` (top-level parameter to `aggregate()`) now affects
+**only** the clustering distance calculation. Previously, weights were baked
+into normalized data, which forced rescaling, reconstruction, and accuracy
+computation to compensate. In v4, all those steps operate on unweighted data.
+
+**What changes:**
+
+- Cluster *assignments* are identical (the weighted distance matrix is
+  mathematically equivalent).
+- With medoid or maxoid representation and non-uniform weights, the selected
+  representative may differ because the medoid is now chosen in the unweighted
+  output space.
+- Across all golden regression tests, the **only** affected configuration is
+  `hierarchical_weighted` — everything else is bit-identical.
+
+**Action required:** If you use non-uniform `weights` with medoid or maxoid
+representation, verify that your downstream results are acceptable. For most
+users, this change is invisible.
+
+### Column order (new API only)
+
+`cluster_representatives`, `reconstructed`, and `original` now return
+columns in the same order as the input DataFrame. Previously, columns were
+alphabetically sorted.
+
+The legacy `TimeSeriesAggregation` class preserves alphabetical sorting for
+backward compatibility.
+
+**Action required:** If your code indexes columns by position (e.g.,
+`df.iloc[:, 0]`), verify that the order matches your expectation.
+
+### Renamed property
+
+`AggregationResult.cluster_weights` has been renamed to `cluster_counts`
+to avoid confusion with per-column clustering weights. The old name still
+works but emits a `FutureWarning`.
+
+### Internal changes (no action required)
+
+- The pipeline has been decomposed into stateless functions in
+  `src/tsam/pipeline/`. Both `tsam.aggregate()` and
+  `TimeSeriesAggregation` delegate to `run_pipeline()`.
+- All internal identifiers have been renamed from camelCase to snake_case.
+  The legacy class accepts both naming conventions for its constructor
+  parameters.
+
+---
+
+## Migrating from ETHOS.TSAM v2 to v3 { #migration-v2-to-v3 }
 
 ETHOS.TSAM v3 replaces the class-based API with a functional API.
 The old `TimeSeriesAggregation` class still works but is deprecated
@@ -237,7 +295,7 @@ object with everything attached.
 | `agg.predictOriginalData()` | `result.reconstructed` |
 | `agg.accuracyIndicators()` | `result.accuracy.summary` |
 | `agg.clusterOrder` | `result.cluster_assignments` |
-| `agg.clusterPeriodNoOccur` | `result.cluster_weights` |
+| `agg.clusterPeriodNoOccur` | `result.cluster_counts` |
 | `agg.clusterCenterIndices` | `result.clustering.cluster_centers` |
 | `agg.timeSeries` | `result.original` |
 | *(no equivalent)* | `result.residuals` |

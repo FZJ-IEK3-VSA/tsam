@@ -26,39 +26,39 @@ def test_cluster_order():
 
     aggregation_wind = tsam.TimeSeriesAggregation(
         raw_wind,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod="hierarchical",
-        representationMethod="meanRepresentation",
+        no_typical_periods=8,
+        hours_per_period=24,
+        cluster_method="hierarchical",
+        representation_method="meanRepresentation",
     )
 
-    typPeriods_wind = aggregation_wind.createTypicalPeriods()
+    typPeriods_wind = aggregation_wind.create_typical_periods()
 
     aggregation_predefClusterOrder = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod="hierarchical",
-        representationMethod="meanRepresentation",
-        predefClusterOrder=aggregation_wind.clusterOrder,
+        no_typical_periods=8,
+        hours_per_period=24,
+        cluster_method="hierarchical",
+        representation_method="meanRepresentation",
+        predef_cluster_order=aggregation_wind.cluster_order,
     )
 
     typPeriods_predefClusterOrder = (
-        aggregation_predefClusterOrder.createTypicalPeriods()
+        aggregation_predefClusterOrder.create_typical_periods()
     )
 
     aggregation_predefClusterOrderAndClusterCenters = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod="hierarchical",
-        representationMethod="meanRepresentation",
-        predefClusterOrder=aggregation_wind.clusterOrder,
-        predefClusterCenterIndices=aggregation_wind.clusterCenterIndices,
+        no_typical_periods=8,
+        hours_per_period=24,
+        cluster_method="hierarchical",
+        representation_method="meanRepresentation",
+        predef_cluster_order=aggregation_wind.cluster_order,
+        predef_cluster_center_indices=aggregation_wind.cluster_center_indices,
     )
 
     typPeriods_predefClusterOrderAndClusterCenters = (
-        aggregation_predefClusterOrderAndClusterCenters.createTypicalPeriods()
+        aggregation_predefClusterOrderAndClusterCenters.create_typical_periods()
     )
 
     print("Clustering took " + str(time.time() - starttime))

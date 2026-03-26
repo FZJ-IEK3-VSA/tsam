@@ -12,33 +12,35 @@ def test_durationCurve():
     # do everything for one attribute only to make sure that scaling does not play a role
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)["GHI"].to_frame()
 
-    noTypicalPeriods = 8
+    no_typical_periods = 8
 
-    hoursPerPeriod = 24
+    hours_per_period = 24
 
     starttime = time.time()
 
     aggregation = tsam.TimeSeriesAggregation(
         raw,
-        noTypicalPeriods=noTypicalPeriods,
-        hoursPerPeriod=hoursPerPeriod,
-        clusterMethod="hierarchical",
-        sortValues=True,
-        rescaleClusterPeriods=False,
+        no_typical_periods=no_typical_periods,
+        hours_per_period=hours_per_period,
+        cluster_method="hierarchical",
+        sort_values=True,
+        rescale_cluster_periods=False,
     )
 
-    typPeriods = aggregation.createTypicalPeriods()
+    typPeriods = aggregation.create_typical_periods()
 
     print("Clustering took " + str(time.time() - starttime))
 
     # sort every attribute in every period in descending order for both, the found typical period and the days
     # that belong to the corresponding cluster
-    for i in range(noTypicalPeriods):
-        calculated = tsam.unstackToPeriods(raw, hoursPerPeriod)[0].loc[
-            np.where(aggregation.clusterOrder == i)[0], :
+    for i in range(no_typical_periods):
+        calculated = tsam.unstack_to_periods(raw, hours_per_period)[0].loc[
+            np.where(aggregation.cluster_order == i)[0], :
         ]
         calculatedSorted = copy.deepcopy(calculated)
-        algorithmResult = tsam.unstackToPeriods(typPeriods.loc[i], hoursPerPeriod)[0]
+        algorithmResult = tsam.unstack_to_periods(typPeriods.loc[i], hours_per_period)[
+            0
+        ]
         for j in raw.columns:
             dfR = algorithmResult[j]
             dfR[dfR.columns] = np.sort(dfR)[:, ::-1]

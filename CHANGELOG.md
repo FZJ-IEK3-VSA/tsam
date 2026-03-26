@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+
 ## [3.2.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.1.2...v3.2.0) (2026-03-24)
 
 This release moves the `weights` argument out of `ClusterConfig`and into `aggregate` (and similar methods), while deprecating the old usage inside `ClusterConfig`. The Parameter affects all aggregation steps and is now placed accordingly. Further, we added a new plotting method that allows you to inspect cluster members and their representation.
@@ -63,7 +64,7 @@ See the [migration guide](migration-guide.md) for a complete guide on upgrading 
 
     - `cluster_representatives`: DataFrame with aggregated typical periods
     - `cluster_assignments`: Which cluster each original period belongs to
-    - `cluster_weights`: Occurrence count per cluster
+    - `cluster_counts`: Occurrence count per cluster (fractional for partial periods)
     - `accuracy`: `AccuracyMetrics` object with RMSE, MAE, and duration curve RMSE
     - `reconstructed`: Reconstructed time series (cached property)
     - `residuals`: Difference between original and reconstructed
