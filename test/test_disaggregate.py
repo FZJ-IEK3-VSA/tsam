@@ -86,6 +86,21 @@ class TestAggregationResultDisaggregate:
         expanded = result.disaggregate(subset)
         assert expanded.shape == (len(result.original), 2)
 
+    def test_multiindex_columns(self, result):
+        """Disaggregate works correctly with MultiIndex columns."""
+        reps = result.cluster_representatives.copy()
+        reps.columns = pd.MultiIndex.from_tuples(
+            [(col, "north") for col in reps.columns]
+        )
+        expanded = result.clustering.disaggregate(reps)
+        assert expanded.shape == (
+            result.clustering.n_original_periods
+            * result.clustering.n_timesteps_per_period,
+            len(reps.columns),
+        )
+        assert isinstance(expanded.columns, pd.MultiIndex)
+        assert not expanded.isna().any().any()
+
 
 class TestClusteringResultDisaggregate:
     """Tests for ClusteringResult.disaggregate."""
@@ -195,5 +210,5 @@ class TestDisaggregateValidation:
     def test_wrong_timesteps_raises(self, result):
         """Wrong number of timesteps per period raises."""
         wrong = result.cluster_representatives.iloc[::2]
-        with pytest.raises(ValueError, match="timesteps per period"):
+        with pytest.raises(ValueError, match="timesteps"):
             result.clustering.disaggregate(wrong)

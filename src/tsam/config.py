@@ -6,6 +6,7 @@ import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
+import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
@@ -380,8 +381,7 @@ def _validate_disaggregate_input(
             f"Expected {sorted(expected_clusters)}, got {sorted(data_clusters)}."
         )
 
-    # Validate second level count based on what the input actually is
-    n_second_level = data.index.get_level_values(1).nunique()
+    # Validate second level count per cluster
     if is_segmented:
         expected = clustering.n_segments
         kind = "segments"
@@ -389,10 +389,12 @@ def _validate_disaggregate_input(
         expected = clustering.n_timesteps_per_period
         kind = "timesteps"
 
-    if n_second_level != expected:
-        raise ValueError(
-            f"data has {n_second_level} {kind} per period, expected {expected}"
-        )
+    for cluster in data.index.get_level_values(0).unique():
+        n_in_cluster = len(data.loc[cluster])
+        if n_in_cluster != expected:
+            raise ValueError(
+                f"cluster {cluster} has {n_in_cluster} {kind}, expected {expected}"
+            )
 
     return data
 
@@ -421,13 +423,15 @@ def _expand_segments_to_timesteps(
         Data with ``(cluster, timestep)`` MultiIndex at full resolution.
         Only the first timestep of each segment has values; the rest are NaN.
     """
-    import numpy as np
-
     clusters = data.index.get_level_values(0).unique()
+    # Map cluster IDs to their segment durations. segment_durations is ordered
+    # by unique cluster ID (sorted), not by positional index — so we zip with
+    # the sorted unique cluster IDs from cluster_assignments to build the lookup.
+    durations_by_cluster = dict(zip(sorted(set(clusters)), segment_durations))
     parts = []
-    for cluster_idx, cluster in enumerate(clusters):
+    for cluster in clusters:
         cluster_data = data.loc[cluster]
-        durations = segment_durations[cluster_idx]
+        durations = durations_by_cluster[cluster]
         n_timesteps = sum(durations)
 
         values = np.full((n_timesteps, len(data.columns)), np.nan)
@@ -466,7 +470,9 @@ def _expand_periods(
     unstacked = data.unstack(level=1)  # rows=cluster, cols=(col, timestep)
     expanded = unstacked.loc[list(cluster_assignments)]
     expanded.index = range(len(cluster_assignments))
-    result: pd.DataFrame = expanded.stack(future_stack=True, level=1)  # type: ignore[assignment]
+    # Use level=-1 to always stack the timestep level (last), which is correct
+    # even when the original columns are a MultiIndex.
+    result: pd.DataFrame = expanded.stack(future_stack=True, level=-1)  # type: ignore[assignment]
     result.index = pd.RangeIndex(len(result))
     return result
 

@@ -253,13 +253,16 @@ class AggregationResult:
         Parameters
         ----------
         data : pd.DataFrame
-            Typical-period data with a ``(cluster, timestep)`` MultiIndex,
-            the same structure as ``cluster_representatives``.
+            Typical-period data matching ``cluster_representatives``:
+
+            - ``(cluster, timestep)`` MultiIndex for non-segmented, or
+            - ``(cluster, segment, duration)`` MultiIndex for segmented.
 
         Returns
         -------
         pd.DataFrame
             Disaggregated data with the original datetime index.
+            For segmented input, non-segment-start timesteps are NaN.
 
         Examples
         --------
