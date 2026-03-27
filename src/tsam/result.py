@@ -38,12 +38,26 @@ class AccuracyMetrics:
         - converged: Whether rescaling converged within max iterations
         - iterations: Number of iterations used
         Only populated if rescaling was enabled, otherwise empty DataFrame.
+    weighted_rmse : float
+        Weighted root-mean-square of per-column RMSE values:
+        ``sqrt(sum(rmse_i² * w_i) / sum(w_i))``.
+        Equals the RMSE over all pooled (weighted) residuals.
+        With uniform weights this matches the old ``totalAccuracyIndicators()["RMSE"]``.
+    weighted_mae : float
+        Weighted arithmetic mean of per-column MAE values:
+        ``sum(mae_i * w_i) / sum(w_i)``.
+    weighted_rmse_duration : float
+        Weighted root-mean-square of per-column duration-curve RMSE values:
+        ``sqrt(sum(rmse_dur_i² * w_i) / sum(w_i))``.
     """
 
     rmse: pd.Series
     mae: pd.Series
     rmse_duration: pd.Series
     rescale_deviations: pd.DataFrame
+    weighted_rmse: float
+    weighted_mae: float
+    weighted_rmse_duration: float
 
     @property
     def summary(self) -> pd.DataFrame:
@@ -75,9 +89,9 @@ class AccuracyMetrics:
                 rescale_info = f",\n  rescale_failures={n_failed} (max {max_dev:.2f}%)"
         return (
             f"AccuracyMetrics(\n"
-            f"  rmse={self.rmse.mean():.4f} (mean),\n"
-            f"  mae={self.mae.mean():.4f} (mean),\n"
-            f"  rmse_duration={self.rmse_duration.mean():.4f} (mean){rescale_info}\n"
+            f"  rmse={self.weighted_rmse:.4f} (weighted),\n"
+            f"  mae={self.weighted_mae:.4f} (weighted),\n"
+            f"  rmse_duration={self.weighted_rmse_duration:.4f} (weighted){rescale_info}\n"
             f")"
         )
 
@@ -270,6 +284,9 @@ class AggregationResult:
                 "mae": self.accuracy.mae.to_dict(),
                 "rmse_duration": self.accuracy.rmse_duration.to_dict(),
                 "rescale_deviations": self.accuracy.rescale_deviations.to_dict(),
+                "weighted_rmse": self.accuracy.weighted_rmse,
+                "weighted_mae": self.accuracy.weighted_mae,
+                "weighted_rmse_duration": self.accuracy.weighted_rmse_duration,
             },
             "clustering_duration": self.clustering_duration,
         }

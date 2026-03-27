@@ -872,11 +872,18 @@ class ClusteringResult:
                 columns=["deviation_pct", "converged", "iterations"]
             )
 
+        from tsam.api import _weighted_mean, _weighted_rms
+
         accuracy = AccuracyMetrics(
             rmse=accuracy_df["RMSE"],
             mae=accuracy_df["MAE"],
             rmse_duration=accuracy_df["RMSE_duration"],
             rescale_deviations=rescale_deviations,
+            weighted_rmse=_weighted_rms(accuracy_df["RMSE"], self.weights),
+            weighted_mae=_weighted_mean(accuracy_df["MAE"], self.weights),
+            weighted_rmse_duration=_weighted_rms(
+                accuracy_df["RMSE_duration"], self.weights
+            ),
         )
 
         # Build ClusteringResult - preserve stored values
