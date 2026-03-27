@@ -119,9 +119,8 @@ class TestClusteringResultDisaggregate:
         expected_values = n_segments * n_periods * n_cols
         assert expanded.notna().sum().sum() == expected_values
 
-    def test_timestep_input_on_segmented_clustering(self, result_segmented):
-        """Passing (cluster, timestep) data to a segmented clustering skips segment expansion."""
-        # Build a (cluster, timestep) DataFrame manually from the segmented clustering
+    def test_timestep_input_on_segmented_clustering_raises(self, result_segmented):
+        """Passing (cluster, timestep) data to a segmented clustering raises."""
         n_clusters = result_segmented.n_clusters
         n_ts = result_segmented.clustering.n_timesteps_per_period
         idx = pd.MultiIndex.from_product([range(n_clusters), range(n_ts)])
@@ -130,10 +129,22 @@ class TestClusteringResultDisaggregate:
             index=idx,
             columns=result_segmented.original.columns,
         )
-        expanded = result_segmented.clustering.disaggregate(data)
-        n_periods = result_segmented.clustering.n_original_periods
-        assert len(expanded) == n_periods * n_ts
-        assert not expanded.isna().any().any()  # No NaN — no segment expansion
+        with pytest.raises(ValueError, match="segmentation"):
+            result_segmented.clustering.disaggregate(data)
+
+    def test_segmented_input_on_nonsegmented_clustering_raises(self, result):
+        """Passing segment-level data to a non-segmented clustering raises."""
+        n_clusters = result.n_clusters
+        idx = pd.MultiIndex.from_tuples(
+            [(c, s, d) for c in range(n_clusters) for s, d in [(0, 5), (1, 7)]],
+        )
+        data = pd.DataFrame(
+            np.ones((len(idx), len(result.original.columns))),
+            index=idx,
+            columns=result.original.columns,
+        )
+        with pytest.raises(ValueError, match="segmentation"):
+            result.clustering.disaggregate(data)
 
     def test_io_roundtrip(self, result, tmp_path):
         path = tmp_path / "clustering.json"

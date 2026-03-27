@@ -864,16 +864,25 @@ class ClusteringResult:
         >>> optimized = run_optimization(result.cluster_representatives)
         >>> full_year = clustering.disaggregate(optimized)
         """
-        is_segmented = data.index.nlevels > 2
-        data = _validate_disaggregate_input(data, self, is_segmented=is_segmented)
+        is_segmented_input = data.index.nlevels > 2
+        is_segmented_clustering = self.segment_durations is not None
 
-        if is_segmented:
-            if self.segment_durations is None:
-                raise ValueError(
-                    "data has segment-level index but this clustering "
-                    "has no segment_durations"
-                )
-            data = _expand_segments_to_timesteps(data, self.segment_durations)
+        if is_segmented_input and not is_segmented_clustering:
+            raise ValueError(
+                "data has segment-level index (3+ levels) but this clustering "
+                "has no segmentation"
+            )
+        if is_segmented_clustering and not is_segmented_input:
+            raise ValueError(
+                "this clustering uses segmentation but data has a "
+                "(cluster, timestep) index — pass segment-level data with a "
+                "(cluster, segment, duration) index instead"
+            )
+
+        data = _validate_disaggregate_input(data, self, is_segmented=is_segmented_input)
+
+        if is_segmented_input:
+            data = _expand_segments_to_timesteps(data, self.segment_durations)  # type: ignore[arg-type]
 
         return _expand_periods(data, self.cluster_assignments)
 
