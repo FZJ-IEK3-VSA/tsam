@@ -337,6 +337,8 @@ class SegmentConfig:
 def _validate_disaggregate_input(
     data: pd.DataFrame,
     clustering: ClusteringResult,
+    *,
+    is_segmented: bool,
 ) -> pd.DataFrame:
     """Validate and normalize input for disaggregation.
 
@@ -358,7 +360,6 @@ def _validate_disaggregate_input(
             )
         )
 
-    is_segmented = data.index.nlevels > 2
     if is_segmented:
         data = data.droplevel(list(range(2, data.index.nlevels)))
 
@@ -379,9 +380,9 @@ def _validate_disaggregate_input(
             f"Expected {sorted(expected_clusters)}, got {sorted(data_clusters)}."
         )
 
-    # Validate timesteps or segments per period
+    # Validate second level count based on what the input actually is
     n_second_level = data.index.get_level_values(1).nunique()
-    if is_segmented or clustering.segment_durations is not None:
+    if is_segmented:
         expected = clustering.n_segments
         kind = "segments"
     else:
@@ -834,18 +835,21 @@ class ClusteringResult:
         Parameters
         ----------
         data : pd.DataFrame
-            Typical-period data with:
+            Typical-period data with one of:
 
-            - A ``(cluster, timestep)`` MultiIndex (non-segmented), or
-            - A ``(cluster, segment, duration)`` MultiIndex (segmented),
-
-            matching the structure of ``AggregationResult.cluster_representatives``.
+            - A ``(cluster, timestep)`` MultiIndex — works for any clustering,
+              segmented or not. Periods are expanded directly.
+            - A ``(cluster, segment, duration)`` MultiIndex — segments are
+              expanded to timesteps first (NaN between segment starts),
+              then periods are expanded.
 
         Returns
         -------
         pd.DataFrame
             Disaggregated data with integer-indexed rows
-            (one row per original timestep).
+            (one row per original timestep). For segmented input,
+            non-segment-start timesteps are NaN — use ``.ffill()``
+            for a step function.
 
         Raises
         ------
@@ -860,9 +864,15 @@ class ClusteringResult:
         >>> optimized = run_optimization(result.cluster_representatives)
         >>> full_year = clustering.disaggregate(optimized)
         """
-        data = _validate_disaggregate_input(data, self)
+        is_segmented = data.index.nlevels > 2
+        data = _validate_disaggregate_input(data, self, is_segmented=is_segmented)
 
-        if self.segment_durations is not None:
+        if is_segmented:
+            if self.segment_durations is None:
+                raise ValueError(
+                    "data has segment-level index but this clustering "
+                    "has no segment_durations"
+                )
             data = _expand_segments_to_timesteps(data, self.segment_durations)
 
         return _expand_periods(data, self.cluster_assignments)
