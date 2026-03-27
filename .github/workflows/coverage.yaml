@@ -1,0 +1,34 @@
+name: Coverage
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop]
+
+jobs:
+  coverage:
+    name: Upload coverage to Codecov
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install
+        run: uv pip install --system ".[develop]"
+
+      - name: Run tests with coverage
+        run: pytest -n auto --cov=tsam --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
