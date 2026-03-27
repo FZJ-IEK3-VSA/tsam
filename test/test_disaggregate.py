@@ -187,6 +187,123 @@ class TestClusteringResultDisaggregate:
         np.testing.assert_array_equal(original.values[mask], restored.values[mask])
 
 
+class TestDisaggregateEdgeCases:
+    """Edge cases and robustness tests."""
+
+    def test_padded_last_period(self, sample_data):
+        """Data whose length isn't divisible by period length gets trimmed correctly."""
+        # 100 rows with hourly data = 4 full days + 4 hours → last period is padded
+        short = sample_data.iloc[:100]
+        result = aggregate(short, n_clusters=3)
+        expanded = result.disaggregate(result.cluster_representatives)
+        assert len(expanded) == len(short)
+        pd.testing.assert_index_equal(expanded.index, short.index)
+
+    def test_single_cluster(self, sample_data):
+        """Degenerate case: n_clusters=1."""
+        result = aggregate(sample_data, n_clusters=1)
+        expanded = result.disaggregate(result.cluster_representatives)
+        assert expanded.shape == result.original.shape
+        np.testing.assert_allclose(
+            expanded.values, result.reconstructed.values, rtol=1e-10
+        )
+
+    def test_extreme_periods_append(self, sample_data):
+        """Extreme periods with 'append' add extra clusters."""
+        from tsam import ExtremeConfig
+
+        result = aggregate(
+            sample_data,
+            n_clusters=8,
+            extremes=ExtremeConfig(
+                method="append",
+                max_value=["GHI"],
+            ),
+        )
+        expanded = result.disaggregate(result.cluster_representatives)
+        assert expanded.shape == result.original.shape
+        np.testing.assert_allclose(
+            expanded.values, result.reconstructed.values, rtol=1e-10
+        )
+
+    def test_extreme_periods_new_cluster(self, sample_data):
+        """Extreme periods with 'new_cluster' add extra clusters."""
+        from tsam import ExtremeConfig
+
+        result = aggregate(
+            sample_data,
+            n_clusters=8,
+            extremes=ExtremeConfig(
+                method="new_cluster",
+                max_value=["GHI"],
+            ),
+        )
+        expanded = result.disaggregate(result.cluster_representatives)
+        assert expanded.shape == result.original.shape
+        np.testing.assert_allclose(
+            expanded.values, result.reconstructed.values, rtol=1e-10
+        )
+
+    def test_kmeans(self, sample_data):
+        """Works with kmeans clustering."""
+        from tsam import ClusterConfig
+
+        result = aggregate(
+            sample_data,
+            n_clusters=8,
+            cluster=ClusterConfig(method="kmeans"),
+        )
+        expanded = result.disaggregate(result.cluster_representatives)
+        assert expanded.shape == result.original.shape
+        np.testing.assert_allclose(
+            expanded.values, result.reconstructed.values, rtol=1e-10
+        )
+
+    def test_segmented_nan_at_correct_positions(self, result_segmented):
+        """NaN values are between segment starts, not at segment starts."""
+        expanded = result_segmented.clustering.disaggregate(
+            result_segmented.cluster_representatives
+        )
+        durations = result_segmented.clustering.segment_durations
+        assignments = result_segmented.clustering.cluster_assignments
+        n_ts = result_segmented.clustering.n_timesteps_per_period
+
+        # Check first few original periods
+        for period_idx in range(min(3, len(assignments))):
+            cluster = assignments[period_idx]
+            cluster_durations = durations[cluster]
+            start = period_idx * n_ts
+            pos = 0
+            for d in cluster_durations:
+                # Segment start should have values
+                assert expanded.iloc[start + pos].notna().all(), (
+                    f"period {period_idx}, segment start at {pos} should have values"
+                )
+                # Positions after start should be NaN (if duration > 1)
+                for offset in range(1, d):
+                    assert expanded.iloc[start + pos + offset].isna().all(), (
+                        f"period {period_idx}, offset {pos + offset} should be NaN"
+                    )
+                pos += d
+
+    def test_reconstructed_unchanged_by_refactor(self, sample_data):
+        """predictOriginalData still matches via the shared _expand_periods helper."""
+        import warnings
+
+        from tsam.timeseriesaggregation import TimeSeriesAggregation
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            agg = TimeSeriesAggregation(sample_data, noTypicalPeriods=8)
+            agg.createTypicalPeriods()
+            reconstructed_old_api = agg.predictOriginalData()
+
+        result = aggregate(sample_data, n_clusters=8)
+        np.testing.assert_allclose(
+            result.reconstructed.values, reconstructed_old_api.values, rtol=1e-10
+        )
+
+
 class TestDisaggregateValidation:
     """Tests for disaggregate input validation."""
 
