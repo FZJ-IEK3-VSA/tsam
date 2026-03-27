@@ -48,12 +48,12 @@ jobs:
       - name: Install
         run: uv pip install --system ".[develop]"
 
-      - name: Run tests
-        run: pytest -n auto -vv
-
-      - name: Run tests with coverage
+      - name: Enable coverage flags
         if: matrix.os == 'self-hosted' && matrix.python-version == '3.10'
-        run: pytest -n auto --cov=tsam --cov-report=xml
+        run: echo "COVERAGE_FLAGS=--cov=tsam --cov-report=xml" >> $GITHUB_ENV
+
+      - name: Run tests
+        run: pytest -n auto -vv $COVERAGE_FLAGS
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'self-hosted' && matrix.python-version == '3.10'
