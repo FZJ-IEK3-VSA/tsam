@@ -48,9 +48,21 @@ jobs:
       - name: Install
         run: uv pip install --system ".[develop]"
 
+      - name: Enable coverage flags
+        if: matrix.os == 'self-hosted' && matrix.python-version == '3.10'
+        run: echo "COVERAGE_FLAGS=--cov=tsam --cov-report=xml" >> $GITHUB_ENV
+
       - name: Run tests
-        run: pytest -n auto -vv
-        
+        run: pytest -n auto -vv $COVERAGE_FLAGS
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'self-hosted' && matrix.python-version == '3.10'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
 
   # Renovate: test max versions of changed dependencies
   detect-renovate-changes:
