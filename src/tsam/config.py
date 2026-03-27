@@ -334,6 +334,142 @@ class SegmentConfig:
         )
 
 
+def _validate_disaggregate_input(
+    data: pd.DataFrame,
+    clustering: ClusteringResult,
+) -> pd.DataFrame:
+    """Validate and normalize input for disaggregation.
+
+    Checks that the MultiIndex structure, cluster IDs, and timestep/segment
+    counts match the clustering. For segmented data (3+ index levels), returns
+    a copy with only the first two levels (cluster, segment).
+
+    Returns the (possibly level-dropped) DataFrame ready for disaggregation.
+    """
+    if not isinstance(data.index, pd.MultiIndex) or data.index.nlevels < 2:
+        raise ValueError(
+            "data must have a MultiIndex with at least 2 levels "
+            "(cluster, timestep) or (cluster, segment, duration), "
+            f"got {type(data.index).__name__}"
+            + (
+                f" with {data.index.nlevels} levels"
+                if isinstance(data.index, pd.MultiIndex)
+                else ""
+            )
+        )
+
+    is_segmented = data.index.nlevels > 2
+    if is_segmented:
+        data = data.droplevel(list(range(2, data.index.nlevels)))
+
+    # Validate cluster IDs
+    data_clusters = set(data.index.get_level_values(0).unique())
+    expected_clusters = set(clustering.cluster_assignments)
+    if data_clusters != expected_clusters:
+        missing = expected_clusters - data_clusters
+        extra = data_clusters - expected_clusters
+        parts = []
+        if missing:
+            parts.append(f"missing clusters {sorted(missing)}")
+        if extra:
+            parts.append(f"unexpected clusters {sorted(extra)}")
+        raise ValueError(
+            f"Cluster IDs in data do not match this clustering: "
+            f"{', '.join(parts)}. "
+            f"Expected {sorted(expected_clusters)}, got {sorted(data_clusters)}."
+        )
+
+    # Validate timesteps or segments per period
+    n_second_level = data.index.get_level_values(1).nunique()
+    if is_segmented or clustering.segment_durations is not None:
+        expected = clustering.n_segments
+        kind = "segments"
+    else:
+        expected = clustering.n_timesteps_per_period
+        kind = "timesteps"
+
+    if n_second_level != expected:
+        raise ValueError(
+            f"data has {n_second_level} {kind} per period, expected {expected}"
+        )
+
+    return data
+
+
+def _expand_segments_to_timesteps(
+    data: pd.DataFrame,
+    segment_durations: tuple[tuple[int, ...], ...],
+) -> pd.DataFrame:
+    """Expand segmented typical-period data to full timestep resolution.
+
+    Segment values are placed at the first timestep of each segment.
+    All other timesteps are NaN. Callers can ``.ffill()`` the result
+    to get a step function if needed.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Segmented data with ``(cluster, segment)`` MultiIndex.
+    segment_durations : tuple of tuples
+        Duration per segment per cluster.  ``segment_durations[i][j]`` is the
+        number of timesteps for cluster *i*, segment *j*.
+
+    Returns
+    -------
+    pd.DataFrame
+        Data with ``(cluster, timestep)`` MultiIndex at full resolution.
+        Only the first timestep of each segment has values; the rest are NaN.
+    """
+    import numpy as np
+
+    clusters = data.index.get_level_values(0).unique()
+    parts = []
+    for cluster_idx, cluster in enumerate(clusters):
+        cluster_data = data.loc[cluster]
+        durations = segment_durations[cluster_idx]
+        n_timesteps = sum(durations)
+
+        values = np.full((n_timesteps, len(data.columns)), np.nan)
+        pos = 0
+        for seg_idx, d in enumerate(durations):
+            values[pos] = cluster_data.values[seg_idx]
+            pos += d
+
+        idx = pd.MultiIndex.from_arrays([[cluster] * n_timesteps, range(n_timesteps)])
+        parts.append(pd.DataFrame(values, index=idx, columns=data.columns))
+
+    return pd.concat(parts)
+
+
+def _expand_periods(
+    data: pd.DataFrame,
+    cluster_assignments: tuple[int, ...],
+) -> pd.DataFrame:
+    """Expand typical-period data to original time series length.
+
+    Selects rows from ``data`` according to ``cluster_assignments``, mapping
+    each original period to its cluster representative.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Typical-period data with ``(cluster, timestep)`` MultiIndex.
+    cluster_assignments : tuple of int
+        Cluster assignment for each original period.
+
+    Returns
+    -------
+    pd.DataFrame
+        Flat DataFrame with integer index, one row per original timestep.
+    """
+    unstacked = data.unstack(level=1)  # rows=cluster, cols=(col, timestep)
+    expanded = unstacked.loc[list(cluster_assignments)]
+    expanded.index = range(len(cluster_assignments))
+    result: pd.DataFrame = expanded.stack(future_stack=True, level=1)  # type: ignore[assignment]
+    result.index = pd.RangeIndex(len(result))
+    return result
+
+
 @dataclass(frozen=True)
 class ClusteringResult:
     """Clustering assignments that can be saved/loaded and applied to new data.
@@ -686,6 +822,50 @@ class ClusteringResult:
 
         with open(path) as f:
             return cls.from_dict(json.load(f))
+
+    def disaggregate(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Expand typical-period data back to the original time series length.
+
+        Each original period is replaced by its assigned cluster representative
+        from ``data``. For segmented data, segments are first expanded back to
+        full timesteps using the stored segment durations, then periods are
+        mapped back using cluster assignments.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Typical-period data with:
+
+            - A ``(cluster, timestep)`` MultiIndex (non-segmented), or
+            - A ``(cluster, segment, duration)`` MultiIndex (segmented),
+
+            matching the structure of ``AggregationResult.cluster_representatives``.
+
+        Returns
+        -------
+        pd.DataFrame
+            Disaggregated data with integer-indexed rows
+            (one row per original timestep).
+
+        Raises
+        ------
+        ValueError
+            If the index structure, cluster IDs, or number of timesteps/segments
+            do not match this clustering.
+
+        Examples
+        --------
+        >>> clustering = ClusteringResult.from_json("clustering.json")
+        >>> result = clustering.apply(df)
+        >>> optimized = run_optimization(result.cluster_representatives)
+        >>> full_year = clustering.disaggregate(optimized)
+        """
+        data = _validate_disaggregate_input(data, self)
+
+        if self.segment_durations is not None:
+            data = _expand_segments_to_timesteps(data, self.segment_durations)
+
+        return _expand_periods(data, self.cluster_assignments)
 
     def apply(
         self,
