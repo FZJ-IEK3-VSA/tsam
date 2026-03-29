@@ -27,7 +27,8 @@ def getNoPeriodsForDataReduction(noRawTimeSteps, segmentsPerPeriod, dataReductio
         This function is deprecated along with the HyperTunedAggregations class.
     """
     warnings.warn(
-        "getNoPeriodsForDataReduction is deprecated along with HyperTunedAggregations.",
+        "getNoPeriodsForDataReduction will be removed in tsam v4.0. "
+        "Use tsam.tuning.find_optimal_combination() instead.",
         LegacyAPIWarning,
         stacklevel=2,
     )
@@ -53,7 +54,8 @@ def getNoSegmentsForDataReduction(noRawTimeSteps, typicalPeriods, dataReduction)
         This function is deprecated along with the HyperTunedAggregations class.
     """
     warnings.warn(
-        "getNoSegmentsForDataReduction is deprecated along with HyperTunedAggregations.",
+        "getNoSegmentsForDataReduction will be removed in tsam v4.0. "
+        "Use tsam.tuning.find_optimal_combination() instead.",
         LegacyAPIWarning,
         stacklevel=2,
     )
@@ -76,7 +78,7 @@ class HyperTunedAggregations:
             :func:`tsam.tuning.find_pareto_front` instead.
         """
         warnings.warn(
-            "HyperTunedAggregations is deprecated. "
+            "HyperTunedAggregations will be removed in tsam v4.0. "
             "Use tsam.tuning.find_optimal_combination() or tsam.tuning.find_pareto_front() instead.",
             LegacyAPIWarning,
             stacklevel=2,
