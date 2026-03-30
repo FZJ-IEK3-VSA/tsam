@@ -29,7 +29,8 @@ def get_no_periods_for_data_reduction(
         This function is deprecated along with the HyperTunedAggregations class.
     """
     warnings.warn(
-        "get_no_periods_for_data_reduction is deprecated along with HyperTunedAggregations.",
+        "getNoPeriodsForDataReduction will be removed in tsam v4.0. "
+        "Use tsam.tuning.find_optimal_combination() instead.",
         LegacyAPIWarning,
         stacklevel=2,
     )
@@ -57,7 +58,8 @@ def get_no_segments_for_data_reduction(
         This function is deprecated along with the HyperTunedAggregations class.
     """
     warnings.warn(
-        "get_no_segments_for_data_reduction is deprecated along with HyperTunedAggregations.",
+        "getNoSegmentsForDataReduction will be removed in tsam v4.0. "
+        "Use tsam.tuning.find_optimal_combination() instead.",
         LegacyAPIWarning,
         stacklevel=2,
     )
@@ -100,7 +102,7 @@ class HyperTunedAggregations:
             raise TypeError(f"Unexpected keyword arguments: {set(kwargs)}")
 
         warnings.warn(
-            "HyperTunedAggregations is deprecated. "
+            "HyperTunedAggregations will be removed in tsam v4.0. "
             "Use tsam.tuning.find_optimal_combination() or tsam.tuning.find_pareto_front() instead.",
             LegacyAPIWarning,
             stacklevel=2,

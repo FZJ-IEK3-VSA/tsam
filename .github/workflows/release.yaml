@@ -16,12 +16,19 @@ jobs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - uses: googleapis/release-please-action@v4
         id: release
         with:
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
           target-branch: master
+          token: ${{ steps.app-token.outputs.token }}
 
   sync-develop:
     name: Sync develop with master

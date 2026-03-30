@@ -20,6 +20,61 @@ if TYPE_CHECKING:
     from tsam.pipeline.types import PipelineResult
 
 
+def _weighted_mean(
+    per_column: pd.Series,
+    weights: dict[str, float] | None,
+) -> float:
+    """Weighted arithmetic mean of per-column values.
+
+    Parameters
+    ----------
+    per_column : pd.Series
+        One value per column (e.g. per-column MAE).
+    weights : dict or None
+        Column name → weight. Missing columns default to 1.
+        ``None`` is equivalent to uniform weights.
+
+    Returns
+    -------
+    float
+        ``sum(value_i * w_i) / sum(w_i)``
+    """
+    if weights:
+        w = pd.Series(weights).reindex(per_column.index, fill_value=1.0)
+        return float((per_column * w).sum() / w.sum())
+    return float(per_column.mean())
+
+
+def _weighted_rms(
+    per_column: pd.Series,
+    weights: dict[str, float] | None,
+) -> float:
+    """Weighted root-mean-square of per-column values.
+
+    Appropriate for aggregating RMSE across columns: the result equals
+    the RMSE you would obtain by pooling all (weighted) residuals into
+    a single series.
+
+    Parameters
+    ----------
+    per_column : pd.Series
+        One RMSE value per column.
+    weights : dict or None
+        Column name → weight. Missing columns default to 1.
+        ``None`` is equivalent to uniform weights.
+
+    Returns
+    -------
+    float
+        ``sqrt(sum(value_i² * w_i) / sum(w_i))``
+    """
+    squared = per_column**2
+    if weights:
+        w = pd.Series(weights).reindex(squared.index, fill_value=1.0)
+        return float(((squared * w).sum() / w.sum()) ** 0.5)
+    return float(squared.mean() ** 0.5)
+
+
 def _parse_duration_hours(value: int | float | str, param_name: str) -> float:
     """Parse a duration value to hours.
 
