@@ -50,23 +50,6 @@ class _AggregateOpts(TypedDict):
 logger = logging.getLogger(__name__)
 
 
-def _compute_rmse(
-    result: AggregationResult,
-    weights: dict[str, float] | None,
-) -> float:
-    """Compute aggregate RMSE, optionally weighted by column weights.
-
-    When weights are provided, columns with higher weight contribute more
-    to the aggregate metric — matching the priority expressed by the user
-    during clustering.
-    """
-    per_col_rmse_sq = result.accuracy.rmse**2
-    if weights:
-        w = pd.Series(weights).reindex(per_col_rmse_sq.index, fill_value=1.0)
-        return float(np.sqrt((per_col_rmse_sq * w).sum() / w.sum()))
-    return float(np.sqrt(per_col_rmse_sq.mean()))
-
-
 def _test_single_config_file(
     args: dict,
 ) -> tuple[int, int, float, AggregationResult | None]:
@@ -113,7 +96,7 @@ def _test_single_config_file(
             round_decimals=opts["round_decimals"],
             numerical_tolerance=opts["numerical_tolerance"],
         )
-        rmse = _compute_rmse(result, opts.get("weights"))
+        rmse = result.accuracy.weighted_rmse
         return (n_clusters, n_segments, rmse, result)
     except Exception as e:
         logger.warning(
@@ -255,7 +238,7 @@ def _test_configs(
                     round_decimals=aggregate_opts["round_decimals"],
                     numerical_tolerance=aggregate_opts["numerical_tolerance"],
                 )
-                rmse = _compute_rmse(result, aggregate_opts["weights"])
+                rmse = result.accuracy.weighted_rmse
                 results.append((n_per, n_seg, rmse, result))
             except Exception as e:
                 logger.debug("Config (%d, %d) failed: %s", n_per, n_seg, e)
