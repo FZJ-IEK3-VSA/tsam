@@ -383,6 +383,7 @@ def _build_aggregation_result(
         _normalized_predicted=result._normalized_predicted,
         _rescale_deviations=rescale_deviations,
         _segmented_df=result.segmented_df,
+        _weights=result.clustering_result.weights,
     )
 
 

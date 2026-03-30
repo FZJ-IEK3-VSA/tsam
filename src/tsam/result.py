@@ -188,6 +188,7 @@ class AggregationResult:
         compare=False,
     )
     _segmented_df: pd.DataFrame | None = field(default=None, repr=False, compare=False)
+    _weights: dict[str, float] | None = field(default=None, repr=False, compare=False)
 
     @cached_property
     def accuracy(self) -> AccuracyMetrics:
@@ -207,9 +208,11 @@ class AggregationResult:
             mae=accuracy_df["MAE"],
             rmse_duration=accuracy_df["RMSE_duration"],
             rescale_deviations=self._rescale_deviations,
-            weighted_rmse=_weighted_rms(accuracy_df["RMSE"], None),
-            weighted_mae=_weighted_mean(accuracy_df["MAE"], None),
-            weighted_rmse_duration=_weighted_rms(accuracy_df["RMSE_duration"], None),
+            weighted_rmse=_weighted_rms(accuracy_df["RMSE"], self._weights),
+            weighted_mae=_weighted_mean(accuracy_df["MAE"], self._weights),
+            weighted_rmse_duration=_weighted_rms(
+                accuracy_df["RMSE_duration"], self._weights
+            ),
         )
 
     @cached_property
