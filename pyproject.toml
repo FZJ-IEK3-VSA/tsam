@@ -57,7 +57,7 @@ develop = [
   "mkdocs>=1.6,<=1.6.1",
   "mkdocs-material>=9.5,<=9.7.6",
   "mkdocstrings[python]>=0.27,<=1.0.3",
-  "mkdocs-jupyter>=0.25,<0.27",         # 0.26.0 has packaging bug (mkdocs-jupyter#269)
+  "mkdocs-jupyter>=0.25,<=0.25.1",         # 0.26.0 has packaging bug (mkdocs-jupyter#269)
   "mkdocs-gen-files>=0.5,<=0.6.1",
   "mkdocs-literate-nav>=0.6,<=0.6.3",
   "nbval<=0.11.0",
