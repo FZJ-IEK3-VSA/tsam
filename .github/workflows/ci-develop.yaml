@@ -87,7 +87,7 @@ jobs:
       library_version: ${{ matrix.dependencies.version }}
       dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
       multiprocessing_pytest_string: "-n auto"
-      
+      docs_build_command: "mkdocs build --strict"
 
   docs:
     name: Build docs
