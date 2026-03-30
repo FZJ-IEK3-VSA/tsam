@@ -54,9 +54,9 @@ jobs:
   # Conda-forge testing
   extract-python-versions:
     if: ${{ github.actor != 'renovate[bot]' && !startsWith(github.head_ref, 'release-please--') }}
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions.yml@main
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/extract_versions.yml@v1
     with:
-      library_name: python
+      libraries: python
       env_file: environment.yml
 
   test-conda-forge:
@@ -68,7 +68,7 @@ jobs:
       matrix:
         runner_tag: ["self-hosted"]
         python_version: ${{ fromJSON(needs.extract-python-versions.outputs.versions) }}
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/run_conda_forge_test.yml@v1
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
@@ -81,7 +81,7 @@ jobs:
   # Min/max dependency boundary testing
   extract-versions:
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@main
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/extract_versions.yml@v1
     with:
       libraries: "scikit-learn,pandas,numpy,pyomo,networkx,tqdm,highspy"
       version_type: both
@@ -96,7 +96,7 @@ jobs:
       matrix:
         runner_tag: ["self-hosted"]
         dependencies: ${{ fromJSON(needs.extract-versions.outputs.matrix) }}
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/run_conda_forge_test.yml@v1
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
@@ -122,7 +122,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Install
         run: uv pip install --system ".[develop]"

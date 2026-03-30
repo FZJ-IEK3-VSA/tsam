@@ -50,13 +50,13 @@ jobs:
 
       - name: Run tests
         run: pytest -n auto -vv
-        
+
 
   # Renovate: test max versions of changed dependencies
   detect-renovate-changes:
     name: Detect changed dependencies
     if: startsWith(github.head_ref, 'renovate/')
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_detect_renovate_changed_libraries.yml@main
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/detect_renovate_changes.yml@v1
     with:
       files: "environment.yml pyproject.toml"
 
@@ -64,7 +64,7 @@ jobs:
     name: Extract max versions of changed libraries
     needs: detect-renovate-changes
     if: startsWith(github.head_ref, 'renovate/') && needs.detect-renovate-changes.outputs.libraries != ''
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@main
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/extract_versions.yml@v1
     with:
       libraries: ${{ needs.detect-renovate-changes.outputs.libraries }}
       version_type: max
@@ -79,7 +79,7 @@ jobs:
       matrix:
         runner_tag: ["self-hosted"]
         dependencies: ${{ fromJSON(needs.extract-renovate-versions.outputs.matrix) }}
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/run_conda_forge_test.yml@v1
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: environment.yml
@@ -87,7 +87,7 @@ jobs:
       library_version: ${{ matrix.dependencies.version }}
       dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
       multiprocessing_pytest_string: "-n auto"
-      
+      docs_build_command: "mkdocs build --strict"
 
   docs:
     name: Build docs
@@ -103,7 +103,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Install
         run: uv pip install --system ".[develop]"

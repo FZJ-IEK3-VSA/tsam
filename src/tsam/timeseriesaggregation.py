@@ -37,6 +37,11 @@ def unstack_to_periods(time_series, time_steps_per_period):
               - **time_index** (pandas Series index) -- is the modification of the original
                 timeseriesindex in case an integer multiple was created
     """
+    warnings.warn(
+        "unstackToPeriods will be removed in tsam v4.0. Use tsam.unstack_to_periods() instead.",
+        LegacyAPIWarning,
+        stacklevel=2,
+    )
     # init new grouped timeindex
     unstacked_time_series = time_series.copy()
 
@@ -351,7 +356,7 @@ class TimeSeriesAggregation:
             raise TypeError(f"Unexpected keyword arguments: {set(kwargs)}")
 
         warnings.warn(
-            "TimeSeriesAggregation is deprecated and will be removed in a future version. "
+            "TimeSeriesAggregation will be removed in tsam v4.0. "
             "Use tsam.aggregate() instead. See the migration guide in the documentation.",
             LegacyAPIWarning,
             stacklevel=2,

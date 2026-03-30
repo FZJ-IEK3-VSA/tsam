@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+## [3.3.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.2.1...v3.3.0) (2026-03-30)
+
+
+### Features
+
+* AccuracyMetrics now exposes weighted_rmse, weighted_mae, and weighted_rmse_duration as pre-computed scalars ([#238](https://github.com/FZJ-IEK3-VSA/tsam/issues/238)) ([b70b819](https://github.com/FZJ-IEK3-VSA/tsam/commit/b70b81998c03473cc494834f5589ba7364cf5ff9))
+* add disaggregate() method ([#245](https://github.com/FZJ-IEK3-VSA/tsam/issues/245)) ([b24e32e](https://github.com/FZJ-IEK3-VSA/tsam/commit/b24e32e4263b5d97c127b3e881d5d845228c01b9))
+
+
+### Bug Fixes
+
+* make LegacyAPIWarning visible by default before v4 removal ([#236](https://github.com/FZJ-IEK3-VSA/tsam/issues/236)) ([#237](https://github.com/FZJ-IEK3-VSA/tsam/issues/237)) ([37ff3d8](https://github.com/FZJ-IEK3-VSA/tsam/commit/37ff3d88a1f28b64bcb4615ba9842f81d8d8bb43))
+
 ## [3.2.1](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.2.0...v3.2.1) (2026-03-25)
 
 ### Bug Fixes

@@ -71,3 +71,4 @@ trash/
 
 # Notebook output artifacts (regenerated when notebooks run)
 docs/notebooks/results/
+docs/notebooks/clustering.json

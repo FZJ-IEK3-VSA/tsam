@@ -65,6 +65,7 @@ nav:
       - notebooks/segmentation.ipynb
       - notebooks/optimization_input.ipynb
       - notebooks/clustering_transfer.ipynb
+      - notebooks/disaggregation.ipynb
     - Hyperparameter Tuning:
       - notebooks/tuning.ipynb
       - notebooks/pareto_optimization.ipynb
