@@ -37,7 +37,6 @@ jobs:
 
   github-release:
     name: Create GitHub Release
-    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -45,12 +44,7 @@ jobs:
           ref: ${{ github.ref_name }}
 
       - name: Create GitHub Release
-        run: |
-          if [[ "$TAG" == *-* ]]; then
-            gh release create "$TAG" --generate-notes --prerelease
-          else
-            gh release create "$TAG" --generate-notes
-          fi
+        run: gh release create "$TAG" --generate-notes || echo "Release $TAG already exists, skipping."
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
