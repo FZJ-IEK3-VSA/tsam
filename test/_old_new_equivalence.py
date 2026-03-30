@@ -448,15 +448,7 @@ _RTOL: dict[str, float] = {
     "kmeans_weighted_segmentation": 1e-5,
 }
 
-# Configs where old and new APIs intentionally diverge.
-# The new API applies weights only for clustering distance, not baked into
-# the normalized data. With medoid representation this can select a different
-# medoid, causing different typical periods, reconstruction, and accuracy.
-# Cluster *assignments* still match.
-_SKIP_EQUIVALENCE: set[str] = {
-    "hierarchical_weighted",
-    "hierarchical_weighted_segmentation",
-}
+_SKIP_EQUIVALENCE: set[str] = set()
 
 _WINDOWS_OPENMP_RUNTIME_WARNING_CASE_IDS = {
     "kmeans_distribution/testdata",
