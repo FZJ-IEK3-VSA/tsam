@@ -29,7 +29,7 @@
                 "/(^|/)environment\\.yml$/"
             ],
             "matchStrings": [
-                "- (?<depName>[a-zA-Z0-9_.-]+)[^\\n]*?(?<currentValue><=\\d[^\\n,]*)"
+                "- (?<depName>[a-zA-Z0-9_.-]+)[^\\n]*?(?<currentValue><=?\\d[^\\n,]*)"
             ],
             "packageNameTemplate": "conda-forge/{{{depName}}}",
             "datasourceTemplate": "conda",
@@ -52,6 +52,12 @@
             ],
             "groupName": "github-actions",
             "commitMessageTopic": "GitHub Actions"
+        },
+        {
+            "description": "Replace (don't widen) Python version in setup-python",
+            "matchDepNames": ["python"],
+            "matchManagers": ["github-actions"],
+            "rangeStrategy": "replace"
         }
     ],
     "vulnerabilityAlerts": {

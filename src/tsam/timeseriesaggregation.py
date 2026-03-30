@@ -44,7 +44,7 @@ def unstackToPeriods(timeSeries, timeStepsPerPeriod):
         Use :func:`tsam.unstack_to_periods` instead.
     """
     warnings.warn(
-        "unstackToPeriods is deprecated. Use tsam.unstack_to_periods() instead.",
+        "unstackToPeriods will be removed in tsam v4.0. Use tsam.unstack_to_periods() instead.",
         LegacyAPIWarning,
         stacklevel=2,
     )
@@ -289,7 +289,7 @@ class TimeSeriesAggregation:
         :type addMeanMax: list
         """
         warnings.warn(
-            "TimeSeriesAggregation is deprecated and will be removed in a future version. "
+            "TimeSeriesAggregation will be removed in tsam v4.0. "
             "Use tsam.aggregate() instead. See the migration guide in the documentation.",
             LegacyAPIWarning,
             stacklevel=2,
@@ -1347,17 +1347,9 @@ class TimeSeriesAggregation:
         else:
             typical = self.normalizedTypicalPeriods
 
-        # Unstack once, then use vectorized indexing to select periods by cluster order
-        typical_unstacked = typical.unstack()
-        reconstructed = typical_unstacked.loc[list(self._clusterOrder)].values
+        from tsam.config import _expand_periods
 
-        # Back in matrix form
-        clustered_data_df = pd.DataFrame(
-            reconstructed,
-            columns=self.normalizedPeriodlyProfiles.columns,
-            index=self.normalizedPeriodlyProfiles.index,
-        )
-        clustered_data_df = clustered_data_df.stack(future_stack=True, level="TimeStep")
+        clustered_data_df = _expand_periods(typical, tuple(self._clusterOrder))
 
         # back in form
         self.normalizedPredictedData = pd.DataFrame(
