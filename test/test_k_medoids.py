@@ -24,7 +24,7 @@ def test_k_medoids():
         clusterMethod="k_medoids",
     )
 
-    typPeriods = aggregation.createTypicalPeriods()
+    typPeriods = aggregation.create_typical_periods()
 
     print("Clustering took " + str(time.time() - starttime))
 

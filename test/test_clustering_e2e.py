@@ -279,7 +279,7 @@ class TestClusteringE2E:
 
         # Compare cluster weights (sum should match)
         expected_weights = metadata["cluster_weights"]
-        actual_weights = result.cluster_weights
+        actual_weights = result.cluster_counts
 
         # Total weight should match number of original periods
         expected_total = sum(expected_weights.values())
@@ -504,7 +504,7 @@ def generate_fixtures(output_dir: Path | None = None):
                 "n_clusters": 8,
             },
             "cluster_weights": {
-                str(k): int(v) for k, v in result.cluster_weights.items()
+                str(k): int(v) for k, v in result.cluster_counts.items()
             },
             "accuracy": {
                 "rmse": {col: float(val) for col, val in result.accuracy.rmse.items()},

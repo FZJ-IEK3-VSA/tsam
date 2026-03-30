@@ -19,7 +19,6 @@ New entries are automatically added by [release-please](https://github.com/googl
 
 ## [3.2.1](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.2.0...v3.2.1) (2026-03-25)
 
-
 ### Bug Fixes
 
 * use column weights in tuning RMSE objective ([#227](https://github.com/FZJ-IEK3-VSA/tsam/issues/227)) ([1ceee5c](https://github.com/FZJ-IEK3-VSA/tsam/commit/1ceee5c69856b61aed9eae3f5d5f713be8ac85e9)), closes [#226](https://github.com/FZJ-IEK3-VSA/tsam/issues/226)
@@ -83,7 +82,7 @@ See the [migration guide](migration-guide.md) for a complete guide on upgrading 
 
     - `cluster_representatives`: DataFrame with aggregated typical periods
     - `cluster_assignments`: Which cluster each original period belongs to
-    - `cluster_weights`: Occurrence count per cluster
+    - `cluster_counts`: Occurrence count per cluster (fractional for partial periods)
     - `accuracy`: `AccuracyMetrics` object with RMSE, MAE, and duration curve RMSE
     - `reconstructed`: Reconstructed time series (cached property)
     - `residuals`: Difference between original and reconstructed
