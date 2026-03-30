@@ -52,6 +52,12 @@
             ],
             "groupName": "github-actions",
             "commitMessageTopic": "GitHub Actions"
+        },
+        {
+            "description": "Replace (don't widen) Python version in setup-python",
+            "matchDepNames": ["python"],
+            "matchManagers": ["github-actions"],
+            "rangeStrategy": "replace"
         }
     ],
     "vulnerabilityAlerts": {
