@@ -244,6 +244,38 @@ class AggregationResult:
         """
         return cast("pd.DataFrame", self._aggregation.predictOriginalData())
 
+    def disaggregate(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Expand typical-period data back to the original time series length.
+
+        Each original period is replaced by its assigned cluster representative
+        from ``data``. The result uses the original datetime index.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Typical-period data matching ``cluster_representatives``:
+
+            - ``(cluster, timestep)`` MultiIndex for non-segmented, or
+            - ``(cluster, segment, duration)`` MultiIndex for segmented.
+
+        Returns
+        -------
+        pd.DataFrame
+            Disaggregated data with the original datetime index.
+            For segmented input, non-segment-start timesteps are NaN.
+
+        Examples
+        --------
+        >>> result = tsam.aggregate(df, n_clusters=8)
+        >>> optimized = run_optimization(result.cluster_representatives)
+        >>> full_year = result.disaggregate(optimized)
+        """
+        expanded = self.clustering.disaggregate(data)
+        # Trim to original length (last period may be padded) and restore datetime index
+        expanded = expanded.iloc[: len(self.original)]
+        expanded.index = self.original.index
+        return expanded
+
     @cached_property
     def residuals(self) -> pd.DataFrame:
         """Residuals (original - reconstructed).
