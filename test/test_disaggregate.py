@@ -225,6 +225,42 @@ class TestClusteringResultDisaggregate:
         np.testing.assert_array_equal(original.values[mask], restored.values[mask])
 
 
+class TestTimeIndexSerialization:
+    """Unit tests for _time_index_to_dict / _time_index_from_dict helpers."""
+
+    def test_regular_index_compact(self):
+        from tsam.config import _time_index_to_dict
+
+        idx = pd.date_range("2025-01-01", periods=8760, freq="h")
+        d = _time_index_to_dict(idx)
+        assert isinstance(d, dict)
+        assert set(d) == {"start", "periods", "freq"}
+        assert d["periods"] == 8760
+
+    def test_regular_index_roundtrip(self):
+        from tsam.config import _time_index_from_dict, _time_index_to_dict
+
+        idx = pd.date_range("2025-01-01", periods=8760, freq="h")
+        restored = _time_index_from_dict(_time_index_to_dict(idx))
+        pd.testing.assert_index_equal(idx, restored)
+
+    def test_irregular_index_fallback(self):
+        from tsam.config import _time_index_from_dict, _time_index_to_dict
+
+        idx = pd.DatetimeIndex(["2025-01-01", "2025-01-03", "2025-01-07"])
+        d = _time_index_to_dict(idx)
+        assert isinstance(d, list)
+        restored = _time_index_from_dict(d)
+        pd.testing.assert_index_equal(idx, restored)
+
+    def test_old_list_format_still_loads(self):
+        from tsam.config import _time_index_from_dict
+
+        raw = ["2025-01-01T00:00:00", "2025-01-01T01:00:00"]
+        restored = _time_index_from_dict(raw)
+        assert len(restored) == 2
+
+
 class TestDisaggregateEdgeCases:
     """Edge cases and robustness tests."""
 
