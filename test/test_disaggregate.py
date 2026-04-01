@@ -105,8 +105,20 @@ class TestAggregationResultDisaggregate:
 class TestClusteringResultDisaggregate:
     """Tests for ClusteringResult.disaggregate."""
 
-    def test_integer_index(self, result):
+    def test_datetime_index_restored(self, result):
         expanded = result.clustering.disaggregate(result.cluster_representatives)
+        if result.clustering.time_index is not None:
+            assert isinstance(expanded.index, pd.DatetimeIndex)
+            assert expanded.index.equals(result.clustering.time_index)
+        else:
+            assert isinstance(expanded.index, pd.RangeIndex)
+
+    def test_integer_index_when_no_time_index(self, result):
+        """Without time_index, disaggregate returns a RangeIndex."""
+        from dataclasses import replace
+
+        clustering_no_ti = replace(result.clustering, time_index=None)
+        expanded = clustering_no_ti.disaggregate(result.cluster_representatives)
         assert isinstance(expanded.index, pd.RangeIndex)
 
     def test_shape(self, result):
@@ -169,6 +181,32 @@ class TestClusteringResultDisaggregate:
         original = result.clustering.disaggregate(result.cluster_representatives)
         restored = loaded.disaggregate(result.cluster_representatives)
         np.testing.assert_array_equal(original.values, restored.values)
+
+    def test_io_roundtrip_preserves_time_index(self, result, tmp_path):
+        """JSON round-trip preserves the original DatetimeIndex."""
+        path = tmp_path / "clustering.json"
+        result.clustering.to_json(str(path))
+        loaded = ClusteringResult.from_json(str(path))
+
+        assert loaded.time_index is not None
+        assert loaded.time_index.equals(result.clustering.time_index)
+
+        restored = loaded.disaggregate(result.cluster_representatives)
+        assert isinstance(restored.index, pd.DatetimeIndex)
+        assert restored.index.equals(result.clustering.time_index)
+
+    def test_io_roundtrip_no_time_index(self, tmp_path):
+        """Old serialized files without time_index still work."""
+
+        cr = ClusteringResult(
+            period_duration=24.0,
+            cluster_assignments=(0, 1, 0, 1),
+            n_timesteps_per_period=24,
+        )
+        path = tmp_path / "clustering.json"
+        cr.to_json(str(path))
+        loaded = ClusteringResult.from_json(str(path))
+        assert loaded.time_index is None
 
     def test_io_roundtrip_segmented(self, result_segmented, tmp_path):
         path = tmp_path / "clustering.json"
