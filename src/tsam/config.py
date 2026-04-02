@@ -153,6 +153,27 @@ def _representation_from_dict(data: str | dict) -> Representation:
     raise ValueError(f"Unknown representation type: {rep_type!r}")
 
 
+def _time_index_to_dict(idx: pd.DatetimeIndex) -> dict[str, Any] | list[str]:
+    """Serialize a DatetimeIndex compactly when possible.
+
+    Regular indices are stored as ``{start, periods, freq}`` (~3 values).
+    Irregular indices fall back to a full ISO string list.
+    """
+    freq = pd.infer_freq(idx)
+    if freq is not None:
+        return {"start": idx[0].isoformat(), "periods": len(idx), "freq": freq}
+    return [t.isoformat() for t in idx]
+
+
+def _time_index_from_dict(
+    raw: dict[str, Any] | list[str],
+) -> pd.DatetimeIndex:
+    """Deserialize a DatetimeIndex from either compact or list format."""
+    if isinstance(raw, dict):
+        return pd.date_range(raw["start"], periods=raw["periods"], freq=raw["freq"])
+    return pd.DatetimeIndex(raw)
+
+
 @dataclass(frozen=True)
 class ClusterConfig:
     """Configuration for the clustering algorithm.
@@ -576,6 +597,9 @@ class ClusteringResult:
     extreme_cluster_indices: tuple[int, ...] | None = None
     weights: dict[str, float] | None = None
 
+    # === Index fields (for disaggregate() round-trip) ===
+    time_index: pd.DatetimeIndex | None = None
+
     # === Reference fields (for documentation, not used by apply()) ===
     cluster_config: ClusterConfig | None = None
     segment_config: SegmentConfig | None = None
@@ -715,6 +739,8 @@ class ClusteringResult:
             result["extreme_cluster_indices"] = list(self.extreme_cluster_indices)
         if self.weights is not None:
             result["weights"] = self.weights
+        if self.time_index is not None:
+            result["time_index"] = _time_index_to_dict(self.time_index)
         # Reference fields (optional, for documentation)
         if self.cluster_config is not None:
             result["cluster_config"] = self.cluster_config.to_dict()
@@ -759,6 +785,9 @@ class ClusteringResult:
             kwargs["extreme_cluster_indices"] = tuple(data["extreme_cluster_indices"])
         if "weights" in data:
             kwargs["weights"] = data["weights"]
+        raw_time_index = data.get("time_index")
+        if raw_time_index is not None:
+            kwargs["time_index"] = _time_index_from_dict(raw_time_index)
         # Reference fields
         if "cluster_config" in data:
             kwargs["cluster_config"] = ClusterConfig.from_dict(data["cluster_config"])
@@ -890,7 +919,12 @@ class ClusteringResult:
         if is_segmented_input:
             data = _expand_segments_to_timesteps(data, self.segment_durations)  # type: ignore[arg-type]
 
-        return _expand_periods(data, self.cluster_assignments)
+        result = _expand_periods(data, self.cluster_assignments)
+
+        if self.time_index is not None and len(self.time_index) == len(result):
+            result.index = self.time_index
+
+        return result
 
     def apply(
         self,
@@ -1094,6 +1128,9 @@ class ClusteringResult:
         # Build ClusteringResult - preserve stored values
         from tsam.api import _build_clustering_result
 
+        apply_time_index = (
+            data.index if isinstance(data.index, pd.DatetimeIndex) else None
+        )
         clustering_result = _build_clustering_result(
             agg=agg,
             n_segments=n_segments,
@@ -1106,6 +1143,7 @@ class ClusteringResult:
             if self.rescale_exclude_columns
             else None,
             temporal_resolution=effective_temporal_resolution,
+            time_index=apply_time_index,
         )
 
         # Build result object

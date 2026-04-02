@@ -381,6 +381,7 @@ def aggregate(
     )
 
     # Build ClusteringResult
+    time_index = data.index if isinstance(data.index, pd.DatetimeIndex) else None
     clustering_result = _build_clustering_result(
         agg=agg,
         n_segments=segments.n_segments if segments else None,
@@ -391,6 +392,7 @@ def aggregate(
         preserve_column_means=preserve_column_means,
         rescale_exclude_columns=rescale_exclude_columns,
         temporal_resolution=temporal_resolution,
+        time_index=time_index,
     )
 
     # Compute segment_durations as tuple of tuples
@@ -431,6 +433,7 @@ def _build_clustering_result(
     preserve_column_means: bool = True,
     rescale_exclude_columns: list[str] | None = None,
     temporal_resolution: float | None = None,
+    time_index: pd.DatetimeIndex | None = None,
 ) -> ClusteringResult:
     """Build ClusteringResult from a TimeSeriesAggregation object."""
     # Get cluster centers (convert to Python ints for JSON serialization)
@@ -520,6 +523,7 @@ def _build_clustering_result(
         cluster_config=cluster_config,
         segment_config=segment_config,
         extremes_config=extremes_config,
+        time_index=time_index,
     )
 
 

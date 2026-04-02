@@ -105,8 +105,20 @@ class TestAggregationResultDisaggregate:
 class TestClusteringResultDisaggregate:
     """Tests for ClusteringResult.disaggregate."""
 
-    def test_integer_index(self, result):
+    def test_datetime_index_restored(self, result):
         expanded = result.clustering.disaggregate(result.cluster_representatives)
+        if result.clustering.time_index is not None:
+            assert isinstance(expanded.index, pd.DatetimeIndex)
+            assert expanded.index.equals(result.clustering.time_index)
+        else:
+            assert isinstance(expanded.index, pd.RangeIndex)
+
+    def test_integer_index_when_no_time_index(self, result):
+        """Without time_index, disaggregate returns a RangeIndex."""
+        from dataclasses import replace
+
+        clustering_no_ti = replace(result.clustering, time_index=None)
+        expanded = clustering_no_ti.disaggregate(result.cluster_representatives)
         assert isinstance(expanded.index, pd.RangeIndex)
 
     def test_shape(self, result):
@@ -170,6 +182,32 @@ class TestClusteringResultDisaggregate:
         restored = loaded.disaggregate(result.cluster_representatives)
         np.testing.assert_array_equal(original.values, restored.values)
 
+    def test_io_roundtrip_preserves_time_index(self, result, tmp_path):
+        """JSON round-trip preserves the original DatetimeIndex."""
+        path = tmp_path / "clustering.json"
+        result.clustering.to_json(str(path))
+        loaded = ClusteringResult.from_json(str(path))
+
+        assert loaded.time_index is not None
+        assert loaded.time_index.equals(result.clustering.time_index)
+
+        restored = loaded.disaggregate(result.cluster_representatives)
+        assert isinstance(restored.index, pd.DatetimeIndex)
+        assert restored.index.equals(result.clustering.time_index)
+
+    def test_io_roundtrip_no_time_index(self, tmp_path):
+        """Old serialized files without time_index still work."""
+
+        cr = ClusteringResult(
+            period_duration=24.0,
+            cluster_assignments=(0, 1, 0, 1),
+            n_timesteps_per_period=24,
+        )
+        path = tmp_path / "clustering.json"
+        cr.to_json(str(path))
+        loaded = ClusteringResult.from_json(str(path))
+        assert loaded.time_index is None
+
     def test_io_roundtrip_segmented(self, result_segmented, tmp_path):
         path = tmp_path / "clustering.json"
         result_segmented.clustering.to_json(str(path))
@@ -185,6 +223,42 @@ class TestClusteringResultDisaggregate:
         )
         mask = ~np.isnan(original.values)
         np.testing.assert_array_equal(original.values[mask], restored.values[mask])
+
+
+class TestTimeIndexSerialization:
+    """Unit tests for _time_index_to_dict / _time_index_from_dict helpers."""
+
+    def test_regular_index_compact(self):
+        from tsam.config import _time_index_to_dict
+
+        idx = pd.date_range("2025-01-01", periods=8760, freq="h")
+        d = _time_index_to_dict(idx)
+        assert isinstance(d, dict)
+        assert set(d) == {"start", "periods", "freq"}
+        assert d["periods"] == 8760
+
+    def test_regular_index_roundtrip(self):
+        from tsam.config import _time_index_from_dict, _time_index_to_dict
+
+        idx = pd.date_range("2025-01-01", periods=8760, freq="h")
+        restored = _time_index_from_dict(_time_index_to_dict(idx))
+        pd.testing.assert_index_equal(idx, restored)
+
+    def test_irregular_index_fallback(self):
+        from tsam.config import _time_index_from_dict, _time_index_to_dict
+
+        idx = pd.DatetimeIndex(["2025-01-01", "2025-01-03", "2025-01-07"])
+        d = _time_index_to_dict(idx)
+        assert isinstance(d, list)
+        restored = _time_index_from_dict(d)
+        pd.testing.assert_index_equal(idx, restored)
+
+    def test_old_list_format_still_loads(self):
+        from tsam.config import _time_index_from_dict
+
+        raw = ["2025-01-01T00:00:00", "2025-01-01T01:00:00"]
+        restored = _time_index_from_dict(raw)
+        assert len(restored) == 2
 
 
 class TestDisaggregateEdgeCases:
