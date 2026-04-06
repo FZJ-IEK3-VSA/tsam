@@ -27,6 +27,6 @@ dependencies:
   - mkdocs-gen-files >=0.5,<=0.6.1
   - mkdocs-literate-nav >=0.6,<=0.6.3
   # Linting and formatting
-  - ruff <=0.15.8
+  - ruff <=0.15.9
   - mypy <=1.20.0
   - pre-commit <=4.5.1
