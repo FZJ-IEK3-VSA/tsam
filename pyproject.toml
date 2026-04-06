@@ -62,7 +62,7 @@ develop = [
   "mkdocs-literate-nav>=0.6,<=0.6.3",
   "nbval<=0.11.0",
   "ruff<=0.15.8",
-  "mypy<=1.19.1",
+  "mypy<=1.20.0",
   "pandas-stubs<=3.0.0.260204",
   "pre-commit<=4.5.1",
   "plotly>=5.0.0,<=6.6.0",
