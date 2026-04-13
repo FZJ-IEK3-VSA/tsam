@@ -14,7 +14,7 @@ dependencies:
   - highspy >=1.7.2,<=1.14.0
   - plotly >=5.0.0,<=6.6.0
   # Testing
-  - pytest <=9.0.2
+  - pytest <=9.0.3
   - pytest-cov <=7.1.0
   - pytest-xdist <=3.8.0
   - codecov <=2.1.13
