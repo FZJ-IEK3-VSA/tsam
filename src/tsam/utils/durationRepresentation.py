@@ -189,12 +189,14 @@ def _representMinMax(
         # due to the change of the min and max values
         # of the duration curve
         delta_sum = delta_max * appearance_max + delta_min * appearance_min
+        mid_weights = np.asarray(
+            meansAndWeightsSorted[1].iloc[1:-1].values, dtype=float
+        )
+        mid_orig = np.asarray(representationValues[1:-1], dtype=float)
+        weighted_mid_sum = float(np.sum(mid_weights * mid_orig))
         # and derive how much the other values have to be changed to preserve
         # the mean of the duration curve
-        correction_factor = (
-            -delta_sum
-            / (meansAndWeightsSorted[1].iloc[1:-1] * representationValues[1:-1]).sum()
-        )
+        correction_factor = -delta_sum / weighted_mid_sum if weighted_mid_sum != 0 else 0.0
 
         if correction_factor < -1 or correction_factor > 1:
             warnings.warn(
@@ -202,12 +204,41 @@ def _representMinMax(
             )
             return representationValues
 
-        # correct the values of the duration curve such
-        # that the mean of the duration curve is preserved
-        # since the min and max values are changed
-        representationValues[1:-1] = np.multiply(
-            representationValues[1:-1], (1 + correction_factor)
-        )
+        # Initial multiplicative correction: preserves the weighted sum exactly
+        # and keeps zero-valued segments at zero (matching the distribution
+        # shape of the cluster). When no bound is violated, no further work
+        # is needed and this matches the legacy behaviour.
+        corrected = mid_orig * (1 + correction_factor)
+
+        # Clip to the cluster envelope and redistribute the mass that got
+        # clipped to segments that still have room. This makes the result
+        # envelope-safe while restoring sum preservation up to feasibility.
+        lower = float(sortedAttr.min())
+        upper = float(sortedAttr.max())
+        target_weighted_sum = weighted_mid_sum - delta_sum
+        tol = max(abs(target_weighted_sum), 1.0) * 1e-12
+        for _ in range(20):
+            np.clip(corrected, lower, upper, out=corrected)
+            residual = target_weighted_sum - float(np.sum(mid_weights * corrected))
+            if abs(residual) <= tol:
+                break
+            if residual > 0:
+                room = upper - corrected
+            else:
+                room = corrected - lower
+            weighted_room = mid_weights * room
+            total = float(weighted_room.sum())
+            if total <= tol:
+                # remaining mass has nowhere feasible to go
+                warnings.warn(
+                    "The cluster is too small to preserve the sum of the duration curve and additionally the min and max values of the original cluster members. The min max values of the cluster are not preserved. This does not necessarily mean that the min and max values of the original time series are not preserved."
+                )
+                break
+            step = min(abs(residual), total)
+            direction = 1.0 if residual > 0 else -1.0
+            corrected = corrected + direction * step * room / total
+
+        representationValues[1:-1] = corrected
 
     # change the values of the duration curve such that the min and max
     # values are preserved

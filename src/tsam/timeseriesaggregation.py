@@ -938,28 +938,48 @@ class TimeSeriesAggregation:
             if column in self.weightDict:
                 scale_ub = scale_ub * self.weightDict[column]
 
-            # difference between predicted and original sum
-            diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
+            # Bounded, sum-preserving rescale: one multiplicative shape-preserving
+            # step, then water-fill the residual proportional to remaining headroom
+            # (or depth when shrinking). Values stay strictly in [0, scale_ub], so
+            # the cluster's distribution top is not flattened against the cap —
+            # which is the condition that previously caused downstream
+            # _representMinMax to overshoot the input envelope.
+            target_np = sum_raw - sum_peak
 
-            # use while loop to rescale cluster periods
+            # Shape-preserving initial shift (single application, not iterated)
+            if sum_clu_wo_peak > 0 and target_np > 0:
+                arr[idx_wo_peak, ci, :] *= target_np / sum_clu_wo_peak
+            # Advanced indexing returns a copy; reassign to write clipped values back
+            arr[idx_wo_peak, ci, :] = np.clip(arr[idx_wo_peak, ci, :], 0, scale_ub)
+            np.nan_to_num(arr[:, ci, :], copy=False, nan=0.0)
+
+            weights_np = weightingVec[idx_wo_peak]
             a = 0
-            while diff > sum_raw * TOLERANCE and a < MAX_ITERATOR:
-                # rescale values (only non-extreme clusters)
-                arr[idx_wo_peak, ci, :] *= (sum_raw - sum_peak) / sum_clu_wo_peak
-
-                # reset values higher than the upper scale or less than zero
-                arr[:, ci, :] = np.clip(arr[:, ci, :], 0, scale_ub)
-
-                # Handle NaN (replace with 0)
-                np.nan_to_num(arr[:, ci, :], copy=False, nan=0.0)
-
-                # calc new sum and new diff to orig data
-                col_data = arr[:, ci, :]
-                sum_clu_wo_peak = np.sum(
-                    weightingVec[idx_wo_peak] * col_data[idx_wo_peak, :].sum(axis=1)
-                )
-                diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
+            while a < MAX_ITERATOR:
+                col_np = arr[idx_wo_peak, ci, :]
+                cur_sum_np = np.sum(weights_np * col_np.sum(axis=1))
+                delta = target_np - cur_sum_np
+                if abs(delta) <= max(abs(sum_raw), 1.0) * TOLERANCE:
+                    break
+                if delta > 0:
+                    available = scale_ub - col_np
+                else:
+                    available = col_np  # depth above lower bound 0
+                total = np.sum(weights_np * available.sum(axis=1))
+                if total <= TOLERANCE:
+                    break
+                step = min(abs(delta), total)
+                direction = 1.0 if delta > 0 else -1.0
+                col_np += direction * step * available / total
+                # Guard against tiny numerical bound violations from the division
+                np.clip(col_np, 0, scale_ub, out=col_np)
+                arr[idx_wo_peak, ci, :] = col_np
                 a += 1
+
+            sum_clu_wo_peak = np.sum(
+                weights_np * arr[idx_wo_peak, ci, :].sum(axis=1)
+            )
+            diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
 
             # Calculate and store final deviation
             deviation_pct = (diff / sum_raw) * 100 if sum_raw != 0 else 0.0
