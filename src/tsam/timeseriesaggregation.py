@@ -1443,10 +1443,8 @@ class TimeSeriesAggregation:
         }  # 'Silhouette score':{},
 
         for column in self.normalizedTimeSeries.columns:
-            if self.weightDict:
-                origTS = self.normalizedTimeSeries[column] / self.weightDict[column]
-            else:
-                origTS = self.normalizedTimeSeries[column]
+            weight = self.weightDict.get(column, 1.0) if self.weightDict else 1.0
+            origTS = self.normalizedTimeSeries[column] / weight
             predTS = self.normalizedPredictedData[column]
             indicatorRaw["RMSE"][column] = np.sqrt(mean_squared_error(origTS, predTS))
             indicatorRaw["RMSE_duration"][column] = np.sqrt(
