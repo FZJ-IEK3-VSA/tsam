@@ -15,12 +15,16 @@
     "enabledManagers": [
         "pep621",
         "custom.regex",
-        "github-actions"
+        "github-actions",
+        "pre-commit"
     ],
     "pep621": {
         "managerFilePatterns": [
             "/(^|/)pyproject\\.toml$/"
         ]
+    },
+    "pre-commit": {
+        "enabled": true
     },
     "customManagers": [
         {
@@ -58,6 +62,12 @@
             "matchDepNames": ["python"],
             "matchManagers": ["github-actions"],
             "rangeStrategy": "replace"
+        },
+        {
+            "description": "Group pre-commit hook bumps into one PR",
+            "matchManagers": ["pre-commit"],
+            "groupName": "pre-commit hooks",
+            "commitMessageTopic": "pre-commit hooks"
         }
     ],
     "vulnerabilityAlerts": {
