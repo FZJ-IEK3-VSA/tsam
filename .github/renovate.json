@@ -38,6 +38,19 @@
             "packageNameTemplate": "conda-forge/{{{depName}}}",
             "datasourceTemplate": "conda",
             "versioningTemplate": "pep440"
+        },
+        {
+            "customType": "regex",
+            "description": "Match deps in pyproject.toml that are also pinned in environment.yml; resolve via conda-forge so PRs only open once a release is available on both channels.",
+            "managerFilePatterns": [
+                "/(^|/)pyproject\\.toml$/"
+            ],
+            "matchStrings": [
+                "\"(?<depName>scikit-learn|mkdocs-literate-nav|mkdocs-gen-files|mkdocs-jupyter|mkdocs-material|pytest-xdist|pytest-cov|pre-commit|networkx|highspy|codecov|plotly|mkdocs|pytest|pyomo|pandas|numpy|nbval|ruff|mypy|tqdm)[^\"]*?(?<currentValue><=?\\d[^\",]*)"
+            ],
+            "packageNameTemplate": "conda-forge/{{{depName}}}",
+            "datasourceTemplate": "conda",
+            "versioningTemplate": "pep440"
         }
     ],
     "packageRules": [
@@ -62,6 +75,34 @@
             "matchDepNames": ["python"],
             "matchManagers": ["github-actions"],
             "rangeStrategy": "replace"
+        },
+        {
+            "description": "Disable pep621 for deps that are also tracked in environment.yml; the custom.regex manager handles them via conda-forge so PRs only open once the new version is on both PyPI and conda-forge.",
+            "matchManagers": ["pep621"],
+            "matchPackageNames": [
+                "scikit-learn",
+                "pandas",
+                "numpy",
+                "pyomo",
+                "networkx",
+                "tqdm",
+                "highspy",
+                "pytest",
+                "pytest-cov",
+                "pytest-xdist",
+                "codecov",
+                "nbval",
+                "mkdocs",
+                "mkdocs-material",
+                "mkdocs-jupyter",
+                "mkdocs-gen-files",
+                "mkdocs-literate-nav",
+                "plotly",
+                "ruff",
+                "mypy",
+                "pre-commit"
+            ],
+            "enabled": false
         },
         {
             "description": "Group pre-commit hook bumps into one PR",
