@@ -56,17 +56,17 @@ develop = [
   "codecov<=2.1.13",
   "mkdocs>=1.6,<=1.6.1",
   "mkdocs-material>=9.5,<=9.7.6",
-  "mkdocstrings[python]>=0.27,<=1.0.3",
+  "mkdocstrings[python]>=0.27,<=1.0.4",
   "mkdocs-jupyter>=0.25,<=0.26.1",         # 0.26.0 has packaging bug (mkdocs-jupyter#269)
   "mkdocs-gen-files>=0.5,<=0.6.1",
   "mkdocs-literate-nav>=0.6,<=0.6.3",
   "nbval<=0.11.0",
-  "ruff<=0.15.10",
+  "ruff<=0.15.12",
   "mypy<=1.20.2",
   "pandas-stubs<=3.0.0.260204",
   "pre-commit<=4.5.1",
   "plotly>=5.0.0,<=6.7.0",
-  "notebook>=7.5.0,<=7.5.5",
+  "notebook>=7.5.0,<=7.5.6",
 ]
 plot = ["plotly>=5.0.0"]
 notebooks = ["notebook>=7.5.0", "plotly>=5.0.0"]
