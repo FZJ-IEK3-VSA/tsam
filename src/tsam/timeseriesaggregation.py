@@ -1444,7 +1444,9 @@ class TimeSeriesAggregation:
 
         for column in self.normalizedTimeSeries.columns:
             if self.weightDict:
-                origTS = self.normalizedTimeSeries[column] / self.weightDict[column]
+                origTS = self.normalizedTimeSeries[column] / self.weightDict.get(
+                    column, 1
+                )
             else:
                 origTS = self.normalizedTimeSeries[column]
             predTS = self.normalizedPredictedData[column]

@@ -438,6 +438,19 @@ class TestClusteringTransfer:
             input_data.columns
         )
 
+    def test_apply_with_weights_and_extra_columns(self, input_data):
+        """Test applying clustering when data has columns not in weights (GH-276)."""
+        # Cluster on a single column with explicit weights
+        wind_only = input_data[["Wind"]]
+        result_wind = aggregate(wind_only, n_clusters=8, weights={"Wind": 1.0})
+
+        # Apply to full data (has extra columns not in weights) - should not raise
+        result_full = result_wind.clustering.apply(input_data)
+
+        # Accuracy metrics should cover all columns in the applied data
+        assert result_full.accuracy is not None
+        assert len(result_full.accuracy.rmse) == len(input_data.columns)
+
     def test_segmentation_preserved_in_transfer(self, input_data, tmp_path):
         """Test that segmentation info is preserved through JSON roundtrip."""
         from tsam import ClusteringResult
