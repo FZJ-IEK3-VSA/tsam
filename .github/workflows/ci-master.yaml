@@ -10,15 +10,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint
+  pre-commit:
+    name: Pre-commit
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/ruff-action@v4.0.0
-      - run: ruff check --output-format=github --config=pyproject.toml
-      - run: ruff format --diff --config=pyproject.toml
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: pre-commit/action@v3.0.1
 
   # Extended PyPI cross-platform testing
   # (6 OS variants × all Python versions)
@@ -133,7 +134,7 @@ jobs:
   ci-success:
     name: CI Success
     if: ${{ always() && !startsWith(github.head_ref, 'release-please--') }}
-    needs: [lint, test, docs]
+    needs: [pre-commit, test, docs]
     runs-on: ubuntu-24.04
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
