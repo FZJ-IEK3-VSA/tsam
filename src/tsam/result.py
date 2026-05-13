@@ -274,7 +274,7 @@ class AggregationResult:
         # Trim to original length (last period may be padded) and restore datetime index
         expanded = expanded.iloc[: len(self.original)]
         expanded.index = self.original.index
-        return expanded
+        return cast("pd.DataFrame", expanded)
 
     @cached_property
     def residuals(self) -> pd.DataFrame:
