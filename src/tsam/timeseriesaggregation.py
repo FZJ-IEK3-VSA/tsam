@@ -1449,6 +1449,7 @@ class TimeSeriesAggregation:
                 )
             else:
                 origTS = self.normalizedTimeSeries[column]
+
             predTS = self.normalizedPredictedData[column]
             indicatorRaw["RMSE"][column] = np.sqrt(mean_squared_error(origTS, predTS))
             indicatorRaw["RMSE_duration"][column] = np.sqrt(
