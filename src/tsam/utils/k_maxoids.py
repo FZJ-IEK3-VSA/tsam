@@ -1,10 +1,17 @@
 """Exact K-maxoids clustering"""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 import numpy.random as rnd
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
@@ -26,6 +33,8 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         self.n_clusters = n_clusters
 
         self.distance_metric = distance_metric
+
+        self.distance_func: Callable | None = None
 
     def _check_init_args(self):
         # Check n_clusters
@@ -67,6 +76,7 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         X = self._check_array(X)
 
         # apply distance metric to get the distance matrix (kept for potential debugging)
+        assert self.distance_func is not None
         _D = self.distance_func(X)
 
         # run mk-maxoids clustering
@@ -90,6 +100,7 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         return X
 
     def k_maxoids(self, X, k, numpasses=5, doLogarithmic=False, n_init=100):
+        assert self.distance_func is not None
         X_old = X
         n, _m = X.shape
         inertiaTempPrime = None

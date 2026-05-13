@@ -86,12 +86,12 @@ ruff check src/ test/ --fix
 ruff format src/ test/
 ```
 
-**Type Checking with Mypy**
+**Type Checking with ty**
 
-[Mypy](https://mypy.readthedocs.io/) is used for static type checking:
+[ty](https://github.com/astral-sh/ty) is used for static type checking:
 
 ```bash
-mypy src/tsam/
+ty check src/tsam/
 ```
 
 **Pre-commit Hooks**

@@ -58,7 +58,7 @@ def aggregatePeriods(
             clusterOrder.append(
                 [n_clusters - 1] * int(n_sets - cluster_size * n_clusters)
             )
-        clusterOrder = np.hstack(np.array(clusterOrder, dtype=object))
+        clusterOrder = np.hstack(clusterOrder)
         clusterCenters, clusterCenterIndices = representations(
             repr_candidates,
             clusterOrder,

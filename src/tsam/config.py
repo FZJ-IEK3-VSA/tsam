@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -143,7 +143,7 @@ def _representation_to_dict(rep: Representation) -> str | dict[str, Any]:
 def _representation_from_dict(data: str | dict) -> Representation:
     """Deserialize a representation value from a JSON-compatible format."""
     if isinstance(data, str):
-        return data  # type: ignore[return-value]
+        return cast("RepresentationMethod", data)
     # It's a dict with a "type" key
     rep_type = data.get("type")
     if rep_type == "distribution":
@@ -917,7 +917,8 @@ class ClusteringResult:
         data = _validate_disaggregate_input(data, self, is_segmented=is_segmented_input)
 
         if is_segmented_input:
-            data = _expand_segments_to_timesteps(data, self.segment_durations)  # type: ignore[arg-type]
+            assert self.segment_durations is not None
+            data = _expand_segments_to_timesteps(data, self.segment_durations)
 
         result = _expand_periods(data, self.cluster_assignments)
 
@@ -1108,7 +1109,7 @@ class ClusteringResult:
             rescale_deviations.index.name = "column"
         else:
             rescale_deviations = pd.DataFrame(
-                columns=["deviation_pct", "converged", "iterations"]
+                columns=pd.Index(["deviation_pct", "converged", "iterations"])
             )
 
         from tsam.api import _weighted_mean, _weighted_rms

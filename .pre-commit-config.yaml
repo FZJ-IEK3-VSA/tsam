@@ -22,12 +22,3 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - pandas-stubs
-        args: [--ignore-missing-imports]
-        exclude: ^(docs/|test/|benchmarks/)

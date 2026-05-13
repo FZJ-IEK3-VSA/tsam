@@ -119,7 +119,8 @@ def segmentation(
             # Use predefined segment order
             clusterOrder = np.asarray(predefSegmentOrder[period_i])
 
-            # Get predefined durations
+            # Get predefined durations (validated non-None alongside predefSegmentOrder above)
+            assert predefSegmentDurations is not None
             segmentNoOccur = np.asarray(predefSegmentDurations[period_i])
 
             # Calculate segment numbers and start indices from durations
@@ -201,7 +202,7 @@ def segmentation(
         )
         # keep additional information on the lengths of the segments in the right order
         segmentDuration = (
-            pd.DataFrame(segmentNoOccur, columns=["Segment Duration"])
+            pd.DataFrame(segmentNoOccur, columns=pd.Index(["Segment Duration"]))
             .reindex(clusterOrderUnique)
             .set_index(np.sort(indices))
         )

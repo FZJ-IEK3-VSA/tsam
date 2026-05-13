@@ -1,11 +1,18 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 # switch to numpy 2.0 (restore deprecated aliases for backward compatibility)
-np.float_ = np.float64  # type: ignore[attr-defined]
-np.complex_ = np.complex128  # type: ignore[attr-defined]
+np.float_ = np.float64  # ty: ignore[unresolved-attribute]
+np.complex_ = np.complex128  # ty: ignore[unresolved-attribute]
 
 import pyomo.environ as pyomo
 import pyomo.opt as opt
@@ -50,6 +57,8 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         self.threads = threads
 
+        self.distance_func: Callable | None = None
+
     def _check_init_args(self):
         # Check n_clusters
         if (
@@ -90,6 +99,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         X = self._check_array(X)
 
         # apply distance metric to get the distance matrix
+        assert self.distance_func is not None
         D = self.distance_func(X)
 
         # run exact optimization

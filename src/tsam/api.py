@@ -367,7 +367,7 @@ def aggregate(
         rescale_deviations.index.name = "column"
     else:
         rescale_deviations = pd.DataFrame(
-            columns=["deviation_pct", "converged", "iterations"]
+            columns=pd.Index(["deviation_pct", "converged", "iterations"])
         )
 
     accuracy = AccuracyMetrics(

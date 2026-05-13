@@ -3,8 +3,8 @@ import time
 import numpy as np
 
 # switch to numpy 2.0 (restore deprecated aliases for backward compatibility)
-np.float_ = np.float64  # type: ignore[attr-defined]
-np.complex_ = np.complex128  # type: ignore[attr-defined]
+np.float_ = np.float64  # ty: ignore[unresolved-attribute]
+np.complex_ = np.complex128  # ty: ignore[unresolved-attribute]
 
 import networkx as nx
 import pyomo.environ as pyomo

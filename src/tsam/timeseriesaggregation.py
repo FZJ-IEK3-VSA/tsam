@@ -721,6 +721,11 @@ class TimeSeriesAggregation:
         self.extremePeriods = {}
         extremePeriodNo = []
 
+        addPeakMax = addPeakMax or []
+        addPeakMin = addPeakMin or []
+        addMeanMax = addMeanMax or []
+        addMeanMin = addMeanMin or []
+
         ccList = [center.tolist() for center in clusterCenters]
 
         # check which extreme periods exist in the profile and add them to
@@ -881,7 +886,7 @@ class TimeSeriesAggregation:
             return column + append_with
         elif isinstance(column, tuple):
             col = list(column)
-            col[-1] = col[-1] + append_with
+            col[-1] = str(col[-1]) + append_with
             return tuple(col)
 
     def _rescaleClusterPeriods(self, clusterOrder, clusterPeriods, extremeClusterIdx):
@@ -1399,7 +1404,7 @@ class TimeSeriesAggregation:
         # create a dataframe
         timeStepMatching = pd.DataFrame(
             [periodIndex, stepIndex],
-            index=["PeriodNum", "TimeStep"],
+            index=pd.Index(["PeriodNum", "TimeStep"]),
             columns=self.timeIndex,
         ).T
 
@@ -1415,11 +1420,11 @@ class TimeSeriesAggregation:
                         self.segmentedNormalizedTypicalPeriods.loc[
                             label, :
                         ].index.get_level_values(1),
-                    ).values
+                    ).values  # ty: ignore[unresolved-attribute]
                 )
             timeStepMatching = pd.DataFrame(
                 [periodIndex, stepIndex, segmentIndex],
-                index=["PeriodNum", "TimeStep", "SegmentIndex"],
+                index=pd.Index(["PeriodNum", "TimeStep", "SegmentIndex"]),
                 columns=self.timeIndex,
             ).T
 

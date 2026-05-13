@@ -62,7 +62,7 @@ develop = [
   "mkdocs-literate-nav>=0.6,<=0.6.3",
   "nbval<=0.11.0",
   "ruff<=0.15.12",
-  "mypy<=1.20.2",
+  "ty<=0.0.35",
   "pandas-stubs<=3.0.0.260204",
   "pre-commit<=4.5.1",
   "plotly>=5.0.0,<=6.7.0",
@@ -138,13 +138,11 @@ known-first-party = ["tsam"]
   "TCH002",
 ] # pandas/numpy needed at runtime for dataclass fields
 
-[tool.mypy]
-python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-ignore_missing_imports = true
-exclude = ["docs/", "build/"]
+[tool.ty.src]
+exclude = ["docs/", "test/", "benchmarks/", "build/"]
 
-[[tool.mypy.overrides]]
-module = "tsam.*"
-ignore_missing_imports = true
+[tool.ty.environment]
+python-version = "3.10"
+
+[tool.ty.rules]
+unresolved-import = "ignore"
