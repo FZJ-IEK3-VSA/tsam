@@ -1,3 +1,9 @@
+# Renovate manages hook revs via the pre-commit manager (see .github/renovate.json).
+# This `ci:` block is read by pre-commit.ci if the app is ever enabled on the repo;
+# `autoupdate_schedule: never` prevents pre-commit.ci from racing with Renovate.
+ci:
+  autoupdate_schedule: never
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0

@@ -41,7 +41,7 @@
         },
         {
             "customType": "regex",
-            "description": "Match deps in pyproject.toml that are also pinned in environment.yml; resolve via conda-forge so PRs only open once a release is available on both channels.",
+            "description": "Match deps in pyproject.toml that are also pinned in environment.yml; resolve via conda-forge so PRs only open once a release is on both channels. IMPORTANT: this list of package names must mirror the matchPackageNames list in the pep621-disable packageRule below — both are derived from the deps shared between pyproject.toml and environment.yml. Longer names must precede their prefixes in the alternation (e.g. pytest-cov before pytest) so the regex matches greedily.",
             "managerFilePatterns": [
                 "/(^|/)pyproject\\.toml$/"
             ],
@@ -77,7 +77,7 @@
             "rangeStrategy": "replace"
         },
         {
-            "description": "Disable pep621 for deps that are also tracked in environment.yml; the custom.regex manager handles them via conda-forge so PRs only open once the new version is on both PyPI and conda-forge.",
+            "description": "Disable pep621 for deps that are also tracked in environment.yml; the custom.regex manager above handles them via conda-forge so PRs only open once the new version is on both PyPI and conda-forge. IMPORTANT: keep this list in sync with the regex alternation in the pyproject.toml customManager above.",
             "matchManagers": ["pep621"],
             "matchPackageNames": [
                 "scikit-learn",
