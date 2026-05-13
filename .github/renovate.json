@@ -41,12 +41,12 @@
         },
         {
             "customType": "regex",
-            "description": "Match deps in pyproject.toml that are also pinned in environment.yml; resolve via conda-forge so PRs only open once a release is on both channels. IMPORTANT: this list of package names must mirror the matchPackageNames list in the pep621-disable packageRule below — both are derived from the deps shared between pyproject.toml and environment.yml. Longer names must precede their prefixes in the alternation (e.g. pytest-cov before pytest) so the regex matches greedily.",
+            "description": "Match deps in pyproject.toml that are also pinned in environment.yml; resolve via conda-forge so PRs only open once a release is on both channels. IMPORTANT: this list of package names must mirror the matchPackageNames list in the pep621-disable packageRule below — both are derived from the deps shared between pyproject.toml and environment.yml. The `(?![a-zA-Z0-9_-])` lookahead after depName prevents prefix-matching against longer package names that are NOT in the alternation (e.g. pytest-benchmark, mkdocstrings, pandas-stubs — PyPI-only deps handled by the pep621 manager). Longer names that ARE in the alternation must still precede their prefixes (e.g. pytest-cov before pytest) so left-to-right alternation picks them first.",
             "managerFilePatterns": [
                 "/(^|/)pyproject\\.toml$/"
             ],
             "matchStrings": [
-                "\"(?<depName>scikit-learn|mkdocs-literate-nav|mkdocs-gen-files|mkdocs-jupyter|mkdocs-material|pytest-xdist|pytest-cov|pre-commit|networkx|highspy|codecov|plotly|mkdocs|pytest|pyomo|pandas|numpy|nbval|ruff|mypy|tqdm)[^\"]*?(?<currentValue><=?\\d[^\",]*)"
+                "\"(?<depName>scikit-learn|mkdocs-literate-nav|mkdocs-gen-files|mkdocs-jupyter|mkdocs-material|pytest-xdist|pytest-cov|pre-commit|networkx|highspy|codecov|plotly|mkdocs|pytest|pyomo|pandas|numpy|nbval|ruff|mypy|tqdm)(?![a-zA-Z0-9_-])[^\"]*?(?<currentValue><=?\\d[^\",]*)"
             ],
             "packageNameTemplate": "conda-forge/{{{depName}}}",
             "datasourceTemplate": "conda",
