@@ -72,4 +72,3 @@ def test_accuracyIndicators_partial_weights():
 
     indicators = aggregation.accuracyIndicators()
     assert set(indicators.index) == set(raw.columns)
-
