@@ -10,8 +10,14 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
+      # docs/changelog.md is a symlink to ../CHANGELOG.md. On Windows checkouts
+      # without symlink support it appears as a text file containing the target
+      # path; whitespace hooks would then "fix" it by appending a newline,
+      # corrupting the symlink target on Linux. Exclude it from both hooks.
       - id: trailing-whitespace
+        exclude: ^docs/changelog\.md$
       - id: end-of-file-fixer
+        exclude: ^docs/changelog\.md$
       - id: check-yaml
         args: ['--unsafe']
       - id: check-added-large-files
