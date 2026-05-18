@@ -37,11 +37,7 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - pandas-stubs
-        args: [--ignore-missing-imports]
-        exclude: ^(docs/|test/|benchmarks/)
+  # Type checking runs as a standalone CI job (see .github/workflows/),
+  # not as a pre-commit hook. Pyrefly requires the project's full set of
+  # installed dependencies to resolve imports correctly, which pre-commit's
+  # isolated environments do not provide.

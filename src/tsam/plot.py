@@ -389,7 +389,9 @@ class ResultPlotAccessor:
             for key, label in zip(anim_keys, anim_labels)
         ]
 
-        # Slider.
+        # Slider. fig.frames is a tuple of go.Frame at runtime; plotly stubs
+        # widen the element type to Frame | str | dict, so we narrow via cast.
+        frames = [cast("go.Frame", f) for f in fig.frames]
         steps = [
             {
                 "args": [
@@ -402,7 +404,7 @@ class ResultPlotAccessor:
                 "label": f.name,
                 "method": "animate",
             }
-            for f in fig.frames
+            for f in frames
         ]
         fig.update_layout(
             sliders=[{"active": 0, "steps": steps}],
@@ -439,8 +441,9 @@ class ResultPlotAccessor:
                     axis_ranges[key] = {"range": [ymin - margin, ymax + margin]}
                 fig.frames[frame_idx].layout = go.Layout(**axis_ranges)
             if fig.frames:
-                for key, val in fig.frames[0].layout.to_plotly_json().items():
-                    if key.startswith("yaxis"):
+                first_layout = cast("go.Frame", fig.frames[0]).layout
+                for key, val in first_layout.to_plotly_json().items():
+                    if key.startswith("yaxis") and isinstance(val, dict):
                         fig.layout[key].range = val["range"]
 
         return fig

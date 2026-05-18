@@ -112,10 +112,26 @@ jobs:
       - name: Build MkDocs
         run: mkdocs build --strict
 
+  type-check:
+    name: Type check (pyrefly)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: uv pip install --system ".[develop]"
+      - name: Run pyrefly
+        run: pyrefly check
+
   ci-success:
     name: CI Success
     if: always()
-    needs: [pre-commit, test, docs]
+    needs: [pre-commit, test, docs, type-check]
     runs-on: ubuntu-24.04
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')

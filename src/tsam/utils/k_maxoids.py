@@ -1,10 +1,17 @@
 """Exact K-maxoids clustering"""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 import numpy.random as rnd
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
@@ -20,12 +27,14 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
     def __init__(
         self,
-        n_clusters=8,
-        distance_metric="euclidean",
+        n_clusters: int = 8,
+        distance_metric: str | Callable[..., np.ndarray] = "euclidean",
     ):
         self.n_clusters = n_clusters
 
         self.distance_metric = distance_metric
+
+        self.distance_func: Callable[..., np.ndarray] | None = None
 
     def _check_init_args(self):
         # Check n_clusters
@@ -67,6 +76,7 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         X = self._check_array(X)
 
         # apply distance metric to get the distance matrix (kept for potential debugging)
+        assert self.distance_func is not None
         _D = self.distance_func(X)
 
         # run mk-maxoids clustering
@@ -90,9 +100,13 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         return X
 
     def k_maxoids(self, X, k, numpasses=5, doLogarithmic=False, n_init=100):
+        assert self.distance_func is not None
+        if n_init < 1:
+            raise ValueError("n_init must be at least 1")
         X_old = X
         n, _m = X.shape
-        inertiaTempPrime = None
+        inertiaTempPrime: float | None = None
+        mFinal = np.copy(X[:k])
 
         for i in range(n_init):
             inds = rnd.permutation(np.arange(n))
@@ -123,13 +137,9 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
             dTemp = self.distance_func(X_old, Y=list(M))
             inertiaTemp = np.sum(np.min(dTemp, axis=1))
 
-            if inertiaTempPrime is None:
+            if inertiaTempPrime is None or inertiaTemp < inertiaTempPrime:
                 mFinal = M
                 inertiaTempPrime = inertiaTemp
-            else:
-                if inertiaTemp < inertiaTempPrime:
-                    mFinal = M
-                    inertiaTempPrime = inertiaTemp
 
         D = self.distance_func(X_old, Y=list(mFinal))
 

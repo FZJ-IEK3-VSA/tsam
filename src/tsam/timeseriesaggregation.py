@@ -980,8 +980,10 @@ class TimeSeriesAggregation:
                     + "%"
                 )
 
-        # Reshape back to 2D: (n_clusters, n_cols * n_timesteps)
-        return arr.reshape(n_clusters, -1)
+        # Reshape back to 2D: (n_clusters, n_cols * n_timesteps), then return
+        # as a list of 1D arrays to match the type produced by the initial
+        # `list(self.clusterCenters)` assignment.
+        return list(arr.reshape(n_clusters, -1))
 
     def _clusterSortedPeriods(
         self, candidates, n_init=20, n_clusters=None, delClusterParams=None
@@ -1371,6 +1373,7 @@ class TimeSeriesAggregation:
             )
         else:
             if self.sameMean:
+                assert self._normalizedMean is not None
                 self.normalizedPredictedData /= self._normalizedMean
             self.predictedData = self._postProcessTimeSeries(
                 self.normalizedPredictedData, applyWeighting=False
@@ -1415,7 +1418,7 @@ class TimeSeriesAggregation:
                         self.segmentedNormalizedTypicalPeriods.loc[
                             label, :
                         ].index.get_level_values(1),
-                    ).values
+                    )
                 )
             timeStepMatching = pd.DataFrame(
                 [periodIndex, stepIndex, segmentIndex],

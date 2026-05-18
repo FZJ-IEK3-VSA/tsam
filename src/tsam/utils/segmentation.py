@@ -120,6 +120,7 @@ def segmentation(
             clusterOrder = np.asarray(predefSegmentOrder[period_i])
 
             # Get predefined durations
+            assert predefSegmentDurations is not None
             segmentNoOccur = np.asarray(predefSegmentDurations[period_i])
 
             # Calculate segment numbers and start indices from durations

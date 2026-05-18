@@ -46,7 +46,7 @@
                 "/(^|/)pyproject\\.toml$/"
             ],
             "matchStrings": [
-                "\"(?<depName>scikit-learn|mkdocs-literate-nav|mkdocs-gen-files|mkdocs-jupyter|mkdocs-material|pytest-xdist|pytest-cov|pre-commit|networkx|highspy|codecov|plotly|mkdocs|pytest|pyomo|pandas|numpy|nbval|ruff|mypy|tqdm)[^\"]*?(?<currentValue><=?\\d[^\",]*)"
+                "\"(?<depName>scikit-learn|mkdocs-literate-nav|mkdocs-gen-files|mkdocs-jupyter|mkdocs-material|pytest-xdist|pytest-cov|pre-commit|networkx|highspy|codecov|plotly|mkdocs|pytest|pyomo|pandas|numpy|nbval|ruff|tqdm)[^\"]*?(?<currentValue><=?\\d[^\",]*)"
             ],
             "packageNameTemplate": "conda-forge/{{{depName}}}",
             "datasourceTemplate": "conda",
@@ -99,7 +99,6 @@
                 "mkdocs-literate-nav",
                 "plotly",
                 "ruff",
-                "mypy",
                 "pre-commit"
             ],
             "enabled": false

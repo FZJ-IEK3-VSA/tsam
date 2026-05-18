@@ -488,10 +488,12 @@ def _build_clustering_result(
             and agg.segmentCenterIndices is not None
         ):
             # Check if any period has center indices (None for mean representation)
-            if all(pc is not None for pc in agg.segmentCenterIndices):
+            period_centers_list = list(agg.segmentCenterIndices)
+            if all(pc is not None for pc in period_centers_list):
                 segment_centers = tuple(
-                    tuple(int(x) for x in period_centers)
-                    for period_centers in agg.segmentCenterIndices
+                    tuple(int(x) for x in pc)
+                    for pc in period_centers_list
+                    if pc is not None
                 )
 
     # Extract representation from configs
