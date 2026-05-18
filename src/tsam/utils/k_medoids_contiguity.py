@@ -1,4 +1,5 @@
 import time
+from typing import Any, cast
 
 import numpy as np
 
@@ -41,8 +42,12 @@ def k_medoids_contiguity(
 
     M.adjacency = adjacency
 
-    # Add constraintlist for the cuts later added
+    # Add constraintlist for the cuts later added. Pyomo attaches attributes
+    # to ConcreteModel dynamically; reading them back returns the generic
+    # `Component` type, so cast to the concrete pyomo types we know we used.
     M.cuts = pyomo.ConstraintList()
+    cuts = cast("pyomo.ConstraintList", M.cuts)
+    z = cast("pyomo.Var", M.z)
 
     # Loop over the relaxed k-medoids problem and add cuts until the problem fits
     _all_cluster_connected = False
@@ -85,11 +90,15 @@ def k_medoids_contiguity(
                                 # Validi uses an own cut generator and Oehrlein falls back to a Java library, here we use simple max flow cutting
                                 # TODO: Check performance for large networks
                                 cut_set = nx.minimum_node_cut(G, node, candidate)
-                                # (Eq. 13 - Oehrlein and Haunert, 2017)
-                                M.cuts.add(
-                                    sum(M.z[u, node] for u in cut_set)
-                                    >= M.z[candidate, node]
+                                # (Eq. 13 - Oehrlein and Haunert, 2017).
+                                # Pyomo overloads comparison operators to build
+                                # symbolic expressions, which its stubs do not
+                                # reflect; cast through Any so the symbolic
+                                # `>=` is accepted.
+                                lhs_expr: Any = pyomo.quicksum(
+                                    z[u, node] for u in cut_set
                                 )
+                                cuts.add(lhs_expr >= z[candidate, node])
                             else:
                                 raise ValueError(
                                     "Minimal cluster,candidate separation/minimum cut does not seem sufficient. Adding additional separators is could help."

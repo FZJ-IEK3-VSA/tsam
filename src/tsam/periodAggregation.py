@@ -58,7 +58,7 @@ def aggregatePeriods(
             clusterOrder.append(
                 [n_clusters - 1] * int(n_sets - cluster_size * n_clusters)
             )
-        clusterOrder = np.hstack(np.array(clusterOrder, dtype=object))
+        clusterOrder = np.hstack(clusterOrder)
         clusterCenters, clusterCenterIndices = representations(
             repr_candidates,
             clusterOrder,
@@ -69,7 +69,7 @@ def aggregatePeriods(
             timeStepsPerPeriod=timeStepsPerPeriod,
         )
 
-    if clusterMethod == "k_means":
+    elif clusterMethod == "k_means":
         from sklearn.cluster import KMeans
 
         k_means = KMeans(n_clusters=n_clusters, max_iter=1000, n_init=n_iter, tol=1e-4)
@@ -86,7 +86,7 @@ def aggregatePeriods(
             timeStepsPerPeriod=timeStepsPerPeriod,
         )
 
-    if clusterMethod == "k_medoids":
+    elif clusterMethod == "k_medoids":
         from tsam.utils.k_medoids_exact import KMedoids
 
         k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
@@ -102,7 +102,7 @@ def aggregatePeriods(
             timeStepsPerPeriod=timeStepsPerPeriod,
         )
 
-    if clusterMethod == "k_maxoids":
+    elif clusterMethod == "k_maxoids":
         from tsam.utils.k_maxoids import KMaxoids
 
         k_maxoid = KMaxoids(n_clusters=n_clusters)
@@ -118,7 +118,7 @@ def aggregatePeriods(
             timeStepsPerPeriod=timeStepsPerPeriod,
         )
 
-    if clusterMethod == "hierarchical" or clusterMethod == "adjacent_periods":
+    elif clusterMethod == "hierarchical" or clusterMethod == "adjacent_periods":
         if n_clusters == 1:
             clusterOrder = np.asarray([0] * len(candidates))
         else:
@@ -146,5 +146,8 @@ def aggregatePeriods(
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
         )
+
+    else:
+        raise ValueError(f"Unknown clusterMethod: {clusterMethod!r}")
 
     return clusterCenters, clusterCenterIndices, clusterOrder

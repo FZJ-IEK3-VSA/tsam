@@ -86,12 +86,12 @@ ruff check src/ test/ --fix
 ruff format src/ test/
 ```
 
-**Type Checking with Mypy**
+**Type Checking with pyrefly**
 
-[Mypy](https://mypy.readthedocs.io/) is used for static type checking:
+[pyrefly](https://pyrefly.org/) is used for static type checking:
 
 ```bash
-mypy src/tsam/
+pyrefly check
 ```
 
 **Pre-commit Hooks**

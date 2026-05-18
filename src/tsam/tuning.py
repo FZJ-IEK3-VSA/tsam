@@ -359,6 +359,7 @@ class TuningResult:
         for i, h in enumerate(self.history):
             if h["rmse"] <= threshold:
                 timesteps = h.get("timesteps", h["n_clusters"] * h["n_segments"])
+                assert timesteps is not None
                 candidates.append((timesteps, i))
 
         if not candidates:

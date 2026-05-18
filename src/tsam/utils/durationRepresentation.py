@@ -1,6 +1,7 @@
 """Orders a set of representation values to fit several candidate value sets"""
 
 import warnings
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -81,7 +82,7 @@ def durationRepresentation(
 
     else:
         clusterCentersList = []
-        for a in candidates_df.columns.levels[0]:
+        for a in cast("pd.MultiIndex", candidates_df.columns).levels[0]:
             meanVals = []
             clusterLengths = []
             for clusterNum in np.unique(clusterOrder):
