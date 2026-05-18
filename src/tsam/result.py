@@ -172,7 +172,6 @@ class AggregationResult:
     is_transferred: bool
     _original_data: pd.DataFrame = field(repr=False, compare=False)
     _reconstructed_data: pd.DataFrame = field(repr=False, compare=False)
-    _time_index: pd.Index = field(repr=False, compare=False)
     _accuracy_metrics: AccuracyMetrics | None = field(
         default=None, repr=False, compare=False
     )
@@ -189,6 +188,21 @@ class AggregationResult:
     )
     _segmented_df: pd.DataFrame | None = field(default=None, repr=False, compare=False)
     _weights: dict[str, float] | None = field(default=None, repr=False, compare=False)
+
+    @property
+    def _time_index(self) -> pd.Index:
+        padded_length = self.clustering.n_original_periods * self.n_timesteps_per_period
+        time_index = self.clustering.time_index
+        if time_index is None:
+            return pd.RangeIndex(stop=padded_length)
+        if len(time_index) == padded_length:
+            return time_index
+        # Input length wasn't a multiple of n_timesteps_per_period; extend to the
+        # padded length the pipeline produced internally.
+        freq = pd.infer_freq(time_index)
+        if freq is not None:
+            return pd.date_range(time_index[0], periods=padded_length, freq=freq)
+        return pd.RangeIndex(stop=padded_length)
 
     @cached_property
     def accuracy(self) -> AccuracyMetrics:
