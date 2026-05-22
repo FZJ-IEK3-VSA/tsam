@@ -26,7 +26,9 @@ dependencies:
   - mkdocs-jupyter >=0.25,<=0.25.1
   - mkdocs-gen-files >=0.5,<=0.6.1
   - mkdocs-literate-nav >=0.6,<=0.6.3
+  - mkdocs-glightbox >=0.4,<=0.4.0
   # Linting and formatting
   - ruff <=0.15.8
   - mypy <=1.19.1
   - pre-commit <=4.5.1
+
