@@ -378,7 +378,6 @@ def _build_aggregation_result(
         is_transferred=is_transferred,
         _original_data=result.original_data,
         _reconstructed_data=result.reconstructed_data,
-        _time_index=result.time_index,
         _norm_values=result._norm_values,
         _normalized_predicted=result._normalized_predicted,
         _rescale_deviations=rescale_deviations,
