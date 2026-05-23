@@ -438,6 +438,30 @@ class TestClusteringTransfer:
             input_data.columns
         )
 
+    def test_apply_with_weights_and_extra_columns(self, input_data):
+        """Apply clustering whose weights cover only a subset of the applied columns.
+
+        Regression for GH #276 (fixes #277 / #288 on develop): on the legacy
+        API this raised KeyError when accuracy_indicators iterated over
+        columns missing from weight_dict.
+
+        On v4 the bug is **architecturally unreachable**: pipeline/accuracy.py
+        compute_accuracy() operates on already-normalized data and never
+        subscripts a weights dict. This test is therefore a guard against a
+        future regression in pipeline design, not coverage of a currently
+        reachable code path. Safe to delete if a later refactor judges the
+        bug class permanently impossible to reintroduce.
+        """
+        wind_only = input_data[["Wind"]]
+        result_wind = aggregate(wind_only, n_clusters=8, weights={"Wind": 1.0})
+
+        # Apply to full data (extra columns absent from weights) — must not raise
+        result_full = result_wind.clustering.apply(input_data)
+
+        # Accuracy metrics must cover every column in the applied data
+        assert len(result_full.accuracy.rmse) == len(input_data.columns)
+        assert set(result_full.accuracy.rmse.index) == set(input_data.columns)
+
     def test_segmentation_preserved_in_transfer(self, input_data, tmp_path):
         """Test that segmentation info is preserved through JSON roundtrip."""
         from tsam import ClusteringResult
