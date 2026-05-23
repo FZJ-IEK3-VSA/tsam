@@ -1,0 +1,49 @@
+name: Pre-commit autofix PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "Branch to run pre-commit against and open the PR back into"
+        required: true
+        default: "develop"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  autofix:
+    name: Run pre-commit and open PR
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_branch }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Run pre-commit (allow modifications)
+        uses: pre-commit/action@v3.0.1
+        continue-on-error: true
+
+      - name: Open PR with auto-fixes (if any)
+        uses: peter-evans/create-pull-request@v8
+        with:
+          base: ${{ inputs.target_branch }}
+          branch: pre-commit-autofix/${{ inputs.target_branch }}
+          delete-branch: true
+          commit-message: "style: apply pre-commit auto-fixes"
+          title: "style: apply pre-commit auto-fixes to ${{ inputs.target_branch }}"
+          body: |
+            Automated pre-commit auto-fixes for `${{ inputs.target_branch }}`,
+            triggered via `workflow_dispatch` by @${{ github.actor }}.
+
+            If the diff looks correct, merge to apply the fixes. If nothing
+            needed fixing, this PR will not be opened.
+          labels: |
+            automated
+            pre-commit

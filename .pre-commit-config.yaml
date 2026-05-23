@@ -1,9 +1,23 @@
+# pre-commit.ci is enabled on this repo; Renovate also manages hook revs via the
+# pre-commit manager (see .github/renovate.json). `autoupdate_schedule: quarterly`
+# is the longest interval pre-commit.ci accepts and makes it effectively a safety
+# net behind Renovate's weekly run. To disable pre-commit.ci autoupdates entirely,
+# toggle it off in the pre-commit.ci dashboard (no config-only option exists).
+ci:
+  autoupdate_schedule: quarterly
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
+      # docs/changelog.md is a symlink to ../CHANGELOG.md. On Windows checkouts
+      # without symlink support it appears as a text file containing the target
+      # path; whitespace hooks would then "fix" it by appending a newline,
+      # corrupting the symlink target on Linux. Exclude it from both hooks.
       - id: trailing-whitespace
+        exclude: ^docs/changelog\.md$
       - id: end-of-file-fixer
+        exclude: ^docs/changelog\.md$
       - id: check-yaml
         args: ['--unsafe']
       - id: check-added-large-files
@@ -12,19 +26,19 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/kynan/nbstripout
-    rev: 0.8.1
+    rev: 0.9.1
     hooks:
       - id: nbstripout
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
+    rev: v0.15.12
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
+    rev: v1.20.2
     hooks:
       - id: mypy
         additional_dependencies:
