@@ -239,14 +239,14 @@ def run_pipeline(
     original_column_order = list(data.columns)
     original_data = data.copy()
 
-    # ── Step 1 — normalize ──────────────────────────────────────────────
+    # ── Normalize ───────────────────────────────────────────────────────
     norm_data = normalize(data, cluster.scale_by_column_means)
 
-    # ── Step 2 — unstack to periods ─────────────────────────────────────
+    # ── Unstack to periods ──────────────────────────────────────────────
     period_profiles = unstack_to_periods(norm_data.values, cfg.n_timesteps_per_period)
     candidates = period_profiles.profiles_dataframe.values
 
-    # ── Step 2a — apply weights (optional) ──────────────────────────────
+    # ── Apply weights (optional) ────────────────────────────────────────
     # Weights are baked into the candidates array so clustering distance
     # respects them. The Weighter also produces a labeled weighted profiles
     # DataFrame on demand for extremes (step 5) and weights/unweights the
@@ -254,7 +254,7 @@ def run_pipeline(
     weighter = _Weighter(norm_data.values.columns, cluster.weights)
     candidates = weighter.apply_candidates(candidates, cfg.n_timesteps_per_period)
 
-    # ── Step 2b — period-sum features (optional) ────────────────────────
+    # ── Append period-sum features (optional) ───────────────────────────
     # Period sums are extra columns appended for clustering distance only;
     # they must NOT reach representations() which expects original columns.
     # We remember the original width so we can trim them off after clustering.
@@ -264,7 +264,7 @@ def run_pipeline(
             period_profiles.profiles_dataframe, candidates
         )
 
-    # ── Step 3 — cluster ────────────────────────────────────────────────
+    # ── Cluster ─────────────────────────────────────────────────────────
     clustering_duration = 0.0
     cluster_center_indices: list[int] | None = None
 
@@ -310,12 +310,12 @@ def run_pipeline(
 
     cluster_order = np.asarray(cluster_order)
 
-    # ── Step 4 — trim period-sum extras (still weighted) ────────────────
+    # ── Trim period-sum extras from centers (still weighted) ────────────
     cluster_periods_list: list[np.ndarray] = [
         center[:n_feature_cols] for center in cluster_centers
     ]
 
-    # ── Step 5 — extreme periods (optional, still weighted) ─────────────
+    # ── Add extreme periods (optional, still weighted) ──────────────────
     # Extremes run in weighted space: weighted profiles determine which
     # period is extreme, and extracted profiles carry weights. Unweighting
     # below treats every center (regular + extreme) the same way.
@@ -345,13 +345,13 @@ def run_pipeline(
         cluster_periods_list, cfg.n_timesteps_per_period
     )
 
-    # ── Step 6 — count cluster occurrences ──────────────────────────────
+    # ── Count cluster occurrences ───────────────────────────────────────
     occurrence_nums, occurrence_counts = np.unique(cluster_order, return_counts=True)
     cluster_counts: dict[int, float] = {
         int(num): float(occurrence_counts[ii]) for ii, num in enumerate(occurrence_nums)
     }
 
-    # ── Step 7 — rescale (optional) ─────────────────────────────────────
+    # ── Rescale representatives to original column means (optional) ─────
     rescale_deviations: dict[str, dict] = {}
     rescale_exclude = cfg.rescale_exclude_columns or []
     if cfg.rescale_cluster_periods:
@@ -367,9 +367,9 @@ def run_pipeline(
         )
         cluster_periods_list = list(cluster_periods_list)
 
-    # ── Step 8 — partial-period adjustment ──────────────────────────────
+    # ── Partial-period adjustment ───────────────────────────────────────
     # If the input doesn't divide evenly into periods the last one was
-    # padded in step 2; shrink its weight proportionally so totals match.
+    # padded during unstack; shrink its weight proportionally so totals match.
     data_length = len(data)
     if data_length % cfg.n_timesteps_per_period != 0:
         last_cluster = int(cluster_order[-1])
@@ -379,12 +379,12 @@ def run_pipeline(
             / cfg.n_timesteps_per_period
         )
 
-    # ── Step 9 — format representatives to a MultiIndex DataFrame ───────
+    # ── Format representatives as a (PeriodNum, TimeStep) DataFrame ─────
     normalized_typical_periods = _representatives_to_dataframe(
         cluster_periods_list, period_profiles.column_index
     )
 
-    # ── Step 10 — segment typical periods (optional) ────────────────────
+    # ── Segment typical periods (optional) ──────────────────────────────
     # Segmentation runs in weighted space so high-weight columns drive
     # segment boundaries. Weights are stripped from both outputs before
     # denormalization and reconstruction.
@@ -411,15 +411,15 @@ def run_pipeline(
         denorm_source = normalized_typical_periods
         reconstruct_source = normalized_typical_periods
 
-    # ── Step 11 — denormalize ───────────────────────────────────────────
+    # ── Denormalize back to original units ──────────────────────────────
     typical_periods = denormalize(denorm_source, norm_data)
     if cfg.round_decimals is not None:
         typical_periods = typical_periods.round(decimals=cfg.round_decimals)
 
-    # ── Step 12 — bounds check ──────────────────────────────────────────
+    # ── Bounds check ────────────────────────────────────────────────────
     _warn_if_out_of_bounds(typical_periods, original_data, cfg.numerical_tolerance)
 
-    # ── Step 13 — reconstruct + accuracy ────────────────────────────────
+    # ── Reconstruct full-length series + accuracy inputs ────────────────
     reconstructed_data, normalized_predicted = reconstruct(
         reconstruct_source,
         cluster_order,
@@ -434,7 +434,7 @@ def run_pipeline(
     typical_periods = typical_periods[original_column_order]
     reconstructed_data = reconstructed_data[original_column_order]
 
-    # ── Step 14 — assemble result ───────────────────────────────────────
+    # ── Assemble result ─────────────────────────────────────────────────
     original_data_out = original_data[original_column_order]
     input_time_index = (
         original_data_out.index
