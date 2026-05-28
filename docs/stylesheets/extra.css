@@ -39,6 +39,7 @@
 .tsam-logo-light {
   display: block;
 }
+
 .tsam-logo-dark {
   display: none;
 }
@@ -46,6 +47,7 @@
 [data-md-color-scheme="slate"] .tsam-logo-light {
   display: none;
 }
+
 [data-md-color-scheme="slate"] .tsam-logo-dark {
   display: block;
 }
@@ -188,7 +190,8 @@
   outline-offset: 4px;
   transition: outline-color 0.15s ease;
 }
-.md-typeset img:not(.no-zoom):hover {
-  outline-color: #35b0ab; /* FZJ accent teal */
-}
 
+.md-typeset img:not(.no-zoom):hover {
+  outline-color: #35b0ab;
+  /* FZJ accent teal */
+}

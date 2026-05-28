@@ -457,6 +457,12 @@ def _assemble_result(
 
     original_data_out = prepared.original_data[prepared.original_column_order]
 
+    input_time_index = (
+        original_data_out.index
+        if isinstance(original_data_out.index, pd.DatetimeIndex)
+        else None
+    )
+
     clustering_result = _ClusteringResult.from_pipeline(
         cluster_center_indices=clustered.cluster_center_indices,
         extreme_periods_info=clustered.extreme_periods_info,
@@ -472,6 +478,7 @@ def _assemble_result(
         rescale_cluster_periods=cfg.rescale_cluster_periods,
         rescale_exclude_columns=cfg.rescale_exclude_columns or [],
         extreme_cluster_idx=clustered.extreme_cluster_idx,
+        time_index=input_time_index,
     )
 
     return PipelineResult(
