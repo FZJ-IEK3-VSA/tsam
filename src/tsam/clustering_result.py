@@ -1,13 +1,7 @@
 """ClusteringResult — save/load clustering assignments and apply to new data.
 
-Split out of ``tsam.config`` for size reasons: this class plus its disaggregate
-helpers and JSON (de)serialization is over 700 lines, half the original config
-module. It is *not* a configuration class — it's a result-and-transfer object
-that bundles cluster assignments, segment structure, and the parameters needed
-to re-run the pipeline against a different dataset via :meth:`ClusteringResult.apply`.
-
-For backwards compatibility, ``from tsam.config import ClusteringResult`` still
-works (lazy re-export via module ``__getattr__`` in ``tsam.config``).
+``from tsam.config import ClusteringResult`` still works (lazy re-export
+via module ``__getattr__`` in ``tsam.config``).
 """
 
 from __future__ import annotations
@@ -30,11 +24,6 @@ from tsam.config import (
 
 if TYPE_CHECKING:
     from tsam.result import AggregationResult
-
-
-# ──────────────────────────────────────────────────────────────────────
-# Private helpers used only by ClusteringResult
-# ──────────────────────────────────────────────────────────────────────
 
 
 def _infer_resolution(data: pd.DataFrame) -> float:
@@ -215,11 +204,6 @@ def _expand_periods(
     result: pd.DataFrame = expanded.stack(future_stack=True, level=-1)  # type: ignore[assignment]
     result.index = pd.RangeIndex(len(result))
     return result
-
-
-# ──────────────────────────────────────────────────────────────────────
-# ClusteringResult
-# ──────────────────────────────────────────────────────────────────────
 
 
 @dataclass(frozen=True)

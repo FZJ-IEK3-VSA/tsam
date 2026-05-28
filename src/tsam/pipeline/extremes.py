@@ -13,8 +13,6 @@ if TYPE_CHECKING:
     from tsam.config import ExtremeConfig
 
 
-# The four extreme flavours `_detect_extremes` knows how to locate. Keep the
-# string values in sync with the column-name suffixes in `_KIND_SUFFIX`.
 ExtremeKind = Literal["max", "min", "mean_max", "mean_min"]
 
 _KIND_SUFFIX: dict[ExtremeKind, str] = {
@@ -51,7 +49,6 @@ def add_extreme_periods(
     """
     extreme_periods = _detect_extremes(profiles_df, extremes, cluster_centers)
 
-    # Tag each detected extreme with its current cluster assignment.
     for period_type in extreme_periods:
         extreme_periods[period_type]["cluster_no"] = cluster_order[
             extreme_periods[period_type]["step_no"]
@@ -67,14 +64,7 @@ def add_extreme_periods(
         return _apply_replace(
             profiles_df, cluster_centers, cluster_order, extreme_periods
         )
-    # Exhaustive over ExtremeConfig.method (Literal); assert_never raises if a
-    # new method is added to the Literal without a branch here.
     assert_never(extremes.method)
-
-
-# ────────────────────────────────────────────────────────────────────────
-# Detection
-# ────────────────────────────────────────────────────────────────────────
 
 
 def _detect_extremes(
@@ -126,8 +116,6 @@ def _extreme_step_for(profiles_df: pd.DataFrame, column, kind: ExtremeKind):
         return profiles_df[column].mean(axis=1).idxmax()  # type: ignore[call-overload]
     if kind == "mean_min":
         return profiles_df[column].mean(axis=1).idxmin()  # type: ignore[call-overload]
-    # Exhaustive over ExtremeKind — mypy treats anything past here as
-    # `Never`. assert_never raises at runtime if an unknown kind sneaks in.
     assert_never(kind)
 
 
@@ -163,11 +151,6 @@ def _append_col_with(column, append_with: str):
         col[-1] = col[-1] + append_with
         return tuple(col)
     return column
-
-
-# ────────────────────────────────────────────────────────────────────────
-# Integration methods
-# ────────────────────────────────────────────────────────────────────────
 
 
 def _apply_append(
@@ -206,13 +189,12 @@ def _apply_new_cluster(
         new_cluster_centers.append(extreme_periods[period_type]["profile"])
         extreme_periods[period_type]["new_cluster_no"] = i + len(cluster_centers)
 
-    # Quick-lookup set: which step indices are themselves declared extremes.
     extreme_step_nos = {extreme_periods[pt]["step_no"] for pt in extreme_periods}
 
     for i, c_period in enumerate(new_cluster_order):
         if i in extreme_step_nos:
-            # Periods that ARE an extreme: only reassign when uniquely so —
-            # if they satisfy multiple extreme types, leave them alone.
+            # Periods satisfying multiple extreme types stay on their original
+            # cluster — ambiguous which new cluster they belong to.
             own_types = [
                 pt for pt in extreme_periods if extreme_periods[pt]["step_no"] == i
             ]
@@ -220,8 +202,6 @@ def _apply_new_cluster(
                 new_cluster_order[i] = extreme_periods[own_types[0]]["new_cluster_no"]
             continue
 
-        # Non-extreme periods: reassign if a new extreme cluster is closer than
-        # the period's current cluster center.
         cluster_dist = sum(
             (profiles_df.iloc[i].values - cluster_centers[c_period]) ** 2
         )
