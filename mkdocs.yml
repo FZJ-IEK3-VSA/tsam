@@ -111,8 +111,9 @@ plugins:
             show_signature_annotations: true
   - mkdocs-jupyter:
       # Notebooks are pre-executed in parallel by scripts/execute_notebooks.py
-      # (see `make notebooks` or `make serve`). mkdocs only renders the
-      # already-populated outputs, which keeps the build fast.
+      # before `mkdocs build`/`mkdocs serve`; see CONTRIBUTING.md. mkdocs
+      # only renders the already-populated outputs, which keeps the build
+      # fast.
       execute: false
       kernel_name: python3
       include_source: true
