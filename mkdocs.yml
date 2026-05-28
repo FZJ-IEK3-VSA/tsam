@@ -51,6 +51,7 @@ nav:
     - index.md
     - Installation: installation.md
     - Getting Started: getting-started.md
+    - Contributing: contributing.md
     - Migration Guide: migration-guide.md
     - Glossary: glossary.md
   - Examples:
@@ -141,7 +142,8 @@ markdown_extensions:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: ['.']
   - pymdownx.mark
   - admonition
   - pymdownx.details
