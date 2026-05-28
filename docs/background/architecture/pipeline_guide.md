@@ -16,18 +16,19 @@ and *where* the code lives.
 
 The diagram below shows the eight main pipeline stages and their key data
 structures. Dashed boxes are optional stages activated by the named config
-parameter. The detailed step-by-step walkthrough that follows uses the
-internal step numbering from the source code (steps 1–16).
+parameter. The detailed step-by-step walkthrough that follows uses the same
+step numbering as the diagram.
 
 ![Pipeline data flow](../../assets/architecture/pipeline_diagram.svg)
 
-**Legend — abbreviations:** T = total timesteps · C = columns (variables) · S = timesteps per period ·
-P = T÷S periods · K = number of clusters · df = `pd.DataFrame` · arr = `np.ndarray` · `(r, c)` = shape
+**Legend — abbreviations:** T = input timesteps · C = columns (variables) · S = timesteps per period ·
+P = T÷S periods · K = number of clusters · K' = extra extreme clusters · seg = segments per period ·
+df = `pd.DataFrame` · arr = `np.ndarray`
 
 **Dashed boxes** are optional stages, each activated by the named config parameter.
-`weights` and `include_period_sums` **can both be active simultaneously** — when both are on,
+`2a` (weights) and `2b` (include_period_sums) **can both be active simultaneously** — when both are on,
 column weights are applied first and period-sum features are then appended to the
-already-weighted candidates. The `if both` arrow shows this sequential combination.
+already-weighted candidates. The double arrow between them in the diagram shows this sequential combination.
 
 ---
 
@@ -100,8 +101,8 @@ differences between columns.
    regardless of their typical magnitude. Useful when columns have very
    different average levels.
 
-**Weights are NOT applied here.** Per-column weights (`ClusterConfig.weights`)
-are applied in step 2b to a separate copy used only for clustering distance.
+**Weights are NOT applied here.** Per-column weights are applied in step 2a
+to a separate copy used only for clustering distance.
 The `NormalizedData` produced here contains unweighted normalized values that
 flow through all downstream steps (rescaling, denormalization, reconstruction,
 accuracy) without any weight compensation.
@@ -138,13 +139,13 @@ the last period is padded by repeating initial rows.
 
 ---
 
-### Step 2b: Apply column weights (optional)
+### Step 2a: Apply column weights (optional)
 
 | | |
 |---|---|
 | **Module** | `pipeline/__init__.py` |
 | **Functions** | `_build_weight_vector()` |
-| **Config** | `weights` (top-level parameter) |
+| **Config** | `weights` parameter of `aggregate()` (preferred); `ClusterConfig.weights` (deprecated) |
 | **Consumes** | `PeriodProfiles.profiles_dataframe`, normalized column order |
 | **Produces** | `weight_vector: np.ndarray | None`, weighted `candidates: np.ndarray`, optional `weighted_profiles_df: pd.DataFrame` |
 
@@ -156,15 +157,15 @@ unweighting.
 This means:
 - Weights influence *which* periods get grouped together (clustering distance),
   *which* period is chosen as representative (medoid/maxoid selection), and
-  `new_cluster` extreme reassignment distances (step 6).
-- After extremes, all representatives are unweighted (step 6b) before
+  `new_cluster` extreme reassignment distances (step 3a).
+- After extremes, all representatives are unweighted (step 4) before
   downstream steps (rescale, denormalization) which expect unweighted data.
 
 If no weights are provided, candidates pass through unchanged.
 
 ---
 
-### Step 3: Add period-sum features (optional)
+### Step 2b: Add period-sum features (optional)
 
 | | |
 |---|---|
@@ -178,10 +179,10 @@ Appends the per-column sum of each period as extra features. When weights
 are active, the sums are appended to the **weighted** candidates (they are
 clustering features). When no weights are active, they are appended to the
 regular candidates. Either way, the extra columns are removed from the
-cluster centers in step 5 — they only influence which periods get grouped
+cluster centers in step 4 — they only influence which periods get grouped
 together.
 
-At the end of steps 1-3, `_prepare_data()` returns a `PreparedData` dataclass with:
+At the end of steps 1–2b, `_prepare_data()` returns a `PreparedData` dataclass with:
 
 - `norm_data: NormalizedData`
 - `period_profiles: PeriodProfiles`
@@ -195,7 +196,7 @@ At the end of steps 1-3, `_prepare_data()` returns a `PreparedData` dataclass wi
 
 ---
 
-### Step 4: Cluster
+### Step 3: Cluster centers
 
 | | |
 |---|---|
@@ -207,10 +208,10 @@ At the end of steps 1-3, `_prepare_data()` returns a `PreparedData` dataclass wi
 This is the core step. It groups the period profiles into `n_clusters`
 clusters and selects or computes a representative for each.
 
-Candidates are already weighted (from step 2b). Representatives are
-computed from weighted candidates; unweighting happens later (step 6b).
-The result: cluster assignments reflect weighted
-importance, but typical-period values are in the original normalized space.
+Candidates are already weighted (from step 2a). Representatives are
+computed from weighted candidates; unweighting happens later (step 4).
+The result: cluster assignments reflect weighted importance, but
+typical-period values are still in the original normalized space.
 
 **Clustering methods** (`ClusterConfig.method`):
 
@@ -218,7 +219,7 @@ importance, but typical-period values are in the original normalized space.
 |---|---|
 | `"hierarchical"` | Agglomerative (Ward linkage). Default. Deterministic. |
 | `"kmeans"` | K-means. Fast but non-deterministic (set random seed externally). |
-| `"kmedoids"` | Exact k-medoids via MILP. Slow but optimal. |
+| `"kmedoids"` | Exact k-medoids via MILP. Slow but optimal. Requires a solver. |
 | `"kmaxoids"` | K-maxoids heuristic. |
 | `"averaging"` | Simple period averaging (1 cluster = mean of all). |
 | `"contiguous"` | Adjacent periods only (preserves temporal order). |
@@ -250,22 +251,7 @@ reused as-is.
 
 ---
 
-### Step 5: Trim augmented features
-
-| | |
-|---|---|
-| **Module** | `pipeline/__init__.py` |
-| **Function** | `_cluster_and_postprocess()` |
-| **Consumes** | weighted `cluster_centers` from step 4 |
-| **Produces** | `cluster_periods_list: list[np.ndarray]` with period-sum extras removed |
-
-If period-sum features were added in step 3, the extra columns are
-stripped from each cluster center vector, restoring the original
-dimensionality. Representatives are still weighted at this point.
-
----
-
-### Step 6: Add extreme periods (optional)
+### Step 3a: Add extreme periods (optional)
 
 | | |
 |---|---|
@@ -275,29 +261,15 @@ dimensionality. Representatives are still weighted at this point.
 | **Consumes** | weighted `profiles_dataframe`, `cluster_periods_list`, `cluster_order` |
 | **Produces** | updated `cluster_periods_list`, `cluster_order`, `extreme_cluster_idx`, `extreme_periods_info` |
 
-Extremes run in **weighted space** (matching develop's behavior): when
-weights are active, `profiles_dataframe` is weighted before being passed
-to `add_extreme_periods()`. Extreme detection itself (per-column
-idxmax/idxmin) is weight-invariant, but the `new_cluster` method's
-distance-based reassignment respects weights. Extracted extreme profiles
-carry weights, which are removed uniformly in step 6b.
+Extremes run in **weighted space**: when weights are active,
+`profiles_dataframe` is weighted before being passed to `add_extreme_periods()`.
+Extreme detection itself (per-column idxmax/idxmin) is weight-invariant, but
+the `new_cluster` method's distance-based reassignment respects weights.
+Extracted extreme profiles carry weights, which are removed uniformly in step 4.
 
 Ensures that periods with extreme values (peak demand, minimum solar, etc.)
 are explicitly represented in the output rather than averaged away by
 clustering.
-
-### Step 6b: Unweight all representatives
-
-| | |
-|---|---|
-| **Module** | `pipeline/__init__.py` |
-| **Function** | `_cluster_and_postprocess()` |
-| **Consumes** | weighted `cluster_periods_list`, `weight_vector` |
-| **Produces** | unweighted representative vectors in normalized space |
-
-Divides weights back out of all representatives (regular + extreme) using
-the stored `weight_vector`. After this point, all data is in unweighted
-normalized space for rescale, denormalization, and reconstruction.
 
 **Extreme types:**
 
@@ -318,26 +290,39 @@ normalized space for rescale, denormalization, and reconstruction.
 
 ---
 
-### Step 7: Compute cluster weights
+### Step 4: Trim · unweight · count
 
 | | |
 |---|---|
 | **Module** | `pipeline/__init__.py` |
-| **Function** | `_count_occurrences()` |
-| **Consumes** | `cluster_order: np.ndarray` |
-| **Produces** | `cluster_counts: dict[int, float]` |
+| **Function** | `_cluster_and_postprocess()` |
+| **Consumes** | (possibly weighted) `cluster_periods_list`, `cluster_order`, `weight_vector`, original data length |
+| **Produces** | unweighted `cluster_periods_list`, final `cluster_counts: dict[int, float]` |
 
-Counts how many original periods are assigned to each cluster. The result
-is a dictionary like `{0: 45, 1: 52, 2: 38, ...}`. These weights are
-used for:
+Four operations happen here in sequence:
 
-- Rescaling (step 8) — the weighted sum must match the original total.
-- Downstream optimization models — each typical period represents
-  `weight` real periods.
+1. **Trim** period-sum extras: if period-sum features were added in step 2b,
+   the extra columns are stripped from each cluster center vector, restoring
+   the original dimensionality.
+
+2. **Unweight** all representatives (regular + extreme): divides weights back
+   out of all representatives using the stored `weight_vector`. After this
+   point, all data is in unweighted normalized space for rescale,
+   denormalization, and reconstruction.
+
+3. **Count** cluster occurrences: counts how many original periods are assigned
+   to each cluster. The result is a dictionary like `{0: 45, 1: 52, 2: 38, ...}`.
+   These weights are used for rescaling (step 4a) and for downstream optimization
+   models — each typical period represents `weight` real periods.
+
+4. **Adjust for partial periods**: if the time series doesn't divide evenly
+   into periods (e.g., 8761 hours with 24-hour periods), the last period was
+   padded in step 2. Here, its cluster weight is reduced proportionally so the
+   total weight is correct.
 
 ---
 
-### Step 8: Rescale representatives (optional)
+### Step 4a: Rescale representatives (optional)
 
 | | |
 |---|---|
@@ -358,28 +343,13 @@ Values are clipped to `[0, scale_ub]` where `scale_ub` depends on
 unweighted at this point, no weight compensation is needed for the
 clipping bound.
 
-Extreme clusters (from step 6) are excluded from rescaling to preserve
+Extreme clusters (from step 3a) are excluded from rescaling to preserve
 their extreme values.
 
 Columns listed in `rescale_exclude_columns` are also skipped — useful for
 binary columns (0/1) that shouldn't be scaled.
 
----
-
-### Step 9: Adjust for partial periods
-
-| | |
-|---|---|
-| **Module** | `pipeline/__init__.py` |
-| **Function** | `_cluster_and_postprocess()` |
-| **Consumes** | `cluster_order`, `cluster_counts`, original data length |
-| **Produces** | final `cluster_counts` with fractional weight for a padded last period |
-
-If the time series doesn't divide evenly into periods (e.g., 8761 hours
-with 24-hour periods), the last period is padded in step 2. Here, its
-cluster weight is reduced proportionally so the total weight is correct.
-
-At the end of steps 4-9, the pipeline returns a `ClusteringOutput` dataclass with:
+At the end of steps 3–4a, `_cluster_and_postprocess()` returns a `ClusteringOutput` dataclass with:
 
 - `cluster_periods_list: list[np.ndarray]`
 - `cluster_order: np.ndarray`
@@ -392,7 +362,7 @@ At the end of steps 4-9, the pipeline returns a `ClusteringOutput` dataclass wit
 
 ---
 
-### Step 10: Format representatives to DataFrame
+### Step 5: Format representatives
 
 | | |
 |---|---|
@@ -406,14 +376,14 @@ DataFrame used by subsequent steps.
 
 ---
 
-### Step 11: Segment typical periods (optional)
+### Step 5a: Segment typical periods (optional)
 
 | | |
 |---|---|
 | **Module** | `pipeline/segment.py` |
 | **Function** | `segment_typical_periods()` |
 | **Config** | `SegmentConfig.n_segments`, `.representation` |
-| **Consumes** | weighted `normalized_typical_periods` |
+| **Consumes** | unweighted `normalized_typical_periods` (weights applied internally for segment boundary placement) |
 | **Produces** | `segmented_df`, `predicted_segmented_df`, `segment_center_indices` |
 
 **Problem:** Even after clustering, each typical period still has the
@@ -429,13 +399,19 @@ agglomerative clustering of adjacent timesteps) as the main clustering
 step. The `representation` parameter controls how segment values are
 computed (typically `"mean"`).
 
+**Weights and segmentation:** `normalized_typical_periods` entering this step
+is unweighted. Internally, `_apply_weights_df()` multiplies column weights into
+a copy before calling `segment_typical_periods()`, so that high-weight columns
+have more influence on where segment boundaries fall. `_remove_weights_df()` is
+called on the outputs before denormalization.
+
 After segmentation, the pipeline tracks two DataFrames:
-- `segmented_normalized` — for denormalization (step 12).
-- `predicted_segmented_df` — for reconstruction (step 14).
+- `segmented_normalized` — for denormalization (step 6).
+- `predicted_segmented_df` — for reconstruction (step 7).
 
 ---
 
-### Step 12: Denormalize
+### Step 6: Denormalize
 
 | | |
 |---|---|
@@ -450,44 +426,36 @@ units:
 1. Undo column-mean normalization (multiply by stored mean).
 2. Inverse min-max scaling (via the stored `MinMaxScaler`).
 
-No weight removal is needed because weights were never baked into the data.
+No weight removal is needed because weights were never baked into the data
+passed to this step.
 
 The output is `typical_periods` — the final representative periods in
 the user's original units.
 
 ---
 
-### Step 13: Bounds check
-
-| | |
-|---|---|
-| **Module** | `pipeline/__init__.py` |
-| **Function** | `_warn_if_out_of_bounds()` |
-| **Consumes** | `typical_periods`, original input data, `numerical_tolerance` |
-| **Produces** | warnings only; no new runtime object |
-
-Warns if any column's max (or min) in the typical periods exceeds the
-original data's range beyond `numerical_tolerance`. This can happen with
-distribution representations or aggressive rescaling.
-
----
-
-### Step 14: Reconstruct and compute accuracy
+### Step 7: Reconstruct + accuracy
 
 | | |
 |---|---|
 | **Module** | `pipeline/accuracy.py` |
 | **Functions** | `reconstruct()`, `compute_accuracy()` |
 | **Consumes** | representative DataFrame, `cluster_order`, `PeriodProfiles`, `NormalizedData`, original data |
-| **Produces** | `reconstructed_data: pd.DataFrame`, `normalized_predicted: pd.DataFrame`, later `accuracy_indicators: pd.DataFrame` |
+| **Produces** | `reconstructed_data: pd.DataFrame`, `normalized_predicted: pd.DataFrame` (accuracy computed lazily on `PipelineResult`) |
+
+**Bounds check:** Before reconstruction, any column whose max (or min) in
+the typical periods exceeds the original data's range beyond `numerical_tolerance`
+triggers a warning. This can happen with distribution representations or
+aggressive rescaling.
 
 **Reconstruct:** Expands the typical periods back into a full-length time
 series by replacing each original period with its assigned cluster
 representative. The result has the same shape as the input data.
 
-**Accuracy:** Compares the reconstruction to the original in normalized
-(unweighted) space. Both are directly comparable — no weight compensation
-needed. Computes per-column:
+**Accuracy:** The reconstructed and original series are stored in normalized
+(unweighted) form as `normalized_predicted` on `PipelineResult`. Accuracy
+metrics are computed lazily via `PipelineResult.accuracy_indicators` (a
+`cached_property`) when first accessed. Computes per-column:
 
 | Metric | Description |
 |---|---|
@@ -495,7 +463,7 @@ needed. Computes per-column:
 | MAE | Mean absolute error. |
 | RMSE (duration) | RMSE on sorted (duration-curve) values — measures distribution fit. |
 
-At the end of steps 10-14, `_format_and_reconstruct()` returns a `FormattedOutput` dataclass with:
+At the end of steps 5–7, `_format_and_reconstruct()` returns a `FormattedOutput` dataclass with:
 
 - `typical_periods: pd.DataFrame`
 - `reconstructed_data: pd.DataFrame`
@@ -505,14 +473,14 @@ At the end of steps 10-14, `_format_and_reconstruct()` returns a `FormattedOutpu
 
 ---
 
-### Step 15: Build ClusteringResult
+### Step 8: Assemble
 
 | | |
 |---|---|
 | **Module** | `config.py` and `pipeline/__init__.py` |
 | **Functions** | `_assemble_result()`, `ClusteringResult.from_pipeline()` |
 | **Consumes** | `ClusteringOutput`, `FormattedOutput`, `PipelineConfig`, original data |
-| **Produces** | `ClusteringResult` |
+| **Produces** | `PipelineResult` → `AggregationResult` |
 
 Assembles all clustering metadata into a `ClusteringResult` object.
 This object is serializable (`.to_json()`, `.from_json()`) and supports
@@ -523,17 +491,6 @@ Key fields stored:
 - `cluster_centers` — indices of medoid periods (if applicable).
 - `segment_assignments`, `segment_durations` — segmentation structure.
 - Config references for documentation.
-
----
-
-### Step 16: Assemble PipelineResult
-
-| | |
-|---|---|
-| **Module** | `pipeline/__init__.py` |
-| **Function** | `_assemble_result()` |
-| **Consumes** | `PreparedData`, `ClusteringOutput`, `FormattedOutput`, `PipelineConfig` |
-| **Produces** | `PipelineResult` |
 
 The pipeline restores the original column order (columns are sorted
 alphabetically internally) and packs everything into a `PipelineResult`,
@@ -653,17 +610,17 @@ extremes = ExtremeConfig(
 
     | Field | Step | Function |
     |---|---|---|
-    | `method` | 4 | `cluster_periods()` |
-    | `representation` | 4, 11 (fallback) | clustering, `segment_typical_periods()` |
-    | `weights` | 2b | vectorized multiply → `weight_vector` |
+    | `method` | 3 | `cluster_periods()` |
+    | `representation` | 3, 5a (fallback) | clustering, `segment_typical_periods()` |
+    | `weights` | 2a | vectorized multiply → `weight_vector` |
     | `scale_by_column_means` | 1 | `normalize()` |
-    | `use_duration_curves` | 4 | branch gate |
-    | `include_period_sums` | 3 | `add_period_sum_features()` |
-    | `solver` | 4 | `cluster_periods()` |
+    | `use_duration_curves` | 3 | branch gate |
+    | `include_period_sums` | 2b | `add_period_sum_features()` |
+    | `solver` | 3 | `cluster_periods()` |
 
-    **ExtremeConfig:** All fields consumed exclusively in step 6 by `add_extreme_periods()`.
+    **ExtremeConfig:** All fields consumed exclusively in step 3a by `add_extreme_periods()`.
 
-    **SegmentConfig:** Both fields consumed exclusively in step 11 by `segment_typical_periods()`.
+    **SegmentConfig:** Both fields consumed exclusively in step 5a by `segment_typical_periods()`.
 
 ??? info "Output assembly: PipelineResult → AggregationResult"
 
@@ -688,7 +645,7 @@ For developers navigating the codebase:
 | `src/tsam/api.py` | User-facing `aggregate()` function and result builder |
 | `src/tsam/config.py` | `ClusterConfig`, `SegmentConfig`, `ExtremeConfig`, `ClusteringResult` |
 | `src/tsam/result.py` | `AggregationResult`, `AccuracyMetrics` |
-| `src/tsam/pipeline/__init__.py` | `run_pipeline()` — orchestrates all 16 steps |
+| `src/tsam/pipeline/__init__.py` | `run_pipeline()` — orchestrates all 8 steps |
 | `src/tsam/pipeline/normalize.py` | `normalize()`, `denormalize()` |
 | `src/tsam/pipeline/periods.py` | `unstack_to_periods()`, `add_period_sum_features()` |
 | `src/tsam/pipeline/clustering.py` | `cluster_periods()`, `cluster_sorted_periods()`, `use_predefined_assignments()` |
@@ -697,4 +654,3 @@ For developers navigating the codebase:
 | `src/tsam/pipeline/segment.py` | `segment_typical_periods()` |
 | `src/tsam/pipeline/accuracy.py` | `reconstruct()`, `compute_accuracy()` |
 | `src/tsam/pipeline/types.py` | `PipelineConfig`, `PredefParams`, `NormalizedData`, `PeriodProfiles`, `PreparedData`, `ClusteringOutput`, `FormattedOutput`, `PipelineResult` |
-| `src/tsam/timeseriesaggregation.py` | Legacy monolith (backward compatibility) |

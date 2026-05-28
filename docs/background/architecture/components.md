@@ -13,7 +13,7 @@ The diagram below shows the architectural components of `tsam` and how they coll
 | Module | Responsibility |
 |--------|---------------|
 | [`api.py`](../../api/tsam/api.md) | Modern, function-based entry point. `aggregate()` accepts a DataFrame plus config dataclasses, builds a `PipelineConfig`, calls `run_pipeline()`, and wraps the output as an `AggregationResult`. |
-| [`timeseriesaggregation.py`](../../api/tsam/timeseriesaggregation.md) | Legacy class-based API (`TimeSeriesAggregation.create_typical_periods()`). Kept for backwards compatibility — also delegates to `run_pipeline()` underneath. See [ADR 0001](../decisions/0001-v4-pipeline.md). |
+
 
 ### Config & Results
 
