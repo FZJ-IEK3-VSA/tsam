@@ -101,7 +101,14 @@ pythonpath = [
   "test",
 ] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
-filterwarnings = ["ignore::tsam.exceptions.LegacyAPIWarning"]
+filterwarnings = [
+  "ignore::tsam.exceptions.LegacyAPIWarning",
+  # camelCase parameter deprecations in the v3 API surface
+  # (timeseriesaggregation.py, hyperparametertuning.py, result.py, config.py).
+  # The legacy tests exercise these names on purpose; the warnings are noise
+  # at the suite level. New code and tests should use the snake_case names.
+  "ignore:'[A-Za-z_]+' is deprecated, use '[A-Za-z_]+'\\.:FutureWarning",
+]
 
 [tool.ruff]
 target-version = "py310"
