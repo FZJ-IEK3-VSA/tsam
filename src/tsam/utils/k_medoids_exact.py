@@ -1,7 +1,14 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array
+
+if TYPE_CHECKING:
+    from tsam.config import Solver
 
 # switch to numpy 2.0 (restore deprecated aliases for backward compatibility)
 np.float_ = np.float64  # type: ignore[attr-defined]
@@ -38,7 +45,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         distance_metric="euclidean",
         timelimit=100,
         threads=7,
-        solver="highs",
+        solver: Solver = "highs",
     ):
         self.n_clusters = n_clusters
 
@@ -202,7 +209,7 @@ def _setup_k_medoids(distances, n_clusters):
     return M
 
 
-def _solve_given_pyomo_model(M, solver="highs"):
+def _solve_given_pyomo_model(M, solver: Solver = "highs"):
     """Solves a given pyomo model clustering model an returns the clusters
 
     Args:

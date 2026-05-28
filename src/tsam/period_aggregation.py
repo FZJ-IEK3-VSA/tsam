@@ -7,11 +7,11 @@ import numpy as np
 from tsam.representations import representations
 
 if TYPE_CHECKING:
-    from tsam.config import Distribution, MinMaxMean
+    from tsam.config import ClusterMethod, Distribution, MinMaxMean, Solver
 
-# Aliases: old verbose names → new short names.
+# Aliases: legacy verbose names → canonical Literal values.
 # The legacy wrapper sends old names; the pipeline sends new names.
-_METHOD_ALIASES = {
+_METHOD_ALIASES: dict[str, ClusterMethod] = {
     "k_means": "kmeans",
     "k_medoids": "kmedoids",
     "k_maxoids": "kmaxoids",
@@ -23,8 +23,8 @@ def aggregate_periods(
     candidates: np.ndarray,
     n_clusters: int = 8,
     n_iter: int = 100,
-    cluster_method: str = "kmeans",
-    solver: str = "highs",
+    cluster_method: ClusterMethod | str = "kmeans",
+    solver: Solver = "highs",
     representation_method: str | Distribution | MinMaxMean | None = None,
     representation_dict: dict[str, str] | None = None,
     distribution_period_wise: bool = True,

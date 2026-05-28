@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
 
 from tsam.config import Distribution, MinMaxMean
 from tsam.utils.duration_representation import duration_representation
 
-# Aliases: old verbose names → new short names.
+if TYPE_CHECKING:
+    from tsam.config import RepresentationMethod
+
+# Aliases: legacy verbose names → canonical Literal values.
 # The legacy wrapper sends old names; the pipeline sends new names.
-_ALIASES = {
+_ALIASES: dict[str, RepresentationMethod] = {
     "meanRepresentation": "mean",
     "medoidRepresentation": "medoid",
     "maxoidRepresentation": "maxoid",
@@ -22,7 +27,7 @@ _ALIASES = {
 def representations(
     candidates: np.ndarray,
     cluster_order: np.ndarray,
-    default: str,
+    default: RepresentationMethod,
     representation_method: str | Distribution | MinMaxMean | None = None,
     representation_dict: dict[str, str] | None = None,
     distribution_period_wise: bool = True,
