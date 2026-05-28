@@ -181,9 +181,12 @@
 }
 
 /* -- Zoomable image / diagram hover affordance --------------------------- */
-/* Diagram images in .md-typeset get a hover ring and magnifier badge to
-   signal that they are clickable (opens a panzoom modal). */
-.md-typeset img:not(.no-zoom) {
+/* Architecture diagrams (anything under assets/architecture/) get a hover
+   ring to signal they are clickable; the click opens a panzoom modal wired
+   up in javascripts/diagram-zoom-init.js. Scoped narrowly by path so the
+   landing-page logos, notebook output images, and plotly figures keep
+   their default behavior. */
+.md-typeset img[src*="assets/architecture/"] {
   cursor: pointer;
   border-radius: 4px;
   outline: 2px solid transparent;
@@ -191,7 +194,7 @@
   transition: outline-color 0.15s ease;
 }
 
-.md-typeset img:not(.no-zoom):hover {
+.md-typeset img[src*="assets/architecture/"]:hover {
   outline-color: #35b0ab;
   /* FZJ accent teal */
 }

@@ -1,9 +1,14 @@
 /**
  * diagram-zoom-init.js
  *
- * Click any diagram image (.md-typeset img, unless marked .no-zoom) to open
- * it in a centered modal overlay. The image is pan/zoomable inside the modal
- * via panzoom (mouse-wheel zoom, drag to pan). Esc or click outside closes.
+ * Click an architecture diagram (any <img> whose src contains
+ * "assets/architecture/" under .md-typeset) to open it in a centered modal
+ * overlay. The image is pan/zoomable inside the modal via panzoom
+ * (mouse-wheel zoom, drag to pan). Esc or click outside closes.
+ *
+ * The path-based predicate keeps the handler off the landing-page logos,
+ * notebook output images, and plotly figures — only the architecture
+ * SVGs match. Keep the CSS selector in extra.css in sync if this changes.
  *
  * Uses Material for MkDocs' document$ observable to re-bind after instant
  * navigation page swaps. A data-zoom-bound guard on document.body prevents
@@ -120,28 +125,22 @@
     }
   }
 
+  function isArchitectureDiagram(img) {
+    if (!img.closest(".md-typeset")) return false;
+    var src = img.getAttribute("src") || "";
+    return src.indexOf("assets/architecture/") !== -1;
+  }
+
   function bindClickHandler() {
     if (document.body.dataset.zoomBound) return;
     document.body.dataset.zoomBound = "1";
 
     document.addEventListener("click", function (e) {
-      // Walk up to find a matching img (handles click on child elements)
-      var el = e.target;
-      while (el && el !== document) {
-        if (
-          el.tagName === "IMG" &&
-          el.closest(".md-typeset") &&
-          !el.classList.contains("no-zoom")
-        ) {
-          // Prevent any wrapping <a> from navigating
-          e.preventDefault();
-          e.stopPropagation();
-          openDiagram(el);
-          return;
-        }
-        if (el.tagName === "A") break;
-        el = el.parentElement;
-      }
+      var img = e.target && e.target.closest && e.target.closest("img");
+      if (!img || !isArchitectureDiagram(img)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      openDiagram(img);
     }, true /* capture phase */);
   }
 
