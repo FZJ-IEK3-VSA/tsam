@@ -1,4 +1,4 @@
-# Architecture Decision Records
+# Architecture Decision Records (ADR)
 
 This section collects the **architectural decisions** that shape tsam. Each decision is a short, append-only markdown file capturing *why* a particular design choice was made — the kind of context that's invisible in the code and easily lost from `git log`.
 
@@ -30,13 +30,6 @@ Write one when:
 
 Don't write one for routine refactors, bug fixes, or stylistic preferences — those belong in commit messages.
 
-## How to write one
-
-1. Copy [`template.md`](template.md) to `NNNN-short-title.md` where `NNNN` is the next free number.
-2. Fill in *Context*, *Decision*, and *Consequences*. Keep prose tight.
-3. Set the *Status* to `Proposed` while it's under discussion, `Accepted` once merged.
-4. Open a PR. The PR review is where the decision is debated.
-5. Add the new file to the `Decisions:` block in `mkdocs.yml`.
 
 ## Index
 
@@ -44,8 +37,4 @@ Don't write one for routine refactors, bug fixes, or stylistic preferences — t
 |---|-------|--------|
 | [0001](0001-v4-pipeline.md) | V4 pipeline replaces `create_typical_periods` | *to be filled in* |
 
-## Further reading
 
-- [Michael Nygard — *Documenting Architecture Decisions*](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) (the original 2011 post)
-- [adr.github.io](https://adr.github.io/) — community catalogue of ADR templates and real-world examples
-- [ThoughtWorks Tech Radar — Lightweight ADRs](https://www.thoughtworks.com/radar/techniques/lightweight-architecture-decision-records)

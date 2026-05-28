@@ -1,0 +1,143 @@
+direction: down
+
+grid-rows: 10
+vertical-gap: 40
+horizontal-gap: 120
+
+# ── Ln3b_extremesal class: optional pipeline step (dashed + translucent) ───────────
+# `default` and `optional` are injected by dn3b_extremess/hooks/d2_diagrams.py.
+# `optional_step` is defined here so that conditionally-executed steps
+# (2a, 2b, 3a, 4a, 5a) visually fade back while still inheriting the
+# theme-aware optional palette.
+classes: {
+  optional_step: {
+    style: {
+      stroke-dash: 5
+      opacity: 0.55
+    }
+  }
+  place_holder_node: {
+    style: {
+      fill: transparent
+      stroke: transparent
+    }
+  }
+}
+
+
+# ── Plain nodes: no optionals ─────────────────────────────────────────────
+n0: "Input\npd.DataFrame\nT rows × C cols, datetime-indexed" {class: default}
+n1: "1 · Normalize\nNormalizedData\ndf (T, C) scaled to 0..1" {class: default}
+
+# ── Steps 2-5 with optional sub-steps (single 3 col × 5 row grid) ────────
+# Column convention:
+#   Col 1 — main pipeline steps (n2, n3, n4, n5), vertically stacked
+#   Col 2 — "a" optionals (2a, 3a, 4a, 5a), on the same row as their main
+#   Col 3 — "b" optionals (2b), one row below the corresponding main step
+#
+# Layout (row-major, exactly 15 cells = 3 cols × 5 rows):
+#   R1: n2,   oA,   gap        (step 2: main + 2a; 2b is below in col 3)
+#   R2: gap,  gap,  n2_b_include_period_sums         (step 2: 2b on its own row, col 3)
+#   R3: n3,   n3b_extremes,   gap        (step 3: main + 3a, no 3b)
+#   R4: n4,   oD,   gap        (step 4: main + 4a, no 4b)
+#   R5: n5,   oE,   gap        (step 5: main + 5a, no 5b)
+steps_with_optional_steps: "" {
+  grid-rows: 5
+  grid-columns: 3  
+  vertical-gap: 70
+  horizontal-gap: 100
+
+  # R1 
+  n2_unstack_periods: "2 · Unstack to periods\nPeriodProfiles\narr (P, C·S)" {class: default}
+  n2_a_weights: "2a · weights\nweighted candidates\narr (P, C·S)" {class: optional_step}
+  place_holder_R1C: "" {class: place_holder_node}
+  
+  # R2
+  place_holder_R2A: "" {class: place_holder_node}
+  place_holder_R2B: "" {class: place_holder_node}
+  n2_b_include_period_sums: "2b · include_period_sums\naugmented candidates\narr (P, C·S+C)" {class: optional_step}
+
+  # R3
+  
+  n3_cluster_centers: "3 · Cluster centers\nClusterCenters\narr (K, C·S)" {class: default}
+  n3b_extremes: "3a · extremes\nK' extra clusters added\norder arr (P)" {class: optional_step}
+  place_holder_R3C: "" {class: place_holder_node}
+  
+
+  # R4 — step 4 (main + 4a, no 4b)
+  n4_trim_unweight_count: "4 · Trim · unweight · count\nClusteringOutput\ncounts: dict(cluster, weight)" {class: default}
+  n4a_preserve_column_means: "4a · preserve_column_means\nrescaled representatives\nK × arr(C·S)" {class: optional_step}
+  place_holder_R4C: "" {class: place_holder_node}
+
+  # R5 — step 5 (main + 5a, no 5b)
+  n5_format_representatives: "5 · Format representatives\nnormalized_typical_periods\ndf (K·S, C)  MultiIndex" {class: default}
+  n5a_n_segments: "5a · n_segments\nsegmented_df\ndf (K·seg, C)" {class: optional_step}
+  place_holder_R5C: "" {class: place_holder_node}
+
+  # ── Main flow inside the grid (vertical down col 1) ────────────────────
+  n2_unstack_periods -> n3_cluster_centers
+  n3_cluster_centers -> n4_trim_unweight_count
+  n4_trim_unweight_count -> n5_format_representatives
+
+  # ── Step 2 optional flows ──────────────────────────────────────────────
+  n2_unstack_periods -> n2_a_weights 
+  n2_unstack_periods -> n2_b_include_period_sums 
+  n2_a_weights <-> n2_b_include_period_sums
+  n2_a_weights -> n3_cluster_centers 
+  n2_b_include_period_sums -> n3_cluster_centers 
+
+  # ── Step 3 optional flow ───────────────────────────────────────────────
+  n3_cluster_centers -> n3b_extremes
+  n3b_extremes -> n4_trim_unweight_count 
+
+  # ── Step 4 optional flow ───────────────────────────────────────────────
+  n4_trim_unweight_count -> n4a_preserve_column_means
+  n4a_preserve_column_means -> n5_format_representatives
+
+  # ── Step 5 optional flow ───────────────────────────────────────────────
+  n5_format_representatives -> n5a_n_segments
+
+  style.fill: transparent
+  style.stroke: transparent
+}
+
+# ── Plain nodes: no optionals ─────────────────────────────────────────────
+n6: "6 · Denormalize\ntypical_periods\ndf (K·S, C)  original units" {class: default}
+n7: "7 · Reconstruct + accuracy\nreconstructed df (T, C)\naccuracy df (C, 3 metrics)" {class: default}
+n8: "8 · Assemble\nAggregationResult" {class: default}
+
+# ── Legend ───────────────────────────────────────────────────────────────
+# Explains the data-type abbreviations and dimension symbols used in
+# the node labels above. Mirrors the dataclasses defined in
+# src/tsam/pipeline/types.py (NormalizedData, PeriodProfiles,
+# ClusteringOutput, PipelineResult) and the numpy/pandas containers
+# they wrap.
+legend: "Legend" {
+  grid-columns: 4
+  grid-gap: 30
+  style.stroke-dash: 2
+
+  sample_default: "Required step" {class: default}
+  sample_optional: "Optional step\n(toggled by config kwarg)" {class: optional_step}
+
+  data_types: "Data types\ndf      = pd.DataFrame\narr     = numpy.ndarray\ndict    = dictionary\nDataclass = frozen @dataclass\n         (NormalizedData,\n          PeriodProfiles,\n          ClusteringOutput,\n          PipelineResult, ...)" {
+    class: default
+    style.fill: transparent
+    style.bold: false
+  }
+
+  dimensions: "Dimensions\nT  = input timesteps\nC  = input columns\nS  = timesteps per period\nP  = candidate periods (T / S)\nK  = clusters (n_clusters)\nK' = extra extreme clusters\nseg = segments per period" {
+    class: default
+    style.fill: transparent
+    style.bold: false
+  }
+}
+
+# ── Main vertical flow ────────────────────────────────────────────────────
+# Steps 2-5 all live inside `steps_with_optional_steps` (the n2->n3->n4->n5
+# main edges are defined inside that container so ELK keeps each pair on
+# the same row of the 3×6 grid). The top-level flow enters at n2 and exits
+# at n5 into n6.
+n0 -> n1 -> steps_with_optional_steps.n2_unstack_periods
+steps_with_optional_steps.n5_format_representatives -> n6 -> n7 -> n8
+

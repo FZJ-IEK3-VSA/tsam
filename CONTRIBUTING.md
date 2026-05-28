@@ -196,6 +196,10 @@ python scripts/execute_notebooks.py
 mkdocs build --strict
 ```
 
+### Architecture Diagrams
+
+Architecture diagrams are authored in [D2](https://d2lang.com/). Both the `.d2` sources and the rendered `.svg` outputs live in `docs/assets/architecture/`. To update a diagram, edit the `.d2` file and re-render it with `d2 <name>.d2 <name>.svg`, then commit both files. A conda environment created from the environment.yml file ships the `d2` binary, so contributors who already use that environment do not need a separate install.
+
 ## Releasing
 
 Releases are automated via [release-please](https://github.com/googleapis/release-please) and GitHub Actions.

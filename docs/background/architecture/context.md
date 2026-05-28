@@ -4,26 +4,7 @@ The diagram below shows tsam in its environment: *who uses it, what it touches, 
 
 ## Context diagram
 
-```kroki-mermaid
-%%{init: {'flowchart': {'padding': 18}}}%%
-graph TB
-    user[Energy-system modeler<br/>or data scientist]
-    ts[Input time series<br/>pandas DataFrame<br/>hourly, multi-column]
-    tsam[tsam<br/>Time-series aggregation library]
-    downstream[Downstream frameworks<br/>ETHOS.FINE / flixopt / oemof / custom]
-    solver[MILP solver<br/>Gurobi, CBC, ...]
-
-    user -->|configures and calls<br/>tsam.aggregate| tsam
-    ts -->|input| tsam
-    tsam -->|typical periods,<br/>cluster order,<br/>accuracy metrics| user
-    user -->|feeds typical periods<br/>into optimization model| downstream
-    tsam -.->|optional, only for<br/>k_medoids_exact| solver
-
-    %% External systems: dashed border only (theme-neutral). Fill/stroke come
-    %% from the Kroki light/dark theme so the nodes adapt to the colour scheme.
-    classDef external stroke-dasharray:5 3
-    class downstream,solver external
-```
+![System context diagram](../../assets/architecture/context_diagram.svg)
 
 ## Actors
 

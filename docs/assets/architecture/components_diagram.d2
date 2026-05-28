@@ -1,0 +1,97 @@
+
+grid-rows: 3
+grid-gap: 80
+
+top_row: "" {
+  grid-rows: 1
+  grid-gap: 60
+  style.fill: transparent
+  style.stroke: transparent
+
+  aux: "Auxiliary" {
+  grid-rows: 3
+  tune: "tuning.py\nhyperparameter search" 
+  plot: "plot.py\n(lazy import, plotly)" 
+  opts: "options.py\nglobal options" 
+  style.fill: transparent
+  style.stroke: "#8a8a8a"
+}
+
+publicapi: "Public API" {
+  grid-rows: 2
+    api: "api.py\naggregate()" {class: default}
+  style.fill: transparent
+  style.stroke: "#8a8a8a"
+}
+
+cfgres: "Config & Results" {
+  grid-rows: 3
+cfg: "config.py\nClusterConfig\nExtremeConfig\nSegmentConfig\nClusteringResult" {class: default}
+  res: "result.py\nAggregationResult\nAccuracyMetrics" {class: default}
+  types: "pipeline/types.py\nPipelineConfig\nPipelineResult" {class: default}
+  style.fill: transparent
+  style.stroke: "#8a8a8a"
+}
+
+   
+}
+orch: "Pipeline orchestrator"
+bottom_row: "" {
+  grid-rows: 2
+  grid-gap: 60
+  style.fill: transparent
+  style.stroke: transparent
+
+  stages: "Pipeline stages" {
+  norm: "normalize" {class: default}
+  per: "periods" {class: default}
+  clu: "clustering" {class: default}
+  ext: "extremes" {class: default}
+  rsc: "rescale" {class: default}
+  seg: "segment" {class: default}
+  acc: "accuracy" {class: default}
+  style.fill: transparent
+  style.stroke: "#8a8a8a"
+}
+
+  backends: "Clustering backends" {
+    kmex: "utils/k_medoids_exact\n(MILP)" {class: default}
+    kmco: "utils/k_medoids_contiguity" {class: default}
+    kmax: "utils/k_maxoids" {class: default}
+    dur: "utils/duration_representation" {class: default}
+    segu: "utils/segmentation" {class: default}
+    style.fill: transparent
+    style.stroke: "#8a8a8a"
+  }
+}
+
+# ── Edges ─────────────────────────────────────────────────────────────────
+top_row.aux.tune -> top_row.publicapi.api
+
+top_row.publicapi.api -> top_row.cfgres.cfg
+top_row.publicapi.api -> top_row.cfgres.types
+top_row.publicapi.api -> top_row.cfgres.res
+top_row.publicapi.api -> orch
+
+orch -> bottom_row.stages.norm
+orch -> bottom_row.stages.per
+orch -> bottom_row.stages.clu
+orch -> bottom_row.stages.ext
+orch -> bottom_row.stages.rsc
+orch -> bottom_row.stages.seg
+orch -> bottom_row.stages.acc
+
+bottom_row.stages
+# top_row.orch -> bottom_row.stages.norm
+# top_row.orch -> bottom_row.stages.per
+# top_row.orch -> bottom_row.stages.clu
+# top_row.orch -> bottom_row.stages.ext
+# top_row.orch -> bottom_row.stages.rsc
+# top_row.orch -> bottom_row.stages.seg
+# top_row.orch -> bottom_row.stages.acc
+
+bottom_row.stages.clu -> bottom_row.backends.kmex
+bottom_row.stages.clu -> bottom_row.backends.kmco
+bottom_row.stages.clu -> bottom_row.backends.kmax
+bottom_row.stages.clu -> bottom_row.backends.dur
+bottom_row.stages.seg -> bottom_row.backends.segu

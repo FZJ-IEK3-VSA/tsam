@@ -71,16 +71,15 @@ nav:
       - notebooks/pareto_optimization.ipynb
       - notebooks/building_energy_system.ipynb
   - Background:
+    - background/index.md
     - Mathematical Background: background/math.md
-    - Pipeline Guide: background/pipeline_guide.md
     - Architecture:
       - background/architecture/index.md
       - System Context: background/architecture/context.md
       - Components: background/architecture/components.md
-      - Pipeline Data Flow: background/architecture/pipeline-dataflow.md
+      - Pipeline Guide: background/architecture/pipeline_guide.md
     - Decisions:
       - background/decisions/index.md
-      - ADR Template: background/decisions/template.md
       - 0001 — V4 Pipeline: background/decisions/0001-v4-pipeline.md
     - Further Reading: further-reading.md
   - API Reference: api/
@@ -124,44 +123,6 @@ plugins:
         - docs/gen_ref_pages.py
   - literate-nav:
       nav_file: SUMMARY.md
-  - kroki:
-      # Renders ```kroki-mermaid fences to SVG at build time via the Kroki
-      # service. http_method POST downloads each rendered SVG and stores it
-      # as a file in the built site (and caches it), so the published pages
-      # serve their own diagrams instead of hot-linking kroki.io.
-      server_url: https://kroki.io
-      http_method: POST
-      file_types:
-        - svg
-      # Theme-aware rendering: Kroki renders a light and a dark variant of
-      # each diagram and emits two <img> tags (#only-light / #only-dark).
-      # Material's CSS then shows the one matching the active colour scheme.
-      # Colours below are a starting point — tune after a visual check.
-      diagram_background_color_light: "#ffffff"
-      diagram_background_color_dark: "#1e2129"
-      styles_light:
-        box:
-          fill: "#eef3f8"
-          stroke: "#023d6b"
-        text:
-          fill: "#1a1a1a"
-        line:
-          stroke: "#5a6b7a"
-          font-color: "#1a1a1a"
-          label-background: "#ffffff"
-      styles_dark:
-        box:
-          fill: "#2b3543"
-          stroke: "#35b0ab"
-        text:
-          fill: "#e6e6e6"
-        line:
-          stroke: "#9aa7b3"
-          font-color: "#e6e6e6"
-          label-background: "#1e2129"
-  - glightbox:
-      # Click-to-zoom lightbox; picks up the <img> tags Kroki emits.
-      auto_caption: false
 
 markdown_extensions:
   - pymdownx.arithmatex:
@@ -204,3 +165,5 @@ extra_javascript:
   - https://cdn.plot.ly/plotly-3.3.0.min.js
   - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+  - https://cdn.jsdelivr.net/npm/panzoom@9.4.3/dist/panzoom.min.js
+  - javascripts/diagram-zoom-init.js
