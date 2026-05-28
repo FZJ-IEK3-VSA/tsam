@@ -11,9 +11,9 @@ if TYPE_CHECKING:
     import pandas as pd
     from sklearn.preprocessing import MinMaxScaler
 
+    from tsam.clustering_result import ClusteringResult
     from tsam.config import (
         ClusterConfig,
-        ClusteringResult,
         ExtremeConfig,
         SegmentConfig,
     )

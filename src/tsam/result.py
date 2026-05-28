@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from tsam.config import ClusteringResult
+    from tsam.clustering_result import ClusteringResult
     from tsam.plot import ResultPlotAccessor
 
 

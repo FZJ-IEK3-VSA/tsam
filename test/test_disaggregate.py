@@ -229,7 +229,7 @@ class TestTimeIndexSerialization:
     """Unit tests for _time_index_to_dict / _time_index_from_dict helpers."""
 
     def test_regular_index_compact(self):
-        from tsam.config import _time_index_to_dict
+        from tsam.clustering_result import _time_index_to_dict
 
         idx = pd.date_range("2025-01-01", periods=8760, freq="h")
         d = _time_index_to_dict(idx)
@@ -238,14 +238,14 @@ class TestTimeIndexSerialization:
         assert d["periods"] == 8760
 
     def test_regular_index_roundtrip(self):
-        from tsam.config import _time_index_from_dict, _time_index_to_dict
+        from tsam.clustering_result import _time_index_from_dict, _time_index_to_dict
 
         idx = pd.date_range("2025-01-01", periods=8760, freq="h")
         restored = _time_index_from_dict(_time_index_to_dict(idx))
         pd.testing.assert_index_equal(idx, restored)
 
     def test_irregular_index_fallback(self):
-        from tsam.config import _time_index_from_dict, _time_index_to_dict
+        from tsam.clustering_result import _time_index_from_dict, _time_index_to_dict
 
         idx = pd.DatetimeIndex(["2025-01-01", "2025-01-03", "2025-01-07"])
         d = _time_index_to_dict(idx)
@@ -254,7 +254,7 @@ class TestTimeIndexSerialization:
         pd.testing.assert_index_equal(idx, restored)
 
     def test_old_list_format_still_loads(self):
-        from tsam.config import _time_index_from_dict
+        from tsam.clustering_result import _time_index_from_dict
 
         raw = ["2025-01-01T00:00:00", "2025-01-01T01:00:00"]
         restored = _time_index_from_dict(raw)

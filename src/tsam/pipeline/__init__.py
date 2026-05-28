@@ -453,7 +453,7 @@ def _assemble_result(
     cfg: PipelineConfig,
 ) -> PipelineResult:
     """Phase 4: Build ClusteringResult + PipelineResult (steps 15-16)."""
-    from tsam.config import ClusteringResult as _ClusteringResult
+    from tsam.clustering_result import ClusteringResult as _ClusteringResult
 
     original_data_out = prepared.original_data[prepared.original_column_order]
 
