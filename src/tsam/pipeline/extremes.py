@@ -2,13 +2,27 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
+
+from typing_extensions import assert_never
 
 if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
 
     from tsam.config import ExtremeConfig
+
+
+# The four extreme flavours `_detect_extremes` knows how to locate. Keep the
+# string values in sync with the column-name suffixes in `_KIND_SUFFIX`.
+ExtremeKind = Literal["max", "min", "mean_max", "mean_min"]
+
+_KIND_SUFFIX: dict[ExtremeKind, str] = {
+    "max": " max.",
+    "min": " min.",
+    "mean_max": " daily max.",
+    "mean_min": " daily min.",
+}
 
 
 def add_extreme_periods(
@@ -53,8 +67,9 @@ def add_extreme_periods(
         return _apply_replace(
             profiles_df, cluster_centers, cluster_order, extreme_periods
         )
-    # Caller already validated method; this protects against silent fall-through.
-    raise ValueError(f"Unknown extremes.method: {extremes.method!r}")
+    # Exhaustive over ExtremeConfig.method (Literal); assert_never raises if a
+    # new method is added to the Literal without a branch here.
+    assert_never(extremes.method)
 
 
 # ────────────────────────────────────────────────────────────────────────
@@ -78,14 +93,14 @@ def _detect_extremes(
     cc_list = [center.tolist() for center in cluster_centers]
 
     columns = profiles_df.columns.get_level_values(0).unique().tolist()
-    checks: list[tuple[list[str], str, str]] = [
-        (extremes.max_value, "max", " max."),
-        (extremes.min_value, "min", " min."),
-        (extremes.max_period, "mean_max", " daily max."),
-        (extremes.min_period, "mean_min", " daily min."),
+    checks: list[tuple[list[str], ExtremeKind]] = [
+        (extremes.max_value, "max"),
+        (extremes.min_value, "min"),
+        (extremes.max_period, "mean_max"),
+        (extremes.min_period, "mean_min"),
     ]
     for column in columns:
-        for config_list, kind, suffix in checks:
+        for config_list, kind in checks:
             if column not in config_list:
                 continue
             step_no = _extreme_step_for(profiles_df, column, kind)
@@ -93,7 +108,7 @@ def _detect_extremes(
                 profiles_df,
                 column,
                 step_no,
-                suffix,
+                _KIND_SUFFIX[kind],
                 extreme_period_no,
                 cc_list,
                 extreme_periods,
@@ -101,7 +116,7 @@ def _detect_extremes(
     return extreme_periods
 
 
-def _extreme_step_for(profiles_df: pd.DataFrame, column, kind: str):
+def _extreme_step_for(profiles_df: pd.DataFrame, column, kind: ExtremeKind):
     """Return the step index of the extreme of *kind* for *column*."""
     if kind == "max":
         return profiles_df[column].max(axis=1).idxmax()  # type: ignore[arg-type]
@@ -111,7 +126,9 @@ def _extreme_step_for(profiles_df: pd.DataFrame, column, kind: str):
         return profiles_df[column].mean(axis=1).idxmax()  # type: ignore[call-overload]
     if kind == "mean_min":
         return profiles_df[column].mean(axis=1).idxmin()  # type: ignore[call-overload]
-    raise ValueError(f"Unknown extreme kind: {kind!r}")
+    # Exhaustive over ExtremeKind — mypy treats anything past here as
+    # `Never`. assert_never raises at runtime if an unknown kind sneaks in.
+    assert_never(kind)
 
 
 def _record_extreme(
@@ -137,7 +154,7 @@ def _record_extreme(
         extreme_period_no.append(step_no)
 
 
-def _append_col_with(column, append_with: str = " max."):
+def _append_col_with(column, append_with: str):
     """Append a suffix to a column name. For MultiIndexes only the last level is changed."""
     if isinstance(column, str):
         return column + append_with
