@@ -16,3 +16,14 @@ The rewrite aimed to address three problems. First, improve understandability fo
 
 The aggregation flow is implemented as a sequence of **pure functions** organised under [`src/tsam/pipeline/`](https://github.com/FZJ-IEK3-VSA/tsam/tree/develop/src/tsam/pipeline), orchestrated by `run_pipeline()` in `pipeline/__init__.py`. Configuration is passed in as immutable dataclasses (`PipelineConfig` composed of `ClusterConfig`, `ExtremeConfig`, `SegmentConfig`). The user-facing entry point is `tsam.aggregate()` in [`src/tsam/api.py`](https://github.com/FZJ-IEK3-VSA/tsam/blob/develop/src/tsam/api.py), which builds the config, calls the pipeline, and wraps the output as an `AggregationResult`.
 
+## Consequences
+
+**Easier to extend.** Each pipeline stage (`normalize`, `periods`, `clustering`, `extremes`, `rescale`, `segment`, `accuracy`) is a small module of pure functions with an explicit signature. Adding a new stage, swapping a clustering backend, or reordering optional steps no longer requires threading state through a monolithic method.
+
+**Easier to test.** Stages can be exercised in isolation by constructing the input dataclass directly. Failures point at the specific stage rather than at a single thousand-line method.
+
+**Public surface is narrower and typed.** Users interact with `tsam.aggregate()`, `ClusterConfig`/`SegmentConfig`/`ExtremeConfig` for inputs, and `AggregationResult` for outputs. Internal types (`PipelineConfig`, `PreparedData`, `ClusteringOutput`, etc.) are not exported.
+
+**Two APIs coexist during the transition.** The legacy `TimeSeriesAggregation.create_typical_periods()` remains importable and functional so existing user code and notebooks keep working. Calls into the legacy entry point emit a `LegacyAPIWarning`. The legacy class will be removed in a future major version once downstream users have migrated.
+
+**Slightly higher onboarding cost for new contributors.** Reading the pipeline now means following a chain of small modules and the dataclasses passed between them, rather than scrolling through one function. The trade-off is that any single stage is much shorter and self-contained than its v3 equivalent.

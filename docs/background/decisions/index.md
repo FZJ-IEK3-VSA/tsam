@@ -35,6 +35,4 @@ Don't write one for routine refactors, bug fixes, or stylistic preferences — t
 
 | # | Title | Status |
 |---|-------|--------|
-| [0001](0001-v4-pipeline.md) | V4 pipeline replaces `create_typical_periods` | *to be filled in* |
-
-
+| [0001](0001-v4-pipeline.md) | V4 pipeline replaces `create_typical_periods` | Accepted |
