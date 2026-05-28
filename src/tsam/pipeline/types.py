@@ -73,7 +73,7 @@ class PeriodProfiles:
 
 @dataclass(frozen=True)
 class PreparedData:
-    """Output of the data preparation phase (steps 1-3)."""
+    """Output of the data-preparation phase (phase 1)."""
 
     norm_data: NormalizedData
     period_profiles: PeriodProfiles
@@ -89,7 +89,7 @@ class PreparedData:
 
 @dataclass(frozen=True)
 class ClusteringOutput:
-    """Output of the clustering + post-processing phase (steps 4-9)."""
+    """Output of the clustering + post-processing phase (phase 2)."""
 
     cluster_periods_list: list[np.ndarray]
     cluster_order: np.ndarray
@@ -103,7 +103,7 @@ class ClusteringOutput:
 
 @dataclass(frozen=True)
 class FormattedOutput:
-    """Output of the formatting + reconstruction phase (steps 10-14)."""
+    """Output of the formatting + reconstruction phase (phase 3)."""
 
     typical_periods: pd.DataFrame
     reconstructed_data: pd.DataFrame

@@ -39,8 +39,8 @@ if TYPE_CHECKING:
 def _count_occurrences(cluster_order: np.ndarray) -> dict[int, float]:
     """Count how many original periods each cluster represents.
 
-    Returns float values because partial-period adjustment (step 9)
-    can produce fractional counts downstream.
+    Returns float values because the partial-period adjustment can produce
+    fractional counts downstream.
     """
     nums, counts = np.unique(cluster_order, return_counts=True)
     return {int(num): float(counts[ii]) for ii, num in enumerate(nums)}
@@ -222,7 +222,7 @@ def _prepare_data(
     data: pd.DataFrame,
     cfg: PipelineConfig,
 ) -> PreparedData:
-    """Phase 1: Build representation dict, normalize, unstack, weight (steps 1-3)."""
+    """Phase 1 — normalize input, unstack to periods, build the Weighter."""
     cluster = cfg.cluster
     cluster_representation = cluster.get_representation()
     representation_dict = _build_representation_dict(
@@ -231,19 +231,17 @@ def _prepare_data(
     original_column_order = list(data.columns)
     original_data = data.copy()
 
-    # Step 1: Normalize
     norm_data = normalize(data, cluster.scale_by_column_means)
 
-    # Step 2: Unstack to periods
     period_profiles = unstack_to_periods(norm_data.values, cfg.n_timesteps_per_period)
     candidates = period_profiles.profiles_dataframe.values
 
-    # Step 2b: Bake weights into the candidates matrix used for clustering distance.
+    # Weights are baked into the candidates matrix used for clustering distance.
     weighter = _Weighter(norm_data.values.columns, cluster.weights)
     candidates = weighter.apply_candidates(candidates, cfg.n_timesteps_per_period)
 
-    # Step 3: Period sums are extra columns appended for clustering distance
-    # only; they must NOT reach representations() which expects original columns.
+    # Period sums are extra columns appended for clustering distance only;
+    # they must NOT reach representations() which expects original columns.
     n_feature_cols = candidates.shape[1]
     if cluster.include_period_sums:
         candidates, _n_extra = add_period_sum_features(
@@ -267,13 +265,12 @@ def _cluster_and_postprocess(
     cfg: PipelineConfig,
     data_length: int,
 ) -> ClusteringOutput:
-    """Phase 2: Cluster, trim, extremes, counts, rescale, partial (steps 4-9)."""
+    """Phase 2 — cluster, add extremes, unweight, count, rescale."""
     cluster = cfg.cluster
     cluster_representation = cluster.get_representation()
     candidates = prepared.candidates
     period_profiles = prepared.period_profiles
 
-    # Step 4: Cluster
     clustering_duration = 0.0
     cluster_center_indices: list[int] | None = None
 
@@ -317,18 +314,16 @@ def _cluster_and_postprocess(
             )
         clustering_duration = time.time() - t_start
 
-    # Ensure cluster_order is always np.ndarray
     cluster_order = np.asarray(cluster_order)
 
-    # Step 5: Trim eval features from representatives (still weighted)
+    # Trim period-sum feature columns off the representatives (still weighted).
     cluster_periods_list: list[np.ndarray] = [
         center[: prepared.n_feature_cols] for center in cluster_centers
     ]
 
-    # Step 6: Add extreme periods if configured
-    # Extremes run in weighted space (matching develop): weighted profiles
-    # determine which period is extreme, and extracted profiles carry weights.
-    # Unweighting happens after, so all centers are treated uniformly.
+    # Extremes run in weighted space: weighted profiles determine which period
+    # is extreme, and the extracted profiles carry weights. The unweighting
+    # below treats every center (regular + extreme) the same way.
     extreme_periods_info: dict[str, dict] = {}
     extreme_cluster_idx: list[int] = []
 
@@ -354,10 +349,8 @@ def _cluster_and_postprocess(
         cluster_periods_list, cfg.n_timesteps_per_period
     )
 
-    # Step 7: Compute cluster counts
     cluster_counts = _count_occurrences(cluster_order)
 
-    # Step 8: Rescale if requested
     rescale_deviations: dict[str, dict] = {}
     rescale_exclude = cfg.rescale_exclude_columns or []
     if cfg.rescale_cluster_periods:
@@ -373,7 +366,8 @@ def _cluster_and_postprocess(
         )
         cluster_periods_list = list(cluster_periods_list)
 
-    # Step 9: Adjust for partial periods
+    # If the input doesn't divide evenly into periods, the last one was padded
+    # in unstack_to_periods; shrink its weight proportionally so totals match.
     if data_length % cfg.n_timesteps_per_period != 0:
         last_cluster = int(cluster_order[-1])
         cluster_counts[last_cluster] -= (
@@ -399,16 +393,14 @@ def _format_and_reconstruct(
     clustered: ClusteringOutput,
     cfg: PipelineConfig,
 ) -> FormattedOutput:
-    """Phase 3: Format, segment, denorm, bounds, reconstruct + accuracy (steps 10-14)."""
+    """Phase 3 — format, segment, denormalize, bounds-check, reconstruct."""
     norm_data = prepared.norm_data
     period_profiles = prepared.period_profiles
 
-    # Step 10: Format representatives to MultiIndex DataFrame
     normalized_typical_periods = _representatives_to_dataframe(
         clustered.cluster_periods_list, period_profiles.column_index
     )
 
-    # Step 11: Segmentation if configured
     segmented_df = None
     predicted_segmented_df = None
     segment_center_indices = None
@@ -436,17 +428,14 @@ def _format_and_reconstruct(
         denorm_source = normalized_typical_periods
         reconstruct_source = normalized_typical_periods
 
-    # Step 12: Denormalize -> typical_periods
     typical_periods = denormalize(denorm_source, norm_data)
     if cfg.round_decimals is not None:
         typical_periods = typical_periods.round(decimals=cfg.round_decimals)
 
-    # Step 13: Bounds check + warnings
     _warn_if_out_of_bounds(
         typical_periods, prepared.original_data, cfg.numerical_tolerance
     )
 
-    # Step 14: Reconstruct + compute accuracy
     reconstructed_data, normalized_predicted = reconstruct(
         reconstruct_source,
         clustered.cluster_order,
@@ -457,7 +446,6 @@ def _format_and_reconstruct(
     if cfg.round_decimals is not None:
         reconstructed_data = reconstructed_data.round(decimals=cfg.round_decimals)
 
-    # Restore original column order
     typical_periods = typical_periods[prepared.original_column_order]
     reconstructed_data = reconstructed_data[prepared.original_column_order]
 
@@ -476,7 +464,7 @@ def _assemble_result(
     formatted: FormattedOutput,
     cfg: PipelineConfig,
 ) -> PipelineResult:
-    """Phase 4: Build ClusteringResult + PipelineResult (steps 15-16)."""
+    """Phase 4 — assemble ClusteringResult and PipelineResult."""
     original_data_out = prepared.original_data[prepared.original_column_order]
 
     input_time_index = (
