@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
+from tsam.config import ClusteringResult, MinMaxMean
 from tsam.options import options
 from tsam.pipeline.accuracy import reconstruct
 from tsam.pipeline.clustering import (
@@ -28,10 +29,7 @@ from tsam.pipeline.types import (
 )
 
 if TYPE_CHECKING:
-    from tsam.config import (
-        Distribution,
-        MinMaxMean,
-    )
+    from tsam.config import Distribution
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -148,8 +146,6 @@ def _build_representation_dict(
     cluster_representation: str | Distribution | MinMaxMean | None,
 ) -> dict[str, str]:
     """Build the representation dict (mean/min/max per column) from config."""
-    from tsam.config import MinMaxMean
-
     representation_dict: dict[str, str] = dict.fromkeys(columns, "mean")
     if isinstance(cluster_representation, MinMaxMean):
         for col in cluster_representation.max_columns:
@@ -181,8 +177,6 @@ def run_pipeline(
     Replaces create_typical_periods() + predict_original_data() +
     accuracy_indicators() from the v3 class-based API.
     """
-    from tsam.config import ClusteringResult as _ClusteringResult
-
     cluster = cfg.cluster
     cluster_representation = cluster.get_representation()
     representation_dict = _build_representation_dict(
@@ -410,7 +404,7 @@ def run_pipeline(
         else None
     )
 
-    clustering_result = _ClusteringResult.from_pipeline(
+    clustering_result = ClusteringResult.from_pipeline(
         cluster_center_indices=cluster_center_indices,
         extreme_periods_info=extreme_periods_info,
         extremes_config=cfg.extremes,
