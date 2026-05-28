@@ -99,43 +99,15 @@ def _warn_if_out_of_bounds(
             )
 
 
-def _apply_weights_df(
-    df: pd.DataFrame, weights: dict[str, float] | None
-) -> pd.DataFrame:
-    """Multiply DataFrame columns by weights for segmentation.
-
-    Segmentation boundaries are determined in weighted space so that
-    high-weight columns have more influence on where segments fall.
-    """
-    if not weights:
-        return df
-    out = df.copy()
-    for col, w in weights.items():
-        if col in out.columns:
-            out[col] *= w
-    return pd.DataFrame(out)
-
-
-def _remove_weights_df(
-    df: pd.DataFrame, weights: dict[str, float] | None
-) -> pd.DataFrame:
-    """Divide out weights after segmentation to restore unweighted values."""
-    if not weights:
-        return df
-    out = df.copy()
-    for col, w in weights.items():
-        if col in out.columns:
-            out[col] /= w
-    return pd.DataFrame(out)
-
-
 def _build_weight_vector(
     columns: pd.Index,
     weights: dict[str, float] | None,
 ) -> np.ndarray | None:
-    """Build a weight array aligned to *columns*, defaulting unlisted columns to 1.0.
+    """Build a column-aligned weight array, ``None`` when no weights are active.
 
-    Returns ``None`` if all weights are 1.0 (no weighting needed).
+    Returns ``None`` when *weights* is missing/empty or every entry is 1.0 —
+    those cases need no weighting at all and the orchestrator can short-circuit.
+    Sub-``options.min_weight`` entries are clamped and warned about.
     """
     if not weights:
         return None
@@ -153,6 +125,81 @@ def _build_weight_vector(
             any_non_unit = True
         result.append(w)
     return np.array(result) if any_non_unit else None
+
+
+class _Weighter:
+    """Encapsulates per-column weighting for the pipeline.
+
+    Built once in `_prepare_data` from the user's weights dict and the
+    (normalized, sorted) column index. Owns the conversion to an ndarray
+    aligned with the columns and exposes apply/remove operations for each
+    data shape the phases need: ndarray candidates, lists of cluster
+    centers, MultiIndex profiles DataFrame (for extremes), flat
+    typical-periods DataFrame (for segmentation).
+
+    No-op when no weights are configured or every weight is 1.0. ``active``
+    reports whether weighting is in effect.
+    """
+
+    def __init__(
+        self,
+        columns: pd.Index,
+        weights: dict[str, float] | None,
+    ) -> None:
+        self._dict = weights
+        self._vector = _build_weight_vector(columns, weights)
+
+    @property
+    def active(self) -> bool:
+        return self._vector is not None
+
+    def apply_candidates(
+        self, candidates: np.ndarray, n_timesteps_per_period: int
+    ) -> np.ndarray:
+        if self._vector is None:
+            return candidates
+        tile = np.repeat(self._vector, n_timesteps_per_period)
+        return np.asarray(candidates * tile)
+
+    def remove_centers(
+        self, centers: list[np.ndarray], n_timesteps_per_period: int
+    ) -> list[np.ndarray]:
+        if self._vector is None:
+            return centers
+        inv_tile = np.repeat(1.0 / self._vector, n_timesteps_per_period)
+        return [c * inv_tile for c in centers]
+
+    def apply_profiles_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Weight a MultiIndex profiles DataFrame, used by add_extreme_periods."""
+        if self._vector is None:
+            return df
+        out = df.copy()
+        for col_name, w in zip(
+            df.columns.get_level_values(0).unique(),
+            self._vector,
+        ):
+            out[col_name] *= w
+        return pd.DataFrame(out)
+
+    def apply_typical_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Weight a flat typical-periods DataFrame before segmentation."""
+        if not self._dict:
+            return df
+        out = df.copy()
+        for col, w in self._dict.items():
+            if col in out.columns:
+                out[col] *= w
+        return pd.DataFrame(out)
+
+    def remove_typical_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Strip weights from segmentation outputs before denormalization."""
+        if not self._dict:
+            return df
+        out = df.copy()
+        for col, w in self._dict.items():
+            if col in out.columns:
+                out[col] /= w
+        return pd.DataFrame(out)
 
 
 def _build_representation_dict(
@@ -191,24 +238,12 @@ def _prepare_data(
     period_profiles = unstack_to_periods(norm_data.values, cfg.n_timesteps_per_period)
     candidates = period_profiles.profiles_dataframe.values
 
-    # Step 2b: Apply weights directly to candidates
-    weight_vector = _build_weight_vector(norm_data.values.columns, cluster.weights)
-    weighted_profiles_df: pd.DataFrame | None = None
-    if weight_vector is not None:
-        weight_tile = np.repeat(weight_vector, period_profiles.n_timesteps_per_period)
-        candidates = candidates * weight_tile
-        # Keep a weighted DataFrame for extremes/segmentation (need column labels).
-        wpdf = period_profiles.profiles_dataframe.copy()
-        for col_name, w in zip(
-            wpdf.columns.get_level_values(0).unique(),
-            weight_vector,
-        ):
-            wpdf[col_name] *= w
-        weighted_profiles_df = wpdf
+    # Step 2b: Bake weights into the candidates matrix used for clustering distance.
+    weighter = _Weighter(norm_data.values.columns, cluster.weights)
+    candidates = weighter.apply_candidates(candidates, cfg.n_timesteps_per_period)
 
-    # Step 3: Add period sum features if requested
-    # Period sums are extra columns appended for clustering distance only;
-    # they must NOT reach representations() which expects original columns.
+    # Step 3: Period sums are extra columns appended for clustering distance
+    # only; they must NOT reach representations() which expects original columns.
     n_feature_cols = candidates.shape[1]
     if cluster.include_period_sums:
         candidates, _n_extra = add_period_sum_features(
@@ -223,8 +258,7 @@ def _prepare_data(
         n_feature_cols=n_feature_cols,
         original_column_order=original_column_order,
         original_data=original_data,
-        weight_vector=weight_vector,
-        weighted_profiles_df=weighted_profiles_df,
+        weighter=weighter,
     )
 
 
@@ -299,32 +333,26 @@ def _cluster_and_postprocess(
     extreme_cluster_idx: list[int] = []
 
     if cfg.extremes is not None:
-        profiles_for_extremes = (
-            prepared.weighted_profiles_df
-            if prepared.weighted_profiles_df is not None
-            else period_profiles.profiles_dataframe
-        )
         (
             cluster_periods_list,
             cluster_order,
             extreme_cluster_idx,
             extreme_periods_info,
         ) = add_extreme_periods(
-            profiles_for_extremes,
+            prepared.weighter.apply_profiles_df(period_profiles.profiles_dataframe),
             cluster_periods_list,
             cluster_order,
             cfg.extremes,
         )
         cluster_order = np.asarray(cluster_order)
-    else:
-        if cfg.predef is not None and cfg.predef.extreme_cluster_idx is not None:
-            extreme_cluster_idx = list(cfg.predef.extreme_cluster_idx)
+    elif cfg.predef is not None and cfg.predef.extreme_cluster_idx is not None:
+        extreme_cluster_idx = list(cfg.predef.extreme_cluster_idx)
 
-    # Unweight all representatives (regular + extreme) — remove weights
-    # before downstream steps (rescale, denorm) which expect unweighted data.
-    if prepared.weight_vector is not None:
-        inv_tile = np.repeat(1.0 / prepared.weight_vector, cfg.n_timesteps_per_period)
-        cluster_periods_list = [center * inv_tile for center in cluster_periods_list]
+    # Unweight all representatives (regular + extreme) before downstream steps
+    # (rescale, denorm) which expect unweighted data.
+    cluster_periods_list = prepared.weighter.remove_centers(
+        cluster_periods_list, cfg.n_timesteps_per_period
+    )
 
     # Step 7: Compute cluster counts
     cluster_counts = _count_occurrences(cluster_order)
@@ -386,22 +414,21 @@ def _format_and_reconstruct(
     segment_center_indices = None
 
     if cfg.segments is not None:
-        # Segmentation runs in weighted space so that high-weight columns
-        # have more influence on segment boundaries. Weights are removed
-        # from the output before denormalization.
-        weights = cfg.cluster.weights
-        segmentation_input = _apply_weights_df(normalized_typical_periods, weights)
+        # Segmentation runs in weighted space so high-weight columns drive
+        # segment boundaries; weights are stripped before denormalization.
         segmented_df, predicted_segmented_df, segment_center_indices = (
             segment_typical_periods(
-                segmentation_input,
+                prepared.weighter.apply_typical_df(normalized_typical_periods),
                 cfg.n_timesteps_per_period,
                 cfg.segments,
                 prepared.representation_dict,
                 cfg.predef,
             )
         )
-        segmented_df = _remove_weights_df(segmented_df, weights)
-        predicted_segmented_df = _remove_weights_df(predicted_segmented_df, weights)
+        segmented_df = prepared.weighter.remove_typical_df(segmented_df)
+        predicted_segmented_df = prepared.weighter.remove_typical_df(
+            predicted_segmented_df
+        )
         segmented_normalized = segmented_df.reset_index(level=3, drop=True)
         denorm_source = segmented_normalized
         reconstruct_source = predicted_segmented_df

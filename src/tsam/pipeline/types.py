@@ -17,6 +17,7 @@ if TYPE_CHECKING:
         ExtremeConfig,
         SegmentConfig,
     )
+    from tsam.pipeline import _Weighter
 
 
 @dataclass(frozen=True)
@@ -83,8 +84,7 @@ class PreparedData:
     original_data: (
         pd.DataFrame
     )  # original input data (for rescale, bounds, reconstruct)
-    weight_vector: np.ndarray | None = None
-    weighted_profiles_df: pd.DataFrame | None = None
+    weighter: _Weighter
 
 
 @dataclass(frozen=True)
