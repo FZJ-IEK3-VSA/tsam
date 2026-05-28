@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
+from tsam.clustering_result import ClusteringResult
+from tsam.config import MinMaxMean
 from tsam.options import options
 from tsam.pipeline.accuracy import reconstruct
 from tsam.pipeline.clustering import (
@@ -31,10 +33,7 @@ from tsam.pipeline.types import (
 )
 
 if TYPE_CHECKING:
-    from tsam.config import (
-        Distribution,
-        MinMaxMean,
-    )
+    from tsam.config import Distribution
 
 
 def _count_occurrences(cluster_order: np.ndarray) -> dict[int, float]:
@@ -161,8 +160,6 @@ def _build_representation_dict(
     cluster_representation: str | Distribution | MinMaxMean | None,
 ) -> dict[str, str]:
     """Build the representation dict (mean/min/max per column) from config."""
-    from tsam.config import MinMaxMean
-
     representation_dict: dict[str, str] = dict.fromkeys(columns, "mean")
     if isinstance(cluster_representation, MinMaxMean):
         for col in cluster_representation.max_columns:
@@ -453,8 +450,6 @@ def _assemble_result(
     cfg: PipelineConfig,
 ) -> PipelineResult:
     """Phase 4: Build ClusteringResult + PipelineResult (steps 15-16)."""
-    from tsam.clustering_result import ClusteringResult as _ClusteringResult
-
     original_data_out = prepared.original_data[prepared.original_column_order]
 
     input_time_index = (
@@ -463,7 +458,7 @@ def _assemble_result(
         else None
     )
 
-    clustering_result = _ClusteringResult.from_pipeline(
+    clustering_result = ClusteringResult.from_pipeline(
         cluster_center_indices=clustered.cluster_center_indices,
         extreme_periods_info=clustered.extreme_periods_info,
         extremes_config=cfg.extremes,
