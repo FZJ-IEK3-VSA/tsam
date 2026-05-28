@@ -25,5 +25,3 @@ The aggregation flow is implemented as a sequence of **pure functions** organise
 **Public surface is narrower and typed.** Users interact with `tsam.aggregate()`, `ClusterConfig`/`SegmentConfig`/`ExtremeConfig` for inputs, and `AggregationResult` for outputs. Internal types (`PipelineConfig`, `PreparedData`, `ClusteringOutput`, etc.) are not exported.
 
 **Two APIs coexist during the transition.** The legacy `TimeSeriesAggregation.create_typical_periods()` remains importable and functional so existing user code and notebooks keep working. Calls into the legacy entry point emit a `LegacyAPIWarning`. The legacy class will be removed in a future major version once downstream users have migrated.
-
-**Slightly higher onboarding cost for new contributors.** Reading the pipeline now means following a chain of small modules and the dataclasses passed between them, rather than scrolling through one function. The trade-off is that any single stage is much shorter and self-contained than its v3 equivalent.
