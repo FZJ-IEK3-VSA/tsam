@@ -42,7 +42,7 @@ Each stage is a small module of pure functions with explicit inputs and outputs.
 |--------|-------|-------|
 | `pipeline/normalize.py` | normalize / denormalize | Scale to [0, 1] per column. |
 | `pipeline/periods.py` | unstack / period-sum features | Reshape flat time series → (period, timestep) matrix. |
-| `pipeline/clustering.py` | cluster | Dispatches to a backend in `utils/`. |
+| `pipeline/clustering.py` | cluster | Calls `period_aggregation.aggregate_periods()`, which dispatches to scikit-learn or to a backend in `utils/`. |
 | `pipeline/extremes.py` | extreme periods | Inject extreme-value periods into the cluster set. |
 | `pipeline/rescale.py` | rescale | Adjust representatives so column means match the original. |
 | `pipeline/segment.py` | segment | Merge adjacent timesteps within a typical period. |
