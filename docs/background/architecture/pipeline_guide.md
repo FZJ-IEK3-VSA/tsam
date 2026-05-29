@@ -441,7 +441,7 @@ the user's original units.
 
 ---
 
-### Step 7: Reconstruct + accuracy
+### Step 7: Reconstruct
 
 | | |
 |---|---|
