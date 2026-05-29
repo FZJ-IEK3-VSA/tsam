@@ -77,7 +77,6 @@ nav:
     - Architecture:
       - background/architecture/index.md
       - System Context: background/architecture/context.md
-      - Components: background/architecture/components.md
       - Pipeline Guide: background/architecture/pipeline_guide.md
     - Decisions:
       - background/decisions/index.md

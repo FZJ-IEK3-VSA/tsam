@@ -143,5 +143,34 @@ Full signatures and options live in the API reference —
 [Configuration](../../api/configuration.md),
 [Results](../../api/results.md), and
 [Pipeline internals](../../api/pipeline.md) (the phase and stage functions
-above link straight into it). For where each module lives in the source tree,
-see [Components](components.md).
+above link straight into it). The source-tree module map is below.
+
+??? info "Public surface"
+
+    | Module | Responsibility |
+    |--------|---------------|
+    | [`api.py`](../../api/index.md) | `aggregate()` — the entry point: builds a `PipelineConfig`, runs the pipeline, wraps the output as an `AggregationResult`. |
+    | [`config.py`](../../api/configuration.md) | Config dataclasses (`ClusterConfig`, `SegmentConfig`, `ExtremeConfig`, `Distribution`, `MinMaxMean`) plus the transfer object `ClusteringResult`. |
+    | [`result.py`](../../api/results.md) | `AggregationResult`, `AccuracyMetrics`. |
+    | [`tuning.py`, `hyperparametertuning.py`](../../api/tuning.md) | Sweep configurations and rank by accuracy (loop `aggregate()`). |
+    | [`plot.py`](../../api/utilities.md) | Plotly-based visualization (lazy import). |
+    | [`options.py`](../../api/utilities.md) | Global numerical options and tolerances. |
+
+??? info "Pipeline internals"
+
+    | Module | Responsibility |
+    |--------|---------------|
+    | `pipeline/orchestrator.py` | `run_pipeline()` plus the four phase functions and the glue with no dedicated stage module. |
+    | `pipeline/normalize.py` | Scale columns to [0, 1] and invert it (`normalize` / `denormalize`). |
+    | `pipeline/periods.py` | Reshape the flat series into a (period, timestep) matrix; optional period-sum features. |
+    | `pipeline/clustering.py` | Group periods and pick representatives; dispatches to a `utils/` backend or scikit-learn. |
+    | `pipeline/extremes.py` | Inject extreme-value periods into the cluster set. |
+    | `pipeline/rescale.py` | Adjust representatives so column means match the original. |
+    | `pipeline/segment.py` | Merge adjacent timesteps within a typical period. |
+    | `pipeline/accuracy.py` | Reconstruct the full series and compute accuracy metrics. |
+    | `pipeline/types.py` | Internal dataclasses: `PipelineConfig`, the phase milestones, `PipelineResult`. |
+    | `period_aggregation.py` · `representations.py` | Clustering dispatch and representative computation (shared by clustering and segmentation). |
+    | `utils/k_medoids_exact.py` · `utils/k_maxoids.py` | k-medoids (MILP) / k-maxoids solvers. |
+    | `utils/duration_representation.py` | Duration-curve representation (for `distribution`). |
+    | `utils/segmentation.py` | Constrained agglomerative segmentation. |
+    | `weights.py` · `exceptions.py` | Weight validation; custom warnings. |
