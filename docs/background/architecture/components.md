@@ -25,7 +25,7 @@ The diagram below shows the architectural components of `tsam` and how they coll
 
 ### Pipeline orchestrator
 
-`pipeline/__init__.py` contains `run_pipeline()`, which executes the 16-step aggregation flow in four phases:
+`pipeline/__init__.py` contains `run_pipeline()`, which executes the eight-stage aggregation flow in four phases:
 
 1. **`_prepare_data`** — normalize, unstack to periods, weight, augment with period sums.
 2. **`_cluster_and_postprocess`** — cluster, add extremes, compute counts, rescale.
