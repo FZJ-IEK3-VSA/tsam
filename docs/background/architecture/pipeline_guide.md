@@ -181,6 +181,14 @@ regular candidates. Either way, the extra columns are removed from the
 cluster centers in step 4 — they only influence which periods get grouped
 together.
 
+The sum features themselves are computed from the unweighted
+`profiles_dataframe`, so column weights scale the per-timestep
+distance contribution but leave the period-sum distance contribution
+at its raw magnitude. The period-sum feature is meant to anchor
+clustering on per-period totals (e.g. total energy), and that total
+is the same quantity regardless of how individual timesteps are
+weighted.
+
 At the end of steps 1–2b, `_prepare_data()` returns a `PreparedData` dataclass with:
 
 - `norm_data: NormalizedData`
