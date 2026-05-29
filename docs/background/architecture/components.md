@@ -47,7 +47,7 @@ Each pipeline module is a small file of pure functions with explicit inputs and 
 | `pipeline/rescale.py` | 4a Rescale (optional) | Adjust representatives so column means match the original. |
 | `pipeline/segment.py` | 5a Segment (optional) | Merge adjacent timesteps within a typical period. |
 | `pipeline/accuracy.py` | 7 Reconstruct | Compute MAE, RMSE, etc. between original and reconstructed (accuracy is computed lazily on `PipelineResult`). |
-| `pipeline/__init__.py` | 2a Apply weights · 4 Trim · unweight · count · 5 Format representatives · 8 Assemble | The `run_pipeline()` orchestrator and its glue helpers — the steps with no dedicated stage module live here. |
+| `pipeline/__init__.py` | 2a Apply weights (optional) · 4 Trim · unweight · count · 5 Format representatives · 8 Assemble | The `run_pipeline()` orchestrator and its glue helpers — the steps with no dedicated stage module live here. |
 
 ### Clustering backends
 
