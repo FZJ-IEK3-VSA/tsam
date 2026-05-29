@@ -26,14 +26,15 @@ vertical-gap: 25
 # ── Left column: public API (config & results, entry) + auxiliary ─────────
 lcol: "" {
   class: pad
-  grid-rows: 5
+  grid-rows: 6
   vertical-gap: 65
 
   pad_top: "" { class: pad }
   cfg: "Config — config.py\nClusterConfig · SegmentConfig · ExtremeConfig\nDistribution · MinMaxMean" { class: public }
   api: "aggregate()\napi.py — the entry point" { class: public }
   res: "Results — result.py (+ config.py)\nAggregationResult · AccuracyMetrics · ClusteringResult" { class: public }
-  tools: "Public tools" {
+  pad_mid: "" { class: pad; height: 35 }
+  tools: "Tools" {
     class: side
     grid-columns: 3
     tune: "tuning.py\nhyperparameter sweeps\n(loops aggregate())" { class: tool }
@@ -119,10 +120,20 @@ rcol: "" {
   }
 }
 
+# ── Legend (colour key) ────────────────────────────────────────────────────
+legend: "Legend" {
+  grid-rows: 1
+  le_pub: "Public API" { class: public; style.font-size: 12 }
+  le_tool: "Tool" { class: tool; style.font-size: 12 }
+  le_flow: "Pipeline stage" { class: default; style.font-size: 12 }
+  le_sup: "Internal" { class: support; style.font-size: 12 }
+  le_opt: "Optional" { class: optional_step; style.font-size: 12 }
+}
+
 # ── Cross-column edges ─────────────────────────────────────────────────────
 lcol.cfg -> lcol.api: "configures"
 lcol.api -> lcol.res: "returns"
-lcol.tools.tune -> lcol.api
+lcol.tools.tune -> lcol.api: "loops" { class: conn }
 lcol.api -> pipeline
 pipeline.p2.clustering -> rcol.clu_solvers { class: conn }
 pipeline.p3.segment -> rcol.seg_back { class: conn }
