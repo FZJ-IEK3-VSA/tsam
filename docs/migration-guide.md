@@ -236,9 +236,14 @@ object with everything attached.
 | `agg.createTypicalPeriods()` | `result.cluster_representatives` |
 | `agg.predictOriginalData()` | `result.reconstructed` |
 | `agg.accuracyIndicators()` | `result.accuracy.summary` |
+| `agg.totalAccuracyIndicators()` | `result.accuracy.weighted_rmse` / `result.accuracy.weighted_mae` |
 | `agg.clusterOrder` | `result.cluster_assignments` |
 | `agg.clusterPeriodNoOccur` | `result.cluster_weights` |
+| `agg.clusterPeriodIdx` | `result.period_index` |
+| `agg.stepIdx` | `result.timestep_index` |
 | `agg.clusterCenterIndices` | `result.clustering.cluster_centers` |
+| `agg.indexMatching()` | `result.assignments` |
+| `agg.segmentDurationDict` | `result.segment_durations` (tuple per cluster; `None` if not segmented) |
 | `agg.timeSeries` | `result.original` |
 | *(no equivalent)* | `result.residuals` |
 | *(no equivalent)* | `result.plot.compare()` |
@@ -246,6 +251,31 @@ object with everything attached.
 The `cluster_representatives` DataFrame now uses a
 `MultiIndex(cluster, timestep)` instead of
 `MultiIndex(PeriodNum, TimeStep)`.
+
+### Accuracy metrics { #accuracy-metrics }
+
+`agg.accuracyIndicators()` returned a DataFrame indexed by column with
+`RMSE`/`MAE`/`RMSE_duration` columns. `result.accuracy` is an
+`AccuracyMetrics` object: `.summary` is the equivalent DataFrame, while the
+individual metrics are per-column `pd.Series`.
+
+| Old (v2) | New (v3) |
+|----------|----------|
+| `agg.accuracyIndicators().loc[col, "RMSE"]` | `result.accuracy.rmse[col]` |
+| `agg.accuracyIndicators().loc[col, "MAE"]` | `result.accuracy.mae[col]` |
+| `agg.accuracyIndicators().loc[col, "RMSE_duration"]` | `result.accuracy.rmse_duration[col]` |
+| `agg.totalAccuracyIndicators()["RMSE"]` | `result.accuracy.weighted_rmse` |
+| `agg.totalAccuracyIndicators()["MAE"]` | `result.accuracy.weighted_mae` |
+
+With uniform weights the `weighted_*` totals match the old
+`totalAccuracyIndicators()` values.
+
+### Index/assignment metadata { #assignment-metadata }
+
+`agg.indexMatching()` returned a DataFrame with `PeriodNum`/`TimeStep`/
+`SegmentIndex` columns. `result.assignments` is the equivalent, indexed by the
+original datetime index, with columns `period_idx`, `timestep_idx`,
+`cluster_idx` (= old `PeriodNum`) and `segment_idx` (only when segmented).
 
 ## Clustering transfer
 
@@ -479,3 +509,18 @@ warnings.filterwarnings("ignore", category=LegacyAPIWarning)
 
 `prepareEnersysInput()`
 :   Removed. Access result properties directly instead.
+
+## Low-level helpers (advanced) { #low-level-helpers }
+
+The clustering and representation primitives used to be reachable through
+`tsam.timeseriesaggregation` (e.g. `tsam.timeseriesaggregation.aggregatePeriods`,
+`tsam.timeseriesaggregation.representations`). Those re-exports go away with the
+legacy module — import the primitives from their own modules instead:
+
+| Old (via legacy wrapper) | New (direct import) |
+|--------------------------|---------------------|
+| `tsam.timeseriesaggregation.aggregatePeriods(...)` | `from tsam.periodAggregation import aggregatePeriods` |
+| `tsam.timeseriesaggregation.representations(...)` | `from tsam.representations import representations` |
+
+These are internal building blocks without public-stability guarantees; prefer
+the high-level `tsam.aggregate()` API for normal use.
