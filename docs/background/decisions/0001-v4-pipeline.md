@@ -1,6 +1,6 @@
 # 0001 — V4 pipeline replaces `create_typical_periods`
 
-- **Released in:** [v4.0.0](../../changelog.md)
+- **Target release:** [v4.0.0](../../changelog.md)
 
 ## Context
 

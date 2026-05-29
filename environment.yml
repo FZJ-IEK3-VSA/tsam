@@ -9,7 +9,6 @@ dependencies:
   - pandas >=2.2.0,<=3.0.1
   - numpy >=1.22.4,<=2.4.3
   - pyomo >=6.4.3,<=6.10.0
-  - networkx >=2.5,<=3.6.1
   - tqdm >=4.21.0,<=4.67.3
   - highspy >=1.7.2,<=1.13.1
   - plotly >=5.0.0,<=6.6.0
@@ -31,4 +30,3 @@ dependencies:
   - ruff <=0.15.8
   - mypy <=1.19.1
   - pre-commit <=4.5.1
-

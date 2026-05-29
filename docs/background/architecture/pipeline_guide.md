@@ -92,11 +92,10 @@ differences between columns.
 
 **What happens:**
 
-1. **Sort columns** alphabetically (deterministic column order).
-2. **Cast to float** (in case of integer columns).
-3. **Min-max scale** each column to [0, 1] using scikit-learn's
+1. **Cast to float** (in case of integer columns).
+2. **Min-max scale** each column to [0, 1] using scikit-learn's
    `MinMaxScaler`. The fitted scaler is stored for later inversion.
-4. **Column-mean normalization** (optional, `scale_by_column_means=True`):
+3. **Column-mean normalization** (optional, `scale_by_column_means=True`):
    divide each column by its mean so all columns have equal weight
    regardless of their typical magnitude. Useful when columns have very
    different average levels.
@@ -181,6 +180,14 @@ clustering features). When no weights are active, they are appended to the
 regular candidates. Either way, the extra columns are removed from the
 cluster centers in step 4 — they only influence which periods get grouped
 together.
+
+The sum features themselves are computed from the unweighted
+`profiles_dataframe`, so column weights scale the per-timestep
+distance contribution but leave the period-sum distance contribution
+at its raw magnitude. The period-sum feature is meant to anchor
+clustering on per-period totals (e.g. total energy), and that total
+is the same quantity regardless of how individual timesteps are
+weighted.
 
 At the end of steps 1–2b, `_prepare_data()` returns a `PreparedData` dataclass with:
 
@@ -299,7 +306,7 @@ clustering.
 | **Consumes** | (possibly weighted) `cluster_periods_list`, `cluster_order`, `weight_vector`, original data length |
 | **Produces** | unweighted `cluster_periods_list`, final `cluster_counts: dict[int, float]` |
 
-Four operations happen here in sequence:
+Three operations happen here in sequence:
 
 1. **Trim** period-sum extras: if period-sum features were added in step 2b,
    the extra columns are stripped from each cluster center vector, restoring
@@ -315,10 +322,10 @@ Four operations happen here in sequence:
    These weights are used for rescaling (step 4a) and for downstream optimization
    models — each typical period represents `weight` real periods.
 
-4. **Adjust for partial periods**: if the time series doesn't divide evenly
-   into periods (e.g., 8761 hours with 24-hour periods), the last period was
-   padded in step 2. Here, its cluster weight is reduced proportionally so the
-   total weight is correct.
+A tail correction follows: if the time series doesn't divide evenly into
+periods (e.g., 8761 hours with 24-hour periods), the last period was padded
+in step 2 to make it fit. The last cluster's count is reduced proportionally
+so the total weight matches the original data length.
 
 ---
 
@@ -434,7 +441,7 @@ the user's original units.
 
 ---
 
-### Step 7: Reconstruct + accuracy
+### Step 7: Reconstruct
 
 | | |
 |---|---|
@@ -492,9 +499,9 @@ Key fields stored:
 - `segment_assignments`, `segment_durations` — segmentation structure.
 - Config references for documentation.
 
-The pipeline restores the original column order (columns are sorted
-alphabetically internally) and packs everything into a `PipelineResult`,
-which `aggregate()` converts to the user-facing `AggregationResult`.
+The pipeline preserves the original column order and packs everything
+into a `PipelineResult`, which `aggregate()` converts to the user-facing
+`AggregationResult`.
 
 `PipelineResult` is the final internal handoff. It contains the denormalized
 representatives, cluster counts, timing and rescaling metadata, the
