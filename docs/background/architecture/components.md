@@ -36,17 +36,18 @@ For the step-by-step walk-through, see the [Pipeline Guide](pipeline_guide.md).
 
 ### Pipeline modules
 
-Each pipeline module is a small file of pure functions with explicit inputs and outputs. They have no shared state — all data flows through function arguments. This is the property that makes the pipeline testable and reorderable.
+Each pipeline module is a small file of pure functions with explicit inputs and outputs. They have no shared state — all data flows through function arguments. This is the property that makes the pipeline testable and reorderable. The eight-step aggregation flow is illustrated in the [Pipeline Guide](pipeline_guide.md); the table below maps each step to the module that implements it.
 
-| Module | Stage | Notes |
-|--------|-------|-------|
-| `pipeline/normalize.py` | normalize / denormalize | Scale to [0, 1] per column. |
-| `pipeline/periods.py` | unstack / period-sum features | Reshape flat time series → (period, timestep) matrix. |
-| `pipeline/clustering.py` | cluster | Calls `period_aggregation.aggregate_periods()`, which dispatches to scikit-learn or to a backend in `utils/`. |
-| `pipeline/extremes.py` | extreme periods | Inject extreme-value periods into the cluster set. |
-| `pipeline/rescale.py` | rescale | Adjust representatives so column means match the original. |
-| `pipeline/segment.py` | segment | Merge adjacent timesteps within a typical period. |
-| `pipeline/accuracy.py` | reconstruct + metrics | Compute MAE, RMSE, etc. between original and reconstructed. |
+| Module | Step(s) implemented | Notes |
+|--------|---------------------|-------|
+| `pipeline/normalize.py` | 1 Normalize · 6 Denormalize | Scale to [0, 1] per column. |
+| `pipeline/periods.py` | 2 Unstack · 2b Period-sum features (optional) | Reshape flat time series → (period, timestep) matrix. |
+| `pipeline/clustering.py` | 3 Cluster | Calls `period_aggregation.aggregate_periods()`, which dispatches to scikit-learn or to a backend in `utils/`. |
+| `pipeline/extremes.py` | 3a Extremes (optional) | Inject extreme-value periods into the cluster set. |
+| `pipeline/rescale.py` | 4a Rescale (optional) | Adjust representatives so column means match the original. |
+| `pipeline/segment.py` | 5a Segment (optional) | Merge adjacent timesteps within a typical period. |
+| `pipeline/accuracy.py` | 7 Reconstruct | Compute MAE, RMSE, etc. between original and reconstructed (accuracy is computed lazily on `PipelineResult`). |
+| `pipeline/__init__.py` | 2a Apply weights · 4 Trim · unweight · count · 5 Format representatives · 8 Assemble | The `run_pipeline()` orchestrator and its glue helpers — the steps with no dedicated stage module live here. |
 
 ### Clustering backends
 
