@@ -121,8 +121,9 @@ rcol: "" {
 }
 
 # ── Legend (colour key) ────────────────────────────────────────────────────
-legend: "Legend" {
+legend: "Legend (colour key)" {
   grid-rows: 1
+  style: { stroke-dash: 4; stroke: "#b3b3b3"; fill: transparent; font-color: "#8a8a8a" }
   le_pub: "Public API" { class: public; style.font-size: 12 }
   le_tool: "Public tool" { class: tool; style.font-size: 12 }
   le_flow: "Pipeline stage" { class: default; style.font-size: 12 }
