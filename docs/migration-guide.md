@@ -509,18 +509,3 @@ warnings.filterwarnings("ignore", category=LegacyAPIWarning)
 
 `prepareEnersysInput()`
 :   Removed. Access result properties directly instead.
-
-## Low-level helpers (advanced) { #low-level-helpers }
-
-The clustering and representation primitives used to be reachable through
-`tsam.timeseriesaggregation` (e.g. `tsam.timeseriesaggregation.aggregatePeriods`,
-`tsam.timeseriesaggregation.representations`). Those re-exports go away with the
-legacy module — import the primitives from their own modules instead:
-
-| Old (via legacy wrapper) | New (direct import) |
-|--------------------------|---------------------|
-| `tsam.timeseriesaggregation.aggregatePeriods(...)` | `from tsam.periodAggregation import aggregatePeriods` |
-| `tsam.timeseriesaggregation.representations(...)` | `from tsam.representations import representations` |
-
-These are internal building blocks without public-stability guarantees; prefer
-the high-level `tsam.aggregate()` API for normal use.
