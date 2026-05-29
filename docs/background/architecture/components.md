@@ -36,7 +36,7 @@ For the step-by-step walk-through, see the [Pipeline Guide](pipeline_guide.md).
 
 ### Pipeline modules
 
-Each pipeline module is a small file of pure functions with explicit inputs and outputs. They have no shared state — all data flows through function arguments. This is the property that makes the pipeline testable and reorderable. The eight-step aggregation flow is illustrated in the [Pipeline Guide](pipeline_guide.md); the table below maps each step to the module that implements it.
+Each pipeline module is a small file of pure functions with explicit inputs and outputs. Data flows through function arguments rather than instance attributes. This is the property that makes the pipeline testable and reorderable. The eight-step aggregation flow is illustrated in the [Pipeline Guide](pipeline_guide.md); the table below maps each step to the module that implements it.
 
 | Module | Step(s) implemented | Notes |
 |--------|---------------------|-------|
