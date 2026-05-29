@@ -8,4 +8,4 @@ ETHOS.TSAM is a Python library used directly by an **energy-system modeler or da
 
 The **downstream optimization framework** (e.g. [ETHOS.FINE](https://github.com/FZJ-IEK3-VSA/FINE), [flixopt](https://github.com/flixOpt/flixopt), [oemof](https://oemof.org/)) consumes the aggregated result, but tsam has no knowledge of it.
 
-The only optional external dependency is a **MILP solver**, required when `ClusterConfig(method="kmedoids")` is used. All other clustering methods run on scipy/scikit-learn with no external solver.
+The only optional external dependency is a **MILP solver**, required when `ClusterConfig(method="kmedoids")` is used. All other clustering methods run without an external solver.
