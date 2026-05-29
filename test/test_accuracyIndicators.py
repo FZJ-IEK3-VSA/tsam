@@ -53,21 +53,21 @@ def test_accuracyIndicators():
 
 
 def test_accuracyIndicators_partial_weights():
-    # Regression: GH #276. accuracyIndicators raised KeyError when the data
-    # had columns absent from weightDict.
+    # Regression: GH #276. accuracy metrics raised KeyError when the data
+    # had columns absent from the weights dict.
     hoursPerPeriod = 24
     noTypicalPeriods = 8
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     partial_weights = {raw.columns[0]: 2.0}
 
-    aggregation = tsam.TimeSeriesAggregation(
+    aggregation = aggregate(
         raw,
-        noTypicalPeriods=noTypicalPeriods,
-        hoursPerPeriod=hoursPerPeriod,
-        clusterMethod="hierarchical",
-        weightDict=partial_weights,
+        n_clusters=noTypicalPeriods,
+        period_duration=hoursPerPeriod,
+        cluster=ClusterConfig(method="hierarchical"),
+        weights=partial_weights,
     )
 
-    indicators = aggregation.accuracyIndicators()
+    indicators = aggregation.accuracy.summary
     assert set(indicators.index) == set(raw.columns)
