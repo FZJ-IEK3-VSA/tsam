@@ -29,7 +29,7 @@ The diagram below shows the architectural components of `tsam` and how they coll
 
 1. **`_prepare_data`** — normalize, unstack to periods, weight, augment with period sums.
 2. **`_cluster_and_postprocess`** — cluster, add extremes, compute counts, rescale.
-3. **`_format_and_reconstruct`** — format representatives, segment, denormalize, reconstruct, compute accuracy.
+3. **`_format_and_reconstruct`** — format representatives, segment, denormalize, reconstruct.
 4. **`_assemble_result`** — build `ClusteringResult` and `PipelineResult`.
 
 For the step-by-step walk-through, see the [Pipeline Guide](pipeline_guide.md).
@@ -71,5 +71,3 @@ Other methods (`hierarchical`, `k_means`, `k_medoids`) delegate to scipy/scikit-
 | `options.py` | Global numerical tolerances and limits (e.g. `min_weight`). |
 | `weights.py` | Validation helpers for the user-supplied `weights` dict. |
 | `exceptions.py` | Custom warning/exception types (e.g. `LegacyAPIWarning`). |
-
-
