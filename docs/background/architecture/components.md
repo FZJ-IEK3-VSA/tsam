@@ -54,13 +54,12 @@ The `utils/` package holds the actual algorithm implementations. `clustering.py`
 
 | Module | Method |
 |--------|--------|
-| `utils/k_medoids_exact.py` | `k_medoids_exact` — MILP formulation; needs a solver. |
-| `utils/k_medoids_contiguity.py` | `k_medoids_contiguity` — contiguity-constrained k-medoids. |
-| `utils/k_maxoids.py` | `k_maxoids` — maxoid-based variant. |
+| `utils/k_medoids_exact.py` | `kmedoids` — MILP formulation; needs a solver. |
+| `utils/k_maxoids.py` | `kmaxoids` — maxoid-based variant. |
 | `utils/segmentation.py` | segmentation algorithms used by `pipeline/segment.py`. |
 | `utils/duration_representation.py` | duration-curve sorting used when `use_duration_curves=True`. |
 
-Other methods (`hierarchical`, `k_means`, `k_medoids`) delegate to scipy/scikit-learn.
+`kmeans`, `hierarchical`, and `contiguous` delegate to scikit-learn. `averaging` is implemented in `period_aggregation.py` itself.
 
 ### Auxiliary
 
