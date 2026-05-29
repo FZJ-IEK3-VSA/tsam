@@ -9,35 +9,36 @@ classes: {
   group: { style: { fill: transparent; stroke: "#8a8a8a" } }
   side: { style: { fill: transparent; stroke: "#bdbdbd" } }
   pad: { style: { fill: transparent; stroke: transparent } }
-  # public API the user calls (teal); entry point gets the strongest accent
-  public: { style: { fill: "#e8f5f4"; stroke: "#21918c"; stroke-width: 2; bold: true } }
-  entry: { style: { fill: "#21918c"; stroke: "#0f5c58"; stroke-width: 3; font-color: "#ffffff"; bold: true } }
+  # first-class public API (aggregate + config + results): prominent teal, larger
+  public: { style: { fill: "#d3efec"; stroke: "#157a75"; stroke-width: 2; bold: true; font-size: 20 } }
+  # secondary public tools (tuning/plot/options): lighter teal
+  tool: { style: { fill: "#eef6f5"; stroke: "#8fc9c3"; font-size: 15 } }
+  # supporting internal modules outside the phases (backends, auxiliary): muted
+  support: { style: { fill: "#eef1f4"; stroke: "#9aa7b4"; font-color: "#4a5560" } }
+  # grey connectors
+  conn: { style: { stroke: "#8693a0" } }
 }
 
 grid-columns: 3
 grid-gap: 30
 vertical-gap: 25
 
-# ── Left column: surrounding modules (entry, config/results, auxiliary) ───
+# ── Left column: public API (config & results, entry) + auxiliary ─────────
 lcol: "" {
   class: pad
-  grid-rows: 4
-  vertical-gap: 30
+  grid-rows: 5
+  vertical-gap: 65
 
   pad_top: "" { class: pad }
-  cfgres: "Public API · config & results" {
-    class: side
-    grid-rows: 2
-    cfg: "config.py\nClusterConfig · SegmentConfig · ExtremeConfig\nDistribution · MinMaxMean · ClusteringResult" { class: public }
-    res: "result.py\nAggregationResult · AccuracyMetrics" { class: public }
-  }
-  api: "aggregate()\napi.py — the entry point" { class: entry }
-  aux: "Auxiliary" {
+  cfg: "Config — config.py\nClusterConfig · SegmentConfig · ExtremeConfig\nDistribution · MinMaxMean" { class: public }
+  api: "aggregate()\napi.py — the entry point" { class: public }
+  res: "Results — result.py (+ config.py)\nAggregationResult · AccuracyMetrics · ClusteringResult" { class: public }
+  tools: "Public tools" {
     class: side
     grid-columns: 3
-    tune: "tuning.py"
-    plot: "plot.py"
-    opts: "options.py"
+    tune: "tuning.py\nhyperparameter sweeps\n(loops aggregate())" { class: tool }
+    plot: "plot.py\nvisualization" { class: tool }
+    opts: "options.py\nglobal options" { class: tool }
   }
 }
 
@@ -50,7 +51,7 @@ pipeline: "Internal pipeline · run_pipeline()" {
   p1: "Phase 1 · Prepare data" {
     class: group
     grid-rows: 1
-    horizontal-gap: 30
+    horizontal-gap: 18
     normalize: "normalize\npipeline/normalize.py\ndf (T, C) → 0..1"
     periods: "periods\npipeline/periods.py\narr (P, C·S)"
     normalize -> periods
@@ -58,20 +59,22 @@ pipeline: "Internal pipeline · run_pipeline()" {
   p2: "Phase 2 · Cluster & post-process" {
     class: group
     grid-rows: 1
-    horizontal-gap: 30
+    horizontal-gap: 18
     clustering: "clustering\npipeline/clustering.py\narr (K, C·S)"
     extremes: "extremes (opt.)\npipeline/extremes.py" { class: optional_step }
     rescale: "rescale (opt.)\npipeline/rescale.py" { class: optional_step }
-    clustering -> extremes -> rescale
+    clustering -> extremes
+    extremes -> rescale
   }
   p3: "Phase 3 · Format & reconstruct" {
     class: group
     grid-rows: 1
-    horizontal-gap: 30
+    horizontal-gap: 18
     segment: "segment (opt.)\npipeline/segment.py" { class: optional_step }
     denorm: "denormalize\npipeline/normalize.py"
     accuracy: "reconstruct + accuracy\npipeline/accuracy.py\ndf (T, C)"
-    segment -> denorm -> accuracy
+    segment -> denorm
+    denorm -> accuracy
   }
   p4: "Phase 4 · Assemble\npipeline/orchestrator.py\nPipelineResult → AggregationResult" { class: group }
 
@@ -80,27 +83,48 @@ pipeline: "Internal pipeline · run_pipeline()" {
   p3 -> p4: "FormattedOutput"
 }
 
-# ── Right column: clustering dispatch + backends (centered via spacers) ───
+# ── Right column: backends, each group aligned with the step that uses it ─
 rcol: "" {
   class: pad
-  grid-rows: 3
-  vertical-gap: 30
+  grid-rows: 5
+  vertical-gap: 45
 
-  pad_top: "" { class: pad; height: 150; width: 20 }
-  backends: "Clustering dispatch & backends" {
+  pad_top: "" { class: pad; height: 120; width: 20 }
+
+  # Clustering-only: period_aggregation dispatches to the medoid/maxoid solvers
+  # (kmeans/hierarchical go to scikit-learn).
+  clu_solvers: "Clustering solvers" {
     class: side
-    grid-rows: 4
-    pa: "period_aggregation.py\nrepresentations.py"
-    km: "utils/k_medoids_exact · utils/k_maxoids"
-    dur: "utils/duration_representation"
-    segu: "utils/segmentation"
+    direction: right
+    pa: "period_aggregation.py\nkmeans/hierarchical → scikit-learn" { class: support }
+    kmex: "utils/k_medoids_exact\n(MILP)" { class: support }
+    kmax: "utils/k_maxoids" { class: support }
+    pa -> kmex { class: conn }
+    pa -> kmax { class: conn }
   }
-  pad_bot: "" { class: pad; height: 150; width: 20 }
+
+  # Shared by clustering AND segmentation.
+  reps: "Representations (shared)" {
+    class: side
+    direction: right
+    rep: "representations.py" { class: support }
+    dur: "utils/duration_representation" { class: support }
+    rep -> dur { class: conn }
+  }
+
+  # Segment-only: its own agglomerative clustering (scikit-learn).
+  seg_back: "Segmentation" {
+    class: side
+    segu: "utils/segmentation\n+ scikit-learn agglomerative" { class: support }
+  }
 }
 
 # ── Cross-column edges ─────────────────────────────────────────────────────
-lcol.aux.tune -> lcol.api
-lcol.api -> lcol.cfgres
+lcol.cfg -> lcol.api: "configures"
+lcol.api -> lcol.res: "returns"
+lcol.tools.tune -> lcol.api
 lcol.api -> pipeline
-pipeline.p2.clustering -> rcol.backends.pa
-pipeline.p3.segment -> rcol.backends.segu
+pipeline.p2.clustering -> rcol.clu_solvers { class: conn }
+pipeline.p3.segment -> rcol.seg_back { class: conn }
+rcol.clu_solvers -> rcol.reps: "represent" { class: conn }
+rcol.seg_back -> rcol.reps: "represent" { class: conn }
