@@ -236,9 +236,11 @@ object with everything attached.
 | `agg.createTypicalPeriods()` | `result.cluster_representatives` |
 | `agg.predictOriginalData()` | `result.reconstructed` |
 | `agg.accuracyIndicators()` | `result.accuracy.summary` |
+| `agg.totalAccuracyIndicators()` | `result.accuracy.weighted_rmse` / `result.accuracy.weighted_mae` |
 | `agg.clusterOrder` | `result.cluster_assignments` |
 | `agg.clusterPeriodNoOccur` | `result.cluster_weights` |
 | `agg.clusterCenterIndices` | `result.clustering.cluster_centers` |
+| `agg.indexMatching()` | `result.assignments` |
 | `agg.timeSeries` | `result.original` |
 | *(no equivalent)* | `result.residuals` |
 | *(no equivalent)* | `result.plot.compare()` |
@@ -246,6 +248,31 @@ object with everything attached.
 The `cluster_representatives` DataFrame now uses a
 `MultiIndex(cluster, timestep)` instead of
 `MultiIndex(PeriodNum, TimeStep)`.
+
+### Accuracy metrics { #accuracy-metrics }
+
+`agg.accuracyIndicators()` returned a DataFrame indexed by column with
+`RMSE`/`MAE`/`RMSE_duration` columns. `result.accuracy` is an
+`AccuracyMetrics` object: `.summary` is the equivalent DataFrame, while the
+individual metrics are per-column `pd.Series`.
+
+| Old (v2) | New (v3) |
+|----------|----------|
+| `agg.accuracyIndicators().loc[col, "RMSE"]` | `result.accuracy.rmse[col]` |
+| `agg.accuracyIndicators().loc[col, "MAE"]` | `result.accuracy.mae[col]` |
+| `agg.accuracyIndicators().loc[col, "RMSE_duration"]` | `result.accuracy.rmse_duration[col]` |
+| `agg.totalAccuracyIndicators()["RMSE"]` | `result.accuracy.weighted_rmse` |
+| `agg.totalAccuracyIndicators()["MAE"]` | `result.accuracy.weighted_mae` |
+
+With uniform weights the `weighted_*` totals match the old
+`totalAccuracyIndicators()` values.
+
+### Index/assignment metadata { #assignment-metadata }
+
+`agg.indexMatching()` returned a DataFrame with `PeriodNum`/`TimeStep`/
+`SegmentIndex` columns. `result.assignments` is the equivalent, indexed by the
+original datetime index, with columns `period_idx`, `timestep_idx`,
+`cluster_idx` (= old `PeriodNum`) and `segment_idx` (only when segmented).
 
 ## Clustering transfer
 
@@ -455,15 +482,10 @@ pandas loops with vectorized numpy operations.
     averaging, contiguous, kmeans, kmedoids, kmaxoids, minmaxmean,
     segmentation, extremes) are bit-for-bit identical to v2.3.9.
 
-Result stability is enforced by two test layers:
-
-1. **Golden regression tests** (`test/test_golden_regression.py`):
-   148 tests compare both APIs against stored CSV baselines. Any code
-   change that alters output values will fail these tests.
-
-2. **Old/new API equivalence tests** (`test/test_old_new_equivalence.py`):
-   296 tests verify that the legacy `TimeSeriesAggregation` class and
-   the new `tsam.aggregate()` function produce identical results.
+Result stability is enforced by golden regression tests
+(`test/test_golden_regression.py`): 111 tests compare `tsam.aggregate()`
+against stored CSV baselines (originally produced by the pre-v3.0.0 API).
+Any code change that alters output values will fail these tests.
 
 If a future release intentionally changes results (e.g., improved
 algorithm), the golden files will be regenerated and the change

@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-import tsam.timeseriesaggregation as tsam_legacy
 from conftest import TESTDATA_CSV
+from tsam import ClusterConfig, ExtremeConfig, aggregate
 
 
 def test_extremePeriods():
@@ -12,63 +12,58 @@ def test_extremePeriods():
 
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
-    aggregation1 = tsam_legacy.TimeSeriesAggregation(
+    aggregation1 = aggregate(
         raw,
-        noTypicalPeriods=noTypicalPeriods,
-        hoursPerPeriod=hoursPerPeriod,
-        clusterMethod="hierarchical",
-        rescaleClusterPeriods=False,
-        extremePeriodMethod="new_cluster_center",
-        addPeakMax=["GHI"],
+        n_clusters=noTypicalPeriods,
+        period_duration=hoursPerPeriod,
+        cluster=ClusterConfig(method="hierarchical"),
+        preserve_column_means=False,
+        extremes=ExtremeConfig(method="new_cluster", max_value=["GHI"]),
     )
 
-    aggregation2 = tsam_legacy.TimeSeriesAggregation(
+    aggregation2 = aggregate(
         raw,
-        noTypicalPeriods=noTypicalPeriods,
-        hoursPerPeriod=hoursPerPeriod,
-        clusterMethod="hierarchical",
-        rescaleClusterPeriods=False,
-        extremePeriodMethod="append",
-        addPeakMax=["GHI"],
+        n_clusters=noTypicalPeriods,
+        period_duration=hoursPerPeriod,
+        cluster=ClusterConfig(method="hierarchical"),
+        preserve_column_means=False,
+        extremes=ExtremeConfig(method="append", max_value=["GHI"]),
     )
 
-    aggregation3 = tsam_legacy.TimeSeriesAggregation(
+    aggregation3 = aggregate(
         raw,
-        noTypicalPeriods=noTypicalPeriods,
-        hoursPerPeriod=hoursPerPeriod,
-        clusterMethod="hierarchical",
-        rescaleClusterPeriods=False,
-        extremePeriodMethod="replace_cluster_center",
-        addPeakMax=["GHI"],
+        n_clusters=noTypicalPeriods,
+        period_duration=hoursPerPeriod,
+        cluster=ClusterConfig(method="hierarchical"),
+        preserve_column_means=False,
+        extremes=ExtremeConfig(method="replace", max_value=["GHI"]),
     )
 
     # make sure that the RMSE for new cluster centers (reassigning points to the exxtreme point if the distance to it is
     # smaller)is bigger than for appending just one extreme period
     np.testing.assert_array_less(
-        aggregation1.accuracyIndicators().loc["GHI", "RMSE"],
-        aggregation2.accuracyIndicators().loc["GHI", "RMSE"],
+        aggregation1.accuracy.rmse["GHI"],
+        aggregation2.accuracy.rmse["GHI"],
     )
 
     # make sure that the RMSE for appending the extreme period is smaller than for replacing the cluster center by the
     # extreme period (conservative assumption)
     np.testing.assert_array_less(
-        aggregation2.accuracyIndicators().loc["GHI", "RMSE"],
-        aggregation3.accuracyIndicators().loc["GHI", "RMSE"],
+        aggregation2.accuracy.rmse["GHI"],
+        aggregation3.accuracy.rmse["GHI"],
     )
 
     # check if addMeanMax and addMeanMin are working
-    aggregation4 = tsam_legacy.TimeSeriesAggregation(
+    aggregation4 = aggregate(
         raw,
-        noTypicalPeriods=noTypicalPeriods,
-        hoursPerPeriod=hoursPerPeriod,
-        clusterMethod="hierarchical",
-        rescaleClusterPeriods=False,
-        extremePeriodMethod="append",
-        addMeanMax=["GHI"],
-        addMeanMin=["GHI"],
+        n_clusters=noTypicalPeriods,
+        period_duration=hoursPerPeriod,
+        cluster=ClusterConfig(method="hierarchical"),
+        preserve_column_means=False,
+        extremes=ExtremeConfig(method="append", max_period=["GHI"], min_period=["GHI"]),
     )
 
-    origData = aggregation4.predictOriginalData()
+    origData = aggregation4.reconstructed
 
     np.testing.assert_array_almost_equal(
         raw.groupby(np.arange(len(raw)) // 24).mean().max().loc["GHI"],
