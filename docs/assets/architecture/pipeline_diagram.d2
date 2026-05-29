@@ -76,7 +76,7 @@ pipeline: "Internal pipeline · run_pipeline()" {
     segment -> denorm
     denorm -> accuracy
   }
-  p4: "Phase 4 · Assemble\npipeline/orchestrator.py\nPipelineResult → AggregationResult" { class: group }
+  p4: "Phase 4 · Assemble\npipeline/orchestrator.py\nPipelineResult (pipeline/types.py) → AggregationResult" { class: group }
 
   p1 -> p2: "PreparedData"
   p2 -> p3: "ClusteringOutput"
@@ -93,7 +93,7 @@ rcol: "" {
 
   # Clustering-only: period_aggregation dispatches to the medoid/maxoid solvers
   # (kmeans/hierarchical go to scikit-learn).
-  clu_solvers: "Clustering solvers" {
+  clu_solvers: "Clustering solvers\nall methods: ClusterConfig.method" {
     class: side
     direction: right
     pa: "period_aggregation.py\nkmeans/hierarchical → scikit-learn" { class: support }
@@ -104,7 +104,7 @@ rcol: "" {
   }
 
   # Shared by clustering AND segmentation.
-  reps: "Representations (shared)" {
+  reps: "Representations (shared)\nall options: ClusterConfig.representation" {
     class: side
     direction: right
     rep: "representations.py" { class: support }
@@ -113,7 +113,7 @@ rcol: "" {
   }
 
   # Segment-only: its own agglomerative clustering (scikit-learn).
-  seg_back: "Segmentation" {
+  seg_back: "Segmentation\noptions: SegmentConfig" {
     class: side
     segu: "utils/segmentation\n+ scikit-learn agglomerative" { class: support }
   }
