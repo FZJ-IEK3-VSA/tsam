@@ -25,18 +25,18 @@ The diagram below shows the architectural components of `tsam` and how they coll
 
 ### Pipeline orchestrator
 
-`pipeline/__init__.py` contains `run_pipeline()`, which executes the eight-stage aggregation flow in four phases:
+`pipeline/__init__.py` contains `run_pipeline()`, which executes the eight-step aggregation flow in four phases:
 
-1. **`_prepare_data`** — normalize, unstack to periods, weight, augment with period sums.
-2. **`_cluster_and_postprocess`** — cluster, add extremes, compute counts, rescale.
-3. **`_format_and_reconstruct`** — format representatives, segment, denormalize, reconstruct.
-4. **`_assemble_result`** — build `ClusteringResult` and `PipelineResult`.
+1. **Prepare data** (`_prepare_data`) — normalize, unstack to periods, weight, augment with period sums.
+2. **Cluster & post-process** (`_cluster_and_postprocess`) — cluster, add extremes, compute counts, rescale.
+3. **Format & reconstruct** (`_format_and_reconstruct`) — format representatives, segment, denormalize, reconstruct.
+4. **Assemble** (`_assemble_result`) — build `ClusteringResult` and `PipelineResult`.
 
-For the step-by-step walk-through, see the [Pipeline Guide](pipeline_guide.md).
+For the phase-by-phase walk-through — with the full docstring of every stage — see the [Pipeline Guide](pipeline_guide.md).
 
 ### Pipeline modules
 
-Each pipeline module is a small file of pure functions with explicit inputs and outputs. Data flows through function arguments rather than instance attributes. This is the property that makes the pipeline testable and reorderable. The eight-step aggregation flow is illustrated in the [Pipeline Guide](pipeline_guide.md); the table below maps each step to the module that implements it.
+Each pipeline module is a small file of pure functions with explicit inputs and outputs. Data flows through function arguments rather than instance attributes. This is the property that makes the pipeline testable and reorderable. The [Pipeline Guide](pipeline_guide.md) is their canonical reference: it groups these modules into the four phases and renders each function's docstring in full. The table below maps each step to the module that implements it.
 
 | Module | Step(s) implemented | Notes |
 |--------|---------------------|-------|

@@ -1,12 +1,15 @@
 direction: down
 
-grid-rows: 10
+grid-rows: 6
+grid-columns: 1
 vertical-gap: 40
 horizontal-gap: 120
 
-# ── Local class: optional pipeline step (dashed + translucent) ───────────
-# `optional_step` is applied to conditionally-executed steps
-# (2a, 2b, 3a, 4a, 5a) so they visually fade back from the required ones.
+# ── Local classes ─────────────────────────────────────────────────────────
+# `optional_step` fades back conditionally-executed steps (2a, 2b, 3a, 4a, 5a).
+# `place_holder_node` occupies an empty grid cell so a main step and its
+# optional sibling stay on the same row. `phase` is the visible grouping box
+# that wraps each set of steps into one of the four pipeline phases.
 classes: {
   optional_step: {
     style: {
@@ -20,89 +23,105 @@ classes: {
       stroke: transparent
     }
   }
+  phase: {
+    style: {
+      fill: transparent
+      stroke: "#8a8a8a"
+      stroke-width: 2
+    }
+  }
 }
 
 
-# ── Plain nodes: no optionals ─────────────────────────────────────────────
+# ── Input (pre-pipeline) ──────────────────────────────────────────────────
 n0: "Input\npd.DataFrame\nT rows × C cols, datetime-indexed" {class: default}
-n1: "1 · Normalize\nNormalizedData\ndf (T, C) scaled to 0..1" {class: default}
 
-# ── Steps 2-5 with optional sub-steps (single 3 col × 5 row grid) ────────
-# Column convention:
-#   Col 1 — main pipeline steps (n2, n3, n4, n5), vertically stacked
-#   Col 2 — "a" optionals (2a, 3a, 4a, 5a), on the same row as their main
-#   Col 3 — "b" optionals (2b), one row below the corresponding main step
-#
-# Layout (row-major, exactly 15 cells = 3 cols × 5 rows):
-#   R1: n2,   oA,   gap        (step 2: main + 2a; 2b is below in col 3)
-#   R2: gap,  gap,  n2_b_include_period_sums         (step 2: 2b on its own row, col 3)
-#   R3: n3,   n3a_extremes,   gap        (step 3: main + 3a, no 3b)
-#   R4: n4,   oD,   gap        (step 4: main + 4a, no 4b)
-#   R5: n5,   oE,   gap        (step 5: main + 5a, no 5b)
-steps_with_optional_steps: "" {
-  grid-rows: 5
+
+# ── Phase 1 — Prepare data (steps 1, 2, optional 2a / 2b) ─────────────────
+# 3×3 grid. Col 1 holds the main steps; 2a sits beside step 2 in col 2;
+# 2b drops to col 3 on the row below (matching the original layout).
+prepare: "Phase 1 — Prepare data" {
+  class: phase
+  grid-rows: 3
   grid-columns: 3
-  vertical-gap: 70
-  horizontal-gap: 100
+  vertical-gap: 60
+  horizontal-gap: 90
 
-  # R1
+  # R1: n1, gap, gap
+  n1_normalize: "1 · Normalize\nNormalizedData\ndf (T, C) scaled to 0..1" {class: default}
+  ph_p1_r1b: "" {class: place_holder_node}
+  ph_p1_r1c: "" {class: place_holder_node}
+
+  # R2: n2, 2a, gap
   n2_unstack_periods: "2 · Unstack to periods\nPeriodProfiles\narr (P, C·S)" {class: default}
   n2_a_weights: "2a · weights\nweighted candidates\narr (P, C·S)" {class: optional_step}
-  place_holder_R1C: "" {class: place_holder_node}
+  ph_p1_r2c: "" {class: place_holder_node}
 
-  # R2
-  place_holder_R2A: "" {class: place_holder_node}
-  place_holder_R2B: "" {class: place_holder_node}
+  # R3: gap, gap, 2b
+  ph_p1_r3a: "" {class: place_holder_node}
+  ph_p1_r3b: "" {class: place_holder_node}
   n2_b_include_period_sums: "2b · include_period_sums\naugmented candidates\narr (P, C·S+C)" {class: optional_step}
 
-  # R3
-
-  n3_cluster_centers: "3 · Cluster centers\nClusterCenters\narr (K, C·S)" {class: default}
-  n3a_extremes: "3a · extremes\nK' extra clusters added\norder arr (P)" {class: optional_step}
-  place_holder_R3C: "" {class: place_holder_node}
-
-
-  # R4 — step 4 (main + 4a, no 4b)
-  n4_trim_unweight_count: "4 · Trim · unweight · count\nClusteringOutput\ncounts: dict(cluster, weight)" {class: default}
-  n4a_preserve_column_means: "4a · preserve_column_means\nrescaled representatives\nK × arr(C·S)" {class: optional_step}
-  place_holder_R4C: "" {class: place_holder_node}
-
-  # R5 — step 5 (main + 5a, no 5b)
-  n5_format_representatives: "5 · Format representatives\nnormalized_typical_periods\ndf (K·S, C)  MultiIndex" {class: default}
-  n5a_n_segments: "5a · n_segments\nsegmented_df\ndf (K·seg, C)" {class: optional_step}
-  place_holder_R5C: "" {class: place_holder_node}
-
-  # ── Main flow inside the grid (vertical down col 1) ────────────────────
-  n2_unstack_periods -> n3_cluster_centers
-  n3_cluster_centers -> n4_trim_unweight_count
-  n4_trim_unweight_count -> n5_format_representatives
-
-  # ── Step 2 optional flows ──────────────────────────────────────────────
+  n1_normalize -> n2_unstack_periods
   n2_unstack_periods -> n2_a_weights
   n2_unstack_periods -> n2_b_include_period_sums
   n2_a_weights <-> n2_b_include_period_sums
-  n2_a_weights -> n3_cluster_centers
-  n2_b_include_period_sums -> n3_cluster_centers
-
-  # ── Step 3 optional flow ───────────────────────────────────────────────
-  n3_cluster_centers -> n3a_extremes
-  n3a_extremes -> n4_trim_unweight_count
-
-  # ── Step 4 optional flow ───────────────────────────────────────────────
-  n4_trim_unweight_count -> n4a_preserve_column_means
-  n4a_preserve_column_means -> n5_format_representatives
-
-  # ── Step 5 optional flow ───────────────────────────────────────────────
-  n5_format_representatives -> n5a_n_segments
-
-  style.fill: transparent
-  style.stroke: transparent
 }
 
-# ── Plain nodes: no optionals ─────────────────────────────────────────────
-n6: "6 · Denormalize\ntypical_periods\ndf (K·S, C)  original units" {class: default}
-n7: "7 · Reconstruct\nreconstructed df (T, C)\nnormalized_predicted df (T, C)" {class: default}
-n8: "8 · Assemble\nAggregationResult" {class: default}
+
+# ── Phase 2 — Cluster & post-process (steps 3, 4, optional 3a / 4a) ────────
+# 2×2 grid: main steps in col 1, their optionals beside them in col 2.
+cluster_postprocess: "Phase 2 — Cluster & post-process" {
+  class: phase
+  grid-rows: 2
+  grid-columns: 2
+  vertical-gap: 60
+  horizontal-gap: 90
+
+  n3_cluster_centers: "3 · Cluster centers\nClusterCenters\narr (K, C·S)" {class: default}
+  n3a_extremes: "3a · extremes\nK' extra clusters added\norder arr (P)" {class: optional_step}
+
+  n4_trim_unweight_count: "4 · Trim · unweight · count\nClusteringOutput\ncounts: dict(cluster, weight)" {class: default}
+  n4a_preserve_column_means: "4a · preserve_column_means\nrescaled representatives\nK × arr(C·S)" {class: optional_step}
+
+  n3_cluster_centers -> n4_trim_unweight_count
+  n3_cluster_centers -> n3a_extremes
+  n3a_extremes -> n4_trim_unweight_count
+  n4_trim_unweight_count -> n4a_preserve_column_means
+}
+
+
+# ── Phase 3 — Format & reconstruct (steps 5, 6, 7, optional 5a) ───────────
+# 2-col grid: main steps stacked in col 1, segmentation beside step 5 in col 2.
+format_reconstruct: "Phase 3 — Format & reconstruct" {
+  class: phase
+  grid-rows: 3
+  grid-columns: 2
+  vertical-gap: 60
+  horizontal-gap: 90
+
+  n5_format_representatives: "5 · Format representatives\nnormalized_typical_periods\ndf (K·S, C)  MultiIndex" {class: default}
+  n5a_n_segments: "5a · n_segments\nsegmented_df\ndf (K·seg, C)" {class: optional_step}
+
+  n6_denormalize: "6 · Denormalize\ntypical_periods\ndf (K·S, C)  original units" {class: default}
+  ph_p3_r2b: "" {class: place_holder_node}
+
+  n7_reconstruct: "7 · Reconstruct\nreconstructed df (T, C)\nnormalized_predicted df (T, C)" {class: default}
+  ph_p3_r3b: "" {class: place_holder_node}
+
+  n5_format_representatives -> n6_denormalize
+  n6_denormalize -> n7_reconstruct
+  n5_format_representatives -> n5a_n_segments
+}
+
+
+# ── Phase 4 — Assemble (step 8) ───────────────────────────────────────────
+assemble: "Phase 4 — Assemble" {
+  class: phase
+
+  n8_assemble: "8 · Assemble\nAggregationResult" {class: default}
+}
+
 
 # ── Legend ───────────────────────────────────────────────────────────────
 # Explains the data-type abbreviations and dimension symbols used in
@@ -131,10 +150,14 @@ legend: "Legend" {
   }
 }
 
-# ── Main vertical flow ────────────────────────────────────────────────────
-# Steps 2-5 all live inside `steps_with_optional_steps` (the n2->n3->n4->n5
-# main edges are defined inside that container so ELK keeps each pair on
-# the same row of the 3×6 grid). The top-level flow enters at n2 and exits
-# at n5 into n6.
-n0 -> n1 -> steps_with_optional_steps.n2_unstack_periods
-steps_with_optional_steps.n5_format_representatives -> n6 -> n7 -> n8
+# ── Cross-phase flow ───────────────────────────────────────────────────────
+# Top-level objects are laid out by the grid (declaration order, one column);
+# these edges draw the connectors between phases. Intra-phase main edges live
+# inside their containers so the grid keeps each main step beside its optional.
+n0 -> prepare.n1_normalize
+prepare.n2_unstack_periods -> cluster_postprocess.n3_cluster_centers
+prepare.n2_a_weights -> cluster_postprocess.n3_cluster_centers
+prepare.n2_b_include_period_sums -> cluster_postprocess.n3_cluster_centers
+cluster_postprocess.n4_trim_unweight_count -> format_reconstruct.n5_format_representatives
+cluster_postprocess.n4a_preserve_column_means -> format_reconstruct.n5_format_representatives
+format_reconstruct.n7_reconstruct -> assemble.n8_assemble

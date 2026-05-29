@@ -20,9 +20,55 @@ def rescale_representatives(
     n_timesteps_per_period: int,
     exclude_columns: list[str],
 ) -> tuple[np.ndarray, dict]:
-    """Rescale cluster periods so weighted mean matches original.
+    """Correct cluster representatives so their weighted mean matches the input.
 
-    Returns (rescaled_periods, deviations_dict).
+    Optional stage, enabled by ``preserve_column_means`` (the
+    ``rescale_cluster_periods`` config flag).
+
+    **Problem.** Clustering can shift column means. Aggregating 365 daily load
+    profiles into 8 typical days may leave the weighted average of the 8
+    representatives not matching the original annual average.
+
+    **Solution.** Iteratively scale each column of each non-extreme cluster
+    center until its occurrence-weighted sum matches the original total within
+    tolerance. Values are clipped to ``[0, scale_ub]``, where ``scale_ub``
+    depends on ``normalize_column_means`` (ratio of max to mean). Because the
+    data is unweighted at this point, no weight compensation is needed for the
+    clip bound.
+
+    Extreme clusters (from `add_extreme_periods`) are excluded so their extreme
+    values are preserved. Columns in ``exclude_columns`` are also skipped —
+    useful for binary 0/1 columns that should not be scaled.
+
+    Parameters
+    ----------
+    cluster_periods
+        Unweighted cluster representatives to rescale.
+    cluster_period_no_occur
+        Occurrence count per cluster (the rescaling weights).
+    extreme_cluster_idx
+        Indices of extreme clusters to leave untouched.
+    profiles_df
+        Normalized period profiles, source of the target column means.
+    original_data
+        Original input, defining the column order and totals to match.
+    normalize_column_means
+        Whether column-mean normalization was applied (sets the clip bound).
+    n_timesteps_per_period
+        Timesteps per period, used to reshape the representatives.
+    exclude_columns
+        Columns to skip during rescaling.
+
+    Returns
+    -------
+    tuple[np.ndarray, dict]
+        ``(rescaled_periods, deviations_dict)`` — the corrected representatives
+        and per-column residual deviations after rescaling.
+
+    See Also
+    --------
+    cluster_periods : Produces the representatives rescaled here.
+    add_extreme_periods : Its extreme clusters are excluded from rescaling.
     """
     columns = list(original_data.columns)
 
