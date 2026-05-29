@@ -34,9 +34,9 @@ The diagram below shows the architectural components of `tsam` and how they coll
 
 For the step-by-step walk-through, see the [Pipeline Guide](pipeline_guide.md).
 
-### Pipeline stages
+### Pipeline modules
 
-Each stage is a small module of pure functions with explicit inputs and outputs. They have no shared state — all data flows through function arguments. This is the property that makes the pipeline testable and reorderable.
+Each pipeline module is a small file of pure functions with explicit inputs and outputs. They have no shared state — all data flows through function arguments. This is the property that makes the pipeline testable and reorderable.
 
 | Module | Stage | Notes |
 |--------|-------|-------|
