@@ -239,11 +239,8 @@ object with everything attached.
 | `agg.totalAccuracyIndicators()` | `result.accuracy.weighted_rmse` / `result.accuracy.weighted_mae` |
 | `agg.clusterOrder` | `result.cluster_assignments` |
 | `agg.clusterPeriodNoOccur` | `result.cluster_weights` |
-| `agg.clusterPeriodIdx` | `result.period_index` |
-| `agg.stepIdx` | `result.timestep_index` |
 | `agg.clusterCenterIndices` | `result.clustering.cluster_centers` |
 | `agg.indexMatching()` | `result.assignments` |
-| `agg.segmentDurationDict` | `result.segment_durations` (tuple per cluster; `None` if not segmented) |
 | `agg.timeSeries` | `result.original` |
 | *(no equivalent)* | `result.residuals` |
 | *(no equivalent)* | `result.plot.compare()` |
