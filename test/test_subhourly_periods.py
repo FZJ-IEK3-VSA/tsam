@@ -2,11 +2,8 @@ import time
 
 import numpy as np
 import pandas as pd
-import pytest
 
-import tsam.timeseriesaggregation as tsam
-
-pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
+from tsam import ClusterConfig, SegmentConfig, aggregate
 
 
 def test_subhourly_periods():
@@ -19,16 +16,15 @@ def test_subhourly_periods():
     # Aggregate every quarter hour to one time step with mean representation.
     starttime = time.time()
 
-    aggregation = tsam.TimeSeriesAggregation(
+    aggregation = aggregate(
         testData,
-        noTypicalPeriods=8,
-        hoursPerPeriod=0.25,
-        clusterMethod="hierarchical",
-        segmentation=True,
-        noSegments=1,
+        n_clusters=8,
+        period_duration=0.25,
+        cluster=ClusterConfig(method="hierarchical"),
+        segments=SegmentConfig(n_segments=1),
     )
 
-    results = aggregation.predictOriginalData()
+    results = aggregation.reconstructed
 
     print("Clustering took " + str(time.time() - starttime))
 
