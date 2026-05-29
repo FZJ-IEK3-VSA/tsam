@@ -11,7 +11,7 @@ hands off to `run_pipeline()`, which runs the aggregation in **four phases**:
 This page is the stable conceptual map of that flow. Each phase below names the
 *stage functions* it runs and links to their full reference — the precise
 signatures, parameters, and behavior live in the auto-generated
-[API reference](../../api/tsam/), which tracks the code. The public input and
+[API reference](../../api/index.md), which tracks the code. The public input and
 output types are linked from [Configuration reference](#configuration-reference)
 and [Working with results](#working-with-results) at the end.
 

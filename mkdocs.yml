@@ -83,16 +83,17 @@ nav:
       - background/decisions/index.md
       - 0001 — V4 Pipeline: background/decisions/0001-v4-pipeline.md
     - Further Reading: further-reading.md
-  - API Reference: api/
+  - API Reference:
+    - api/index.md
+    - Configuration: api/configuration.md
+    - Results: api/results.md
+    - Pipeline internals: api/pipeline.md
+    - Tuning: api/tuning.md
+    - Utilities: api/utilities.md
+    - Legacy (v3 API): api/legacy.md
   - About:
     - Changelog: changelog.md
     - Legal Notice: legal-notice.md
-
-# gen_ref_pages.py lives in docs/ because gen-files requires scripts to be
-# relative to the project root, but mkdocs-jupyter would otherwise pick it up
-# and try to execute it as a notebook, crashing the build.
-exclude_docs: |
-  gen_ref_pages.py
 
 plugins:
   - search
@@ -105,6 +106,8 @@ plugins:
             show_root_heading: true
             members_order: source
             docstring_style: auto
+            docstring_section_style: table
+            summary: true
             show_symbol_type_heading: true
             show_symbol_type_toc: true
             separate_signature: true
@@ -120,11 +123,6 @@ plugins:
       allow_errors: false
       include_requirejs: true
       toc_depth: 3
-  - gen-files:
-      scripts:
-        - docs/gen_ref_pages.py
-  - literate-nav:
-      nav_file: SUMMARY.md
 
 markdown_extensions:
   - pymdownx.arithmatex:
@@ -156,7 +154,7 @@ markdown_extensions:
   - abbr
   - toc:
       permalink: true
-      toc_depth: 2
+      toc_depth: 3
 
 extra:
   generator: false

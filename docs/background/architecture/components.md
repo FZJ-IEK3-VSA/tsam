@@ -12,20 +12,20 @@ The diagram below shows the architectural components of `tsam` and how they coll
 
 | Module | Responsibility |
 |--------|---------------|
-| [`api.py`](../../api/tsam/api.md) | Modern, function-based entry point. `aggregate()` accepts a DataFrame plus config dataclasses, builds a `PipelineConfig`, calls `run_pipeline()`, and wraps the output as an `AggregationResult`. |
+| [`api.py`](../../api/index.md) | Modern, function-based entry point. `aggregate()` accepts a DataFrame plus config dataclasses, builds a `PipelineConfig`, calls `run_pipeline()`, and wraps the output as an `AggregationResult`. |
 
 
 ### Config & Results
 
 | Module | Responsibility |
 |--------|---------------|
-| [`config.py`](../../api/tsam/config.md) | User-facing config dataclasses (`ClusterConfig`, `ExtremeConfig`, `SegmentConfig`) plus representation specs (`Distribution`, `MinMaxMean`) and the post-clustering `ClusteringResult`. |
-| [`result.py`](../../api/tsam/result.md) | User-facing result objects (`AggregationResult`, `AccuracyMetrics`) returned from `aggregate()`. |
-| [`pipeline/types.py`](../../api/tsam/pipeline/types.md) | Internal types: `PipelineConfig` (full configuration consumed by `run_pipeline`) and `PipelineResult` (raw pipeline output, later wrapped into `AggregationResult`). |
+| [`config.py`](../../api/configuration.md) | User-facing config dataclasses (`ClusterConfig`, `ExtremeConfig`, `SegmentConfig`) plus representation specs (`Distribution`, `MinMaxMean`) and the post-clustering `ClusteringResult`. |
+| [`result.py`](../../api/results.md) | User-facing result objects (`AggregationResult`, `AccuracyMetrics`) returned from `aggregate()`. |
+| [`pipeline/types.py`](../../api/pipeline.md) | Internal types: `PipelineConfig` (full configuration consumed by `run_pipeline`) and `PipelineResult` (raw pipeline output, later wrapped into `AggregationResult`). |
 
 ### Pipeline orchestrator
 
-`pipeline/__init__.py` contains `run_pipeline()`, which executes the eight-step aggregation flow in four phases:
+`pipeline/orchestrator.py` contains `run_pipeline()`, which executes the eight-step aggregation flow in four phases:
 
 1. **Prepare data** (`_prepare_data`) — normalize, unstack to periods, weight, augment with period sums.
 2. **Cluster & post-process** (`_cluster_and_postprocess`) — cluster, add extremes, compute counts, rescale.
@@ -47,7 +47,7 @@ Each pipeline module is a small file of pure functions with explicit inputs and 
 | `pipeline/rescale.py` | 4a Rescale (optional) | Adjust representatives so column means match the original. |
 | `pipeline/segment.py` | 5a Segment (optional) | Merge adjacent timesteps within a typical period. |
 | `pipeline/accuracy.py` | 7 Reconstruct | Compute MAE, RMSE, etc. between original and reconstructed (accuracy is computed lazily on `PipelineResult`). |
-| `pipeline/__init__.py` | 2a Apply weights (optional) · 4 Trim · unweight · count · 5 Format representatives · 8 Assemble | The `run_pipeline()` orchestrator and its glue helpers — the steps with no dedicated stage module live here. |
+| `pipeline/orchestrator.py` | 2a Apply weights (optional) · 4 Trim · unweight · count · 5 Format representatives · 8 Assemble | The `run_pipeline()` orchestrator and its glue helpers — the steps with no dedicated stage module live here. |
 
 ### Clustering backends
 
