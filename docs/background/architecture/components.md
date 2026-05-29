@@ -25,29 +25,28 @@ The diagram below shows the architectural components of `tsam` and how they coll
 
 ### Pipeline orchestrator
 
-`pipeline/orchestrator.py` contains `run_pipeline()`, which executes the eight-step aggregation flow in four phases:
-
-1. **Prepare data** (`_prepare_data`) — normalize, unstack to periods, weight, augment with period sums.
-2. **Cluster & post-process** (`_cluster_and_postprocess`) — cluster, add extremes, compute counts, rescale.
-3. **Format & reconstruct** (`_format_and_reconstruct`) — format representatives, segment, denormalize, reconstruct.
-4. **Assemble** (`_assemble_result`) — build `ClusteringResult` and `PipelineResult`.
-
-For the phase-by-phase walk-through — with the full docstring of every stage — see the [Pipeline Guide](pipeline_guide.md).
+`pipeline/orchestrator.py` holds `run_pipeline()` and the four phase functions
+it calls — `prepare_data`, `cluster_and_postprocess`, `format_and_reconstruct`,
+`assemble_result`. The [Pipeline Guide](pipeline_guide.md) explains what each
+phase does; the [Pipeline internals](../../api/pipeline.md) reference documents
+the functions.
 
 ### Pipeline modules
 
-Each pipeline module is a small file of pure functions with explicit inputs and outputs. Data flows through function arguments rather than instance attributes. This is the property that makes the pipeline testable and reorderable. The [Pipeline Guide](pipeline_guide.md) is their canonical reference: it groups these modules into the four phases and renders each function's docstring in full. The table below maps each step to the module that implements it.
+Each pipeline module is a small file of pure functions with explicit inputs and
+outputs — data flows through arguments rather than instance state, which is what
+makes the pipeline testable and reorderable.
 
-| Module | Step(s) implemented | Notes |
-|--------|---------------------|-------|
-| `pipeline/normalize.py` | 1 Normalize · 6 Denormalize | Scale to [0, 1] per column. |
-| `pipeline/periods.py` | 2 Unstack · 2b Period-sum features (optional) | Reshape flat time series → (period, timestep) matrix. |
-| `pipeline/clustering.py` | 3 Cluster | Calls `period_aggregation.aggregate_periods()`, which dispatches to scikit-learn or to a backend in `utils/`. |
-| `pipeline/extremes.py` | 3a Extremes (optional) | Inject extreme-value periods into the cluster set. |
-| `pipeline/rescale.py` | 4a Rescale (optional) | Adjust representatives so column means match the original. |
-| `pipeline/segment.py` | 5a Segment (optional) | Merge adjacent timesteps within a typical period. |
-| `pipeline/accuracy.py` | 7 Reconstruct | Compute MAE, RMSE, etc. between original and reconstructed (accuracy is computed lazily on `PipelineResult`). |
-| `pipeline/orchestrator.py` | 2a Apply weights (optional) · 4 Trim · unweight · count · 5 Format representatives · 8 Assemble | The `run_pipeline()` orchestrator and its glue helpers — the steps with no dedicated stage module live here. |
+| Module | Responsibility |
+|--------|---------------|
+| `pipeline/normalize.py` | Scale columns to [0, 1] and invert it (`normalize` / `denormalize`). |
+| `pipeline/periods.py` | Reshape the flat series into a (period, timestep) matrix; optional period-sum features. |
+| `pipeline/clustering.py` | Group periods and pick representatives; dispatches to a `utils/` backend or scikit-learn. |
+| `pipeline/extremes.py` | Inject extreme-value periods into the cluster set. |
+| `pipeline/rescale.py` | Adjust representatives so column means match the original. |
+| `pipeline/segment.py` | Merge adjacent timesteps within a typical period. |
+| `pipeline/accuracy.py` | Reconstruct the full series and compute accuracy metrics. |
+| `pipeline/orchestrator.py` | `run_pipeline()` plus the four phase functions and the glue with no dedicated stage module. |
 
 ### Clustering backends
 
