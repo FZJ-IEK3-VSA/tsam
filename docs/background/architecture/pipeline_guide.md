@@ -92,11 +92,10 @@ differences between columns.
 
 **What happens:**
 
-1. **Sort columns** alphabetically (deterministic column order).
-2. **Cast to float** (in case of integer columns).
-3. **Min-max scale** each column to [0, 1] using scikit-learn's
+1. **Cast to float** (in case of integer columns).
+2. **Min-max scale** each column to [0, 1] using scikit-learn's
    `MinMaxScaler`. The fitted scaler is stored for later inversion.
-4. **Column-mean normalization** (optional, `scale_by_column_means=True`):
+3. **Column-mean normalization** (optional, `scale_by_column_means=True`):
    divide each column by its mean so all columns have equal weight
    regardless of their typical magnitude. Useful when columns have very
    different average levels.
@@ -492,9 +491,9 @@ Key fields stored:
 - `segment_assignments`, `segment_durations` — segmentation structure.
 - Config references for documentation.
 
-The pipeline restores the original column order (columns are sorted
-alphabetically internally) and packs everything into a `PipelineResult`,
-which `aggregate()` converts to the user-facing `AggregationResult`.
+The pipeline preserves the original column order and packs everything
+into a `PipelineResult`, which `aggregate()` converts to the user-facing
+`AggregationResult`.
 
 `PipelineResult` is the final internal handoff. It contains the denormalized
 representatives, cluster counts, timing and rescaling metadata, the
