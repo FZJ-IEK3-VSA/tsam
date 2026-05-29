@@ -455,15 +455,10 @@ pandas loops with vectorized numpy operations.
     averaging, contiguous, kmeans, kmedoids, kmaxoids, minmaxmean,
     segmentation, extremes) are bit-for-bit identical to v2.3.9.
 
-Result stability is enforced by two test layers:
-
-1. **Golden regression tests** (`test/test_golden_regression.py`):
-   148 tests compare both APIs against stored CSV baselines. Any code
-   change that alters output values will fail these tests.
-
-2. **Old/new API equivalence tests** (`test/test_old_new_equivalence.py`):
-   296 tests verify that the legacy `TimeSeriesAggregation` class and
-   the new `tsam.aggregate()` function produce identical results.
+Result stability is enforced by golden regression tests
+(`test/test_golden_regression.py`): 111 tests compare `tsam.aggregate()`
+against stored CSV baselines (originally produced by the pre-v3.0.0 API).
+Any code change that alters output values will fail these tests.
 
 If a future release intentionally changes results (e.g., improved
 algorithm), the golden files will be regenerated and the change
