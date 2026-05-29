@@ -1,163 +1,106 @@
 direction: down
 
-grid-rows: 6
-grid-columns: 1
-vertical-gap: 40
-horizontal-gap: 120
+vars: {
+  d2-config: { pad: 25 }
+}
 
-# ── Local classes ─────────────────────────────────────────────────────────
-# `optional_step` fades back conditionally-executed steps (2a, 2b, 3a, 4a, 5a).
-# `place_holder_node` occupies an empty grid cell so a main step and its
-# optional sibling stay on the same row. `phase` is the visible grouping box
-# that wraps each set of steps into one of the four pipeline phases.
 classes: {
-  optional_step: {
-    style: {
-      stroke-dash: 5
-      opacity: 0.55
-    }
+  optional_step: { style: { stroke-dash: 5; opacity: 0.6 } }
+  group: { style: { fill: transparent; stroke: "#8a8a8a" } }
+  side: { style: { fill: transparent; stroke: "#bdbdbd" } }
+  pad: { style: { fill: transparent; stroke: transparent } }
+  # public API the user calls (teal); entry point gets the strongest accent
+  public: { style: { fill: "#e8f5f4"; stroke: "#21918c"; stroke-width: 2; bold: true } }
+  entry: { style: { fill: "#21918c"; stroke: "#0f5c58"; stroke-width: 3; font-color: "#ffffff"; bold: true } }
+}
+
+grid-columns: 3
+grid-gap: 30
+vertical-gap: 25
+
+# ── Left column: surrounding modules (entry, config/results, auxiliary) ───
+lcol: "" {
+  class: pad
+  grid-rows: 4
+  vertical-gap: 30
+
+  pad_top: "" { class: pad }
+  cfgres: "Public API · config & results" {
+    class: side
+    grid-rows: 2
+    cfg: "config.py\nClusterConfig · SegmentConfig · ExtremeConfig\nDistribution · MinMaxMean · ClusteringResult" { class: public }
+    res: "result.py\nAggregationResult · AccuracyMetrics" { class: public }
   }
-  place_holder_node: {
-    style: {
-      fill: transparent
-      stroke: transparent
-    }
-  }
-  phase: {
-    style: {
-      fill: transparent
-      stroke: "#8a8a8a"
-      stroke-width: 2
-    }
+  api: "aggregate()\napi.py — the entry point" { class: entry }
+  aux: "Auxiliary" {
+    class: side
+    grid-columns: 3
+    tune: "tuning.py"
+    plot: "plot.py"
+    opts: "options.py"
   }
 }
 
+# ── Center column: the run_pipeline() spine ───────────────────────────────
+pipeline: "Internal pipeline · run_pipeline()" {
+  class: group
+  direction: down
+  vertical-gap: 25
 
-# ── Input (pre-pipeline) ──────────────────────────────────────────────────
-n0: "Input\npd.DataFrame\nT rows × C cols, datetime-indexed" {class: default}
+  p1: "Phase 1 · Prepare data" {
+    class: group
+    grid-rows: 1
+    horizontal-gap: 30
+    normalize: "normalize\npipeline/normalize.py\ndf (T, C) → 0..1"
+    periods: "periods\npipeline/periods.py\narr (P, C·S)"
+    normalize -> periods
+  }
+  p2: "Phase 2 · Cluster & post-process" {
+    class: group
+    grid-rows: 1
+    horizontal-gap: 30
+    clustering: "clustering\npipeline/clustering.py\narr (K, C·S)"
+    extremes: "extremes (opt.)\npipeline/extremes.py" { class: optional_step }
+    rescale: "rescale (opt.)\npipeline/rescale.py" { class: optional_step }
+    clustering -> extremes -> rescale
+  }
+  p3: "Phase 3 · Format & reconstruct" {
+    class: group
+    grid-rows: 1
+    horizontal-gap: 30
+    segment: "segment (opt.)\npipeline/segment.py" { class: optional_step }
+    denorm: "denormalize\npipeline/normalize.py"
+    accuracy: "reconstruct + accuracy\npipeline/accuracy.py\ndf (T, C)"
+    segment -> denorm -> accuracy
+  }
+  p4: "Phase 4 · Assemble\npipeline/orchestrator.py\nPipelineResult → AggregationResult" { class: group }
 
+  p1 -> p2: "PreparedData"
+  p2 -> p3: "ClusteringOutput"
+  p3 -> p4: "FormattedOutput"
+}
 
-# ── Phase 1 — Prepare data (steps 1, 2, optional 2a / 2b) ─────────────────
-# 3×3 grid. Col 1 holds the main steps; 2a sits beside step 2 in col 2;
-# 2b drops to col 3 on the row below (matching the original layout).
-prepare: "Phase 1 — Prepare data" {
-  class: phase
+# ── Right column: clustering dispatch + backends (centered via spacers) ───
+rcol: "" {
+  class: pad
   grid-rows: 3
-  grid-columns: 3
-  vertical-gap: 60
-  horizontal-gap: 90
+  vertical-gap: 30
 
-  # R1: n1, gap, gap
-  n1_normalize: "1 · Normalize\nNormalizedData\ndf (T, C) scaled to 0..1" {class: default}
-  ph_p1_r1b: "" {class: place_holder_node}
-  ph_p1_r1c: "" {class: place_holder_node}
-
-  # R2: n2, 2a, gap
-  n2_unstack_periods: "2 · Unstack to periods\nPeriodProfiles\narr (P, C·S)" {class: default}
-  n2_a_weights: "2a · weights\nweighted candidates\narr (P, C·S)" {class: optional_step}
-  ph_p1_r2c: "" {class: place_holder_node}
-
-  # R3: gap, gap, 2b
-  ph_p1_r3a: "" {class: place_holder_node}
-  ph_p1_r3b: "" {class: place_holder_node}
-  n2_b_include_period_sums: "2b · include_period_sums\naugmented candidates\narr (P, C·S+C)" {class: optional_step}
-
-  n1_normalize -> n2_unstack_periods
-  n2_unstack_periods -> n2_a_weights
-  n2_unstack_periods -> n2_b_include_period_sums
-  n2_a_weights <-> n2_b_include_period_sums
-}
-
-
-# ── Phase 2 — Cluster & post-process (steps 3, 4, optional 3a / 4a) ────────
-# 2×2 grid: main steps in col 1, their optionals beside them in col 2.
-cluster_postprocess: "Phase 2 — Cluster & post-process" {
-  class: phase
-  grid-rows: 2
-  grid-columns: 2
-  vertical-gap: 60
-  horizontal-gap: 90
-
-  n3_cluster_centers: "3 · Cluster centers\nClusterCenters\narr (K, C·S)" {class: default}
-  n3a_extremes: "3a · extremes\nK' extra clusters added\norder arr (P)" {class: optional_step}
-
-  n4_trim_unweight_count: "4 · Trim · unweight · count\nClusteringOutput\ncounts: dict(cluster, weight)" {class: default}
-  n4a_preserve_column_means: "4a · preserve_column_means\nrescaled representatives\nK × arr(C·S)" {class: optional_step}
-
-  n3_cluster_centers -> n4_trim_unweight_count
-  n3_cluster_centers -> n3a_extremes
-  n3a_extremes -> n4_trim_unweight_count
-  n4_trim_unweight_count -> n4a_preserve_column_means
-}
-
-
-# ── Phase 3 — Format & reconstruct (steps 5, 6, 7, optional 5a) ───────────
-# 2-col grid: main steps stacked in col 1, segmentation beside step 5 in col 2.
-format_reconstruct: "Phase 3 — Format & reconstruct" {
-  class: phase
-  grid-rows: 3
-  grid-columns: 2
-  vertical-gap: 60
-  horizontal-gap: 90
-
-  n5_format_representatives: "5 · Format representatives\nnormalized_typical_periods\ndf (K·S, C)  MultiIndex" {class: default}
-  n5a_n_segments: "5a · n_segments\nsegmented_df\ndf (K·seg, C)" {class: optional_step}
-
-  n6_denormalize: "6 · Denormalize\ntypical_periods\ndf (K·S, C)  original units" {class: default}
-  ph_p3_r2b: "" {class: place_holder_node}
-
-  n7_reconstruct: "7 · Reconstruct\nreconstructed df (T, C)\nnormalized_predicted df (T, C)" {class: default}
-  ph_p3_r3b: "" {class: place_holder_node}
-
-  n5_format_representatives -> n6_denormalize
-  n6_denormalize -> n7_reconstruct
-  n5_format_representatives -> n5a_n_segments
-}
-
-
-# ── Phase 4 — Assemble (step 8) ───────────────────────────────────────────
-assemble: "Phase 4 — Assemble" {
-  class: phase
-
-  n8_assemble: "8 · Assemble\nAggregationResult" {class: default}
-}
-
-
-# ── Legend ───────────────────────────────────────────────────────────────
-# Explains the data-type abbreviations and dimension symbols used in
-# the node labels above. Mirrors the dataclasses defined in
-# src/tsam/pipeline/types.py (NormalizedData, PeriodProfiles,
-# ClusteringOutput, PipelineResult) and the numpy/pandas containers
-# they wrap.
-legend: "Legend" {
-  grid-columns: 4
-  grid-gap: 30
-  style.stroke-dash: 2
-
-  sample_default: "Required step" {class: default}
-  sample_optional: "Optional step\n(toggled by config kwarg)" {class: optional_step}
-
-  data_types: "Data types\ndf      = pd.DataFrame\narr     = numpy.ndarray\ndict    = dictionary\nDataclass = frozen @dataclass\n         (NormalizedData,\n          PeriodProfiles,\n          ClusteringOutput,\n          PipelineResult, ...)" {
-    class: default
-    style.fill: transparent
-    style.bold: false
+  pad_top: "" { class: pad; height: 150; width: 20 }
+  backends: "Clustering dispatch & backends" {
+    class: side
+    grid-rows: 4
+    pa: "period_aggregation.py\nrepresentations.py"
+    km: "utils/k_medoids_exact · utils/k_maxoids"
+    dur: "utils/duration_representation"
+    segu: "utils/segmentation"
   }
-
-  dimensions: "Dimensions\nT  = input timesteps\nC  = input columns\nS  = timesteps per period\nP  = candidate periods (T / S)\nK  = clusters (n_clusters)\nK' = extra extreme clusters\nseg = segments per period" {
-    class: default
-    style.fill: transparent
-    style.bold: false
-  }
+  pad_bot: "" { class: pad; height: 150; width: 20 }
 }
 
-# ── Cross-phase flow ───────────────────────────────────────────────────────
-# Top-level objects are laid out by the grid (declaration order, one column);
-# these edges draw the connectors between phases. Intra-phase main edges live
-# inside their containers so the grid keeps each main step beside its optional.
-n0 -> prepare.n1_normalize
-prepare.n2_unstack_periods -> cluster_postprocess.n3_cluster_centers
-prepare.n2_a_weights -> cluster_postprocess.n3_cluster_centers
-prepare.n2_b_include_period_sums -> cluster_postprocess.n3_cluster_centers
-cluster_postprocess.n4_trim_unweight_count -> format_reconstruct.n5_format_representatives
-cluster_postprocess.n4a_preserve_column_means -> format_reconstruct.n5_format_representatives
-format_reconstruct.n7_reconstruct -> assemble.n8_assemble
+# ── Cross-column edges ─────────────────────────────────────────────────────
+lcol.aux.tune -> lcol.api
+lcol.api -> lcol.cfgres
+lcol.api -> pipeline
+pipeline.p2.clustering -> rcol.backends.pa
+pipeline.p3.segment -> rcol.backends.segu

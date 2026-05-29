@@ -19,19 +19,16 @@ and [Working with results](#working-with-results) at the end.
 
 ## Overview
 
-The diagram below groups the eight pipeline steps into the four phases. Dashed
-boxes are optional steps, each activated by the named config parameter.
+The diagram below shows the four phases down the centre — the module each stage
+lives in and the data that flows between them, with the milestone dataclass on
+each phase transition — wrapped by the surrounding modules: the public API and
+config/result objects (left) and the clustering backends (right). Dashed boxes
+are optional steps, activated by the named config parameter.
 
 ![Pipeline data flow](../../assets/architecture/pipeline_diagram.svg)
 
-**Legend — abbreviations:** T = input timesteps · C = columns (variables) · S = timesteps per period ·
-P = T÷S periods · K = number of clusters · K' = extra extreme clusters · seg = segments per period ·
-df = `pd.DataFrame` · arr = `np.ndarray`
-
-**Dashed boxes** are optional steps, each activated by the named config parameter.
-`2a` (weights) and `2b` (include_period_sums) **can both be active simultaneously** — when both are on,
-column weights are applied first and period-sum features are then appended to the
-already-weighted candidates. The double arrow between them in the diagram shows this sequential combination.
+**Abbreviations:** T = input timesteps · C = columns · S = timesteps per period ·
+P = T÷S periods · K = number of clusters · df = `pd.DataFrame` · arr = `np.ndarray`.
 
 ---
 
