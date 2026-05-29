@@ -10,9 +10,9 @@ top_row: "" {
 
   aux: "Auxiliary" {
   grid-rows: 3
-  tune: "tuning.py\nhyperparameter search" 
-  plot: "plot.py\n(lazy import, plotly)" 
-  opts: "options.py\nglobal options" 
+  tune: "tuning.py\nhyperparameter search"
+  plot: "plot.py\n(lazy import, plotly)"
+  opts: "options.py\nglobal options"
   style.fill: transparent
   style.stroke: "#8a8a8a"
 }
@@ -33,7 +33,7 @@ cfg: "config.py\nClusterConfig\nExtremeConfig\nSegmentConfig\nClusteringResult" 
   style.stroke: "#8a8a8a"
 }
 
-   
+
 }
 orch: "Pipeline orchestrator"
 bottom_row: "" {
@@ -54,9 +54,15 @@ bottom_row: "" {
   style.stroke: "#8a8a8a"
 }
 
+  dispatch: "Clustering dispatch" {
+    pa: "period_aggregation.py\naggregate_periods()" {class: default}
+    rep: "representations.py\nrepresentations()" {class: default}
+    style.fill: transparent
+    style.stroke: "#8a8a8a"
+  }
+
   backends: "Clustering backends" {
     kmex: "utils/k_medoids_exact\n(MILP)" {class: default}
-    kmco: "utils/k_medoids_contiguity" {class: default}
     kmax: "utils/k_maxoids" {class: default}
     dur: "utils/duration_representation" {class: default}
     segu: "utils/segmentation" {class: default}
@@ -90,8 +96,9 @@ bottom_row.stages
 # top_row.orch -> bottom_row.stages.seg
 # top_row.orch -> bottom_row.stages.acc
 
-bottom_row.stages.clu -> bottom_row.backends.kmex
-bottom_row.stages.clu -> bottom_row.backends.kmco
-bottom_row.stages.clu -> bottom_row.backends.kmax
-bottom_row.stages.clu -> bottom_row.backends.dur
+bottom_row.stages.clu -> bottom_row.dispatch.pa
+bottom_row.dispatch.pa -> bottom_row.dispatch.rep
+bottom_row.dispatch.pa -> bottom_row.backends.kmex
+bottom_row.dispatch.pa -> bottom_row.backends.kmax
+bottom_row.dispatch.rep -> bottom_row.backends.dur
 bottom_row.stages.seg -> bottom_row.backends.segu
