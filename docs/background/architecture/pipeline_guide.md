@@ -306,7 +306,7 @@ clustering.
 | **Consumes** | (possibly weighted) `cluster_periods_list`, `cluster_order`, `weight_vector`, original data length |
 | **Produces** | unweighted `cluster_periods_list`, final `cluster_counts: dict[int, float]` |
 
-Four operations happen here in sequence:
+Three operations happen here in sequence:
 
 1. **Trim** period-sum extras: if period-sum features were added in step 2b,
    the extra columns are stripped from each cluster center vector, restoring
@@ -322,10 +322,10 @@ Four operations happen here in sequence:
    These weights are used for rescaling (step 4a) and for downstream optimization
    models — each typical period represents `weight` real periods.
 
-4. **Adjust for partial periods**: if the time series doesn't divide evenly
-   into periods (e.g., 8761 hours with 24-hour periods), the last period was
-   padded in step 2. Here, its cluster weight is reduced proportionally so the
-   total weight is correct.
+A tail correction follows: if the time series doesn't divide evenly into
+periods (e.g., 8761 hours with 24-hour periods), the last period was padded
+in step 2 to make it fit. The last cluster's count is reduced proportionally
+so the total weight matches the original data length.
 
 ---
 
