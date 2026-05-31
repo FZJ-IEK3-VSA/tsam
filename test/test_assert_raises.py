@@ -4,227 +4,113 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
+from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
+
+# NOTE: The legacy ``TimeSeriesAggregation`` constructor performed runtime
+# type-checks on a number of scalar/boolean keyword arguments (e.g.
+# ``evalSumPeriods``/``sortValues``/``sameMean``/``rescaleClusterPeriods`` "has
+# to be boolean", and ``predefClusterOrder``/``predefClusterCenterIndices`` "has
+# to be an array or list").  The new ``aggregate`` API expresses these through
+# typed config objects / dataclass fields, so there is no equivalent runtime
+# validation to assert against — those cases are intentionally not ported here.
 
 
 def test_assert_raises():
-    # important: special signs such as brackets must be marked with '\' when matching error message
-
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
-    # check error message for wrong time series
-    np.testing.assert_raises_regex(
-        ValueError,
-        r"timeSeries has to be of type pandas.DataFrame\(\) or of type np.array\(\) in "
-        "initialization of object of class TimeSeriesAggregation",
-        tsam.TimeSeriesAggregation,
-        timeSeries="erroneousTimeSeries",
-    )
+    # wrong time series type
+    with pytest.raises(TypeError, match="data must be a pandas DataFrame"):
+        aggregate("erroneousTimeSeries", n_clusters=8)
 
-    # check error messages for wrong attribute names added for extreme period methods
-    np.testing.assert_raises_regex(
-        ValueError,
-        'erroneousAttribute listed in "addPeakMin" does not occur as timeSeries column',
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        addPeakMin=["erroneousAttribute"],
-    )
-    np.testing.assert_raises_regex(
-        ValueError,
-        'erroneousAttribute listed in "addPeakMax" does not occur as timeSeries column',
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        addPeakMax=["erroneousAttribute"],
-    )
-    np.testing.assert_raises_regex(
-        ValueError,
-        'erroneousAttribute listed in "addMeanMin" does not occur as timeSeries column',
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        addMeanMin=["erroneousAttribute"],
-    )
-    np.testing.assert_raises_regex(
-        ValueError,
-        'erroneousAttribute listed in "addMeanMax" does not occur as timeSeries column',
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        addMeanMax=["erroneousAttribute"],
-    )
+    # extreme-period columns that do not occur in the data
+    for cfg in (
+        ExtremeConfig(method="append", min_value=["erroneousAttribute"]),
+        ExtremeConfig(method="append", max_value=["erroneousAttribute"]),
+        ExtremeConfig(method="append", min_period=["erroneousAttribute"]),
+        ExtremeConfig(method="append", max_period=["erroneousAttribute"]),
+    ):
+        with pytest.raises(
+            ValueError, match="Extreme period columns not found in data"
+        ):
+            aggregate(raw, n_clusters=8, extremes=cfg)
 
-    # check error message for missing datetime index and missing resolution argument
-    np.testing.assert_raises_regex(
+    # missing datetime index and missing temporal_resolution argument
+    with pytest.raises(
         ValueError,
-        "'resolution' argument has to be nonnegative float or int or the given "
+        match="'resolution' argument has to be nonnegative float or int or the given "
         "timeseries needs a datetime index",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw.reset_index(),
-    )
-    # overwrite one of the datetime-like string indices in the raw data to an index that cannot be converted
+    ):
+        aggregate(raw.reset_index(), n_clusters=8)
+
+    # erroneous datetime index (one entry cannot be converted) and missing resolution
     rawErrInd = copy.deepcopy(raw)
     as_list = rawErrInd.index.tolist()
     idx = as_list.index("2010-01-01 00:30:00")
     as_list[idx] = "erroneousDatetimeIndex"
     rawErrInd.index = as_list
-    # check error message for erroneous datetime index and missing resolution argument
-    np.testing.assert_raises_regex(
+    with pytest.raises(
         ValueError,
-        "'resolution' argument has to be nonnegative float or int or the given "
+        match="'resolution' argument has to be nonnegative float or int or the given "
         "timeseries needs a datetime index",
-        tsam.TimeSeriesAggregation,
-        timeSeries=rawErrInd,
-    )
-    # check erroneous resolution argument
-    np.testing.assert_raises_regex(
-        ValueError,
-        "resolution has to be nonnegative float or int",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        resolution="erroneousResolution",
-    )
+    ):
+        aggregate(rawErrInd, n_clusters=8)
 
-    # check erroneous hoursPerPeriod argument
-    np.testing.assert_raises_regex(
-        ValueError,
-        "hoursPerPeriod has to be nonnegative float or int",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        hoursPerPeriod=None,
-    )
+    # erroneous temporal_resolution argument
+    with pytest.raises(ValueError, match="temporal_resolution"):
+        aggregate(raw, n_clusters=8, temporal_resolution="erroneousResolution")
 
-    # check erroneous noTypicalPeriods argument
-    np.testing.assert_raises_regex(
-        ValueError,
-        "noTypicalPeriods has to be nonnegative integer",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        noTypicalPeriods=None,
-    )
+    # erroneous period_duration argument
+    with pytest.raises(TypeError, match="period_duration must be"):
+        aggregate(raw, n_clusters=8, period_duration=None)
 
-    # check non-integer time step number per typical period
-    np.testing.assert_raises_regex(
-        ValueError,
-        "The combination of hoursPerPeriod and the resulution does not result in an integer "
-        "number of time steps per period",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        hoursPerPeriod=23,
-        resolution=2,
-    )
+    # erroneous n_clusters argument
+    with pytest.raises(ValueError, match="n_clusters must be a positive integer"):
+        aggregate(raw, n_clusters=None)
 
-    # check warning when number of segments per period is higher than the number of time steps per period
-    with pytest.warns(Warning):
-        tsam.TimeSeriesAggregation(
-            timeSeries=raw,
-            segmentation=True,
-            noSegments=25,
+    # non-integer number of time steps per period
+    with pytest.raises(
+        ValueError,
+        match="does not result in an integer number of time steps per period",
+    ):
+        aggregate(raw, n_clusters=8, period_duration=23, temporal_resolution=2)
+
+    # number of segments per period higher than the number of time steps per period
+    with pytest.raises(ValueError, match="cannot exceed timesteps per period"):
+        aggregate(raw, n_clusters=8, segments=SegmentConfig(n_segments=25))
+
+    # erroneous cluster method
+    with pytest.raises(ValueError, match="Unknown cluster method"):
+        aggregate(
+            raw, n_clusters=8, cluster=ClusterConfig(method="erroneousClusterMethod")
         )
 
-    # check erroneous clusterMethod argument
-    np.testing.assert_raises_regex(
-        ValueError,
-        r"clusterMethod needs to be one of the following: \['averaging', 'k_means', "
-        r"'k_medoids', 'k_maxoids', 'hierarchical', 'adjacent_periods'\]",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        clusterMethod="erroneousClusterMethod",
-    )
+    # erroneous representation method
+    with pytest.raises(ValueError, match="Unknown representation method"):
+        aggregate(
+            raw,
+            n_clusters=8,
+            cluster=ClusterConfig(representation="erroneousRepresentationMethod"),
+        )
 
-    # check erroneous representationMethod argument
-    np.testing.assert_raises(
-        ValueError,
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        representationMethod="erroneousRepresentationMethod",
-    )
+    # erroneous extreme period method
+    with pytest.raises(KeyError):
+        aggregate(
+            raw,
+            n_clusters=8,
+            extremes=ExtremeConfig(
+                method="erroneousExtremePeriodMethod", max_value=["Load"]
+            ),
+        )
 
-    # check erroneous extremePeriodMethod argument
-    np.testing.assert_raises_regex(
-        ValueError,
-        r"extremePeriodMethod needs to be one of the following: \['None', 'append', "
-        r"'new_cluster_center', 'replace_cluster_center'\]",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        extremePeriodMethod="erroneousExtremePeriodMethod",
-    )
-
-    # check erroneous evalSumPeriods argument
-    np.testing.assert_raises_regex(
-        ValueError,
-        "evalSumPeriods has to be boolean",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        evalSumPeriods="erroneousEvalSumPeriods",
-    )
-
-    # check erroneous sortValues argument
-    np.testing.assert_raises_regex(
-        ValueError,
-        "sortValues has to be boolean",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        sortValues="erroneousSortValues",
-    )
-
-    # check erroneous sameMean argument
-    np.testing.assert_raises_regex(
-        ValueError,
-        "sameMean has to be boolean",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        sameMean="erroneousSameMean",
-    )
-
-    # check erroneous rescaleClusterPeriods argument
-    np.testing.assert_raises_regex(
-        ValueError,
-        "rescaleClusterPeriods has to be boolean",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        rescaleClusterPeriods="erroneousrescaleClusterPeriods",
-    )
-
-    # check erroneous predefClusterOrder argument
-    np.testing.assert_raises_regex(
-        ValueError,
-        "predefClusterOrder has to be an array or list",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        predefClusterOrder="erroneousPredefClusterOrder",
-    )
-
-    # get a cluster order from a preceding clustering run
-    aggregation = tsam.TimeSeriesAggregation(timeSeries=raw)
-    periodOrder = aggregation.clusterOrder
-    # check erroneous predefClusterCenterIndices argument
-    np.testing.assert_raises_regex(
-        ValueError,
-        "predefClusterCenterIndices has to be an array or list",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        predefClusterOrder=periodOrder,
-        predefClusterCenterIndices="erroneousPredefClusterCenterIndices",
-    )
-
-    # check error, when predefClusterCenterIndices are defined but not predefClusterOrder
-    np.testing.assert_raises_regex(
-        ValueError,
-        'If "predefClusterCenterIndices" is defined, "predefClusterOrder" needs to be '
-        "defined as well",
-        tsam.TimeSeriesAggregation,
-        timeSeries=raw,
-        predefClusterCenterIndices="erroneousPredefClusterCenterIndices",
-    )
-
-    # check erroneous dataframe containing NaN values
+    # data frame containing NaN values
     rawNan = copy.deepcopy(raw)
     rawNan.iloc[10, :] = np.nan
-    aggregation = tsam.TimeSeriesAggregation(timeSeries=rawNan)
-    np.testing.assert_raises_regex(
+    with pytest.raises(
         ValueError,
-        "Pre processed data includes NaN. Please check the timeSeries input data.",
-        aggregation.createTypicalPeriods,
-    )
+        match="Pre processed data includes NaN",
+    ):
+        aggregate(rawNan, n_clusters=8)
 
 
 if __name__ == "__main__":
