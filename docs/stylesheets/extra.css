@@ -39,6 +39,7 @@
 .tsam-logo-light {
   display: block;
 }
+
 .tsam-logo-dark {
   display: none;
 }
@@ -46,6 +47,7 @@
 [data-md-color-scheme="slate"] .tsam-logo-light {
   display: none;
 }
+
 [data-md-color-scheme="slate"] .tsam-logo-dark {
   display: block;
 }
@@ -176,4 +178,23 @@
 /* Footer is always dark — always show JSA logo in white */
 .footer-logo--jsa {
   filter: brightness(0) invert(1);
+}
+
+/* -- Zoomable image / diagram hover affordance --------------------------- */
+/* Architecture diagrams (anything under assets/architecture/) get a hover
+   ring to signal they are clickable; the click opens a panzoom modal wired
+   up in javascripts/diagram-zoom-init.js. Scoped narrowly by path so the
+   landing-page logos, notebook output images, and plotly figures keep
+   their default behavior. */
+.md-typeset img[src*="assets/architecture/"] {
+  cursor: pointer;
+  border-radius: 4px;
+  outline: 2px solid transparent;
+  outline-offset: 4px;
+  transition: outline-color 0.15s ease;
+}
+
+.md-typeset img[src*="assets/architecture/"]:hover {
+  outline-color: #35b0ab;
+  /* FZJ accent teal */
 }

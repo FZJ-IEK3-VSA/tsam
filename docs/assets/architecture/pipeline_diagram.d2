@@ -1,0 +1,184 @@
+# Pipeline architecture diagram — user data flow (time series in -> aggregate()
+# -> clustered data out), the four-phase run_pipeline(), and the clustering /
+# representation / segmentation options. Compact and A4-printable. Regenerate:
+#   d2 pipeline_diagram.d2 pipeline_diagram.svg
+
+direction: down
+
+vars: {
+  d2-config: { pad: 6 }
+}
+
+classes: {
+  side: { style: { fill: transparent; stroke: "#bdbdbd" } }
+  pad: { style: { fill: transparent; stroke: transparent } }
+  # green wrapper around the whole public API column (the user's entry points)
+  api_group: { style: { fill: "#eef9f6"; stroke: "#157a75"; stroke-width: 2; bold: true; font-size: 20; font-color: "#0f5c58" } }
+  # first-class public API (aggregate + config + results): prominent teal
+  public: { style: { fill: "#d3efec"; stroke: "#157a75"; stroke-width: 2; bold: false; font-size: 18 } }
+  # secondary public tools: lighter teal
+  tool: { style: { fill: "#eef6f5"; stroke: "#8fc9c3"; bold: false; font-size: 16 } }
+  # user data (time series in / clustered data out) — blue, distinct from the API
+  data: { style: { fill: "#e7f0fb"; stroke: "#3f6fb0"; stroke-width: 2 } }
+  # public-box title (bold) + body (normal) sub-nodes — same split as the phases
+  # (d2 can't bold only part of a single label without markdown, which drops the
+  # fill/border); fixed width keeps every box equal width and the text centred.
+  pub_title: { width: 360; height: 30; style: { fill: transparent; stroke: transparent; bold: true; font-size: 20 } }
+  pub_body: { width: 360; height: 30; style: { fill: transparent; stroke: transparent; bold: false; font-size: 17 } }
+  # phase container holds a bold title sub-node + a normal-weight body sub-node
+  # (d2 cannot bold only part of a single label without markdown, which drops
+  # the box border — so the two weights are two borderless sub-nodes).
+  phase: { style: { fill: "#ffffff"; stroke: "#1f4ea1"; stroke-width: 2 } }
+  # fixed widths so every phase box is the same width and the centered text
+  # lands on the box centre (d2 left-aligns content when it stretches a narrower
+  # sibling to match the widest one).
+  phase_title: { width: 384; height: 32; style: { fill: transparent; stroke: transparent; bold: true; font-size: 22 } }
+  phase_body: { width: 384; height: 30; style: { fill: transparent; stroke: transparent; bold: false; font-size: 18 } }
+  # individual option chips — fixed width so all three groups are equal width
+  opt: { width: 196; height: 40; style: { fill: "#f4f6f8"; stroke: "#aeb9c4"; bold: false; font-size: 18 } }
+  conn: { style: { stroke: "#8693a0" } }
+}
+
+grid-columns: 3
+grid-gap: 36
+vertical-gap: 20
+
+# ── Left: public API (config → aggregate → results) + tools ────────────────
+# grid-gap doubles as the container's inner padding, so it is kept tiny (4) to
+# keep the outer boxes tight; the vertical spacing comes from transparent spacer
+# rows whose heights are tuned to fill the column to the tallest (right) one.
+lcol: "Public API · user entry points" {
+  class: api_group
+  grid-columns: 1
+  grid-gap: 16
+  cfg: "" {
+    class: public
+    grid-rows: 2
+    grid-gap: 2
+    title: "Config" { class: pub_title }
+    body: "ClusterConfig · SegmentConfig · ExtremeConfig\nDistribution · MinMaxMean" { class: pub_body; height: 52 }
+  }
+  gap0: "" { class: pad; width: 10; height: 40 }
+  ts: "" {
+    class: data
+    grid-rows: 2
+    grid-gap: 2
+    title: "Time series in" { class: pub_title }
+    body: "T timesteps × C columns" { class: pub_body }
+  }
+  gapA: "" { class: pad; width: 10; height: 40 }
+  api: "" {
+    class: public
+    grid-rows: 2
+    grid-gap: 2
+    title: "aggregate()" { class: pub_title }
+    body: "the entry point" { class: pub_body }
+  }
+  gapB: "" { class: pad; width: 10; height: 40 }
+  res: "" {
+    class: data
+    grid-rows: 2
+    grid-gap: 2
+    title: "Clustered data out" { class: pub_title }
+    body: "Typical periods (K) + weights\n(AggregationResult)" { class: pub_body; height: 52 }
+  }
+  gapC: "" { class: pad; width: 10; height: 40 }
+  tools: "" {
+    class: tool
+    grid-rows: 2
+    grid-gap: 2
+    title: "Tools" { class: pub_title }
+    body: "tuning · plot · options" { class: pub_body }
+  }
+  ts -> api: "time series"
+  api -> res: "typical periods"
+}
+
+# ── Center: the four phases (bold title + stage names) ─────────────────────
+pipeline: "Internal pipeline · run_pipeline()" {
+  class: side
+  grid-columns: 1
+  grid-gap: 16
+
+  p1: "" {
+    class: phase
+    grid-rows: 2
+    grid-gap: 2
+    title: "Phase 1 · Prepare data" { class: phase_title }
+    body: "normalize → unstack to periods\n(optional: weights, period sums)" { class: phase_body; height: 54 }
+  }
+  gap1: "" { class: pad; width: 10; height: 87 }
+  p2: "" {
+    class: phase
+    grid-rows: 2
+    grid-gap: 2
+    title: "Phase 2 · Cluster & post-process" { class: phase_title }
+    body: "cluster → extremes → rescale → count" { class: phase_body }
+  }
+  gap2: "" { class: pad; width: 10; height: 87 }
+  p3: "" {
+    class: phase
+    grid-rows: 2
+    grid-gap: 2
+    title: "Phase 3 · Format & reconstruct" { class: phase_title }
+    body: "format → segment → denormalize → reconstruct" { class: phase_body }
+  }
+  gap3: "" { class: pad; width: 10; height: 87 }
+  p4: "" {
+    class: phase
+    grid-rows: 2
+    grid-gap: 2
+    title: "Phase 4 · Assemble" { class: phase_title }
+    body: "build ClusteringResult + PipelineResult" { class: phase_body }
+  }
+
+  p1 -> p2: "PreparedData" { style.font-size: 18; style.font-color: "#3f4a55" }
+  p2 -> p3: "ClusteringOutput" { style.font-size: 18; style.font-color: "#3f4a55" }
+  p3 -> p4: "FormattedOutput" { style.font-size: 18; style.font-color: "#3f4a55" }
+}
+
+# ── Right: backends. Clustering & segmentation both feed Representations ───
+rcol: "" {
+  class: pad
+  grid-columns: 1
+  grid-gap: 16
+
+  clu_back: "Clustering methods" {
+    class: side
+    grid-columns: 2
+    grid-gap: 6
+    m1: "averaging" { class: opt }
+    m2: "k-means" { class: opt }
+    m3: "k-medoids" { class: opt }
+    m4: "k-maxoids" { class: opt }
+    m5: "hierarchical (Ward)" { class: opt }
+    m6: "contiguous" { class: opt }
+  }
+
+  gapR1: "" { class: pad; width: 10; height: 40 }
+  reps: "Representations" {
+    class: side
+    grid-columns: 2
+    grid-gap: 6
+    r1: "mean" { class: opt }
+    r2: "medoid" { class: opt }
+    r3: "maxoid" { class: opt }
+    r4: "minmax_mean" { class: opt }
+    r5: "distribution" { class: opt }
+    r6: "distribution + minmax" { class: opt }
+  }
+
+  gapR2: "" { class: pad; width: 10; height: 40 }
+  seg_back: "Segmentation" {
+    class: side
+    grid-columns: 1
+    s1: "n_segments merged by\nagglomerative clustering" { class: opt; height: 60; width: 250 }
+  }
+}
+
+# ── Edges ─────────────────────────────────────────────────────────────────
+lcol.api -> pipeline
+pipeline.p2 -> rcol.clu_back { class: conn }
+pipeline.p3 -> rcol.seg_back { class: conn }
+rcol.clu_back -> rcol.reps: "uses" { style: { stroke: "#4a5560"; stroke-width: 2 } }
+rcol.seg_back -> rcol.reps: "uses" { style: { stroke: "#4a5560"; stroke-width: 2 } }

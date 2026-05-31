@@ -241,17 +241,12 @@ class TestValidateWeights:
         assert result is not None
         assert result["A"] == pytest.approx(MIN_WEIGHT)
 
-    def test_old_wrapper_rejects_invalid_columns(self, sample_data):
-        """Old wrapper now raises ValueError on invalid weight column names."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            from tsam.timeseriesaggregation import TimeSeriesAggregation
-
-            agg = TimeSeriesAggregation(
-                time_series=sample_data,
-                no_typical_periods=8,
-                hours_per_period=24,
-                weight_dict={"NonExistent": 2.0},
+    def test_aggregate_rejects_invalid_weight_columns(self, sample_data):
+        """aggregate() raises ValueError on weight column names not in the data."""
+        with pytest.raises(ValueError, match="Weight columns not found"):
+            aggregate(
+                sample_data,
+                n_clusters=8,
+                period_duration=24,
+                weights={"NonExistent": 2.0},
             )
-            with pytest.raises(ValueError, match="Weight columns not found"):
-                agg.create_typical_periods()

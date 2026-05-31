@@ -51,6 +51,7 @@ nav:
     - index.md
     - Installation: installation.md
     - Getting Started: getting-started.md
+    - Contributing: contributing.md
     - Migration Guide: migration-guide.md
     - Glossary: glossary.md
   - Examples:
@@ -70,20 +71,27 @@ nav:
       - notebooks/tuning.ipynb
       - notebooks/pareto_optimization.ipynb
       - notebooks/building_energy_system.ipynb
-  - Learn:
+  - Background:
+    - background/index.md
     - Mathematical Background: background/math.md
-    - Pipeline Guide: background/pipeline_guide.md
+    - Architecture:
+      - background/architecture/index.md
+      - System Context: background/architecture/context.md
+      - Pipeline Guide: background/architecture/pipeline_guide.md
+    - Decisions:
+      - background/decisions/index.md
+      - 0001 — V4 Pipeline: background/decisions/0001-v4-pipeline.md
     - Further Reading: further-reading.md
-  - API Reference: api/
+  - API Reference:
+    - api/index.md
+    - Configuration: api/configuration.md
+    - Results: api/results.md
+    - Pipeline internals: api/pipeline.md
+    - Tuning: api/tuning.md
+    - Utilities: api/utilities.md
   - About:
     - Changelog: changelog.md
     - Legal Notice: legal-notice.md
-
-# gen_ref_pages.py lives in docs/ because gen-files requires scripts to be
-# relative to the project root, but mkdocs-jupyter would otherwise pick it up
-# and try to execute it as a notebook, crashing the build.
-exclude_docs: |
-  gen_ref_pages.py
 
 plugins:
   - search
@@ -96,22 +104,23 @@ plugins:
             show_root_heading: true
             members_order: source
             docstring_style: auto
+            docstring_section_style: table
+            summary: true
             show_symbol_type_heading: true
             show_symbol_type_toc: true
             separate_signature: true
             show_signature_annotations: true
   - mkdocs-jupyter:
-      execute: true
+      # Notebooks are pre-executed in parallel by scripts/execute_notebooks.py
+      # before `mkdocs build`/`mkdocs serve`; see CONTRIBUTING.md. mkdocs
+      # only renders the already-populated outputs, which keeps the build
+      # fast.
+      execute: false
       kernel_name: python3
       include_source: true
       allow_errors: false
       include_requirejs: true
       toc_depth: 3
-  - gen-files:
-      scripts:
-        - docs/gen_ref_pages.py
-  - literate-nav:
-      nav_file: SUMMARY.md
 
 markdown_extensions:
   - pymdownx.arithmatex:
@@ -130,7 +139,8 @@ markdown_extensions:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: ['.']
   - pymdownx.mark
   - admonition
   - pymdownx.details
@@ -142,7 +152,7 @@ markdown_extensions:
   - abbr
   - toc:
       permalink: true
-      toc_depth: 2
+      toc_depth: 3
 
 extra:
   generator: false
@@ -154,3 +164,5 @@ extra_javascript:
   - https://cdn.plot.ly/plotly-3.3.0.min.js
   - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+  - https://cdn.jsdelivr.net/npm/panzoom@9.4.3/dist/panzoom.min.js
+  - javascripts/diagram-zoom-init.js

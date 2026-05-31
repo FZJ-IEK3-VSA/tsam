@@ -51,9 +51,57 @@ def add_extreme_periods(
     cluster_order: list | np.ndarray,
     extremes: ExtremeConfig,
 ) -> tuple[list, list | np.ndarray, list[int], dict]:
-    """Add extreme periods to clustered data.
+    """Ensure periods with extreme values survive into the typical-period set.
 
-    Returns (new_cluster_centers, new_cluster_order, extreme_cluster_idx, extreme_periods_info).
+    Optional stage, configured by `ExtremeConfig`. Clustering tends to average
+    away rare but important periods (peak demand, minimum solar). This stage
+    detects such periods and explicitly represents them in the output.
+
+    Extreme detection itself (per-column ``idxmax``/``idxmin``) is
+    weight-invariant. When weights are active the ``profiles_df`` passed in is
+    already weighted, so the ``new_cluster`` method's distance-based
+    reassignment respects weights; the extracted profiles carry weights, which
+    are stripped uniformly during the later unweighting step.
+
+    **Extreme types** (which period is preserved):
+
+    | Config field | What it preserves |
+    |---|---|
+    | `max_value=["demand"]` | The period containing the single highest demand value. |
+    | `min_value=["solar"]` | The period containing the single lowest solar value. |
+    | `max_period=["demand"]` | The period with the highest average demand. |
+    | `min_period=["solar"]` | The period with the lowest average solar. |
+
+    **Integration methods** (``ExtremeConfig.method``):
+
+    | Method | Behavior |
+    |---|---|
+    | `"append"` | Add extreme periods as new clusters (increases `n_clusters`). Default. |
+    | `"new_cluster"` | Like append, but also reassign nearby periods to the new cluster. |
+    | `"replace"` | Overwrite the relevant column values in the nearest existing center. |
+
+    Parameters
+    ----------
+    profiles_df
+        Period profiles (weighted if weights are active), searched for extremes.
+    cluster_centers
+        Representatives produced by clustering, to be extended.
+    cluster_order
+        Per-period cluster assignment, updated in place for the chosen method.
+    extremes
+        Which extremes to preserve and how to integrate them.
+
+    Returns
+    -------
+    tuple
+        ``(new_cluster_centers, new_cluster_order, extreme_cluster_idx,
+        extreme_periods_info)`` — the updated center list and assignment, the
+        indices of the newly added extreme clusters, and metadata for transfer.
+
+    See Also
+    --------
+    cluster_periods : Produces the clusters this stage augments.
+    rescale_representatives : Skips extreme clusters when correcting means.
     """
     columns = profiles_df.columns.get_level_values(0).unique().tolist()
     extreme_periods: dict = {}

@@ -28,14 +28,6 @@ For more control, use configuration objects:
 ...     cluster=ClusterConfig(method="hierarchical", representation="distribution"),
 ...     segments=SegmentConfig(n_segments=12),
 ... )
-
-Legacy API
-----------
-The original class-based API is still available:
-
->>> from tsam.timeseriesaggregation import TimeSeriesAggregation
->>> agg = TimeSeriesAggregation(df, no_typical_periods=8)
->>> typical = agg.create_typical_periods()
 """
 
 from tsam.api import aggregate, unstack_to_periods
@@ -61,12 +53,8 @@ from tsam.config import (
     MinMaxMean,
     SegmentConfig,
 )
-from tsam.exceptions import LegacyAPIWarning
 from tsam.options import options
 from tsam.result import AccuracyMetrics, AggregationResult
-
-# Legacy imports for backward compatibility
-from tsam.timeseriesaggregation import TimeSeriesAggregation, unstackToPeriods
 
 try:
     from tsam._version import __version__
@@ -80,14 +68,11 @@ __all__ = [
     "ClusteringResult",
     "Distribution",
     "ExtremeConfig",
-    "LegacyAPIWarning",
     "MinMaxMean",
     "SegmentConfig",
-    "TimeSeriesAggregation",
     "aggregate",
     "options",
     "plot",
     "tuning",
-    "unstackToPeriods",  # Legacy alias
     "unstack_to_periods",
 ]

@@ -10,28 +10,46 @@ Tests that weights affect ONLY clustering distance, and do not leak into:
 import pandas as pd
 import pytest
 
-import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
-
-pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
+from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
 
 RAW = pd.read_csv(TESTDATA_CSV, index_col=0)
 N_TYPICAL = 8
 HOURS_PER_PERIOD = 24
 
 
-def _make_agg(weight_dict=None, **kwargs):
-    defaults = {
-        "no_typical_periods": N_TYPICAL,
-        "hours_per_period": HOURS_PER_PERIOD,
-        "cluster_method": "hierarchical",
+def _run(weight_dict=None, **kwargs):
+    cluster_method = kwargs.pop("cluster_method", "hierarchical")
+    method = "kmeans" if cluster_method == "k_means" else cluster_method
+    same_mean = kwargs.pop("same_mean", False)
+
+    agg_kwargs = {
+        "n_clusters": N_TYPICAL,
+        "period_duration": HOURS_PER_PERIOD,
+        "cluster": ClusterConfig(method=method, scale_by_column_means=same_mean),
     }
-    defaults.update(kwargs)
+
+    if "rescale_cluster_periods" in kwargs:
+        agg_kwargs["preserve_column_means"] = kwargs.pop("rescale_cluster_periods")
+
+    segmentation = kwargs.pop("segmentation", False)
+    no_segments = kwargs.pop("no_segments", None)
+    if segmentation or no_segments is not None:
+        agg_kwargs["segments"] = SegmentConfig(n_segments=no_segments)
+
+    add_peak_max = kwargs.pop("add_peak_max", None)
+    add_peak_min = kwargs.pop("add_peak_min", None)
+    if add_peak_max is not None or add_peak_min is not None:
+        agg_kwargs["extremes"] = ExtremeConfig(
+            max_value=add_peak_max or [],
+            min_value=add_peak_min or [],
+        )
+
     if weight_dict is not None:
-        defaults["weight_dict"] = weight_dict
-    agg = tsam.TimeSeriesAggregation(RAW.copy(), **defaults)
-    agg.create_typical_periods()
-    return agg
+        agg_kwargs["weights"] = weight_dict
+
+    agg_kwargs.update(kwargs)
+    return aggregate(RAW.copy(), **agg_kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -54,8 +72,8 @@ class TestOutputRange:
         ],
     )
     def test_typical_periods_within_bounds(self, weights):
-        agg = _make_agg(weights)
-        tp = agg.typical_periods
+        agg = _run(weights)
+        tp = agg.cluster_representatives
 
         for col in RAW.columns:
             col_min = RAW[col].min()
@@ -76,8 +94,8 @@ class TestOutputRange:
         ],
     )
     def test_predicted_data_within_bounds(self, weights):
-        agg = _make_agg(weights)
-        pred = agg.predict_original_data()
+        agg = _run(weights)
+        pred = agg.reconstructed
 
         for col in RAW.columns:
             col_min = RAW[col].min()
@@ -100,34 +118,40 @@ class TestUniformWeightsEquivalence:
 
     @pytest.mark.parametrize("uniform_weight", [1, 2, 0.5, 10, 100])
     def test_uniform_weights_typical_periods(self, uniform_weight):
-        agg_none = _make_agg(None)
-        agg_uniform = _make_agg(dict.fromkeys(RAW.columns, uniform_weight))
+        agg_none = _run(None)
+        agg_uniform = _run(dict.fromkeys(RAW.columns, uniform_weight))
 
         pd.testing.assert_frame_equal(
-            agg_none.typical_periods,
-            agg_uniform.typical_periods,
+            agg_none.cluster_representatives,
+            agg_uniform.cluster_representatives,
             atol=1e-6,
         )
 
     @pytest.mark.parametrize("uniform_weight", [1, 2, 10])
     def test_uniform_weights_predicted_data(self, uniform_weight):
-        agg_none = _make_agg(None)
-        agg_uniform = _make_agg(dict.fromkeys(RAW.columns, uniform_weight))
+        agg_none = _run(None)
+        agg_uniform = _run(dict.fromkeys(RAW.columns, uniform_weight))
 
         pd.testing.assert_frame_equal(
-            agg_none.predict_original_data(),
-            agg_uniform.predict_original_data(),
+            agg_none.reconstructed,
+            agg_uniform.reconstructed,
             atol=1e-6,
         )
 
     @pytest.mark.parametrize("uniform_weight", [1, 2, 10])
     def test_uniform_weights_accuracy(self, uniform_weight):
-        agg_none = _make_agg(None)
-        agg_uniform = _make_agg(dict.fromkeys(RAW.columns, uniform_weight))
+        agg_none = _run(None)
+        agg_uniform = _run(dict.fromkeys(RAW.columns, uniform_weight))
 
-        pd.testing.assert_frame_equal(
-            agg_none.accuracy_indicators(),
-            agg_uniform.accuracy_indicators(),
+        pd.testing.assert_series_equal(
+            agg_none.accuracy.rmse, agg_uniform.accuracy.rmse, atol=1e-6
+        )
+        pd.testing.assert_series_equal(
+            agg_none.accuracy.mae, agg_uniform.accuracy.mae, atol=1e-6
+        )
+        pd.testing.assert_series_equal(
+            agg_none.accuracy.rmse_duration,
+            agg_uniform.accuracy.rmse_duration,
             atol=1e-6,
         )
 
@@ -151,8 +175,8 @@ class TestRescalePreservesMeans:
         ],
     )
     def test_predicted_data_preserves_column_means(self, weights):
-        agg = _make_agg(weights, rescale_cluster_periods=True)
-        pred = agg.predict_original_data()
+        agg = _run(weights, rescale_cluster_periods=True)
+        pred = agg.reconstructed
 
         for col in RAW.columns:
             orig_mean = RAW[col].mean()
@@ -178,19 +202,19 @@ class TestWeightsAffectOnlyClustering:
 
     def test_non_uniform_weights_change_assignments(self):
         """Different weights should (in general) give different cluster orders."""
-        agg1 = _make_agg({"GHI": 1, "T": 1, "Wind": 1, "Load": 1})
-        agg3 = _make_agg({"GHI": 10, "T": 1, "Wind": 1, "Load": 1})
+        agg1 = _run({"GHI": 1, "T": 1, "Wind": 1, "Load": 1})
+        agg3 = _run({"GHI": 10, "T": 1, "Wind": 1, "Load": 1})
 
-        order1 = list(agg1._cluster_order)
-        order3 = list(agg3._cluster_order)
+        order1 = list(agg1.cluster_assignments)
+        order3 = list(agg3.cluster_assignments)
         assert order1 != order3, (
             "Expected different cluster orders with extreme weight diff"
         )
 
     def test_weight_does_not_scale_output(self):
         """Even with extreme weights, output values should be in original data range."""
-        agg = _make_agg({"GHI": 100, "T": 0.01, "Wind": 1, "Load": 1})
-        tp = agg.typical_periods
+        agg = _run({"GHI": 100, "T": 0.01, "Wind": 1, "Load": 1})
+        tp = agg.cluster_representatives
 
         # GHI should NOT be 100x its original range
         assert tp["GHI"].max() <= RAW["GHI"].max() + 1e-6
@@ -215,19 +239,19 @@ class TestWeightsWithSameMean:
         ],
     )
     def test_same_mean_output_in_range(self, weights):
-        agg = _make_agg(weights, same_mean=True)
-        tp = agg.typical_periods
+        agg = _run(weights, same_mean=True)
+        tp = agg.cluster_representatives
 
         for col in RAW.columns:
             assert tp[col].min() >= RAW[col].min() - 1e-6
             assert tp[col].max() <= RAW[col].max() + 1e-6
 
     def test_same_mean_uniform_weights_equal_no_weights(self):
-        agg_none = _make_agg(None, same_mean=True)
-        agg_uniform = _make_agg(dict.fromkeys(RAW.columns, 3), same_mean=True)
+        agg_none = _run(None, same_mean=True)
+        agg_uniform = _run(dict.fromkeys(RAW.columns, 3), same_mean=True)
         pd.testing.assert_frame_equal(
-            agg_none.typical_periods,
-            agg_uniform.typical_periods,
+            agg_none.cluster_representatives,
+            agg_uniform.cluster_representatives,
             atol=1e-6,
         )
 
@@ -240,8 +264,8 @@ class TestWeightsWithSameMean:
         ],
     )
     def test_same_mean_preserves_column_means(self, weights):
-        agg = _make_agg(weights, same_mean=True, rescale_cluster_periods=True)
-        pred = agg.predict_original_data()
+        agg = _run(weights, same_mean=True, rescale_cluster_periods=True)
+        pred = agg.reconstructed
 
         for col in RAW.columns:
             orig_mean = RAW[col].mean()
@@ -270,12 +294,12 @@ class TestWeightsWithExtremePeriods:
         ],
     )
     def test_extreme_periods_in_range(self, weights):
-        agg = _make_agg(
+        agg = _run(
             weights,
             add_peak_max=["GHI"],
             add_peak_min=["T"],
         )
-        tp = agg.typical_periods
+        tp = agg.cluster_representatives
 
         for col in RAW.columns:
             assert tp[col].min() >= RAW[col].min() - 1e-6
@@ -293,22 +317,22 @@ class TestAccuracyIndicatorsConsistency:
 
     def test_accuracy_values_reasonable(self):
         """RMSE and MAE should be between 0 and 1 (on normalized data)."""
-        agg = _make_agg({"GHI": 10, "T": 1, "Wind": 1, "Load": 1})
-        acc = agg.accuracy_indicators()
+        agg = _run({"GHI": 10, "T": 1, "Wind": 1, "Load": 1})
+        acc = agg.accuracy
 
         for col in RAW.columns:
-            rmse = acc.loc[col, "RMSE"]
-            mae = acc.loc[col, "MAE"]
+            rmse = acc.rmse[col]
+            mae = acc.mae[col]
             assert 0 <= rmse <= 2, f"{col} RMSE={rmse} out of reasonable range"
             assert 0 <= mae <= 2, f"{col} MAE={mae} out of reasonable range"
 
     def test_weight_scaling_does_not_inflate_metrics(self):
         """Doubling one weight should not double that column's RMSE."""
-        agg1 = _make_agg({"GHI": 1, "T": 1, "Wind": 1, "Load": 1})
-        agg2 = _make_agg({"GHI": 2, "T": 1, "Wind": 1, "Load": 1})
+        agg1 = _run({"GHI": 1, "T": 1, "Wind": 1, "Load": 1})
+        agg2 = _run({"GHI": 2, "T": 1, "Wind": 1, "Load": 1})
 
-        rmse1 = agg1.accuracy_indicators().loc["GHI", "RMSE"]
-        rmse2 = agg2.accuracy_indicators().loc["GHI", "RMSE"]
+        rmse1 = agg1.accuracy.rmse["GHI"]
+        rmse2 = agg2.accuracy.rmse["GHI"]
 
         if rmse1 > 0:
             ratio = rmse2 / rmse1
@@ -327,13 +351,13 @@ class TestPartialWeightDict:
 
     def test_partial_weights_runs(self):
         """Should not crash when only some columns are weighted."""
-        agg = _make_agg({"GHI": 5})
-        tp = agg.typical_periods
+        agg = _run({"GHI": 5})
+        tp = agg.cluster_representatives
         assert tp.shape[1] == len(RAW.columns)
 
     def test_partial_weights_output_in_range(self):
-        agg = _make_agg({"GHI": 5})
-        tp = agg.typical_periods
+        agg = _run({"GHI": 5})
+        tp = agg.cluster_representatives
         for col in RAW.columns:
             assert tp[col].min() >= RAW[col].min() - 1e-6
             assert tp[col].max() <= RAW[col].max() + 1e-6
@@ -343,9 +367,9 @@ class TestPartialWeightDict:
     )
     def test_partial_weights_accuracy(self):
         """Accuracy indicators should work with partial weight dicts."""
-        agg = _make_agg({"GHI": 5})
-        acc = agg.accuracy_indicators()
-        assert set(acc.index) == set(RAW.columns)
+        agg = _run({"GHI": 5})
+        acc = agg.accuracy
+        assert set(acc.rmse.index) == set(RAW.columns)
 
 
 # ---------------------------------------------------------------------------
@@ -357,21 +381,21 @@ class TestExtremeWeights:
     """Extreme weight values should not break the pipeline."""
 
     def test_very_large_weight(self):
-        agg = _make_agg({"GHI": 1000, "T": 1, "Wind": 1, "Load": 1})
-        tp = agg.typical_periods
+        agg = _run({"GHI": 1000, "T": 1, "Wind": 1, "Load": 1})
+        tp = agg.cluster_representatives
         assert not tp.isnull().any().any(), "NaN in output with large weight"
         assert tp["GHI"].max() <= RAW["GHI"].max() + 1e-6
 
     def test_very_small_weight(self):
         """Very small weights should be clamped to MIN_WEIGHT, not zero."""
-        agg = _make_agg({"GHI": 1e-10, "T": 1, "Wind": 1, "Load": 1})
-        tp = agg.typical_periods
+        agg = _run({"GHI": 1e-10, "T": 1, "Wind": 1, "Load": 1})
+        tp = agg.cluster_representatives
         assert not tp.isnull().any().any(), "NaN in output with tiny weight"
 
     def test_zero_weight_clamped(self):
         """Zero weight should be clamped, not cause division by zero."""
-        agg = _make_agg({"GHI": 0, "T": 1, "Wind": 1, "Load": 1})
-        tp = agg.typical_periods
+        agg = _run({"GHI": 0, "T": 1, "Wind": 1, "Load": 1})
+        tp = agg.cluster_representatives
         assert not tp.isnull().any().any(), "NaN in output with zero weight"
 
 
@@ -386,11 +410,11 @@ class TestRescaleScaleUb:
 
     def test_rescale_with_high_weight_preserves_mean(self):
         """A column with very high weight should still have its mean preserved."""
-        agg = _make_agg(
+        agg = _run(
             {"GHI": 50, "T": 1, "Wind": 1, "Load": 1},
             rescale_cluster_periods=True,
         )
-        pred = agg.predict_original_data()
+        pred = agg.reconstructed
 
         orig_mean = RAW["GHI"].mean()
         pred_mean = pred["GHI"].mean()
@@ -403,8 +427,8 @@ class TestRescaleScaleUb:
 
     def test_rescale_without_weights_preserves_mean(self):
         """Baseline: rescaling without weights should preserve means well."""
-        agg = _make_agg(None, rescale_cluster_periods=True)
-        pred = agg.predict_original_data()
+        agg = _run(None, rescale_cluster_periods=True)
+        pred = agg.reconstructed
 
         for col in RAW.columns:
             orig_mean = RAW[col].mean()
@@ -428,18 +452,18 @@ class TestWeightsWithKMeans:
     def test_kmeans_uniform_weights_match_no_weights(self):
         """k-means is non-deterministic; uniform scaling changes centroid init.
         We only check that the output is reasonable, not bit-identical."""
-        agg_uniform = _make_agg(dict.fromkeys(RAW.columns, 3), cluster_method="k_means")
-        tp = agg_uniform.typical_periods
+        agg_uniform = _run(dict.fromkeys(RAW.columns, 3), cluster_method="k_means")
+        tp = agg_uniform.cluster_representatives
         for col in RAW.columns:
             assert tp[col].max() <= RAW[col].max() + 1e-6
             assert tp[col].min() >= RAW[col].min() - 1e-6
 
     def test_kmeans_output_in_range(self):
-        agg = _make_agg(
+        agg = _run(
             {"GHI": 5, "T": 1, "Wind": 1, "Load": 1},
             cluster_method="k_means",
         )
-        tp = agg.typical_periods
+        tp = agg.cluster_representatives
         for col in RAW.columns:
             assert tp[col].max() <= RAW[col].max() + 1e-6
             assert tp[col].min() >= RAW[col].min() - 1e-6
@@ -457,13 +481,13 @@ class TestWeightsWithSegmentation:
 
     def test_segmentation_uniform_weights_equal_no_weights(self):
         """Uniform weights + segmentation must match no weights."""
-        agg_none = _make_agg(None, segmentation=True, no_segments=4)
-        agg_uniform = _make_agg(
+        agg_none = _run(None, segmentation=True, no_segments=4)
+        agg_uniform = _run(
             dict.fromkeys(RAW.columns, 100), segmentation=True, no_segments=4
         )
         pd.testing.assert_frame_equal(
-            agg_none.predict_original_data(),
-            agg_uniform.predict_original_data(),
+            agg_none.reconstructed,
+            agg_uniform.reconstructed,
             atol=1e-6,
         )
 
@@ -475,8 +499,8 @@ class TestWeightsWithSegmentation:
         ],
     )
     def test_segmentation_output_in_range(self, weights):
-        agg = _make_agg(weights, segmentation=True, no_segments=4)
-        pred = agg.predict_original_data()
+        agg = _run(weights, segmentation=True, no_segments=4)
+        pred = agg.reconstructed
         for col in RAW.columns:
             assert pred[col].min() >= RAW[col].min() - 1e-6, (
                 f"{col}: pred min {pred[col].min()} < data min {RAW[col].min()}"
@@ -494,10 +518,10 @@ class TestWeightsWithSegmentation:
     )
     def test_segmentation_preserves_column_means(self, weights):
         """Reconstructed means should be close to original, not scaled by weight."""
-        agg = _make_agg(
+        agg = _run(
             weights, segmentation=True, no_segments=4, rescale_cluster_periods=True
         )
-        pred = agg.predict_original_data()
+        pred = agg.reconstructed
         for col in RAW.columns:
             orig_mean = RAW[col].mean()
             pred_mean = pred[col].mean()
@@ -511,25 +535,25 @@ class TestWeightsWithSegmentation:
 
     def test_segmentation_samemean_weights(self):
         """same_mean + segmentation + weights must not produce scaled output."""
-        agg = _make_agg(
+        agg = _run(
             {"GHI": 100, "T": 1, "Wind": 1, "Load": 1},
             segmentation=True,
             no_segments=4,
             same_mean=True,
         )
-        pred = agg.predict_original_data()
+        pred = agg.reconstructed
         for col in RAW.columns:
             assert pred[col].min() >= RAW[col].min() - 1e-6
             assert pred[col].max() <= RAW[col].max() + 1e-6
 
     def test_segmentation_typical_periods_in_range(self):
         """typical_periods with segmentation + weights should be in range."""
-        agg = _make_agg(
+        agg = _run(
             {"GHI": 100, "T": 1, "Wind": 1, "Load": 1},
             segmentation=True,
             no_segments=4,
         )
-        tp = agg.typical_periods
+        tp = agg.cluster_representatives
         for col in RAW.columns:
             assert tp[col].min() >= RAW[col].min() - 1e-6
             assert tp[col].max() <= RAW[col].max() + 1e-6

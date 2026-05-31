@@ -14,7 +14,44 @@ def unstack_to_periods(
     normalized_ts: pd.DataFrame,
     n_timesteps_per_period: int,
 ) -> PeriodProfiles:
-    """Extend to integer multiple of period length, reshape to period matrix."""
+    """Reshape the flat time series into a (period × timestep-feature) matrix.
+
+    Clustering groups whole periods, so the flat series must first become a
+    matrix where each row is one period and each column is an
+    ``(attribute, timestep)`` pair.
+
+    **Example.** 365 days of hourly data for 3 columns is an ``(8760, 3)``
+    DataFrame. Unstacking with ``n_timesteps_per_period=24`` yields a
+    ``(365, 72)`` matrix — each row is a 72-dimensional point
+    (3 columns × 24 hours).
+
+    If the series length is not an integer multiple of the period length, the
+    last period is padded by repeating the first rows so the reshape succeeds;
+    the padded period's weight is corrected later during post-processing.
+
+    Parameters
+    ----------
+    normalized_ts
+        Normalized flat time series (output of `normalize`).
+    n_timesteps_per_period
+        Timesteps in one period, e.g. ``24`` for daily periods of hourly data.
+
+    Returns
+    -------
+    PeriodProfiles
+        The candidate matrix plus the column ``MultiIndex`` and original time
+        index needed to reshape and reconstruct later.
+
+    Raises
+    ------
+    ValueError
+        If the reshaped data contains NaN (indicates malformed input).
+
+    See Also
+    --------
+    add_period_sum_features : Optionally append per-period column sums as
+        extra clustering features.
+    """
     unstacked = normalized_ts.copy()
 
     # Extend to integer multiple of period length
@@ -68,9 +105,35 @@ def add_period_sum_features(
     profiles_df: pd.DataFrame,
     candidates: np.ndarray,
 ) -> tuple[np.ndarray, int]:
-    """Append per-column sums as extra features.
+    """Append each period's per-column sum as extra clustering features.
 
-    Returns (augmented_candidates, n_extra_features_to_trim).
+    Optional stage, enabled by ``ClusterConfig.include_period_sums``. The
+    per-column sum of each period is appended as extra columns so that periods
+    with similar totals are pulled together, not just periods with similar
+    shapes.
+
+    These extra columns influence **only** which periods get grouped — they are
+    stripped from the cluster centers during post-processing (the trim step) so
+    they never reach the representation logic, which expects the original
+    columns. When per-column weights are active they are already baked into
+    ``candidates``, so the sums are appended to the weighted candidates.
+
+    Parameters
+    ----------
+    profiles_df
+        The unstacked period profiles (used to compute per-period sums).
+    candidates
+        Current candidate matrix (possibly already weighted) to augment.
+
+    Returns
+    -------
+    tuple[np.ndarray, int]
+        ``(augmented_candidates, n_extra_features)`` — the second value is the
+        number of appended columns, kept so the trim step can remove them.
+
+    See Also
+    --------
+    cluster_periods : Consumes the (possibly augmented) candidate matrix.
     """
     evaluation_values = (
         profiles_df.stack(future_stack=True, level=0).sum(axis=1).unstack(level=1)  # type: ignore[arg-type]

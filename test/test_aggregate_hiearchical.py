@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-import tsam.timeseriesaggregation as tsam
 from conftest import RESULTS_DIR
+from tsam.period_aggregation import aggregate_periods
 
 
 def test_aggregate_hiearchical():
@@ -12,7 +12,7 @@ def test_aggregate_hiearchical():
         header=[0, 1],
     )
 
-    _clusterCenters, _clusterCenterIndices, clusterOrder = tsam.aggregate_periods(
+    _clusterCenters, _clusterCenterIndices, clusterOrder = aggregate_periods(
         normalizedPeriodlyProfiles.values,
         n_clusters=8,
         cluster_method="hierarchical",
