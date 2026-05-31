@@ -9,7 +9,7 @@ Usage:
     >>> result.plot.residuals()  # View reconstruction errors
     >>> result.plot.cluster_representatives()
     >>> result.plot.cluster_members()  # All periods per cluster
-    >>> result.plot.cluster_weights()
+    >>> result.plot.cluster_counts()
     >>> result.plot.accuracy()
 
 For exploring raw data before aggregation, use plotly directly with
@@ -134,7 +134,7 @@ class ResultPlotAccessor:
     >>> result.plot.residuals()  # View reconstruction errors
     >>> result.plot.cluster_representatives()
     >>> result.plot.cluster_members()
-    >>> result.plot.cluster_weights()
+    >>> result.plot.cluster_counts()
     """
 
     def __init__(self, result: AggregationResult):
@@ -445,23 +445,23 @@ class ResultPlotAccessor:
 
         return fig
 
-    def cluster_weights(self, title: str = "Cluster Weights") -> go.Figure:
-        """Plot cluster weight distribution.
+    def cluster_counts(self, title: str = "Cluster Counts") -> go.Figure:
+        """Plot how many original periods each cluster represents.
 
         Parameters
         ----------
-        title : str, default "Cluster Weights"
+        title : str, default "Cluster Counts"
             Plot title.
 
         Returns
         -------
         go.Figure
         """
-        weights = self._result.cluster_counts
+        counts = self._result.cluster_counts
         df = pd.DataFrame(
             {
-                "Period": [f"Period {p}" for p in weights],
-                "Count": list(weights.values()),
+                "Period": [f"Period {p}" for p in counts],
+                "Count": list(counts.values()),
             }
         )
 
@@ -478,6 +478,15 @@ class ResultPlotAccessor:
         fig.update_layout(showlegend=False)
 
         return fig
+
+    def cluster_weights(self, title: str = "Cluster Weights") -> go.Figure:
+        """Deprecated alias for :meth:`cluster_counts`."""
+        warnings.warn(
+            "plot.cluster_weights() is deprecated, use plot.cluster_counts().",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self.cluster_counts(title)
 
     def accuracy(self, title: str = "Accuracy Metrics") -> go.Figure:
         """Plot accuracy metrics by column.

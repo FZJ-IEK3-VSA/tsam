@@ -506,7 +506,7 @@ class AggregationResult:
         >>> result.plot.residuals()  # View reconstruction errors
         >>> result.plot.cluster_representatives()
         >>> result.plot.cluster_members()  # All periods per cluster
-        >>> result.plot.cluster_weights()
+        >>> result.plot.cluster_counts()
         >>> result.plot.accuracy()
         """
         from tsam.plot import ResultPlotAccessor

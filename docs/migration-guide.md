@@ -66,6 +66,12 @@ In v4, per-column `weights` are a **top-level input to `aggregate()`**, not part
 of `ClusterConfig` — they are an aggregation parameter, not clustering
 configuration. Passing `weights=` to `ClusterConfig` now raises `TypeError`.
 
+### Newly deprecated (alias kept for one release)
+
+- `result.plot.cluster_weights()` is renamed to `result.plot.cluster_counts()`,
+  matching the `AggregationResult.cluster_counts` attribute. The old name still
+  works but emits a `FutureWarning` and will be removed in a future release.
+
 ### Internal changes (no action required)
 
 - The pipeline has been decomposed into stateless functions in
@@ -396,7 +402,7 @@ result.plot.compare()               # Duration curves: original vs reconstructed
 result.plot.residuals()             # Reconstruction errors
 result.plot.heatmap()               # Heatmap of cluster representatives
 result.plot.cluster_assignments()   # Period-to-cluster mapping
-result.plot.cluster_weights()       # Cluster occurrence counts
+result.plot.cluster_counts()       # Cluster occurrence counts
 result.plot.accuracy()              # Accuracy metrics bar chart
 ```
 
