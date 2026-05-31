@@ -13,10 +13,10 @@ if TYPE_CHECKING:
 
     from tsam.config import (
         ClusterConfig,
-        ClusteringResult,
         ExtremeConfig,
         SegmentConfig,
     )
+    from tsam.result import ClusteringResult
 
 
 @dataclass(frozen=True)

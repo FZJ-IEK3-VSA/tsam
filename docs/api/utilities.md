@@ -21,9 +21,9 @@ Supporting modules used across the package.
 
 The clustering and representation primitives the pipeline dispatches to.
 
-::: tsam.period_aggregation
+::: tsam.utils.period_aggregation
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
-::: tsam.representations
+::: tsam.utils.representations
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 
 ## Algorithm backends

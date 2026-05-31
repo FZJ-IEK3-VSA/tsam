@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from tsam.period_aggregation import aggregate_periods
-from tsam.representations import representations
+from tsam.utils.period_aggregation import aggregate_periods
+from tsam.utils.representations import representations
 
 if TYPE_CHECKING:
     from tsam.config import ClusterConfig, Distribution, MinMaxMean

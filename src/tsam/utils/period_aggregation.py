@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from tsam.representations import representations
+from tsam.utils.representations import representations
 
 if TYPE_CHECKING:
     from tsam.config import Distribution, MinMaxMean

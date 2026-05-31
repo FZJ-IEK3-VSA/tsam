@@ -548,7 +548,7 @@ def assemble_result(
     """Phase 4 — Assemble: pack everything into the pipeline result.
 
     Builds a serializable, transferable
-    [`ClusteringResult`][tsam.config.ClusteringResult] from the cluster order,
+    [`ClusteringResult`][tsam.result.ClusteringResult] from the cluster order,
     center indices, extremes, and segmentation, then packs it with the typical
     periods, counts, reconstructed series, and metadata into a
     [`PipelineResult`][tsam.pipeline.types.PipelineResult] — the single handoff
@@ -559,7 +559,7 @@ def assemble_result(
     --------
     format_and_reconstruct : The phase that produces the outputs packed here.
     """
-    from tsam.config import ClusteringResult as _ClusteringResult
+    from tsam.result import ClusteringResult as _ClusteringResult
 
     original_data_out = prepared.original_data[prepared.original_column_order]
 

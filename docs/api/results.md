@@ -12,6 +12,6 @@ re-apply a clustering to new data.
 `ClusteringResult` captures a fitted clustering. It is serializable
 (`to_json` / `from_json`) and can be re-applied to new data via `apply()`.
 
-::: tsam.config.ClusteringResult
+::: tsam.result.ClusteringResult
     options:
       heading_level: 2

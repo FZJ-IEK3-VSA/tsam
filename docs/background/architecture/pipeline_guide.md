@@ -42,7 +42,7 @@ parameters.
 result = tsam.aggregate(df, n_clusters=8, period_duration=24)
 ```
 
-**[`ClusteringResult.apply()`][tsam.config.ClusteringResult]** — reuse a fitted
+**[`ClusteringResult.apply()`][tsam.result.ClusteringResult]** — reuse a fitted
 clustering on new data, skipping clustering in favor of the stored assignments:
 
 ```python
@@ -124,7 +124,7 @@ segmentation.
 Orchestrated by [`assemble_result`][tsam.pipeline.orchestrator.assemble_result].
 
 8. **Assemble** — build the serializable, transferable
-   [`ClusteringResult`][tsam.config.ClusteringResult] and pack it with the
+   [`ClusteringResult`][tsam.result.ClusteringResult] and pack it with the
    typical periods, counts, reconstruction, and metadata into the result that
    [`tsam.aggregate()`][tsam.aggregate] returns as an
    [`AggregationResult`][tsam.result.AggregationResult].
