@@ -605,75 +605,56 @@ class ClusteringResult:
 
     Get this from `result.clustering` after running an aggregation.
 
-    Transfer Fields (used by apply())
-    ----------------------------------
+    The first group of attributes is the *transfer state* consumed by
+    `apply()`; the trailing ``*_config`` attributes are kept for reference only
+    and are not used when re-applying.
+
+    Attributes
+    ----------
     period_duration : float
         Length of each period in hours (e.g., 24 for daily periods).
-
     cluster_assignments : tuple[int, ...]
-        Cluster assignments for each original period.
-        Length equals the number of original periods in the data.
-
+        Cluster assignments for each original period. Length equals the number
+        of original periods in the data.
     n_timesteps_per_period : int
-        Number of timesteps in each period. Used to validate that new data
-        has compatible structure when calling apply().
-
+        Number of timesteps in each period. Used to validate that new data has
+        compatible structure when calling `apply()`.
     cluster_centers : tuple[int, ...], optional
-        Indices of original periods used as cluster centers.
-        If not provided, centers will be recalculated when applying.
-
+        Indices of original periods used as cluster centers. If not provided,
+        centers are recalculated when applying.
     segment_assignments : tuple[tuple[int, ...], ...], optional
-        Segment assignments per timestep, per typical period.
-        Only present if segmentation was used.
-
+        Segment assignments per timestep, per typical period. Only present if
+        segmentation was used.
     segment_durations : tuple[tuple[int, ...], ...], optional
-        Duration (in timesteps) per segment, per typical period.
-        Required if segment_assignments is present.
-
+        Duration (in timesteps) per segment, per typical period. Required if
+        ``segment_assignments`` is present.
     segment_centers : tuple[tuple[int, ...], ...], optional
         Indices of timesteps used as segment centers, per typical period.
         Required for fully deterministic segment replication.
-
     preserve_column_means : bool, default True
         Whether to rescale typical periods to match original data means.
-
     rescale_exclude_columns : tuple[str, ...], optional
         Column names to exclude from rescaling. Useful for binary columns.
-
     representation : str, default "medoid"
         How to compute typical periods from cluster members.
-
     segment_representation : str, optional
         How to compute segment values. Only used if segmentation is present.
-
     temporal_resolution : float, optional
         Time resolution of input data in hours. If not provided, inferred.
-
-    Reference Fields (for documentation, not used by apply())
-    ---------------------------------------------------------
     cluster_config : ClusterConfig, optional
-        Clustering configuration used to create this result.
-
+        Reference only. Clustering configuration used to create this result.
     segment_config : SegmentConfig, optional
-        Segmentation configuration used to create this result.
-
+        Reference only. Segmentation configuration used to create this result.
     extremes_config : ExtremeConfig, optional
-        Extreme period configuration used to create this result.
+        Reference only. Extreme-period configuration used to create this result.
 
     Examples
     --------
-    >>> # Get clustering from a result
     >>> result = tsam.aggregate(df_wind, n_clusters=8)
     >>> clustering = result.clustering
-
-    >>> # Save to file
-    >>> clustering.to_json("clustering.json")
-
-    >>> # Load from file
-    >>> clustering = ClusteringResult.from_json("clustering.json")
-
-    >>> # Apply to new data
-    >>> result2 = clustering.apply(df_all)
+    >>> clustering.to_json("clustering.json")  # save
+    >>> clustering = ClusteringResult.from_json("clustering.json")  # load
+    >>> result2 = clustering.apply(df_all)  # apply to new data
     """
 
     # === Transfer fields (used by apply()) ===

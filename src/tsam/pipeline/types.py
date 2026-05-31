@@ -72,7 +72,7 @@ class PeriodProfiles:
 
 @dataclass(frozen=True)
 class PreparedData:
-    """Output of the data preparation phase (steps 1-3)."""
+    """Output of the prepare-data phase (`prepare_data`)."""
 
     norm_data: NormalizedData
     period_profiles: PeriodProfiles
@@ -89,7 +89,7 @@ class PreparedData:
 
 @dataclass(frozen=True)
 class ClusteringOutput:
-    """Output of the clustering + post-processing phase (steps 4-9)."""
+    """Output of the cluster & post-process phase (`cluster_and_postprocess`)."""
 
     cluster_periods_list: list[np.ndarray]
     cluster_order: np.ndarray
@@ -103,7 +103,7 @@ class ClusteringOutput:
 
 @dataclass(frozen=True)
 class FormattedOutput:
-    """Output of the formatting + reconstruction phase (steps 10-14)."""
+    """Output of the format & reconstruct phase (`format_and_reconstruct`)."""
 
     typical_periods: pd.DataFrame
     reconstructed_data: pd.DataFrame
@@ -114,7 +114,11 @@ class FormattedOutput:
 
 @dataclass(frozen=True)
 class PipelineResult:
-    """Single handoff from pipeline to api.py / config.py."""
+    """Output of the assemble phase (`assemble_result`).
+
+    The single handoff from the pipeline to `tsam.api` / `tsam.config`, wrapped
+    there as the user-facing `AggregationResult`.
+    """
 
     typical_periods: pd.DataFrame  # denormalized, MultiIndex (cluster, timestep)
     cluster_counts: dict[int, float]

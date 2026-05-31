@@ -1,0 +1,37 @@
+
+vars: {
+  d2-config: {
+    layout-engine: dagre
+  }
+}
+
+grid-columns: 2
+grid-rows: 2
+direction: down
+vertical-gap: 100
+horizontal-gap: 200
+
+
+user: "Energy-system modeler\nor data scientist" 
+user.shape: person
+
+
+downstream: "Downstream frameworks\nETHOS.FINE / flixopt / oemof" 
+
+user -> downstream: "feeds typical periods\ninto optimization model"
+
+TSAM and Integrated Software: {
+    grid-rows: 2 
+
+tsam: "ETHOS.TSAM\nTime-series aggregation library" 
+solver: "MILP solver\ne.g. HiGHS"
+solver -> tsam: "Only for the exact k medoids method"  
+}
+
+# user -> TSAM and Integrated Software.tsam: "provides input time series\npd.DataFrame\nT rows × C cols"
+
+# TSAM and Integrated Software.tsam -> user: "typical periods,\ncluster order,\naccuracy metrics"
+
+user -> TSAM and Integrated Software.tsam: Provide input time series\n and receive typical periods,\n cluster order, and\naccuracy metrics
+TSAM and Integrated Software.tsam -> user
+

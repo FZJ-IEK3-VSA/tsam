@@ -159,11 +159,46 @@ Documentation is built using [MkDocs](https://www.mkdocs.org/) with [Material fo
 
 ### Building Documentation Locally
 
+The docs include executable Jupyter notebooks. To keep builds fast, the
+notebooks are **pre-executed in parallel** by a helper script, and
+`mkdocs-jupyter` is configured with `execute: false` so it only renders the
+already-populated outputs.
+
+Two steps:
+
 ```bash
+# 1. Pre-execute every notebook in docs/notebooks/ (parallel)
+python scripts/execute_notebooks.py
+
+# 2. Serve the docs locally
 mkdocs serve
 ```
 
-The documentation will be available at `http://127.0.0.1:8000/`.
+The site will be available at `http://127.0.0.1:8000/`.
+
+You only need to re-run step 1 when a notebook (or its dependencies) changes —
+prose edits don't require it. Outputs are written back into the notebook files
+in place; on commit, `nbstripout` (already wired up via `pre-commit`) strips
+them so git diffs stay clean.
+
+Useful flags on the script:
+
+```bash
+python scripts/execute_notebooks.py --workers 4              # cap parallelism
+python scripts/execute_notebooks.py --exclude tuning.ipynb   # skip a notebook
+python scripts/execute_notebooks.py --timeout 1200           # raise per-cell timeout
+```
+
+To produce the built site (e.g. to inspect strict-mode warnings as CI does):
+
+```bash
+python scripts/execute_notebooks.py
+mkdocs build --strict
+```
+
+### Architecture Diagrams
+
+Architecture diagrams are authored in [D2](https://d2lang.com/). Both the `.d2` sources and the rendered `.svg` outputs live in `docs/assets/architecture/`. To update a diagram, edit the `.d2` file and re-render it with `d2 <name>.d2 <name>.svg`, then commit both files. A conda environment created from the environment.yml file ships the `d2` binary, so contributors who already use that environment do not need a separate install.
 
 ## Releasing
 
