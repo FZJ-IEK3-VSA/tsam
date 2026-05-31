@@ -14,8 +14,9 @@ Supporting modules used across the package.
 
 ## Shared helpers
 
-Resolution inference and the (de)serialization helpers shared by the config and
-result objects for JSON round-trips.
+Generic helpers shared across the package: resolution inference, DatetimeIndex
+(de)serialization for JSON round-trips, duration-string parsing, and weighted
+aggregation of per-column metrics.
 
 ::: tsam.commons
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }

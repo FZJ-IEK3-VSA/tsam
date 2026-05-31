@@ -14,6 +14,8 @@ from tsam.commons import (
     infer_resolution,
     time_index_from_dict,
     time_index_to_dict,
+    weighted_mean,
+    weighted_rms,
 )
 from tsam.config import (
     ClusterConfig,
@@ -225,7 +227,6 @@ class AggregationResult:
         """
         if self._accuracy_metrics is not None:
             return self._accuracy_metrics
-        from tsam.api import _weighted_mean, _weighted_rms
         from tsam.pipeline.accuracy import compute_accuracy
 
         assert self._norm_values is not None and self._normalized_predicted is not None
@@ -235,9 +236,9 @@ class AggregationResult:
             mae=accuracy_df["MAE"],
             rmse_duration=accuracy_df["RMSE_duration"],
             rescale_deviations=self._rescale_deviations,
-            weighted_rmse=_weighted_rms(accuracy_df["RMSE"], self._weights),
-            weighted_mae=_weighted_mean(accuracy_df["MAE"], self._weights),
-            weighted_rmse_duration=_weighted_rms(
+            weighted_rmse=weighted_rms(accuracy_df["RMSE"], self._weights),
+            weighted_mae=weighted_mean(accuracy_df["MAE"], self._weights),
+            weighted_rmse_duration=weighted_rms(
                 accuracy_df["RMSE_duration"], self._weights
             ),
         )

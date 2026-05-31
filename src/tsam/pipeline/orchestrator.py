@@ -4,12 +4,7 @@
 explicit input and output: `prepare_data`, `cluster_and_postprocess`,
 `format_and_reconstruct`, `assemble_result`. The individual stages they call
 live in the sibling modules (normalize, periods, clustering, extremes, rescale,
-segment, accuracy).
-
-These four phase functions are public so their docstrings are discoverable in
-the API reference, but they are deliberately not exported from
-``tsam.pipeline`` — only `run_pipeline` is. They are orchestration glue, not a
-stable API to call directly.
+segmentation, accuracy).
 """
 
 from __future__ import annotations

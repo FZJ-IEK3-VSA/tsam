@@ -19,7 +19,8 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-from tsam.api import _parse_duration_hours, aggregate
+from tsam.api import aggregate
+from tsam.commons import parse_duration_hours
 from tsam.config import (
     ClusterConfig,
     ExtremeConfig,
@@ -553,9 +554,9 @@ def find_optimal_combination(
         cluster = ClusterConfig()
 
     # Parse duration parameters to hours
-    period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
+    period_duration_hours = parse_duration_hours(period_duration, "period_duration")
     temporal_resolution_hours = (
-        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        parse_duration_hours(temporal_resolution, "temporal_resolution")
         if temporal_resolution is not None
         else _infer_temporal_resolution(data)
     )
@@ -751,9 +752,9 @@ def find_pareto_front(
         cluster = ClusterConfig()
 
     # Parse duration parameters to hours
-    period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
+    period_duration_hours = parse_duration_hours(period_duration, "period_duration")
     temporal_resolution_hours = (
-        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        parse_duration_hours(temporal_resolution, "temporal_resolution")
         if temporal_resolution is not None
         else _infer_temporal_resolution(data)
     )

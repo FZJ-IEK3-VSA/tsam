@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
+from tsam.commons import parse_duration_hours
 from tsam.config import (
     ClusterConfig,
     ExtremeConfig,
@@ -18,85 +19,6 @@ from tsam.weights import validate_weights
 
 if TYPE_CHECKING:
     from tsam.pipeline.types import PipelineResult
-
-
-def _weighted_mean(
-    per_column: pd.Series,
-    weights: dict[str, float] | None,
-) -> float:
-    """Weighted arithmetic mean of per-column values.
-
-    Parameters
-    ----------
-    per_column : pd.Series
-        One value per column (e.g. per-column MAE).
-    weights : dict or None
-        Column name → weight. Missing columns default to 1.
-        ``None`` is equivalent to uniform weights.
-
-    Returns
-    -------
-    float
-        ``sum(value_i * w_i) / sum(w_i)``
-    """
-    if weights:
-        w = pd.Series(weights).reindex(per_column.index, fill_value=1.0)
-        return float((per_column * w).sum() / w.sum())
-    return float(per_column.mean())
-
-
-def _weighted_rms(
-    per_column: pd.Series,
-    weights: dict[str, float] | None,
-) -> float:
-    """Weighted root-mean-square of per-column values.
-
-    Appropriate for aggregating RMSE across columns: the result equals
-    the RMSE you would obtain by pooling all (weighted) residuals into
-    a single series.
-
-    Parameters
-    ----------
-    per_column : pd.Series
-        One RMSE value per column.
-    weights : dict or None
-        Column name → weight. Missing columns default to 1.
-        ``None`` is equivalent to uniform weights.
-
-    Returns
-    -------
-    float
-        ``sqrt(sum(value_i² * w_i) / sum(w_i))``
-    """
-    squared = per_column**2
-    if weights:
-        w = pd.Series(weights).reindex(squared.index, fill_value=1.0)
-        return float(((squared * w).sum() / w.sum()) ** 0.5)
-    return float(squared.mean() ** 0.5)
-
-
-def _parse_duration_hours(value: int | float | str, param_name: str) -> float:
-    """Parse a duration value to hours.
-
-    Accepts:
-    - int/float: interpreted as hours (e.g., 24 -> 24.0 hours)
-    - str: pandas Timedelta string (e.g., '24h', '1d', '15min')
-
-    Returns duration in hours as float.
-    """
-    if isinstance(value, (int, float)):
-        return float(value)
-    if isinstance(value, str):
-        try:
-            td = pd.Timedelta(value)
-            return td.total_seconds() / 3600
-        except ValueError as e:
-            raise ValueError(
-                f"{param_name}: invalid duration string '{value}': {e}"
-            ) from e
-    raise TypeError(
-        f"{param_name} must be int, float, or string, got {type(value).__name__}"
-    )
 
 
 def aggregate(
@@ -253,12 +175,12 @@ def aggregate(
         raise ValueError(f"n_clusters must be a positive integer, got {n_clusters}")
 
     # Parse duration parameters to hours
-    period_duration = _parse_duration_hours(period_duration, "period_duration")
+    period_duration = parse_duration_hours(period_duration, "period_duration")
     if period_duration <= 0:
         raise ValueError(f"period_duration must be positive, got {period_duration}")
 
     temporal_resolution = (
-        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        parse_duration_hours(temporal_resolution, "temporal_resolution")
         if temporal_resolution is not None
         else None
     )
@@ -416,7 +338,7 @@ def unstack_to_periods(
     ...     title="Load Heatmap"
     ... )
     """
-    period_hours = _parse_duration_hours(period_duration, "period_duration")
+    period_hours = parse_duration_hours(period_duration, "period_duration")
 
     # Infer timestep resolution from data index
     timestep_hours = 1.0  # Default to hourly
