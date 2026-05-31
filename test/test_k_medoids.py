@@ -3,8 +3,8 @@ import time
 import numpy as np
 import pandas as pd
 
-import tsam.timeseriesaggregation as tsam
 from conftest import RESULTS_DIR, TESTDATA_CSV
+from tsam import ClusterConfig, aggregate
 
 
 def test_k_medoids():
@@ -17,14 +17,14 @@ def test_k_medoids():
 
     starttime = time.time()
 
-    aggregation = tsam.TimeSeriesAggregation(
+    result = aggregate(
         raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=48,
-        clusterMethod="k_medoids",
+        n_clusters=8,
+        period_duration=48,
+        cluster=ClusterConfig(method="kmedoids"),
     )
 
-    typPeriods = aggregation.create_typical_periods()
+    typPeriods = result.cluster_representatives
 
     print("Clustering took " + str(time.time() - starttime))
 

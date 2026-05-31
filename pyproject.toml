@@ -10,7 +10,7 @@ description = "Time series aggregation module (tsam) to create typical periods"
 authors = [
   { name = "Leander Kotzur", email = "leander.kotzur@googlemail.com" },
   { name = "Maximilian Hoffmann", email = "maximilian.hoffmann@julumni.fz-juelich.de" },
-  { name = "Felix Buumann" , email = "felixvumann387@gmail.com"},
+  { name = "Felix Bumann", email = "dev@fxbumann.de" },
   { name = "Julian Belina", email = "j.belina@fz-juelich.de" },
   { name = "Olalekan Omoyele", email = "o.omoyele@fz-juelich.de" },
 ]
@@ -42,12 +42,12 @@ classifiers = [
 # .github/renovate.json (regex alternation + pep621 disable rule).
 dependencies = [
   "scikit-learn>=1.3.0,<=1.8.0",
-  "pandas>=2.2.0,<=3.0.1",
-  "numpy>=1.22.4,<=2.4.4",
+  "pandas>=2.2.0,<=3.0.3",
+  "numpy>=1.22.4,<=2.4.6",
   "pyomo>=6.4.8,<=6.10.0",
   "networkx>=2.5,<=3.6.1",
   "tqdm>=4.21.0,<=4.67.3",
-  "highspy>=1.7.2,<=1.13.1",
+  "highspy>=1.7.2,<=1.14.0",
 ]
 
 requires-python = ">=3.10,<3.15"
@@ -59,24 +59,24 @@ requires-python = ">=3.10,<3.15"
 # When adding a dep that should be dual-channel, mirror it in environment.yml
 # and update .github/renovate.json.
 develop = [
-  "pytest<=9.0.2",
+  "pytest<=9.0.3",
   "pytest-cov<=7.1.0",
   "pytest-xdist<=3.8.0",
   "pytest-benchmark<=5.2.3",
   "codecov<=2.1.13",
   "mkdocs>=1.6,<=1.6.1",
   "mkdocs-material>=9.5,<=9.7.6",
-  "mkdocstrings[python]>=0.27,<=1.0.3",
-  "mkdocs-jupyter>=0.25,<=0.25.1",         # 0.26.0 has packaging bug (mkdocs-jupyter#269)
+  "mkdocstrings[python]>=0.27,<=1.0.4",
+  "mkdocs-jupyter>=0.25,<=0.26.1",         # 0.26.0 has packaging bug (mkdocs-jupyter#269)
   "mkdocs-gen-files>=0.5,<=0.6.1",
   "mkdocs-literate-nav>=0.6,<=0.6.3",
   "nbval<=0.11.0",
-  "ruff<=0.15.8",
-  "mypy<=1.19.1",
+  "ruff<=0.15.14",
+  "mypy<=1.20.2",
   "pandas-stubs<=3.0.0.260204",
-  "pre-commit<=4.5.1",
-  "plotly>=5.0.0,<=6.6.0",
-  "notebook>=7.5.0,<=7.5.5",
+  "pre-commit<=4.6.0",
+  "plotly>=5.0.0,<=6.7.0",
+  "notebook>=7.5.0,<=7.5.6",
 ]
 plot = ["plotly>=5.0.0"]
 notebooks = ["notebook>=7.5.0", "plotly>=5.0.0"]

@@ -2,12 +2,10 @@ import time
 
 import numpy as np
 import pandas as pd
-import pytest
 
-import tsam.timeseriesaggregation as tsam
 from conftest import RESULTS_DIR, TESTDATA_CSV
-
-pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
+from tsam import ClusterConfig, SegmentConfig, aggregate
+from tsam.representations import representations
 
 
 def test_segmentation():
@@ -20,17 +18,15 @@ def test_segmentation():
 
     starttime = time.time()
 
-    aggregation = tsam.TimeSeriesAggregation(
+    result = aggregate(
         raw,
-        no_typical_periods=20,
-        hours_per_period=24,
-        cluster_method="hierarchical",
-        representation_method="meanRepresentation",
-        segmentation=True,
-        no_segments=12,
+        n_clusters=20,
+        period_duration=24,
+        cluster=ClusterConfig(method="hierarchical", representation="mean"),
+        segments=SegmentConfig(n_segments=12),
     )
 
-    typPeriods = aggregation.create_typical_periods()
+    typPeriods = result.cluster_representatives
 
     print("Clustering took " + str(time.time() - starttime))
 
@@ -59,7 +55,7 @@ def test_segmentation():
 
 
 def test_representation_in_segmentation():
-    segmentation_candidates = np.array(
+    segmentationCandidates = np.array(
         [
             [0.0, 0.38936961, 0.27539063, 0.25],
             [0.0, 0.35591778, 0.26841518, 0.25],
@@ -88,29 +84,29 @@ def test_representation_in_segmentation():
         ]
     )
 
-    cluster_order = np.array(
+    clusterOrder = np.array(
         [5, 5, 5, 5, 5, 7, 3, 2, 2, 2, 2, 0, 0, 0, 0, 1, 1, 1, 1, 1, 6, 6, 4, 4]
     )
 
-    cluster_centers_mean, _cluster_center_indices = tsam.representations(
-        segmentation_candidates,
-        cluster_order,
+    clusterCenters_mean, _clusterCenterIndices = representations(
+        segmentationCandidates,
+        clusterOrder,
         default="meanRepresentation",
         representation_method="meanRepresentation",
         distribution_period_wise=False,
         n_timesteps_per_period=1,
     )
 
-    cluster_centers_dist, _cluster_center_indices = tsam.representations(
-        segmentation_candidates,
-        cluster_order,
+    clusterCenters_dist, _clusterCenterIndices = representations(
+        segmentationCandidates,
+        clusterOrder,
         default="meanRepresentation",
         representation_method="distributionRepresentation",
         distribution_period_wise=True,
         n_timesteps_per_period=1,
     )
 
-    assert np.isclose(cluster_centers_mean, cluster_centers_dist).all()
+    assert np.isclose(clusterCenters_mean, clusterCenters_dist).all()
 
 
 if __name__ == "__main__":

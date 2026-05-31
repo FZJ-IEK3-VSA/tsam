@@ -2,204 +2,131 @@ import time
 
 import numpy as np
 import pandas as pd
-import pytest
 
-import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
+from tsam import ClusterConfig, SegmentConfig, aggregate
 
-pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
 
-
-@pytest.mark.filterwarnings("ignore:Segmentation is turned off:UserWarning")
 def test_properties():
-    hours_per_period = 24
+    period_duration = 24
 
-    no_segments = 8
+    n_segments = 8
 
-    no_typical_periods = 8
+    n_clusters = 8
 
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
     starttime = time.time()
 
-    aggregation1 = tsam.TimeSeriesAggregation(
+    result1 = aggregate(
         raw,
-        no_typical_periods=no_typical_periods,
-        hours_per_period=hours_per_period,
-        cluster_method="hierarchical",
-        segmentation=True,
-        no_segments=no_segments,
+        n_clusters=n_clusters,
+        period_duration=period_duration,
+        cluster=ClusterConfig(method="hierarchical"),
+        segments=SegmentConfig(n_segments=n_segments),
     )
 
     print("Clustering took " + str(time.time() - starttime))
+
+    # with segmentation the timestep index runs over the segments
+    np.testing.assert_array_almost_equal(
+        result1.timestep_index, np.arange(n_segments), decimal=4
+    )
+
+    result2 = aggregate(
+        raw,
+        n_clusters=n_clusters,
+        period_duration=period_duration,
+        cluster=ClusterConfig(method="hierarchical"),
+    )
+
+    # without segmentation the timestep index runs over the timesteps per period
+    np.testing.assert_array_almost_equal(
+        result2.timestep_index, np.arange(period_duration), decimal=4
+    )
+
+    result3 = aggregate(
+        raw,
+        n_clusters=n_clusters,
+        period_duration=period_duration,
+        cluster=ClusterConfig(method="hierarchical"),
+    )
 
     np.testing.assert_array_almost_equal(
-        aggregation1.step_idx, np.arange(no_segments), decimal=4
+        result3.period_index, np.arange(n_clusters), decimal=4
     )
 
-    starttime = time.time()
-
-    aggregation2 = tsam.TimeSeriesAggregation(
+    result4 = aggregate(
         raw,
-        no_typical_periods=no_typical_periods,
-        hours_per_period=hours_per_period,
-        cluster_method="hierarchical",
+        n_clusters=n_clusters,
+        period_duration=period_duration,
+        cluster=ClusterConfig(method="hierarchical"),
+        segments=SegmentConfig(n_segments=n_segments),
     )
 
-    print("Clustering took " + str(time.time() - starttime))
-
-    np.testing.assert_array_almost_equal(
-        aggregation2.step_idx, np.arange(hours_per_period), decimal=4
-    )
-
-    starttime = time.time()
-
-    aggregation3 = tsam.TimeSeriesAggregation(
-        raw,
-        no_typical_periods=no_typical_periods,
-        hours_per_period=hours_per_period,
-        cluster_method="hierarchical",
-    )
-
-    print("Clustering took " + str(time.time() - starttime))
-
-    np.testing.assert_array_almost_equal(
-        aggregation3.cluster_period_idx, np.arange(no_typical_periods), decimal=4
-    )
-
-    starttime = time.time()
-
-    aggregation4 = tsam.TimeSeriesAggregation(
-        raw,
-        no_typical_periods=no_typical_periods,
-        hours_per_period=hours_per_period,
-        cluster_method="hierarchical",
-        segmentation=True,
-        no_segments=no_segments,
-    )
-
-    print("Clustering took " + str(time.time() - starttime))
-
-    appearances = np.unique(aggregation4.cluster_order, return_counts=True)[1].tolist()
+    appearances = np.unique(result4.cluster_assignments, return_counts=True)[1].tolist()
 
     occurrenceDict = {i: j for i, j in enumerate(appearances)}
 
-    # make sure that the cluster_period_no_occur equals the number of appearances in the cluster_order
+    # make sure that the cluster_weights equal the number of appearances in the cluster_assignments
     np.testing.assert_array_almost_equal(
-        list(aggregation4.cluster_period_no_occur.values()),
+        [result4.cluster_weights[k] for k in sorted(result4.cluster_weights)],
         list(occurrenceDict.values()),
         decimal=4,
     )
 
-    starttime = time.time()
-
-    aggregation5 = tsam.TimeSeriesAggregation(
+    result5 = aggregate(
         raw,
-        no_typical_periods=no_typical_periods,
-        hours_per_period=hours_per_period,
-        cluster_method="hierarchical",
-        segmentation=True,
-        no_segments=no_segments,
+        n_clusters=n_clusters,
+        period_duration=period_duration,
+        cluster=ClusterConfig(method="hierarchical"),
     )
 
-    print("Clustering took " + str(time.time() - starttime))
+    # without segmentation there are no segment durations
+    assert result5.segment_durations is None
 
-    # make sure that the values of the cluster_period_dict equal those from the typicalPeriods-dataframe
+    result6 = aggregate(
+        raw,
+        n_clusters=n_clusters,
+        period_duration=period_duration,
+        cluster=ClusterConfig(method="hierarchical"),
+        segments=SegmentConfig(n_segments=n_segments),
+    )
+
+    # make sure that the sum of all segment durations in each period equals the timesteps per period
+    for i in range(n_clusters):
+        np.testing.assert_array_almost_equal(
+            sum(result6.segment_durations[i]), period_duration, decimal=4
+        )
+
+    result7 = aggregate(
+        raw,
+        n_clusters=n_clusters,
+        period_duration=period_duration,
+        cluster=ClusterConfig(method="hierarchical"),
+        segments=SegmentConfig(n_segments=n_segments),
+    )
+
+    indexTable = result7.assignments
+
+    # make sure that the cluster_idx column (per period) equals the cluster_assignments
     np.testing.assert_array_almost_equal(
-        pd.DataFrame.from_dict(data=aggregation5.cluster_period_dict).values,
-        aggregation5.create_typical_periods().values,
+        indexTable.iloc[::24]["cluster_idx"].values,
+        result7.cluster_assignments,
         decimal=4,
     )
 
-    starttime = time.time()
-
-    aggregation6 = tsam.TimeSeriesAggregation(
-        raw,
-        no_typical_periods=no_typical_periods,
-        hours_per_period=hours_per_period,
-        cluster_method="hierarchical",
-    )
-
-    print("Clustering took " + str(time.time() - starttime))
-
-    # make sure that the sum of all segment durations in each period equals the hours per period
-    for i in range(no_typical_periods):
-        print(i)
-        print(pd.DataFrame.from_dict(aggregation6.segment_duration_dict).loc[(i,), :])
-        # print(
-        #     pd.DataFrame.from_dict(aggregation6.segment_duration_dict)
-        #     .iloc[
-        #         pd.DataFrame.from_dict(
-        #             aggregation6.segment_duration_dict
-        #         ).index.get_level_values(0)
-        #     ]
-        # )
-        print("\n")
-        np.testing.assert_array_almost_equal(
-            pd.DataFrame.from_dict(aggregation6.segment_duration_dict)
-            .loc[(i,), :]
-            .sum()
-            .iloc[0],
-            hours_per_period,
-            decimal=4,
-        )
-        print("")
-
-    starttime = time.time()
-
-    aggregation7 = tsam.TimeSeriesAggregation(
-        raw,
-        no_typical_periods=no_typical_periods,
-        hours_per_period=hours_per_period,
-        cluster_method="hierarchical",
-        segmentation=True,
-        no_segments=no_segments,
-    )
-
-    print("Clustering took " + str(time.time() - starttime))
-
-    # make sure that the sum of all segment durations in each period equals the hours per period
-    for i in range(no_typical_periods):
-        np.testing.assert_array_almost_equal(
-            pd.DataFrame.from_dict(aggregation7.segment_duration_dict)
-            .loc[i]
-            .sum()
-            .iloc[0],
-            hours_per_period,
-            decimal=4,
-        )
-
-    starttime = time.time()
-
-    aggregation8 = tsam.TimeSeriesAggregation(
-        raw,
-        no_typical_periods=no_typical_periods,
-        hours_per_period=hours_per_period,
-        cluster_method="hierarchical",
-        segmentation=True,
-        no_segments=no_segments,
-    )
-
-    print("Clustering took " + str(time.time() - starttime))
-
-    indexTable = aggregation8.index_matching()
-
-    # make sure that the PeriodNum column equals the cluster_order
+    # make sure that the timestep indices equal the number of timesteps per period arranged as array
     np.testing.assert_array_almost_equal(
-        indexTable.loc[::24, "PeriodNum"].values, aggregation8.cluster_order, decimal=4
-    )
-
-    # make sure that the TimeStep indices equal the number of hours_per_period arranged as array
-    np.testing.assert_array_almost_equal(
-        pd.unique(indexTable.loc[:, "TimeStep"]),
-        np.arange(hours_per_period, dtype="int64"),
+        pd.unique(indexTable.loc[:, "timestep_idx"]),
+        np.arange(period_duration, dtype="int64"),
         decimal=4,
     )
 
-    # make sure that the SegmentIndex indices equal the number of no_segments arranged as array
+    # make sure that the segment indices equal the number of segments arranged as array
     np.testing.assert_array_almost_equal(
-        pd.unique(indexTable.loc[:, "SegmentIndex"]),
-        np.arange(no_segments, dtype="int64"),
+        np.sort(pd.unique(indexTable.loc[:, "segment_idx"])),
+        np.arange(n_segments, dtype="int64"),
         decimal=4,
     )
 
