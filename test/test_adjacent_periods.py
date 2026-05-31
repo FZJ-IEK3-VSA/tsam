@@ -3,33 +3,32 @@ import time
 import numpy as np
 import pandas as pd
 
-import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
+from tsam import ClusterConfig, aggregate
 
 
 def test_adjacent_periods():
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
-    no_typical_periods = 8
+    noTypicalPeriods = 8
 
     starttime = time.time()
 
-    aggregation = tsam.TimeSeriesAggregation(
+    result = aggregate(
         raw,
-        no_typical_periods=no_typical_periods,
-        hours_per_period=24,
-        cluster_method="adjacent_periods",
-        representation_method="meanRepresentation",
+        n_clusters=noTypicalPeriods,
+        period_duration=24,
+        cluster=ClusterConfig(method="contiguous", representation="mean"),
     )
 
-    typPeriods = aggregation.create_typical_periods()
+    typPeriods = result.cluster_representatives
 
     print("Clustering took " + str(time.time() - starttime))
 
-    # check whether the cluster_order consists of no_typical_periods blocks of the same number
+    # check whether the clusterOrder consists of noTypicalPeriods blocks of the same number
     np.testing.assert_array_almost_equal(
-        np.size(np.where(np.diff(aggregation.cluster_order) != 0)),
-        no_typical_periods - 1,
+        np.size(np.where(np.diff(result.cluster_assignments) != 0)),
+        noTypicalPeriods - 1,
         decimal=4,
     )
 

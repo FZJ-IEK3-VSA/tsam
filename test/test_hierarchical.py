@@ -3,8 +3,8 @@ import time
 import numpy as np
 import pandas as pd
 
-import tsam.timeseriesaggregation as tsam
 from conftest import RESULTS_DIR, TESTDATA_CSV
+from tsam import ClusterConfig, ExtremeConfig, aggregate
 
 
 def test_hierarchical():
@@ -17,17 +17,19 @@ def test_hierarchical():
 
     starttime = time.time()
 
-    aggregation = tsam.TimeSeriesAggregation(
+    result = aggregate(
         raw,
-        no_typical_periods=8,
-        hours_per_period=24,
-        cluster_method="hierarchical",
-        extreme_period_method="new_cluster_center",
-        add_peak_min=["T"],
-        add_peak_max=["Load"],
+        n_clusters=8,
+        period_duration=24,
+        cluster=ClusterConfig(method="hierarchical"),
+        extremes=ExtremeConfig(
+            method="new_cluster",
+            min_value=["T"],
+            max_value=["Load"],
+        ),
     )
 
-    typPeriods = aggregation.create_typical_periods()
+    typPeriods = result.cluster_representatives
 
     print("Clustering took " + str(time.time() - starttime))
 
@@ -60,17 +62,19 @@ def test_hierarchical_for_weeks():
 
     starttime = time.time()
 
-    aggregation = tsam.TimeSeriesAggregation(
+    result = aggregate(
         raw,
-        no_typical_periods=8,
-        hours_per_period=24 * 7,
-        cluster_method="hierarchical",
-        extreme_period_method="new_cluster_center",
-        add_peak_min=["T"],
-        add_peak_max=["Load"],
+        n_clusters=8,
+        period_duration=24 * 7,
+        cluster=ClusterConfig(method="hierarchical"),
+        extremes=ExtremeConfig(
+            method="new_cluster",
+            min_value=["T"],
+            max_value=["Load"],
+        ),
     )
 
-    typPeriods = aggregation.create_typical_periods()
+    typPeriods = result.cluster_representatives
 
     print("Clustering took " + str(time.time() - starttime))
 

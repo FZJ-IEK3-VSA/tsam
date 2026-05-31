@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
+from tsam import ClusterConfig, aggregate
 
 pytestmark = pytest.mark.filterwarnings(
     "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
@@ -24,29 +24,29 @@ def test_k_maxoids():
     # Set seed for deterministic k-means results
     np.random.seed(42)
 
-    aggregation1 = tsam.TimeSeriesAggregation(
+    result1 = aggregate(
         raw,
-        no_typical_periods=8,
-        hours_per_period=24,
-        cluster_method="k_means",
-        rescale_cluster_periods=False,
+        n_clusters=8,
+        period_duration=24,
+        cluster=ClusterConfig(method="kmeans"),
+        preserve_column_means=False,
     )
 
-    predictedPeriods1 = aggregation1.predict_original_data()
+    predictedPeriods1 = result1.reconstructed
 
     print("Clustering took " + str(time.time() - starttime))
 
     starttime = time.time()
 
-    aggregation2 = tsam.TimeSeriesAggregation(
+    result2 = aggregate(
         raw,
-        no_typical_periods=8,
-        hours_per_period=24,
-        cluster_method="k_maxoids",
-        rescale_cluster_periods=False,
+        n_clusters=8,
+        period_duration=24,
+        cluster=ClusterConfig(method="kmaxoids"),
+        preserve_column_means=False,
     )
 
-    predictedPeriods2 = aggregation2.predict_original_data()
+    predictedPeriods2 = result2.reconstructed
 
     print("Clustering took " + str(time.time() - starttime))
 

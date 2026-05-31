@@ -281,7 +281,16 @@ def aggregate(
         else:
             resolution = 1.0  # Default to hourly
 
-    n_timesteps_per_period = int(period_duration / resolution)
+    timesteps_per_period = period_duration / resolution
+    n_timesteps_per_period = round(timesteps_per_period)
+    if abs(timesteps_per_period - n_timesteps_per_period) > 1e-9 * max(
+        1.0, timesteps_per_period
+    ):
+        raise ValueError(
+            "The combination of period_duration and temporal_resolution "
+            "does not result in an integer number of time steps per period"
+        )
+    n_timesteps_per_period = int(n_timesteps_per_period)
 
     # Validate segments against data
     if segments is not None:

@@ -90,7 +90,7 @@ def representations(
             represent_min_max=True,
         )
     else:
-        raise ValueError("Chosen 'representationMethod' does not exist.")
+        raise ValueError(f"Unknown representation method {representation_method!r}")
 
     return cluster_centers, cluster_center_indices
 

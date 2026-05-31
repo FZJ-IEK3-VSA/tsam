@@ -4,11 +4,10 @@ import time
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn import preprocessing
 
-import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
-
-pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
+from tsam import ClusterConfig, aggregate
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning:threadpoolctl")
@@ -25,21 +24,32 @@ def test_samemean():
 
     # Silence warning on machines that cannot detect their physical cpu cores
     os.environ["OMP_NUM_THREADS"] = "1"
-    aggregation = tsam.TimeSeriesAggregation(
+    aggregation = aggregate(
         raw,
-        no_typical_periods=8,
-        hours_per_period=24,
-        cluster_method="k_means",
-        same_mean=True,
+        n_clusters=8,
+        period_duration=24,
+        cluster=ClusterConfig(method="kmeans", normalize_column_means=True),
     )
 
-    typPeriods = aggregation.create_typical_periods()
     print("Clustering took " + str(time.time() - starttime))
 
-    # repredict the original data
-    rearangedData = aggregation.predict_original_data()
+    # test if the normalized time series all have the same mean. The normalization
+    # mirrors what normalize_column_means=True does internally: min-max scale each
+    # column, then divide by its mean so every column ends up with the same mean.
+    min_max_scaler = preprocessing.MinMaxScaler()
+    normalized = pd.DataFrame(
+        min_max_scaler.fit_transform(raw),
+        columns=raw.columns,
+        index=raw.index,
+    )
+    normalized /= normalized.mean()
+    means = normalized.mean().values
+    np.testing.assert_allclose(means, np.array([means[0]] * len(means)), rtol=1e-5)
 
-    # test if the mean fits the mean of the raw time series --> should always hold for k-means independent from same_mean True or False
+    # repredict the original data
+    rearangedData = aggregation.reconstructed
+
+    # test if the mean fits the mean of the raw time series --> should always hold for k-means independent from sameMean True or False
     np.testing.assert_array_almost_equal(
         raw.mean(), rearangedData[raw.columns].mean(), decimal=4
     )

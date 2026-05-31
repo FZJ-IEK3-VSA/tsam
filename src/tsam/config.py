@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, get_args
 
 import numpy as np
 import pandas as pd
@@ -44,6 +44,10 @@ ExtremeMethod = Literal[
     "replace",
     "new_cluster",
 ]
+
+# Runtime-checkable tuple of the valid extreme-period methods, kept in sync with
+# the ``ExtremeMethod`` type alias above (single source of truth).
+EXTREME_METHODS: tuple[str, ...] = get_args(ExtremeMethod)
 
 Solver = Literal["highs", "cbc", "gurobi", "cplex"]
 
@@ -1348,6 +1352,13 @@ class ExtremeConfig:
     min_value: list[str] = field(default_factory=list)
     max_period: list[str] = field(default_factory=list)
     min_period: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.method not in EXTREME_METHODS:
+            raise ValueError(
+                f"Unknown extreme period method {self.method!r}. "
+                f"Valid options: {list(EXTREME_METHODS)}"
+            )
 
     def has_extremes(self) -> bool:
         """Check if any extreme periods are configured."""
