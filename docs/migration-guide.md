@@ -6,6 +6,33 @@ and will be removed in a future release.
 
 This guide covers every change you need to make.
 
+## Heads-up: column order changes in v4 { #v4-column-order }
+
+!!! warning "`aggregate()` result column order will change in v4"
+
+    In **v3**, `aggregate()` returns `cluster_representatives`, `reconstructed`,
+    and `original` with columns **sorted alphabetically**; in **v4** they follow
+    the **input DataFrame's order**. This can break code that reads results *by
+    position* (`.values`, `.iloc[:, 0]`) **silently** — names and shape are
+    unchanged, but each column's data lands in a different slot. Indexing *by
+    name* is unaffected. `aggregate()` emits a `FutureWarning` when input columns
+    are not already alphabetical (the only case that changes).
+
+    To keep the v3 order, sort before — `aggregate(data.sort_index(axis=1), ...)`
+    — or after — `result.cluster_representatives.sort_index(axis=1)`. To adopt
+    v4 now, index results by column name. The legacy `TimeSeriesAggregation`
+    class is unaffected (it sorts alphabetically in both v3 and v4).
+
+    To silence the warning (e.g. you have already migrated):
+
+    ```python
+    import warnings
+
+    warnings.filterwarnings(
+        "ignore", category=FutureWarning, message=".*sorted alphabetically.*"
+    )
+    ```
+
 ## Quick before-and-after
 
 === "v3 (new)"
