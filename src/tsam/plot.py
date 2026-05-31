@@ -246,7 +246,7 @@ class ResultPlotAccessor:
         unstacked = unstack_to_periods(result.original, n_ts * timestep_hours)
         assignments = result.cluster_assignments
         representatives = result.cluster_representatives
-        weights = result.cluster_weights
+        weights = result.cluster_counts
         timesteps = np.arange(n_ts)
 
         all_cluster_ids = sorted(set(assignments))

@@ -239,7 +239,7 @@ def prepare_data(
     candidates = period_profiles.profiles_dataframe.values
 
     # Apply weights directly to candidates
-    weight_vector = _build_weight_vector(norm_data.values.columns, cluster.weights)
+    weight_vector = _build_weight_vector(norm_data.values.columns, cfg.weights)
     weighted_profiles_df: pd.DataFrame | None = None
     if weight_vector is not None:
         weight_tile = np.repeat(weight_vector, period_profiles.n_timesteps_per_period)
@@ -485,7 +485,7 @@ def format_and_reconstruct(
         # Segmentation runs in weighted space so that high-weight columns
         # have more influence on segment boundaries. Weights are removed
         # from the output before denormalization.
-        weights = cfg.cluster.weights
+        weights = cfg.weights
         segmentation_input = _apply_weights_df(normalized_typical_periods, weights)
         segmented_df, predicted_segmented_df, segment_center_indices = (
             segment_typical_periods(
@@ -584,6 +584,7 @@ def assemble_result(
         rescale_cluster_periods=cfg.rescale_cluster_periods,
         rescale_exclude_columns=cfg.rescale_exclude_columns or [],
         extreme_cluster_idx=clustered.extreme_cluster_idx,
+        weights=cfg.weights,
         time_index=input_time_index,
     )
 

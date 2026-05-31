@@ -93,7 +93,8 @@ class TestPartialWeights:
             sample_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(method="hierarchical", weights={"Load": 10.0}),
+            cluster=ClusterConfig(method="hierarchical"),
+            weights={"Load": 10.0},
         )
         # With a very high weight on Load, Load's RMSE should improve
         assert partial.accuracy.rmse["Load"] <= unweighted.accuracy.rmse["Load"]
@@ -104,16 +105,15 @@ class TestPartialWeights:
             sample_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(method="hierarchical", weights={"Load": 2.0}),
+            cluster=ClusterConfig(method="hierarchical"),
+            weights={"Load": 2.0},
         )
         full = aggregate(
             sample_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(
-                method="hierarchical",
-                weights={"Load": 2.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-            ),
+            cluster=ClusterConfig(method="hierarchical"),
+            weights={"Load": 2.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         )
         np.testing.assert_array_equal(
             partial.cluster_assignments, full.cluster_assignments
@@ -137,29 +137,12 @@ class TestDurationCurvesWithWeights:
             sample_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(
-                method="hierarchical",
-                use_duration_curves=True,
-                weights={"Load": 10.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
-            ),
+            cluster=ClusterConfig(method="hierarchical", use_duration_curves=True),
+            weights={"Load": 10.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         )
         # With a very strong weight on Load, assignments should change
         # (or at least Load RMSE should improve)
         assert weighted.accuracy.rmse["Load"] <= unweighted.accuracy.rmse["Load"]
-
-
-class TestDeprecatedClusterWeightsProperty:
-    """The deprecated cluster_weights property must emit FutureWarning."""
-
-    def test_emits_future_warning(self, sample_data):
-        result = aggregate(
-            sample_data,
-            n_clusters=8,
-            period_duration=24,
-            cluster=ClusterConfig(method="hierarchical"),
-        )
-        with pytest.warns(FutureWarning, match="cluster_weights.*deprecated"):
-            _ = result.cluster_weights
 
 
 class TestWeightRoundTrip:
@@ -171,7 +154,8 @@ class TestWeightRoundTrip:
             sample_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(method="hierarchical", weights=weights),
+            cluster=ClusterConfig(method="hierarchical"),
+            weights=weights,
         )
 
         # Apply stored clustering to same data
@@ -187,7 +171,8 @@ class TestWeightRoundTrip:
             sample_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(method="hierarchical", weights=weights),
+            cluster=ClusterConfig(method="hierarchical"),
+            weights=weights,
         )
 
         # Serialize and deserialize

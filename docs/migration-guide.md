@@ -50,11 +50,21 @@ given timeseries needs a datetime index`").
 `temporal_resolution`, pass it explicitly (e.g. `temporal_resolution='15min'`)
 to be sure the timestep length matches your data instead of defaulting to 1h.
 
-### Renamed property
+### Removed deprecated APIs
 
-`AggregationResult.cluster_weights` has been renamed to `cluster_counts`
-to avoid confusion with per-column clustering weights. The old name still
-works but emits a `FutureWarning`.
+The v3 deprecation shims have been **removed** in v4:
+
+| Removed | Use instead |
+|---------|-------------|
+| `AggregationResult.cluster_weights` | `AggregationResult.cluster_counts` |
+| `ClusterConfig(normalize_column_means=...)` | `ClusterConfig(scale_by_column_means=...)` |
+| `ClusterConfig(weights=...)` | top-level `aggregate(..., weights={...})` |
+| Verbose representation names (`"meanRepresentation"`, `"distributionRepresentation"`, …) | short names (`"mean"`, `"distribution"`, …) — see [representation values](#representation-method-values) |
+| `LegacyAPIWarning` | — (no longer needed; the legacy API is gone) |
+
+In v4, per-column `weights` are a **top-level input to `aggregate()`**, not part
+of `ClusterConfig` — they are an aggregation parameter, not clustering
+configuration. Passing `weights=` to `ClusterConfig` now raises `TypeError`.
 
 ### Internal changes (no action required)
 
@@ -132,7 +142,7 @@ The table below maps every old parameter to its v3 equivalent.
 | `clusterMethod` | `ClusterConfig(method=...)` | See [cluster method values](#cluster-method-values). |
 | `representationMethod` | `ClusterConfig(representation=...)` | See [representation values](#representation-method-values). |
 | `weightDict` | `weights` | Top-level kwarg of `aggregate()`. |
-| `sameMean` | `ClusterConfig(normalize_column_means=...)` | |
+| `sameMean` | `ClusterConfig(scale_by_column_means=...)` | |
 | `sortValues` | `ClusterConfig(use_duration_curves=...)` | |
 | `evalSumPeriods` | `ClusterConfig(include_period_sums=...)` | |
 | `solver` | `ClusterConfig(solver=...)` | |

@@ -312,33 +312,15 @@ def aggregate(
         if missing:
             raise ValueError(f"Extreme period columns not found in data: {missing}")
 
-    # Resolve weights: top-level takes precedence, ClusterConfig.weights is deprecated
-    if cluster.weights is not None and weights is not None:
-        raise ValueError(
-            "weights specified both as top-level parameter and in ClusterConfig. "
-            "Use only the top-level weights parameter."
-        )
-    if cluster.weights is not None:
-        weights = cluster.weights
-
-    # Validate and normalize weights
-    validated = validate_weights(data.columns, weights)
-    if validated is not cluster.weights:
-        cluster = ClusterConfig(
-            method=cluster.method,
-            representation=cluster.representation,
-            weights=validated,
-            scale_by_column_means=cluster.scale_by_column_means,
-            use_duration_curves=cluster.use_duration_curves,
-            include_period_sums=cluster.include_period_sums,
-            solver=cluster.solver,
-        )
+    # Validate and normalize weights (a pipeline input, not part of ClusterConfig)
+    validated_weights = validate_weights(data.columns, weights)
 
     # Build pipeline config
     cfg = PipelineConfig(
         n_clusters=n_clusters,
         n_timesteps_per_period=n_timesteps_per_period,
         cluster=cluster,
+        weights=validated_weights,
         extremes=extremes if extremes and extremes.has_extremes() else None,
         segments=segments,
         rescale_cluster_periods=preserve_column_means,

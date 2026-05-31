@@ -266,16 +266,6 @@ class AggregationResult:
         """
         return np.array(self.clustering.cluster_assignments)
 
-    @property
-    def cluster_weights(self) -> dict[int, float]:
-        """Deprecated: use cluster_counts instead."""
-        warnings.warn(
-            "'cluster_weights' is deprecated, use 'cluster_counts'.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        return self.cluster_counts
-
     def __repr__(self) -> str:
         seg_info = f", n_segments={self.n_segments}" if self.n_segments else ""
         transferred_info = ", is_transferred=True" if self.is_transferred else ""
@@ -799,6 +789,7 @@ class ClusteringResult:
         rescale_cluster_periods: bool,
         rescale_exclude_columns: list[str] | None,
         extreme_cluster_idx: list[int],
+        weights: dict[str, float] | None = None,
         time_index: pd.DatetimeIndex | None = None,
     ) -> ClusteringResult:
         """Build a ClusteringResult from pipeline intermediate data."""
@@ -864,7 +855,7 @@ class ClusteringResult:
             temporal_resolution=temporal_resolution,
             n_timesteps_per_period=n_timesteps_per_period,
             extreme_cluster_indices=extreme_cluster_indices_tuple,
-            weights=dict(cluster_config.weights) if cluster_config.weights else None,
+            weights=dict(weights) if weights else None,
             time_index=time_index,
             cluster_config=cluster_config,
             segment_config=segment_config,
@@ -1323,11 +1314,10 @@ class ClusteringResult:
         # Build minimal ClusterConfig with just the representation.
         cluster = ClusterConfig(representation=self.representation)
 
-        # Validate weight columns exist in new data
-        if self.weights is not None:
-            missing = set(self.weights.keys()) - set(data.columns)
-            if missing:
-                raise ValueError(f"Weight columns not found in data: {missing}")
+        # Validate (and normalize) the stored weights against the new data
+        from tsam.weights import validate_weights
+
+        validated_weights = validate_weights(data.columns, self.weights)
 
         # Use stored segment config if available, otherwise build from transfer fields
         segments: SegmentConfig | None = None
@@ -1362,6 +1352,7 @@ class ClusteringResult:
             n_clusters=self.n_clusters,
             n_timesteps_per_period=self.n_timesteps_per_period,
             cluster=cluster,
+            weights=validated_weights,
             segments=segments,
             rescale_cluster_periods=self.preserve_column_means,
             rescale_exclude_columns=list(self.rescale_exclude_columns)

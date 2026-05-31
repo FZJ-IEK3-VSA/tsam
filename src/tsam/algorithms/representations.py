@@ -6,18 +6,6 @@ from sklearn.metrics.pairwise import euclidean_distances
 from tsam.algorithms.duration_representation import duration_representation
 from tsam.config import Distribution, MinMaxMean
 
-# Aliases: old verbose names → new short names.
-# The legacy wrapper sends old names; the pipeline sends new names.
-_ALIASES = {
-    "meanRepresentation": "mean",
-    "medoidRepresentation": "medoid",
-    "maxoidRepresentation": "maxoid",
-    "minmaxmeanRepresentation": "minmax_mean",
-    "durationRepresentation": "distribution",
-    "distributionRepresentation": "distribution",
-    "distributionAndMinMaxRepresentation": "distribution_minmax",
-}
-
 
 def representations(
     candidates: np.ndarray,
@@ -32,9 +20,9 @@ def representations(
 
     Dispatches to the representation named by ``representation_method`` — a
     string (``"mean"``, ``"medoid"``, ``"maxoid"``, ``"minmax_mean"``,
-    ``"distribution"``, ``"distribution_minmax"``; legacy verbose names are
-    accepted) or a ``Distribution`` / ``MinMaxMean`` object — returning one
-    representative period per cluster, in cluster order.
+    ``"distribution"``, ``"distribution_minmax"``) or a ``Distribution`` /
+    ``MinMaxMean`` object — returning one representative period per cluster, in
+    cluster order.
 
     Parameters
     ----------
@@ -93,9 +81,7 @@ def representations(
         )
         return cluster_centers, cluster_center_indices
 
-    # --- Fallback: string-based dispatch (legacy wrapper compat) ---
-    # Normalize old names to new names
-    representation_method = _ALIASES.get(representation_method, representation_method)
+    # --- String-based dispatch ---
     if representation_method == "mean":
         cluster_centers = mean_representation(candidates, cluster_order)
     elif representation_method == "medoid":

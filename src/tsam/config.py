@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass, field
 from typing import Any, Literal, get_args
 
@@ -171,40 +170,10 @@ class ClusterConfig:
         - "medoid" for kmedoids, hierarchical, contiguous
         - "maxoid" for kmaxoids
 
-    weights : dict[str, float], optional
-        .. deprecated::
-            Pass ``weights`` as a top-level parameter to
-            :func:`~tsam.aggregate` instead.
-
-        Per-column importance factors for clustering. Higher weight = more
-        influence. Example: ``{"demand": 2.0, "solar": 1.0}``
-
-        Weights scale the normalized data used for all clustering-related
-        decisions. They affect:
-
-        1. **Clustering distance**: Columns with higher weight contribute
-           more to the distance metric, so clusters form around patterns
-           in high-weight columns.
-        2. **Medoid/maxoid selection**: These representations pick an actual
-           period by cross-column distance. Weights change which period is
-           "closest to the centroid" or "farthest from other centroids."
-        3. **Segmentation**: Segment boundaries within typical periods are
-           determined in weighted space. High-weight columns have more
-           influence on where boundaries fall.
-
-        Other representations (mean, distribution, minmax_mean) are
-        **weight-invariant** — the weight multiplies in and divides back
-        out, producing the same result regardless of weight values.
-
-        Weights are removed before producing final outputs. They do not
-        affect normalization, rescaling, denormalization, reconstruction,
-        or accuracy computation. Columns not listed default to weight 1.0.
-
     scale_by_column_means : bool, default False
         Divide each column by its mean after MinMax normalization, so all
         columns have equal mean before clustering.
         Useful when columns have very different scales.
-        (Previously called ``normalize_column_means``.)
 
     use_duration_curves : bool, default False
         Sort values within each period before clustering.
@@ -221,7 +190,6 @@ class ClusterConfig:
 
     method: ClusterMethod
     representation: Representation | None
-    weights: dict[str, float] | None
     scale_by_column_means: bool
     use_duration_curves: bool
     include_period_sums: bool
@@ -234,39 +202,19 @@ class ClusterConfig:
         "scale_by_column_means",
         "solver",
         "use_duration_curves",
-        "weights",
     )
 
     def __init__(
         self,
         method: ClusterMethod = "hierarchical",
         representation: Representation | None = None,
-        weights: dict[str, float] | None = None,
         scale_by_column_means: bool = False,
         use_duration_curves: bool = False,
         include_period_sums: bool = False,
         solver: Solver = "highs",
-        # Backward compat alias
-        normalize_column_means: bool | None = None,
     ) -> None:
-        if normalize_column_means is not None:
-            warnings.warn(
-                "'normalize_column_means' is deprecated, use 'scale_by_column_means'.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            scale_by_column_means = normalize_column_means
-        if weights is not None:
-            warnings.warn(
-                "Passing weights via ClusterConfig is deprecated. "
-                "Pass weights as a top-level parameter to aggregate() instead, "
-                "e.g. aggregate(data, n_clusters=8, weights={...}).",
-                DeprecationWarning,
-                stacklevel=2,
-            )
         object.__setattr__(self, "method", method)
         object.__setattr__(self, "representation", representation)
-        object.__setattr__(self, "weights", weights)
         object.__setattr__(self, "scale_by_column_means", scale_by_column_means)
         object.__setattr__(self, "use_duration_curves", use_duration_curves)
         object.__setattr__(self, "include_period_sums", include_period_sums)
@@ -297,11 +245,6 @@ class ClusterConfig:
         parts = ", ".join(f"{s}={getattr(self, s)!r}" for s in self.__slots__)
         return f"ClusterConfig({parts})"
 
-    @property
-    def normalize_column_means(self) -> bool:
-        """Deprecated alias for ``scale_by_column_means``."""
-        return self.scale_by_column_means
-
     def get_representation(self) -> Representation:
         """Get the representation, using default if not specified."""
         if self.representation is not None:
@@ -323,8 +266,6 @@ class ClusterConfig:
         result: dict[str, Any] = {"method": self.method}
         if self.representation is not None:
             result["representation"] = representation_to_dict(self.representation)
-        if self.weights is not None:
-            result["weights"] = self.weights
         if self.scale_by_column_means:
             result["scale_by_column_means"] = self.scale_by_column_means
         if self.use_duration_curves:
@@ -345,11 +286,7 @@ class ClusterConfig:
         return cls(
             method=data.get("method", "hierarchical"),
             representation=representation,
-            weights=data.get("weights"),
-            scale_by_column_means=data.get(
-                "scale_by_column_means",
-                data.get("normalize_column_means", False),
-            ),
+            scale_by_column_means=data.get("scale_by_column_means", False),
             use_duration_curves=data.get("use_duration_curves", False),
             include_period_sums=data.get("include_period_sums", False),
             solver=data.get("solver", "highs"),
