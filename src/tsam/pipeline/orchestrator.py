@@ -32,7 +32,7 @@ from tsam.pipeline.extremes import add_extreme_periods
 from tsam.pipeline.normalize import denormalize, normalize
 from tsam.pipeline.periods import add_period_sum_features, unstack_to_periods
 from tsam.pipeline.rescale import rescale_representatives
-from tsam.pipeline.segment import segment_typical_periods
+from tsam.pipeline.segmentation import segment_typical_periods
 from tsam.pipeline.types import (
     ClusteringOutput,
     FormattedOutput,
@@ -452,7 +452,7 @@ def format_and_reconstruct(
     - **Format representatives** — reshape the flat center vectors into a
       ``(PeriodNum, TimeStep)`` MultiIndex DataFrame.
     - **Segment** *(optional,
-      [`segment_typical_periods`][tsam.pipeline.segment.segment_typical_periods])*
+      [`segment_typical_periods`][tsam.pipeline.segmentation.segment_typical_periods])*
       — merge adjacent timesteps within each period into fewer segments. Runs
       in weighted space; weights are removed from the outputs afterwards.
     - **Denormalize** ([`denormalize`][tsam.pipeline.normalize.denormalize]) —
