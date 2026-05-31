@@ -45,3 +45,14 @@ repos:
           - pandas-stubs
         args: [--ignore-missing-imports]
         exclude: ^(docs/|test/|benchmarks/)
+
+  - repo: local
+    hooks:
+      # Fail if a src/tsam module is added without a docs/api reference (or an
+      # explicit allowlist entry). The script scans the whole tree itself.
+      - id: check-api-reference
+        name: check API reference coverage
+        entry: python scripts/check_api_reference.py
+        language: system
+        pass_filenames: false
+        files: ^(src/tsam/.*\.py|docs/.*\.md)$

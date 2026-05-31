@@ -12,6 +12,14 @@ Supporting modules used across the package.
 ::: tsam.weights
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 
+## Shared helpers
+
+Resolution inference and the (de)serialization helpers shared by the config and
+result objects for JSON round-trips.
+
+::: tsam.commons
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
+
 ## Plotting
 
 ::: tsam.plot
