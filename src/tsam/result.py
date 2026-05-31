@@ -10,15 +10,17 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 import pandas as pd
 
+from tsam.commons import (
+    infer_resolution,
+    time_index_from_dict,
+    time_index_to_dict,
+)
 from tsam.config import (
     ClusterConfig,
     ExtremeConfig,
     SegmentConfig,
-    _infer_resolution,
-    _representation_from_dict,
-    _representation_to_dict,
-    _time_index_from_dict,
-    _time_index_to_dict,
+    representation_from_dict,
+    representation_to_dict,
 )
 
 if TYPE_CHECKING:
@@ -842,7 +844,7 @@ class ClusteringResult:
         effective_resolution = (
             temporal_resolution
             if temporal_resolution is not None
-            else _infer_resolution(original_data)
+            else infer_resolution(original_data)
         )
         period_duration = n_timesteps_per_period * effective_resolution
 
@@ -1002,7 +1004,7 @@ class ClusteringResult:
             "cluster_assignments": list(self.cluster_assignments),
             "n_timesteps_per_period": self.n_timesteps_per_period,
             "preserve_column_means": self.preserve_column_means,
-            "representation": _representation_to_dict(self.representation),
+            "representation": representation_to_dict(self.representation),
         }
         if self.cluster_centers is not None:
             result["cluster_centers"] = list(self.cluster_centers)
@@ -1015,7 +1017,7 @@ class ClusteringResult:
         if self.rescale_exclude_columns is not None:
             result["rescale_exclude_columns"] = list(self.rescale_exclude_columns)
         if self.segment_representation is not None:
-            result["segment_representation"] = _representation_to_dict(
+            result["segment_representation"] = representation_to_dict(
                 self.segment_representation
             )
         if self.temporal_resolution is not None:
@@ -1025,7 +1027,7 @@ class ClusteringResult:
         if self.weights is not None:
             result["weights"] = self.weights
         if self.time_index is not None:
-            result["time_index"] = _time_index_to_dict(self.time_index)
+            result["time_index"] = time_index_to_dict(self.time_index)
         # Reference fields (optional, for documentation)
         if self.cluster_config is not None:
             result["cluster_config"] = self.cluster_config.to_dict()
@@ -1046,7 +1048,7 @@ class ClusteringResult:
             "cluster_assignments": tuple(data["cluster_assignments"]),
             "n_timesteps_per_period": data["n_timesteps_per_period"],
             "preserve_column_means": data.get("preserve_column_means", True),
-            "representation": _representation_from_dict(rep_data),
+            "representation": representation_from_dict(rep_data),
             "version": data.get("version"),
         }
         if "cluster_centers" in data:
@@ -1064,7 +1066,7 @@ class ClusteringResult:
         if "rescale_exclude_columns" in data:
             kwargs["rescale_exclude_columns"] = tuple(data["rescale_exclude_columns"])
         if seg_rep_data is not None:
-            kwargs["segment_representation"] = _representation_from_dict(seg_rep_data)
+            kwargs["segment_representation"] = representation_from_dict(seg_rep_data)
         if "temporal_resolution" in data:
             kwargs["temporal_resolution"] = data["temporal_resolution"]
         if "extreme_cluster_indices" in data:
@@ -1073,7 +1075,7 @@ class ClusteringResult:
             kwargs["weights"] = data["weights"]
         raw_time_index = data.get("time_index")
         if raw_time_index is not None:
-            kwargs["time_index"] = _time_index_from_dict(raw_time_index)
+            kwargs["time_index"] = time_index_from_dict(raw_time_index)
         # Reference fields
         if "cluster_config" in data:
             kwargs["cluster_config"] = ClusterConfig.from_dict(data["cluster_config"])
@@ -1298,7 +1300,7 @@ class ClusteringResult:
 
         # Validate n_timesteps_per_period matches data
         if effective_temporal_resolution is None:
-            inferred = _infer_resolution(data)
+            inferred = infer_resolution(data)
         else:
             inferred = effective_temporal_resolution
 

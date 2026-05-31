@@ -6,16 +6,6 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Any, Literal, get_args
 
-import pandas as pd
-
-
-def _infer_resolution(data: pd.DataFrame) -> float:
-    """Infer temporal resolution from data index."""
-    if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
-        return (data.index[1] - data.index[0]).total_seconds() / 3600
-    return 1.0
-
-
 # Type aliases for clarity
 ClusterMethod = Literal[
     "averaging",
@@ -122,14 +112,14 @@ class MinMaxMean:
 Representation = RepresentationMethod | Distribution | MinMaxMean
 
 
-def _representation_to_dict(rep: Representation) -> str | dict[str, Any]:
+def representation_to_dict(rep: Representation) -> str | dict[str, Any]:
     """Serialize a representation value to a JSON-compatible format."""
     if isinstance(rep, (Distribution, MinMaxMean)):
         return rep.to_dict()
     return rep
 
 
-def _representation_from_dict(data: str | dict) -> Representation:
+def representation_from_dict(data: str | dict) -> Representation:
     """Deserialize a representation value from a JSON-compatible format."""
     if isinstance(data, str):
         return data  # type: ignore[return-value]
@@ -140,27 +130,6 @@ def _representation_from_dict(data: str | dict) -> Representation:
     if rep_type == "minmax_mean":
         return MinMaxMean.from_dict(data)
     raise ValueError(f"Unknown representation type: {rep_type!r}")
-
-
-def _time_index_to_dict(idx: pd.DatetimeIndex) -> dict[str, Any] | list[str]:
-    """Serialize a DatetimeIndex compactly when possible.
-
-    Regular indices are stored as ``{start, periods, freq}`` (~3 values).
-    Irregular indices fall back to a full ISO string list.
-    """
-    freq = pd.infer_freq(idx)
-    if freq is not None:
-        return {"start": idx[0].isoformat(), "periods": len(idx), "freq": freq}
-    return [t.isoformat() for t in idx]
-
-
-def _time_index_from_dict(
-    raw: dict[str, Any] | list[str],
-) -> pd.DatetimeIndex:
-    """Deserialize a DatetimeIndex from either compact or list format."""
-    if isinstance(raw, dict):
-        return pd.date_range(raw["start"], periods=raw["periods"], freq=raw["freq"])
-    return pd.DatetimeIndex(raw)
 
 
 class ClusterConfig:
@@ -353,7 +322,7 @@ class ClusterConfig:
         """Convert to dictionary for JSON serialization."""
         result: dict[str, Any] = {"method": self.method}
         if self.representation is not None:
-            result["representation"] = _representation_to_dict(self.representation)
+            result["representation"] = representation_to_dict(self.representation)
         if self.weights is not None:
             result["weights"] = self.weights
         if self.scale_by_column_means:
@@ -371,7 +340,7 @@ class ClusterConfig:
         """Create from dictionary (e.g., loaded from JSON)."""
         rep_data = data.get("representation")
         representation = (
-            _representation_from_dict(rep_data) if rep_data is not None else None
+            representation_from_dict(rep_data) if rep_data is not None else None
         )
         return cls(
             method=data.get("method", "hierarchical"),
@@ -424,7 +393,7 @@ class SegmentConfig:
         """Convert to dictionary for JSON serialization."""
         result: dict[str, Any] = {"n_segments": self.n_segments}
         if self.representation != "mean":
-            result["representation"] = _representation_to_dict(self.representation)
+            result["representation"] = representation_to_dict(self.representation)
         return result
 
     @classmethod
@@ -433,7 +402,7 @@ class SegmentConfig:
         rep_data = data.get("representation", "mean")
         return cls(
             n_segments=data["n_segments"],
-            representation=_representation_from_dict(rep_data),
+            representation=representation_from_dict(rep_data),
         )
 
 
