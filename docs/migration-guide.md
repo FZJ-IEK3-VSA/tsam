@@ -61,6 +61,7 @@ The v3 deprecation shims have been **removed** in v4:
 | `ClusterConfig(weights=...)` | top-level `aggregate(..., weights={...})` |
 | Verbose representation names (`"meanRepresentation"`, `"distributionRepresentation"`, …) | short names (`"mean"`, `"distribution"`, …) — see [representation values](#representation-method-values) |
 | `LegacyAPIWarning` | — (no longer needed; the legacy API is gone) |
+| `tsam.weights.MIN_WEIGHT` | `tsam.options.min_weight` |
 
 In v4, per-column `weights` are a **top-level input to `aggregate()`**, not part
 of `ClusterConfig` — they are an aggregation parameter, not clustering

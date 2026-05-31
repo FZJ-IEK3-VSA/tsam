@@ -388,7 +388,7 @@ class TestExtremeWeights:
         assert tp["GHI"].max() <= RAW["GHI"].max() + 1e-6
 
     def test_very_small_weight(self):
-        """Very small weights should be clamped to MIN_WEIGHT, not zero."""
+        """Very small weights should be clamped to options.min_weight, not zero."""
         agg = _run({"GHI": 1e-10, "T": 1, "Wind": 1, "Load": 1})
         tp = agg.cluster_representatives
         assert not tp.isnull().any().any(), "NaN in output with tiny weight"

@@ -15,8 +15,9 @@ import pytest
 
 from conftest import TESTDATA_CSV
 from tsam import ClusterConfig, ClusteringResult, aggregate
+from tsam.options import options
 from tsam.pipeline import _build_weight_vector
-from tsam.weights import MIN_WEIGHT, validate_weights
+from tsam.weights import validate_weights
 
 
 @pytest.fixture
@@ -224,7 +225,7 @@ class TestValidateWeights:
         assert len(w) == 1
         assert "minimal tolerable" in str(w[0].message)
         assert result is not None
-        assert result["A"] == pytest.approx(MIN_WEIGHT)
+        assert result["A"] == pytest.approx(options.min_weight)
 
     def test_aggregate_rejects_invalid_weight_columns(self, sample_data):
         """aggregate() raises ValueError on weight column names not in the data."""

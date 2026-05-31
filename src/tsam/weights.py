@@ -11,13 +11,6 @@ if TYPE_CHECKING:
     import pandas as pd
 
 
-def __getattr__(name: str):
-    """Backward compat: ``MIN_WEIGHT`` now lives in ``tsam.options``."""
-    if name == "MIN_WEIGHT":
-        return options.min_weight
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
 def validate_weights(
     columns: pd.Index,
     weights: dict[str, float] | None,
