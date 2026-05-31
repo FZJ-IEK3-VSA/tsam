@@ -21,9 +21,9 @@ Supporting modules used across the package.
 
 The clustering and representation primitives the pipeline dispatches to.
 
-::: tsam.utils.period_aggregation
+::: tsam.algorithms.period_aggregation
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
-::: tsam.utils.representations
+::: tsam.algorithms.representations
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 
 ## Algorithm backends
@@ -32,11 +32,11 @@ The concrete clustering, representation, and segmentation algorithms the
 primitives above dispatch to — k-medoids/k-maxoids solvers, the duration-curve
 representation, and constrained agglomerative segmentation.
 
-::: tsam.utils.k_medoids_exact
+::: tsam.algorithms.k_medoids_exact
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
-::: tsam.utils.k_maxoids
+::: tsam.algorithms.k_maxoids
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
-::: tsam.utils.duration_representation
+::: tsam.algorithms.duration_representation
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
-::: tsam.utils.segmentation
+::: tsam.algorithms.segmentation
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from tsam.utils.representations import representations
+from tsam.algorithms.representations import representations
 
 if TYPE_CHECKING:
     from tsam.config import Distribution, MinMaxMean
@@ -82,7 +82,7 @@ def aggregate_periods(
         )
 
     elif cluster_method == "kmedoids":
-        from tsam.utils.k_medoids_exact import KMedoids
+        from tsam.algorithms.k_medoids_exact import KMedoids
 
         k_medoid = KMedoids(n_clusters=n_clusters, solver=solver)
 
@@ -98,7 +98,7 @@ def aggregate_periods(
         )
 
     elif cluster_method == "kmaxoids":
-        from tsam.utils.k_maxoids import KMaxoids
+        from tsam.algorithms.k_maxoids import KMaxoids
 
         k_maxoid = KMaxoids(n_clusters=n_clusters)
 

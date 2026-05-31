@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from conftest import RESULTS_DIR
-from tsam.utils.period_aggregation import aggregate_periods
+from tsam.algorithms.period_aggregation import aggregate_periods
 
 
 def test_aggregate_hiearchical():

@@ -5,7 +5,7 @@ import pandas as pd
 
 from conftest import RESULTS_DIR, TESTDATA_CSV
 from tsam import ClusterConfig, SegmentConfig, aggregate
-from tsam.utils.representations import representations
+from tsam.algorithms.representations import representations
 
 
 def test_segmentation():

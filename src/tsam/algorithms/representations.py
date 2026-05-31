@@ -3,8 +3,8 @@ from __future__ import annotations
 import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
 
+from tsam.algorithms.duration_representation import duration_representation
 from tsam.config import Distribution, MinMaxMean
-from tsam.utils.duration_representation import duration_representation
 
 # Aliases: old verbose names → new short names.
 # The legacy wrapper sends old names; the pipeline sends new names.
