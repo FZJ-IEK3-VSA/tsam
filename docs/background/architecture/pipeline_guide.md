@@ -12,8 +12,8 @@ This page is the stable conceptual map of that flow. Each phase below names the
 *stage functions* it runs and links to their full reference — the precise
 signatures, parameters, and behavior live in the auto-generated
 [API reference](../../api/index.md), which tracks the code. The public input and
-output types are linked from [Configuration reference](#configuration-reference)
-and [Working with results](#working-with-results) at the end.
+output types live in the API reference —
+[Configuration](../../api/configuration.md) and [Results](../../api/results.md).
 
 ---
 
@@ -26,6 +26,13 @@ config/result objects (left) and the clustering backends (right). Dashed boxes
 are optional steps, activated by the named config parameter.
 
 ![Pipeline data flow](../../assets/architecture/pipeline_diagram.svg)
+
+!!! tip "Printable version"
+    For printing or a quick overview, a simplified single-page layout — the user
+    data flow (time series in → `aggregate()` → clustered data out) and the four
+    phases, with module paths and data shapes dropped — is available as a
+    [print-optimized diagram](../../assets/architecture/pipeline_diagram_print.svg)
+    that fits one A4 sheet.
 
 **Abbreviations:** T = input timesteps · C = columns · S = timesteps per period ·
 P = T÷S periods · K = number of clusters · df = `pd.DataFrame` · arr = `np.ndarray`.
