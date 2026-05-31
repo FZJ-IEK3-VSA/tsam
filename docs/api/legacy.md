@@ -6,6 +6,6 @@ should use [`aggregate`][tsam.aggregate]; see the
 
 ::: tsam.timeseriesaggregation
     options:
-      show_root_heading: false
+      show_root_heading: true
       show_root_toc_entry: false
       heading_level: 2

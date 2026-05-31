@@ -5,7 +5,7 @@ re-apply a clustering to new data.
 
 ::: tsam.result
     options:
-      show_root_heading: false
+      show_root_heading: true
       show_root_toc_entry: false
       heading_level: 2
 

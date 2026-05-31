@@ -11,7 +11,7 @@ page is the reference for the functions themselves.
 
 ::: tsam.pipeline.orchestrator
     options:
-      show_root_heading: false
+      show_root_heading: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -20,19 +20,19 @@ page is the reference for the functions themselves.
 The pure transforms each phase calls, one module per concern.
 
 ::: tsam.pipeline.normalize
-    options: { show_root_heading: false, show_root_toc_entry: false, heading_level: 3 }
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 ::: tsam.pipeline.periods
-    options: { show_root_heading: false, show_root_toc_entry: false, heading_level: 3 }
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 ::: tsam.pipeline.clustering
-    options: { show_root_heading: false, show_root_toc_entry: false, heading_level: 3 }
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 ::: tsam.pipeline.extremes
-    options: { show_root_heading: false, show_root_toc_entry: false, heading_level: 3 }
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 ::: tsam.pipeline.rescale
-    options: { show_root_heading: false, show_root_toc_entry: false, heading_level: 3 }
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 ::: tsam.pipeline.segment
-    options: { show_root_heading: false, show_root_toc_entry: false, heading_level: 3 }
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 ::: tsam.pipeline.accuracy
-    options: { show_root_heading: false, show_root_toc_entry: false, heading_level: 3 }
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 
 ## Internal types
 
@@ -40,6 +40,6 @@ The dataclasses passed between phases — each phase's milestone output.
 
 ::: tsam.pipeline.types
     options:
-      show_root_heading: false
+      show_root_heading: true
       show_root_toc_entry: false
       heading_level: 3

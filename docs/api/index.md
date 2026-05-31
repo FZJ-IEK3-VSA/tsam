@@ -17,6 +17,6 @@ returns. The pipeline internals and legacy API are here for completeness.
 
 ::: tsam.api
     options:
-      show_root_heading: false
+      show_root_heading: true
       show_root_toc_entry: false
       heading_level: 3
