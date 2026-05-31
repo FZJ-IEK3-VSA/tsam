@@ -89,7 +89,6 @@ nav:
     - Pipeline internals: api/pipeline.md
     - Tuning: api/tuning.md
     - Utilities: api/utilities.md
-    - Legacy (v3 API): api/legacy.md
   - About:
     - Changelog: changelog.md
     - Legal Notice: legal-notice.md

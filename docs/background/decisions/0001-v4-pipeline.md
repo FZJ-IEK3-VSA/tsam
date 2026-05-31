@@ -24,4 +24,4 @@ The aggregation flow is implemented as a sequence of **pure functions** organise
 
 **Public surface is narrower and typed.** Users interact with `tsam.aggregate()`, `ClusterConfig`/`SegmentConfig`/`ExtremeConfig` for inputs, and `AggregationResult` for outputs. Internal types (`PipelineConfig`, `PreparedData`, `ClusteringOutput`, etc.) are not exported.
 
-**Two APIs coexist during the transition.** The legacy `TimeSeriesAggregation.create_typical_periods()` remains importable and functional so existing user code and notebooks keep working. Calls into the legacy entry point emit a `LegacyAPIWarning`. The legacy class will be removed in a future major version once downstream users have migrated.
+**The legacy API has been removed.** In v3 the legacy `TimeSeriesAggregation.create_typical_periods()` was kept importable and functional, emitting a `LegacyAPIWarning` to flag it as deprecated. v4 completes that deprecation by removing the class-based API entirely; `tsam.aggregate()` is the single entry point. The [migration guide](../../migration-guide.md) maps every old parameter to its replacement.

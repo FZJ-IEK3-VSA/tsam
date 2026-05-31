@@ -12,11 +12,6 @@ Supporting modules used across the package.
 ::: tsam.weights
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 
-## Exceptions and warnings
-
-::: tsam.exceptions
-    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
-
 ## Plotting
 
 ::: tsam.plot

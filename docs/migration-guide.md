@@ -2,9 +2,10 @@
 
 ## Migrating from v3 to v4 { #migration-v3-to-v4 }
 
-tsam v4 is a pipeline rewrite of the internals. The `tsam.aggregate()` API
-and the legacy `TimeSeriesAggregation` class both still work, but there are
-behavioral changes that may affect your results.
+tsam v4 is a pipeline rewrite of the internals. **The legacy class-based
+`TimeSeriesAggregation` API has been removed** — use the `tsam.aggregate()`
+function instead (this guide shows the equivalent for every old parameter).
+There are also behavioral changes that may affect your results.
 
 ### Weight semantics
 
@@ -30,14 +31,12 @@ users, this change is invisible.
 ### Column order (new API only)
 
 `cluster_representatives`, `reconstructed`, and `original` now return
-columns in the same order as the input DataFrame. Previously, columns were
-alphabetically sorted.
-
-The legacy `TimeSeriesAggregation` class preserves alphabetical sorting for
-backward compatibility.
+columns in the same order as the input DataFrame. Previously (v3), columns
+were alphabetically sorted.
 
 **Action required:** If your code indexes columns by position (e.g.,
-`df.iloc[:, 0]`), verify that the order matches your expectation.
+`df.iloc[:, 0]`), verify that the order matches your expectation. To keep the
+old behavior, sort the columns yourself: `result.cluster_representatives.sort_index(axis=1)`.
 
 ### Resolution defaults for non-datetime indices
 
@@ -60,48 +59,19 @@ works but emits a `FutureWarning`.
 ### Internal changes (no action required)
 
 - The pipeline has been decomposed into stateless functions in
-  `src/tsam/pipeline/`. Both `tsam.aggregate()` and
-  `TimeSeriesAggregation` delegate to `run_pipeline()`.
+  `src/tsam/pipeline/`. `tsam.aggregate()` delegates to `run_pipeline()`.
 - All internal identifiers have been renamed from camelCase to snake_case.
-  The legacy class accepts both naming conventions for its constructor
-  parameters.
 
 ---
 
 ## Migrating from ETHOS.TSAM v2 to v3 { #migration-v2-to-v3 }
 
-ETHOS.TSAM v3 replaces the class-based API with a functional API.
-The old `TimeSeriesAggregation` class still works but is deprecated
-and will be removed in a future release.
+ETHOS.TSAM v3 introduced the functional `aggregate()` API alongside the
+class-based `TimeSeriesAggregation`, which remained importable but emitted a
+`LegacyAPIWarning`. As of **v4 the class-based API has been removed**, so the
+mapping below is also what you need to move off the old class.
 
 This guide covers every change you need to make.
-
-## Heads-up: column order changes in v4 { #v4-column-order }
-
-!!! warning "`aggregate()` result column order will change in v4"
-
-    In **v3**, `aggregate()` returns `cluster_representatives`, `reconstructed`,
-    and `original` with columns **sorted alphabetically**; in **v4** they follow
-    the **input DataFrame's order**. This can break code that reads results *by
-    position* (`.values`, `.iloc[:, 0]`) **silently** — names and shape are
-    unchanged, but each column's data lands in a different slot. Indexing *by
-    name* is unaffected. `aggregate()` emits a `FutureWarning` when input columns
-    are not already alphabetical (the only case that changes).
-
-    To keep the v3 order, sort before — `aggregate(data.sort_index(axis=1), ...)`
-    — or after — `result.cluster_representatives.sort_index(axis=1)`. To adopt
-    v4 now, index results by column name. The legacy `TimeSeriesAggregation`
-    class is unaffected (it sorts alphabetically in both v3 and v4).
-
-    To silence the warning (e.g. you have already migrated):
-
-    ```python
-    import warnings
-
-    warnings.filterwarnings(
-        "ignore", category=FutureWarning, message=".*sorted alphabetically.*"
-    )
-    ```
 
 ## Quick before-and-after
 
@@ -587,17 +557,6 @@ Any code change that alters output values will fail these tests.
 If a future release intentionally changes results (e.g., improved
 algorithm), the golden files will be regenerated and the change
 documented in the changelog.
-
-## Suppressing warnings
-
-During migration you can silence the deprecation warnings:
-
-```python
-import warnings
-from tsam import LegacyAPIWarning
-
-warnings.filterwarnings("ignore", category=LegacyAPIWarning)
-```
 
 ## Removed parameters
 

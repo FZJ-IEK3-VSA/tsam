@@ -149,7 +149,7 @@ above link straight into it). The source-tree module map is below.
     | [`api.py`](../../api/index.md) | `aggregate()` — the entry point: builds a `PipelineConfig`, runs the pipeline, wraps the output as an `AggregationResult`. |
     | [`config.py`](../../api/configuration.md) | Config dataclasses (`ClusterConfig`, `SegmentConfig`, `ExtremeConfig`, `Distribution`, `MinMaxMean`) plus the transfer object `ClusteringResult`. |
     | [`result.py`](../../api/results.md) | `AggregationResult`, `AccuracyMetrics`. |
-    | [`tuning.py`, `hyperparametertuning.py`](../../api/tuning.md) | Sweep configurations and rank by accuracy (loop `aggregate()`). |
+    | [`tuning.py`](../../api/tuning.md) | Sweep configurations and rank by accuracy (loop `aggregate()`). |
     | [`plot.py`](../../api/utilities.md) | Plotly-based visualization (lazy import). |
     | [`options.py`](../../api/utilities.md) | Global numerical options and tolerances. |
 
