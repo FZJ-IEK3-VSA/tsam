@@ -166,8 +166,8 @@ above link straight into it). The source-tree module map is below.
     | `pipeline/segment.py` | Merge adjacent timesteps within a typical period. |
     | `pipeline/accuracy.py` | Reconstruct the full series and compute accuracy metrics. |
     | `pipeline/types.py` | Internal dataclasses: `PipelineConfig`, the phase milestones, `PipelineResult`. |
-    | `period_aggregation.py` · `representations.py` | Clustering dispatch and representative computation (shared by clustering and segmentation). |
-    | `utils/k_medoids_exact.py` · `utils/k_maxoids.py` | k-medoids (MILP) / k-maxoids solvers. |
-    | `utils/duration_representation.py` | Duration-curve representation (for `distribution`). |
+    | `algorithms/clustering.py` · `algorithms/representations.py` | Clustering dispatch and representative computation (shared by clustering and segmentation). |
+    | `algorithms/k_medoids_exact.py` · `algorithms/k_maxoids.py` | k-medoids (MILP) / k-maxoids solvers. |
+    | `algorithms/duration_representation.py` | Duration-curve representation (for `distribution`). |
     | `utils/segmentation.py` | Constrained agglomerative segmentation. |
     | `weights.py` · `exceptions.py` | Weight validation; custom warnings. |

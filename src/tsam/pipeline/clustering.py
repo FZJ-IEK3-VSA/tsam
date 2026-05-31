@@ -1,4 +1,8 @@
-"""Clustering wrappers around period_aggregation and representations."""
+"""Config-aware clustering stage: adapt ClusterConfig onto the algorithm kernels.
+
+Thin wrappers over :mod:`tsam.algorithms.clustering` and
+:mod:`tsam.algorithms.representations`.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from tsam.algorithms.period_aggregation import aggregate_periods
+from tsam.algorithms.clustering import cluster_and_represent
 from tsam.algorithms.representations import representations
 
 if TYPE_CHECKING:
@@ -90,7 +94,7 @@ def cluster_periods(
     add_extreme_periods : Inject extreme-value periods after clustering.
     rescale_representatives : Correct column means of the representatives.
     """
-    centers, center_indices, order = aggregate_periods(
+    centers, center_indices, order = cluster_and_represent(
         candidates,
         n_clusters=n_clusters,
         n_iter=100,
@@ -163,7 +167,7 @@ def cluster_sorted_periods(
     values_3d = candidates.copy().reshape(n_periods, n_columns, n_timesteps)
     sorted_values = (-np.sort(-values_3d, axis=2, kind="stable")).reshape(n_periods, -1)
 
-    _, center_indices, cluster_order = aggregate_periods(
+    _, center_indices, cluster_order = cluster_and_represent(
         sorted_values,
         n_clusters=n_clusters,
         n_iter=30,

@@ -22,7 +22,7 @@ _DEFAULT_REPRESENTATION = {
 }
 
 
-def cluster_assignments(
+def assign_clusters(
     candidates: np.ndarray,
     n_clusters: int,
     cluster_method: str,
@@ -33,7 +33,8 @@ def cluster_assignments(
 
     Pure clustering step: maps each period (row of ``candidates``) to a cluster
     id, without computing the cluster representatives. See
-    :func:`aggregate_periods` for the combined clustering + representation step.
+    :func:`cluster_and_represent` for the combined clustering + representation
+    step.
 
     Valid ``cluster_method`` values: 'averaging', 'kmeans', 'kmedoids',
     'kmaxoids', 'hierarchical', 'contiguous'.
@@ -89,7 +90,7 @@ def cluster_assignments(
     )
 
 
-def aggregate_periods(
+def cluster_and_represent(
     candidates: np.ndarray,
     n_clusters: int = 8,
     n_iter: int = 100,
@@ -103,12 +104,12 @@ def aggregate_periods(
 ) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
     """Cluster ``candidates`` and compute the representative profile per cluster.
 
-    Two steps: :func:`cluster_assignments` assigns each period to a cluster, then
+    Two steps: :func:`assign_clusters` assigns each period to a cluster, then
     :func:`~tsam.algorithms.representations.representations` derives the cluster
     representatives (using the per-method default unless ``representation_method``
     overrides it).
     """
-    cluster_order = cluster_assignments(
+    cluster_order = assign_clusters(
         candidates, n_clusters, cluster_method, n_iter=n_iter, solver=solver
     )
 
