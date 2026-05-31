@@ -20,13 +20,14 @@ HOURS_PER_PERIOD = 24
 
 def _run(weight_dict=None, **kwargs):
     cluster_method = kwargs.pop("cluster_method", "hierarchical")
-    method = "kmeans" if cluster_method == "k_means" else cluster_method
     same_mean = kwargs.pop("same_mean", False)
 
     agg_kwargs = {
         "n_clusters": N_TYPICAL,
         "period_duration": HOURS_PER_PERIOD,
-        "cluster": ClusterConfig(method=method, scale_by_column_means=same_mean),
+        "cluster": ClusterConfig(
+            method=cluster_method, scale_by_column_means=same_mean
+        ),
     }
 
     if "rescale_cluster_periods" in kwargs:
@@ -452,7 +453,7 @@ class TestWeightsWithKMeans:
     def test_kmeans_uniform_weights_match_no_weights(self):
         """k-means is non-deterministic; uniform scaling changes centroid init.
         We only check that the output is reasonable, not bit-identical."""
-        agg_uniform = _run(dict.fromkeys(RAW.columns, 3), cluster_method="k_means")
+        agg_uniform = _run(dict.fromkeys(RAW.columns, 3), cluster_method="kmeans")
         tp = agg_uniform.cluster_representatives
         for col in RAW.columns:
             assert tp[col].max() <= RAW[col].max() + 1e-6
@@ -461,7 +462,7 @@ class TestWeightsWithKMeans:
     def test_kmeans_output_in_range(self):
         agg = _run(
             {"GHI": 5, "T": 1, "Wind": 1, "Load": 1},
-            cluster_method="k_means",
+            cluster_method="kmeans",
         )
         tp = agg.cluster_representatives
         for col in RAW.columns:
