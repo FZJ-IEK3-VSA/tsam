@@ -28,6 +28,46 @@ def representations(
     distribution_period_wise: bool = True,
     n_timesteps_per_period: int | None = None,
 ) -> tuple[list[np.ndarray], list[int] | None]:
+    """Compute each cluster's representative profile with the chosen method.
+
+    Dispatches to the representation named by ``representation_method`` — a
+    string (``"mean"``, ``"medoid"``, ``"maxoid"``, ``"minmax_mean"``,
+    ``"distribution"``, ``"distribution_minmax"``; legacy verbose names are
+    accepted) or a ``Distribution`` / ``MinMaxMean`` object — returning one
+    representative period per cluster, in cluster order.
+
+    Parameters
+    ----------
+    candidates
+        Candidate matrix of period profiles, one row per original period.
+    cluster_order
+        Cluster label assigned to each period.
+    default
+        Representation used when ``representation_method`` is ``None``.
+    representation_method
+        Representation to apply; ``None`` falls back to ``default``.
+    representation_dict
+        Per-column method overrides for the min/max/mean representation.
+    distribution_period_wise
+        For the distribution representation, preserve the per-cluster duration
+        curve (``True``) or the global one (``False``).
+    n_timesteps_per_period
+        Timesteps per period; required by the distribution and min/max/mean
+        representations.
+
+    Returns
+    -------
+    cluster_centers
+        Representative profile for each cluster, in cluster order.
+    cluster_center_indices
+        For medoid/maxoid, the index of the original period chosen as each
+        representative; ``None`` for the other methods.
+
+    See Also
+    --------
+    mean_representation, medoid_representation, maxoid_representation,
+    minmax_mean_representation
+    """
     cluster_center_indices = None
     if representation_method is None:
         representation_method = default
