@@ -19,23 +19,13 @@ output types live in the API reference —
 
 ## Overview
 
-The diagram below shows the four phases down the centre — the module each stage
-lives in and the data that flows between them, with the milestone dataclass on
-each phase transition — wrapped by the surrounding modules: the public API and
-config/result objects (left) and the clustering backends (right). Dashed boxes
-are optional steps, activated by the named config parameter.
+The diagram below traces the user-facing data flow on the left — a **time series**
+and a **`Config`** go into [`aggregate()`][tsam.aggregate], which returns the
+**clustered data** — through the four-phase `run_pipeline()` down the centre, with
+the milestone dataclass passed between phases. The right column lists the
+clustering, representation, and segmentation options that Phases 2 and 3 draw on.
 
 ![Pipeline data flow](../../assets/architecture/pipeline_diagram.svg)
-
-!!! tip "Printable version"
-    For printing or a quick overview, a simplified single-page layout — the user
-    data flow (time series in → `aggregate()` → clustered data out) and the four
-    phases, with module paths and data shapes dropped — is available as a
-    [print-optimized diagram](../../assets/architecture/pipeline_diagram_print.svg)
-    that fits one A4 sheet.
-
-**Abbreviations:** T = input timesteps · C = columns · S = timesteps per period ·
-P = T÷S periods · K = number of clusters · df = `pd.DataFrame` · arr = `np.ndarray`.
 
 ---
 
