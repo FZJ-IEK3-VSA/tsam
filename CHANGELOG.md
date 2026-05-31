@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+## [3.4.1](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.4.0...v3.4.1) (2026-05-31)
+
+
+### Bug Fixes
+
+* warn that aggregate() column order will change in v4 ([#330](https://github.com/FZJ-IEK3-VSA/tsam/issues/330)) ([97f6e6d](https://github.com/FZJ-IEK3-VSA/tsam/commit/97f6e6d984a0eb089547fe0c61f95353498de416))
+
 ## [3.4.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.3.0...v3.4.0) (2026-05-15)
 
 
