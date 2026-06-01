@@ -159,7 +159,7 @@ class ResultPlotAccessor:
         go.Figure
         """
         typ = self._result.cluster_representatives
-        weights = self._result.cluster_counts
+        counts = self._result.cluster_counts
 
         available_columns = [c for c in typ.columns if c not in ["cluster", "timestep"]]
         columns = _validate_columns(
@@ -170,8 +170,8 @@ class ResultPlotAccessor:
         df = typ[columns].reset_index()
         df.columns = pd.Index(["Period", "Timestep", *columns])
 
-        # Map period IDs to labels with weights
-        df["Period"] = df["Period"].map(lambda p: f"Period {p} (n={weights.get(p, 1)})")
+        # Map period IDs to labels with their occurrence counts
+        df["Period"] = df["Period"].map(lambda p: f"Period {p} (n={counts.get(p, 1)})")
 
         long_df = df.melt(
             id_vars=["Period", "Timestep"],
@@ -246,7 +246,7 @@ class ResultPlotAccessor:
         unstacked = unstack_to_periods(result.original, n_ts * timestep_hours)
         assignments = result.cluster_assignments
         representatives = result.cluster_representatives
-        weights = result.cluster_counts
+        counts = result.cluster_counts
         timesteps = np.arange(n_ts)
 
         all_cluster_ids = sorted(set(assignments))
@@ -292,7 +292,7 @@ class ResultPlotAccessor:
             }
 
         cluster_labels = {
-            cid: f"Cluster {cid} (n={weights.get(cid, 1)})" for cid in cluster_ids
+            cid: f"Cluster {cid} (n={counts.get(cid, 1)})" for cid in cluster_ids
         }
 
         # Determine which dimension is animated vs faceted.
