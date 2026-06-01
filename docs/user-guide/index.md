@@ -1,9 +1,8 @@
 # User Guide
 
 The [Quickstart](../notebooks/quickstart.ipynb) covers the core workflow —
-shrinking a time series to a few typical periods and checking the result. Once
-you know it, these three notebooks cover everything else, grouped by what you're
-trying to do.
+shrinking a time series to a few typical periods and checking the result. These
+notebooks cover everything else, grouped by what you're trying to do.
 
 ## Make it smaller
 
@@ -11,16 +10,22 @@ trying to do.
 keep fewer time steps *within* each period by merging adjacent steps into a few
 variable-length segments.
 
-**[Sizing & tuning](../notebooks/sizing_tuning.ipynb)** — the accuracy-vs-size
+**[How small can you go?](../notebooks/tuning.ipynb)** — the accuracy-vs-size
 trade-off across both levers (periods and segments), and how to let tsam search
-for the combination that hits a target.
+for the best combination at a target size.
 
 ## Control what it preserves
 
-**[Representations, methods & extremes](../notebooks/representations_methods.ipynb)**
-— pick the clustering method, choose how each typical period is built (mean,
-medoid, value distribution, per-step min/max), and force extreme periods to be
-kept exactly so peaks survive aggregation.
+**[Clustering methods](../notebooks/clustering_methods.ipynb)** — how periods are
+grouped: hierarchical, k-means, k-medoids, k-maxoids, averaging, contiguous, and
+when to pick each.
+
+**[Representations](../notebooks/representations.ipynb)** — how each cluster
+becomes one profile: mean, medoid, the value distribution, or per-step min/max —
+and why the choice changes which features survive.
+
+**[Extreme periods](../notebooks/extreme_periods.ipynb)** — force the peak (or
+trough) day to be kept exactly, so it isn't averaged away.
 
 ## Put it to work
 

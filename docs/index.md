@@ -51,16 +51,16 @@ result.plot.cluster_representatives()   # ...and a plot of them
   exactly with an MILP solver.
 - **Two aggregation dimensions, freely combined.** Reduce the number of *periods*
   (typical days) and/or the *temporal resolution* within them, via
-  [sizing & tuning](notebooks/sizing_tuning.ipynb).
+  [how small you can go](notebooks/tuning.ipynb).
 - **Representations that preserve what matters.** Beyond means and medoids, keep
-  the [value distribution](notebooks/representations_methods.ipynb) (duration
+  the [value distribution](notebooks/representations.ipynb) (duration
   curve), per-time-step min/max, or force **extreme periods** so peaks survive
   aggregation.
 - **Built-in evaluation and plotting.** Every result carries accuracy metrics and
   an interactive `.plot` accessor (Plotly) — see the
   [Quickstart](notebooks/quickstart.ipynb).
 - **Automatic hyperparameter tuning.** Let tsam
-  [find the period/segment combination](notebooks/sizing_tuning.ipynb) that hits a
+  [find the period/segment combination](notebooks/tuning.ipynb) that hits a
   target data reduction, or map the full Pareto front.
 - **Built for downstream models.** Hand the representatives, counts, and
   assignments to an optimization, then map results back — see the
