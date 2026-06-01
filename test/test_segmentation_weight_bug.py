@@ -35,14 +35,14 @@ def _make_data():
     )
 
 
-def _aggregate(data, weights=None, normalize_column_means=False):
+def _aggregate(data, weights=None, scale_by_column_means=False):
     return aggregate(
         data,
         n_clusters=4,
         period_duration=24,
         cluster=ClusterConfig(
             method="hierarchical",
-            normalize_column_means=normalize_column_means,
+            scale_by_column_means=scale_by_column_means,
         ),
         segments=SegmentConfig(n_segments=4),
         weights=weights,
@@ -117,7 +117,7 @@ class TestSegmentationWeightLeak:
         result = _aggregate(
             data.copy(),
             weights={"Solar": 100, "Wind": 1, "Load": 1},
-            normalize_column_means=True,
+            scale_by_column_means=True,
         )
         pred = result.reconstructed
 

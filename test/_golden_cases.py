@@ -187,7 +187,7 @@ _NEW_KWARGS: dict[str, dict] = {
     "segmentation_samemean": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(method="hierarchical", normalize_column_means=True),
+        "cluster": ClusterConfig(method="hierarchical", scale_by_column_means=True),
         "segments": SegmentConfig(n_segments=4),
     },
     "segmentation_distribution_global": {
@@ -392,7 +392,7 @@ _NEW_KWARGS: dict[str, dict] = {
         "period_duration": 24,
         "cluster": ClusterConfig(
             method="hierarchical",
-            normalize_column_means=True,
+            scale_by_column_means=True,
         ),
         "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
     },
@@ -446,7 +446,7 @@ _NEW_KWARGS: dict[str, dict] = {
         "period_duration": 24,
         "cluster": ClusterConfig(
             method="hierarchical",
-            normalize_column_means=True,
+            scale_by_column_means=True,
         ),
         "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         "segments": SegmentConfig(n_segments=4),

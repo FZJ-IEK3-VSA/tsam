@@ -4,12 +4,7 @@
 explicit input and output: `prepare_data`, `cluster_and_postprocess`,
 `format_and_reconstruct`, `assemble_result`. The individual stages they call
 live in the sibling modules (normalize, periods, clustering, extremes, rescale,
-segment, accuracy).
-
-These four phase functions are public so their docstrings are discoverable in
-the API reference, but they are deliberately not exported from
-``tsam.pipeline`` — only `run_pipeline` is. They are orchestration glue, not a
-stable API to call directly.
+segmentation, accuracy).
 """
 
 from __future__ import annotations
@@ -32,7 +27,7 @@ from tsam.pipeline.extremes import add_extreme_periods
 from tsam.pipeline.normalize import denormalize, normalize
 from tsam.pipeline.periods import add_period_sum_features, unstack_to_periods
 from tsam.pipeline.rescale import rescale_representatives
-from tsam.pipeline.segment import segment_typical_periods
+from tsam.pipeline.segmentation import segment_typical_periods
 from tsam.pipeline.types import (
     ClusteringOutput,
     FormattedOutput,
@@ -239,7 +234,7 @@ def prepare_data(
     candidates = period_profiles.profiles_dataframe.values
 
     # Apply weights directly to candidates
-    weight_vector = _build_weight_vector(norm_data.values.columns, cluster.weights)
+    weight_vector = _build_weight_vector(norm_data.values.columns, cfg.weights)
     weighted_profiles_df: pd.DataFrame | None = None
     if weight_vector is not None:
         weight_tile = np.repeat(weight_vector, period_profiles.n_timesteps_per_period)
@@ -452,7 +447,7 @@ def format_and_reconstruct(
     - **Format representatives** — reshape the flat center vectors into a
       ``(PeriodNum, TimeStep)`` MultiIndex DataFrame.
     - **Segment** *(optional,
-      [`segment_typical_periods`][tsam.pipeline.segment.segment_typical_periods])*
+      [`segment_typical_periods`][tsam.pipeline.segmentation.segment_typical_periods])*
       — merge adjacent timesteps within each period into fewer segments. Runs
       in weighted space; weights are removed from the outputs afterwards.
     - **Denormalize** ([`denormalize`][tsam.pipeline.normalize.denormalize]) —
@@ -485,7 +480,7 @@ def format_and_reconstruct(
         # Segmentation runs in weighted space so that high-weight columns
         # have more influence on segment boundaries. Weights are removed
         # from the output before denormalization.
-        weights = cfg.cluster.weights
+        weights = cfg.weights
         segmentation_input = _apply_weights_df(normalized_typical_periods, weights)
         segmented_df, predicted_segmented_df, segment_center_indices = (
             segment_typical_periods(
@@ -548,7 +543,7 @@ def assemble_result(
     """Phase 4 — Assemble: pack everything into the pipeline result.
 
     Builds a serializable, transferable
-    [`ClusteringResult`][tsam.config.ClusteringResult] from the cluster order,
+    [`ClusteringResult`][tsam.result.ClusteringResult] from the cluster order,
     center indices, extremes, and segmentation, then packs it with the typical
     periods, counts, reconstructed series, and metadata into a
     [`PipelineResult`][tsam.pipeline.types.PipelineResult] — the single handoff
@@ -559,7 +554,7 @@ def assemble_result(
     --------
     format_and_reconstruct : The phase that produces the outputs packed here.
     """
-    from tsam.config import ClusteringResult as _ClusteringResult
+    from tsam.result import ClusteringResult as _ClusteringResult
 
     original_data_out = prepared.original_data[prepared.original_column_order]
 
@@ -584,6 +579,7 @@ def assemble_result(
         rescale_cluster_periods=cfg.rescale_cluster_periods,
         rescale_exclude_columns=cfg.rescale_exclude_columns or [],
         extreme_cluster_idx=clustered.extreme_cluster_idx,
+        weights=cfg.weights,
         time_index=input_time_index,
     )
 

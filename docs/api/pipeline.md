@@ -29,7 +29,7 @@ The pure transforms each phase calls, one module per concern.
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 ::: tsam.pipeline.rescale
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
-::: tsam.pipeline.segment
+::: tsam.pipeline.segmentation
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 ::: tsam.pipeline.accuracy
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }

@@ -13,10 +13,10 @@ if TYPE_CHECKING:
 
     from tsam.config import (
         ClusterConfig,
-        ClusteringResult,
         ExtremeConfig,
         SegmentConfig,
     )
+    from tsam.result import ClusteringResult
 
 
 @dataclass(frozen=True)
@@ -26,6 +26,7 @@ class PipelineConfig:
     n_clusters: int
     n_timesteps_per_period: int
     cluster: ClusterConfig
+    weights: dict[str, float] | None = None
     extremes: ExtremeConfig | None = None
     segments: SegmentConfig | None = None
     rescale_cluster_periods: bool = True

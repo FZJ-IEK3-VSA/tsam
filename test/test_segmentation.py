@@ -5,7 +5,7 @@ import pandas as pd
 
 from conftest import RESULTS_DIR, TESTDATA_CSV
 from tsam import ClusterConfig, SegmentConfig, aggregate
-from tsam.representations import representations
+from tsam.algorithms.representations import representations
 
 
 def test_segmentation():
@@ -91,8 +91,8 @@ def test_representation_in_segmentation():
     clusterCenters_mean, _clusterCenterIndices = representations(
         segmentationCandidates,
         clusterOrder,
-        default="meanRepresentation",
-        representation_method="meanRepresentation",
+        default="mean",
+        representation_method="mean",
         distribution_period_wise=False,
         n_timesteps_per_period=1,
     )
@@ -100,8 +100,8 @@ def test_representation_in_segmentation():
     clusterCenters_dist, _clusterCenterIndices = representations(
         segmentationCandidates,
         clusterOrder,
-        default="meanRepresentation",
-        representation_method="distributionRepresentation",
+        default="mean",
+        representation_method="distribution",
         distribution_period_wise=True,
         n_timesteps_per_period=1,
     )

@@ -1,10 +1,8 @@
-"""Pipeline package — pure-function rewrite of create_typical_periods.
+"""Pure-function aggregation pipeline.
 
 Orchestration lives in [`tsam.pipeline.orchestrator`][]; the stage transforms
 live in their own modules (normalize, periods, clustering, extremes, rescale,
-segment, accuracy). The orchestration entry points are re-exported here for
-convenience but are intentionally *not* re-exported from the top-level `tsam`
-package — they are internal glue, not public API.
+segmentation, accuracy).
 """
 
 from __future__ import annotations

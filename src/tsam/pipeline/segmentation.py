@@ -1,10 +1,10 @@
-"""Thin wrapper around tsam.utils.segmentation."""
+"""Thin wrapper around tsam.algorithms.segmentation."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tsam.utils.segmentation import segmentation
+from tsam.algorithms.segmentation import segmentation
 
 if TYPE_CHECKING:
     import pandas as pd

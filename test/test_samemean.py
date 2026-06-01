@@ -28,13 +28,13 @@ def test_samemean():
         raw,
         n_clusters=8,
         period_duration=24,
-        cluster=ClusterConfig(method="kmeans", normalize_column_means=True),
+        cluster=ClusterConfig(method="kmeans", scale_by_column_means=True),
     )
 
     print("Clustering took " + str(time.time() - starttime))
 
     # test if the normalized time series all have the same mean. The normalization
-    # mirrors what normalize_column_means=True does internally: min-max scale each
+    # mirrors what scale_by_column_means=True does internally: min-max scale each
     # column, then divide by its mean so every column ends up with the same mean.
     min_max_scaler = preprocessing.MinMaxScaler()
     normalized = pd.DataFrame(

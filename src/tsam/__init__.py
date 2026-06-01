@@ -47,14 +47,13 @@ def __getattr__(name: str):
 
 from tsam.config import (
     ClusterConfig,
-    ClusteringResult,
     Distribution,
     ExtremeConfig,
     MinMaxMean,
     SegmentConfig,
 )
 from tsam.options import options
-from tsam.result import AccuracyMetrics, AggregationResult
+from tsam.result import AccuracyMetrics, AggregationResult, ClusteringResult
 
 try:
     from tsam._version import __version__

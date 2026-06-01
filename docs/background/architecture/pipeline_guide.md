@@ -42,7 +42,7 @@ parameters.
 result = tsam.aggregate(df, n_clusters=8, period_duration=24)
 ```
 
-**[`ClusteringResult.apply()`][tsam.config.ClusteringResult]** — reuse a fitted
+**[`ClusteringResult.apply()`][tsam.result.ClusteringResult]** — reuse a fitted
 clustering on new data, skipping clustering in favor of the stored assignments:
 
 ```python
@@ -107,7 +107,7 @@ original units, and rebuilds the full series with accuracy metrics
    `(PeriodNum, TimeStep)` MultiIndex DataFrame.
 - **5a · Segment** *(optional, [`SegmentConfig`][tsam.config.SegmentConfig])* —
   merge adjacent timesteps within each period into fewer segments. →
-  [`segment_typical_periods`][tsam.pipeline.segment.segment_typical_periods]
+  [`segment_typical_periods`][tsam.pipeline.segmentation.segment_typical_periods]
 6. **Denormalize** — convert the representatives back to the user's units. →
    [`denormalize`][tsam.pipeline.normalize.denormalize]
 7. **Reconstruct + accuracy** — expand the typical periods back to a
@@ -124,7 +124,7 @@ segmentation.
 Orchestrated by [`assemble_result`][tsam.pipeline.orchestrator.assemble_result].
 
 8. **Assemble** — build the serializable, transferable
-   [`ClusteringResult`][tsam.config.ClusteringResult] and pack it with the
+   [`ClusteringResult`][tsam.result.ClusteringResult] and pack it with the
    typical periods, counts, reconstruction, and metadata into the result that
    [`tsam.aggregate()`][tsam.aggregate] returns as an
    [`AggregationResult`][tsam.result.AggregationResult].
@@ -160,14 +160,14 @@ above link straight into it). The source-tree module map is below.
     | `pipeline/orchestrator.py` | `run_pipeline()` plus the four phase functions and the glue with no dedicated stage module. |
     | `pipeline/normalize.py` | Scale columns to [0, 1] and invert it (`normalize` / `denormalize`). |
     | `pipeline/periods.py` | Reshape the flat series into a (period, timestep) matrix; optional period-sum features. |
-    | `pipeline/clustering.py` | Group periods and pick representatives; dispatches to a `utils/` backend or scikit-learn. |
+    | `pipeline/clustering.py` | Config-aware clustering stage: adapts `ClusterConfig` (plus the duration-curve and transfer variants) onto `algorithms/clustering`. |
     | `pipeline/extremes.py` | Inject extreme-value periods into the cluster set. |
     | `pipeline/rescale.py` | Adjust representatives so column means match the original. |
-    | `pipeline/segment.py` | Merge adjacent timesteps within a typical period. |
+    | `pipeline/segmentation.py` | Merge adjacent timesteps within a typical period. |
     | `pipeline/accuracy.py` | Reconstruct the full series and compute accuracy metrics. |
     | `pipeline/types.py` | Internal dataclasses: `PipelineConfig`, the phase milestones, `PipelineResult`. |
-    | `period_aggregation.py` · `representations.py` | Clustering dispatch and representative computation (shared by clustering and segmentation). |
-    | `utils/k_medoids_exact.py` · `utils/k_maxoids.py` | k-medoids (MILP) / k-maxoids solvers. |
-    | `utils/duration_representation.py` | Duration-curve representation (for `distribution`). |
-    | `utils/segmentation.py` | Constrained agglomerative segmentation. |
+    | `algorithms/clustering.py` · `algorithms/representations.py` | Clustering dispatch — to scikit-learn or the `algorithms/` k-medoids/k-maxoids solvers — and representative computation (shared by clustering and segmentation). |
+    | `algorithms/k_medoids_exact.py` · `algorithms/k_maxoids.py` | k-medoids (MILP) / k-maxoids solvers. |
+    | `algorithms/duration_representation.py` | Duration-curve representation (for `distribution`). |
+    | `algorithms/segmentation.py` | Constrained agglomerative segmentation. |
     | `weights.py` · `exceptions.py` | Weight validation; custom warnings. |

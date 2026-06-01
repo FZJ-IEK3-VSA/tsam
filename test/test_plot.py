@@ -150,12 +150,17 @@ class TestClusterMembers:
         assert len(rep_trace.y) == result_segmented.n_timesteps_per_period
 
 
-# ---- cluster_weights -------------------------------------------------------
+# ---- cluster_counts --------------------------------------------------------
 
 
-class TestClusterWeights:
+class TestClusterCounts:
     def test_returns_figure(self, result):
-        fig = result.plot.cluster_weights()
+        fig = result.plot.cluster_counts()
+        assert isinstance(fig, go.Figure)
+
+    def test_cluster_weights_alias_deprecated(self, result):
+        with pytest.warns(FutureWarning, match="cluster_weights.*deprecated"):
+            fig = result.plot.cluster_weights()
         assert isinstance(fig, go.Figure)
 
 

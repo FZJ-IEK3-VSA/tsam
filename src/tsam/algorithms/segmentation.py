@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
 
-from tsam.representations import representations
+from tsam.algorithms.representations import representations
 
 
 def segmentation(
