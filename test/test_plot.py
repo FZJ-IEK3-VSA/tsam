@@ -222,6 +222,24 @@ class TestCompare:
         sliced_points = sum(len(t.x) for t in sliced.data if t.x is not None)
         assert sliced_points < full_points
 
+    @pytest.mark.parametrize("mode", ["overlay", "side_by_side", "duration_curve"])
+    @pytest.mark.parametrize("color", ["column", "source"])
+    def test_color_dimension(self, result, mode, color):
+        fig = result.plot.compare(columns=["GHI", "Load"], mode=mode, color=color)
+        assert isinstance(fig, go.Figure)
+
+    def test_color_source_swaps_legend(self, result):
+        # color drives the legend group; "column" vs "source" must differ.
+        by_col = result.plot.compare(columns=["Load"], color="column")
+        by_src = result.plot.compare(columns=["Load"], color="source")
+        col_groups = {t.legendgroup for t in by_col.data}
+        src_groups = {t.legendgroup for t in by_src.data}
+        assert col_groups != src_groups
+
+    def test_invalid_color_raises(self, result):
+        with pytest.raises(ValueError, match="color must be"):
+            result.plot.compare(color="invalid")
+
 
 # ---- residuals -------------------------------------------------------------
 
