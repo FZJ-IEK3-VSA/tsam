@@ -592,6 +592,7 @@ class ResultPlotAccessor:
         columns: list[str] | None = None,
         mode: str = "overlay",
         title: str | None = None,
+        time_slice: slice | None = None,
     ) -> go.Figure:
         """Compare original vs reconstructed time series.
 
@@ -606,6 +607,12 @@ class ResultPlotAccessor:
             - "duration_curve": Compare sorted values
         title : str, optional
             Plot title.
+        time_slice : slice, optional
+            Restrict the comparison to a window of the time axis, e.g.
+            ``slice("2010-01-11", "2010-01-17")``. Useful for zooming into a few
+            periods so fine detail (such as segment step functions) is visible.
+            Applies to all modes; for ``"duration_curve"`` the curve is computed
+            over the sliced window.
 
         Returns
         -------
@@ -616,9 +623,14 @@ class ResultPlotAccessor:
         >>> result.plot.compare()  # Compare all columns
         >>> result.plot.compare(columns=["Load"])  # Compare specific column
         >>> result.plot.compare(mode="duration_curve")
+        >>> result.plot.compare(columns=["Load"], time_slice=slice("2010-01-11", "2010-01-17"))
         """
         orig = self._result.original
         recon = self._result.reconstructed
+
+        if time_slice is not None:
+            orig = orig.loc[time_slice]
+            recon = recon.loc[time_slice]
 
         columns = _validate_columns(columns, list(orig.columns), "original data")
 

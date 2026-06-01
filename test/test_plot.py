@@ -211,6 +211,17 @@ class TestCompare:
         with pytest.raises(ValueError, match="Unknown mode"):
             result.plot.compare(mode="invalid")
 
+    @pytest.mark.parametrize("mode", ["overlay", "side_by_side", "duration_curve"])
+    def test_time_slice(self, result, mode):
+        col = result.original.columns[0]
+        window = slice("2010-01-11", "2010-01-17")
+        full = result.plot.compare(columns=[col], mode=mode)
+        sliced = result.plot.compare(columns=[col], mode=mode, time_slice=window)
+        assert isinstance(sliced, go.Figure)
+        full_points = sum(len(t.x) for t in full.data if t.x is not None)
+        sliced_points = sum(len(t.x) for t in sliced.data if t.x is not None)
+        assert sliced_points < full_points
+
 
 # ---- residuals -------------------------------------------------------------
 
