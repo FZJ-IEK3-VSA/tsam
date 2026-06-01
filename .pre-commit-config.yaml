@@ -48,7 +48,7 @@ repos:
       # explicit allowlist entry). The script scans the whole tree itself.
       - id: check-api-reference
         name: check API reference coverage
-        entry: python scripts/check_api_reference.py
+        entry: python docs/scripts/check_api_reference.py
         language: system
         pass_filenames: false
         files: ^(src/tsam/.*\.py|docs/.*\.md)$

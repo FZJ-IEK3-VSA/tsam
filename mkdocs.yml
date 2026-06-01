@@ -142,6 +142,10 @@ markdown_extensions:
       permalink: true
       toc_depth: 3
 
+# Tooling that lives under docs/ but is not a documentation page.
+exclude_docs: |
+  scripts/
+
 extra:
   generator: false
 
