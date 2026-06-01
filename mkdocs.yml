@@ -50,6 +50,7 @@ nav:
     - Quickstart: notebooks/quickstart.ipynb
   - User Guide:
     - Overview: user-guide/index.md
+    - Segmentation: notebooks/segmentation.ipynb
     - Sizing & tuning: notebooks/sizing_tuning.ipynb
     - Representations, methods & extremes: notebooks/representations_methods.ipynb
     - Optimization workflow: notebooks/optimization_workflow.ipynb

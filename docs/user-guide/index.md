@@ -7,10 +7,13 @@ trying to do.
 
 ## Make it smaller
 
-**[Sizing & tuning](../notebooks/sizing_tuning.ipynb)** — the two levers that set
-the size of the aggregation (number of periods, and segments within a period), the
-accuracy-vs-size trade-off, and how to let tsam search for the combination that
-hits a target.
+**[Segmentation](../notebooks/segmentation.ipynb)** — the second reduction lever:
+keep fewer time steps *within* each period by merging adjacent steps into a few
+variable-length segments.
+
+**[Sizing & tuning](../notebooks/sizing_tuning.ipynb)** — the accuracy-vs-size
+trade-off across both levers (periods and segments), and how to let tsam search
+for the combination that hits a target.
 
 ## Control what it preserves
 
