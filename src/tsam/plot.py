@@ -95,8 +95,14 @@ def _duration_curve_figure(
     results: dict[str, pd.DataFrame],
     columns: list[str],
     title: str | None = None,
+    color: str = "column",
 ) -> go.Figure:
-    """Create duration curve comparison figure (internal helper)."""
+    """Create duration curve comparison figure (internal helper).
+
+    ``color`` selects which dimension drives the line colour: ``"column"``
+    colours by column and dashes by series (e.g. original/reconstructed);
+    ``"source"`` swaps them.
+    """
     frames = []
     for name, data in results.items():
         for col in columns:
@@ -112,12 +118,15 @@ def _duration_curve_figure(
                 )
             )
     long_df = pd.concat(frames, ignore_index=True)
+    color_by, dash_by = (
+        ("Column", "Method") if color == "column" else ("Method", "Column")
+    )
     return px.line(
         long_df,
         x="Hour",
         y="Value",
-        color="Column",
-        line_dash="Method",
+        color=color_by,
+        line_dash=dash_by,
         title=title or "Duration Curve Comparison",
     )
 
@@ -592,6 +601,8 @@ class ResultPlotAccessor:
         columns: list[str] | None = None,
         mode: str = "overlay",
         title: str | None = None,
+        time_slice: slice | None = None,
+        color: str = "column",
     ) -> go.Figure:
         """Compare original vs reconstructed time series.
 
@@ -606,6 +617,23 @@ class ResultPlotAccessor:
             - "duration_curve": Compare sorted values
         title : str, optional
             Plot title.
+        time_slice : slice, optional
+            Restrict the comparison to a window of the time axis, e.g.
+            ``slice("2010-01-11", "2010-01-17")``. Useful for zooming into a few
+            periods so fine detail (such as segment step functions) is visible.
+            Applies to all modes; for ``"duration_curve"`` the curve is computed
+            over the sliced window.
+        color : ``"column"`` or ``"source"``, default ``"column"``
+            Which dimension drives the line colour:
+
+            - ``"column"``: colour by column; the source (original vs.
+              reconstructed) is the secondary encoding — dash in ``"overlay"``
+              and ``"duration_curve"``, facet row in ``"side_by_side"``.
+            - ``"source"``: colour by source, with the column as the secondary
+              encoding instead. Clearer when comparing a single column, where the
+              original/reconstructed split is the thing you want to see.
+
+            Applies to all modes.
 
         Returns
         -------
@@ -616,9 +644,18 @@ class ResultPlotAccessor:
         >>> result.plot.compare()  # Compare all columns
         >>> result.plot.compare(columns=["Load"])  # Compare specific column
         >>> result.plot.compare(mode="duration_curve")
+        >>> result.plot.compare(columns=["Load"], time_slice=slice("2010-01-11", "2010-01-17"))
+        >>> result.plot.compare(columns=["Load"], color="source")
         """
+        if color not in ("column", "source"):
+            raise ValueError(f"color must be 'column' or 'source', got {color!r}")
+
         orig = self._result.original
         recon = self._result.reconstructed
+
+        if time_slice is not None:
+            orig = orig.loc[time_slice]
+            recon = recon.loc[time_slice]
 
         columns = _validate_columns(columns, list(orig.columns), "original data")
 
@@ -627,6 +664,7 @@ class ResultPlotAccessor:
                 {"Original": orig, "Reconstructed": recon},
                 columns=columns,
                 title=title,
+                color=color,
             )
 
         elif mode in ("overlay", "side_by_side"):
@@ -644,23 +682,27 @@ class ResultPlotAccessor:
                 value_name="Value",
             )
 
+            # color="column": colour by Column, with Source as the secondary
+            # encoding. color="source": swap them.
+            color_by, other = (
+                ("Column", "Source") if color == "column" else ("Source", "Column")
+            )
             if mode == "overlay":
-                # Color by Column, dash by Source (Original/Reconstructed)
                 fig = px.line(
                     long_df,
                     x="Time",
                     y="Value",
-                    color="Column",
-                    line_dash="Source",
+                    color=color_by,
+                    line_dash=other,
                     title=title or "Original vs Reconstructed",
                 )
-            else:  # side_by_side
+            else:  # side_by_side — facet by the non-colour dimension
                 fig = px.line(
                     long_df,
                     x="Time",
                     y="Value",
-                    color="Column",
-                    facet_row="Source",
+                    color=color_by,
+                    facet_row=other,
                     title=title or "Original vs Reconstructed",
                 )
                 fig.update_layout(height=600)

@@ -35,6 +35,139 @@
   --md-typeset-a-color: #35b0ab;
 }
 
+/* -- Syntax highlighting: Monokai Light + Monokai Dark -------------------
+ *
+ * TWO sets of variables to override:
+ *   --md-code-hl-*-color       → Material's markdown code blocks (.highlight)
+ *   --jp-mirror-editor-*-color → notebook code blocks (.highlight-ipynb)
+ *
+ * Notebook code uses JupyterLab's CSS variables, NOT Material's. Both must
+ * be overridden together to keep colors consistent across the whole site.
+ *
+ * Light = darkened-Monokai variant (dark hues on light bg for readability);
+ * Dark = classic Monokai.
+ */
+
+:root,
+[data-md-color-scheme="default"] {
+  --md-code-fg-color: #272822;
+  --md-code-bg-color: #fafafa;
+
+  --md-code-hl-keyword-color:     #d11f72;   /* darkened pink */
+  --md-code-hl-string-color:      #998800;   /* mustard yellow */
+  --md-code-hl-number-color:      #6f42c1;   /* purple */
+  --md-code-hl-function-color:    #4d8d04;   /* green */
+  --md-code-hl-comment-color:     #75715e;   /* olive-gray */
+  --md-code-hl-name-color:        #272822;   /* default text */
+  --md-code-hl-operator-color:    #d11f72;   /* pink */
+  --md-code-hl-punctuation-color: #272822;
+  --md-code-hl-constant-color:    #6f42c1;   /* purple — None, True, False */
+  --md-code-hl-special-color:     #4d8d04;   /* green — decorators */
+  --md-code-hl-variable-color:    #d35400;   /* burnt orange */
+  --md-code-hl-generic-color:     #272822;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-code-fg-color: #f8f8f2;
+  /* Derived from slate body bg: same hue, less saturated, brighter. */
+  --md-code-bg-color: hsla(var(--md-hue), 6%, 18%, 1);
+
+  --md-code-hl-keyword-color:     #f92672;   /* hot pink */
+  --md-code-hl-string-color:      #e6db74;   /* yellow */
+  --md-code-hl-number-color:      #ae81ff;   /* purple */
+  --md-code-hl-function-color:    #a6e22e;   /* green */
+  --md-code-hl-comment-color:     #75715e;   /* olive-gray */
+  --md-code-hl-name-color:        #f8f8f2;   /* default text */
+  --md-code-hl-operator-color:    #f92672;   /* pink */
+  --md-code-hl-punctuation-color: #f8f8f2;
+  --md-code-hl-constant-color:    #ae81ff;   /* purple — None, True, False */
+  --md-code-hl-special-color:     #a6e22e;   /* green — decorators */
+  --md-code-hl-variable-color:    #fd971f;   /* orange */
+  --md-code-hl-generic-color:     #f8f8f2;
+}
+
+/* JupyterLab vars: must be set ON .jupyter-wrapper because that element
+   re-defines them locally. Prefix with `body` (where Material puts the
+   scheme attribute) to outrank mkdocs-jupyter's inline rule, which
+   otherwise wins on cascade order. */
+body[data-md-color-scheme="default"] .jupyter-wrapper {
+  --jp-mirror-editor-keyword-color:     #d11f72;
+  --jp-mirror-editor-string-color:      #998800;
+  --jp-mirror-editor-number-color:      #6f42c1;
+  --jp-mirror-editor-builtin-color:     #4d8d04;
+  --jp-mirror-editor-comment-color:     #75715e;
+  --jp-mirror-editor-operator-color:    #d11f72;
+  --jp-mirror-editor-punctuation-color: #272822;
+  --jp-mirror-editor-variable-color:    #d35400;
+  --jp-mirror-editor-meta-color:        #4d8d04;
+  --jp-mirror-editor-bracket-color:     #272822;
+  --jp-mirror-editor-property-color:    #272822;
+  --jp-mirror-editor-attribute-color:   #d11f72;
+  --jp-mirror-editor-tag-color:         #d11f72;
+}
+
+body[data-md-color-scheme="slate"] .jupyter-wrapper {
+  --jp-mirror-editor-keyword-color:     #f92672;
+  --jp-mirror-editor-string-color:      #e6db74;
+  --jp-mirror-editor-number-color:      #ae81ff;
+  --jp-mirror-editor-builtin-color:     #a6e22e;
+  --jp-mirror-editor-comment-color:     #75715e;
+  --jp-mirror-editor-operator-color:    #f92672;
+  --jp-mirror-editor-punctuation-color: #f8f8f2;
+  --jp-mirror-editor-variable-color:    #fd971f;
+  --jp-mirror-editor-meta-color:        #a6e22e;
+  --jp-mirror-editor-bracket-color:     #f8f8f2;
+  --jp-mirror-editor-property-color:    #f8f8f2;
+  --jp-mirror-editor-attribute-color:   #f92672;
+  --jp-mirror-editor-tag-color:         #f92672;
+}
+
+/* -- Layout & navigation polish ------------------------------------------ */
+
+:root {
+  --md-grid-max-width: 80rem;  /* default 61rem — let content breathe */
+}
+
+.md-grid {
+  max-width: var(--md-grid-max-width);
+}
+
+/* Narrower sidebars — defaults are 12.1rem each. Both kept visible so the
+   per-page TOC stays on the right. */
+.md-sidebar--primary {
+  width: 11rem;
+}
+
+.md-sidebar--secondary {
+  width: 10rem;
+}
+
+/* Tighter heading spacing site-wide (matches notebook aesthetic) */
+.md-typeset h1 {
+  margin: 0 0 0.5em;
+  font-weight: 600;
+}
+
+.md-typeset h2 {
+  margin: 0.8em 0 0.3em;
+}
+
+.md-typeset h3 {
+  margin: 0.6em 0 0.2em;
+}
+
+.md-typeset h4 {
+  margin: 0.5em 0 0.15em;
+}
+
+/* Code block font size: Material defaults to 0.85em, hard to scan in
+   tutorials. Bump blocks; leave inline `code` at default so it still
+   stands out mid-sentence. */
+.md-typeset pre > code,
+.md-typeset .highlight pre {
+  font-size: 0.92em;
+}
+
 /* -- Landing page hero logos (light/dark switching) ---------------------- */
 .tsam-logo-light {
   display: block;
@@ -78,55 +211,364 @@
   filter: brightness(0) invert(1);
 }
 
-/* -- Notebook styling — hide prompts, style code cells, dark mode -------- */
+/* -- Notebook styling — nbsphinx / linopy aesthetic ---------------------
+ *
+ * mkdocs-jupyter's CSS uses `.jupyter-wrapper .jp-*` selectors; the
+ * `.jupyter-wrapper` prefix is required for our overrides to win on
+ * specificity against the inlined JupyterLab stylesheet.
+ *
+ * Recolored from fluxopt's sky accent to the FZJ teal (#35b0ab / #21918c).
+ */
 
-/* Hide In [1]: / Out [1]: prompts */
-.jp-InputPrompt,
-.jp-OutputPrompt {
+/* Cell rhythm: as tight as possible without cramping */
+.jupyter-wrapper .jp-Cell {
+  margin: 0;
+  padding: 0;
+}
+
+/* Code cells: prompt + content side-by-side, indented as one unit.
+   Markdown cells share the wrapper structure but have an empty prompt;
+   below we strip both so markdown flows full-width at the left edge. */
+.jupyter-wrapper .jp-CodeCell .jp-Cell-inputWrapper,
+.jupyter-wrapper .jp-Cell-outputWrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25em;
+  margin: 0;
+  padding: 0;
+}
+
+/* Markdown cells: full width, no prompt gutter, no left indent */
+.jupyter-wrapper .jp-MarkdownCell .jp-Cell-inputWrapper {
+  margin: 0;
+  padding: 0;
+}
+
+.jupyter-wrapper .jp-MarkdownCell .jp-InputPrompt {
   display: none !important;
 }
 
+.jupyter-wrapper .jp-MarkdownCell .jp-InputArea {
+  display: block;
+}
+
+.jupyter-wrapper .jp-MarkdownCell .jp-MarkdownOutput,
+.jupyter-wrapper .jp-MarkdownCell .jp-RenderedHTMLCommon {
+  padding: 0;
+}
+
+.jupyter-wrapper .jp-MarkdownCell h1,
+.jupyter-wrapper .jp-MarkdownCell h2,
+.jupyter-wrapper .jp-MarkdownCell h3,
+.jupyter-wrapper .jp-MarkdownCell h4,
+.jupyter-wrapper .jp-MarkdownCell h5,
+.jupyter-wrapper .jp-MarkdownCell h6 {
+  margin-left: 0;
+  padding-left: 0;
+  text-indent: 0;
+}
+
+/* Numbered prompts: monospace gutter — input teal, output muted slate to
+   keep the output secondary. The "In " / "Out" prefixes are stripped by
+   javascripts/notebook-prompts.js; only the bracketed number remains.
+   !important needed because JupyterLab's `:not(.jp-mod-active)` rule has
+   higher specificity and forces a gray color + reduced opacity. */
+.jupyter-wrapper .jp-InputPrompt,
+.jupyter-wrapper .jp-OutputPrompt {
+  display: block !important;
+  flex: 0 0 5ch !important;
+  min-width: 5ch !important;
+  padding: 0.4em 0.5em 0 0 !important;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.78em;
+  text-align: right;
+  background: none;
+  border: none;
+  opacity: 1 !important;
+}
+
+.jupyter-wrapper .jp-InputPrompt {
+  color: #35b0ab !important;       /* FZJ teal — matches link color */
+}
+
+.jupyter-wrapper .jp-OutputPrompt {
+  color: #cbd5e1 !important;       /* slate-300 — muted, secondary to input */
+}
+
+/* Input area: tight, full-width */
+.jupyter-wrapper .jp-InputArea {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.jupyter-wrapper .jp-InputArea-editor {
+  flex: 1;
+  min-width: 0;
+}
+
+.jupyter-wrapper .jp-CodeCell .highlight-ipynb {
+  background: var(--md-code-bg-color);   /* matches Material's other code blocks */
+  border: none;
+  border-left: 2px solid #35b0ab;        /* FZJ teal accent stripe */
+  border-radius: 0 2px 2px 0;
+  margin: 0;
+  width: 100%;
+  cursor: pointer;                       /* signals click-to-copy */
+  position: relative;                    /* anchor for the .copied ::after badge */
+  transition: border-left-color 150ms, box-shadow 150ms, background 200ms;
+}
+
+.jupyter-wrapper .jp-CodeCell .highlight-ipynb:hover {
+  border-left-color: #21918c;            /* darken on hover */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* Copy confirmation: subtle background flash + "Copied!" badge */
+.jupyter-wrapper .jp-CodeCell .highlight-ipynb.copied {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.jupyter-wrapper .jp-CodeCell .highlight-ipynb.copied::after {
+  content: '✓ Copied!';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: 0.65em 1.6em;
+  background: #21918c;                     /* FZJ teal — vivid */
+  color: #ffffff;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 1.35em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 6px;
+  box-shadow: 0 4px 18px rgba(33, 145, 140, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  pointer-events: none;
+  animation: copied-fade 900ms ease-out forwards;
+}
+
+@keyframes copied-fade {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+  20%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  80%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+.jupyter-wrapper .jp-CodeCell .highlight-ipynb pre {
+  padding: 0.3em 0.6em;
+  margin: 0;
+  line-height: 1.45;
+  background: transparent;
+  border: none;
+}
+
+/* Output area: prompt + content laid out via .jp-OutputArea-child */
+.jupyter-wrapper .jp-OutputArea {
+  flex: 1;
+  min-width: 0;
+}
+
+.jupyter-wrapper .jp-OutputArea-child {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25em;
+  margin: 0;
+}
+
+.jupyter-wrapper .jp-OutputArea-output {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  margin: 0;
+  border-left: 2px solid #cbd5e1;       /* muted stripe pairs visually with input */
+  padding-left: 0.6em;
+}
+
+.jupyter-wrapper .jp-RenderedText pre {
+  background: transparent;
+  border: none;
+  padding: 0.3em 0.75em;
+  margin: 0;
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+/* Markdown cells: aggressive heading spacing */
+.jupyter-wrapper .jp-MarkdownCell h1 {
+  margin: 0.4em 0 0.2em;
+}
+
+.jupyter-wrapper .jp-MarkdownCell h2 {
+  margin: 0.3em 0 0.15em;
+}
+
+.jupyter-wrapper .jp-MarkdownCell h3 {
+  margin: 0.25em 0 0.1em;
+}
+
+.jupyter-wrapper .jp-MarkdownCell p {
+  margin: 0.3em 0;
+}
+
 /* Hide non-functional collapsers in static docs */
-.jp-Collapser {
+.jupyter-wrapper .jp-Collapser {
   display: none;
 }
 
-/* Code cell background */
-.jp-CodeCell .highlight-ipynb {
-  background: #f7f7f7;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  padding: 0.5em;
+/* Plotly compactness */
+.jupyter-wrapper .jp-OutputArea .js-plotly-plot {
+  margin: 0.25em 0;
 }
 
-/* Ensure input/output areas use full width */
-.jp-InputArea,
-.jp-OutputArea {
+/* Notebook code font size (mkdocs-jupyter uses JupyterLab CSS variables).
+   The plugin inlines its own rule later in the cascade, so !important wins. */
+.jupyter-wrapper {
+  --jp-code-font-size: 14.5px !important;
+}
+
+/* Dark mode tone-down */
+[data-md-color-scheme="slate"] .jupyter-wrapper .jp-CodeCell .highlight-ipynb:hover {
+  border-left-color: #5fc9c4;            /* brighter teal on hover */
+  box-shadow: 0 1px 4px rgba(255, 255, 255, 0.06);
+}
+
+[data-md-color-scheme="slate"] .jupyter-wrapper .jp-CodeCell .highlight-ipynb.copied {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-md-color-scheme="slate"] .jupyter-wrapper .jp-CodeCell .highlight-ipynb.copied::after {
+  background: #35b0ab;
+  color: #06302e;                          /* dark text on bright teal for contrast */
+  box-shadow: 0 4px 22px rgba(53, 176, 171, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+}
+
+[data-md-color-scheme="slate"] .jupyter-wrapper .jp-OutputPrompt {
+  color: #64748b !important;       /* slate-500 — readable muted on dark bg */
+}
+
+[data-md-color-scheme="slate"] .jupyter-wrapper .jp-OutputArea-output {
+  border-left-color: #475569;       /* slate-600 — subtle on dark bg */
+}
+
+/* -- Notebook download / source links -----------------------------------
+
+/* Injected by notebook-download.js as a sibling right before .jupyter-wrapper.
+   Absolutely positioned against the article so it's fully out of normal flow —
+   it neither pushes the notebook content down nor makes it wrap. Offset from
+   the right edge by ~3.6rem so it sits just LEFT of Material's two floated
+   edit/view action icons, on the same line. */
+.md-content__inner:has(> .notebook-downloads) {
+  position: relative;
+}
+
+.notebook-downloads {
   display: flex;
-  flex-direction: column;
-  width: 100%;
+  gap: 0.4em;
+  position: absolute;
+  top: 0.2rem;
+  right: 3.6rem;
+  z-index: 2;
 }
 
-/* Clean up text output styling */
-.jp-RenderedText pre {
-  background: none;
-  border: none;
-  padding: 0.5em 0;
+.notebook-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.3em 0.75em;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: #21918c;                          /* FZJ teal */
+  background: rgba(53, 176, 171, 0.08);
+  border: 1px solid rgba(53, 176, 171, 0.25);
+  border-radius: 999px;
+  text-decoration: none;
+  transition: background 150ms, color 150ms, border-color 150ms;
 }
 
-/* Compact spacing for Plotly charts */
-.jp-OutputArea .js-plotly-plot {
-  margin: 0.25em 0 !important;
+.notebook-download:hover {
+  background: #21918c;
+  border-color: #21918c;
+  color: #ffffff;
 }
 
-/* Dark mode */
-[data-md-color-scheme="slate"] .jp-CodeCell .highlight-ipynb {
-  background: #2b2b2b;
-  border-color: #404040;
+.notebook-download__icon {
+  font-size: 0.95em;
+  line-height: 1;
 }
 
-[data-md-color-scheme="slate"] .jp-RenderedText pre {
-  background: none;
+[data-md-color-scheme="slate"] .notebook-download {
+  color: #35b0ab;
+  background: rgba(53, 176, 171, 0.10);
+  border-color: rgba(53, 176, 171, 0.28);
+}
+
+[data-md-color-scheme="slate"] .notebook-download:hover {
+  background: #35b0ab;
+  border-color: #35b0ab;
+  color: #06302e;                          /* dark text on bright teal */
+}
+
+/* -- Anchor target highlight --------------------------------------------
+ * When the URL has a #hash, the matching element gets :target. Flash the
+ * background once on arrival so it's obvious where the page jumped to. */
+.md-content :target {
+  animation: target-flash 1.5s ease-in-out;
+  scroll-margin-top: 4rem;
+}
+
+.md-content tr:has(:target) {
+  animation: target-row-flash 1.5s ease-in-out;
+}
+
+@keyframes target-flash {
+  0%, 100% {
+    background-color: transparent;
+    box-shadow: -0.4rem 0 0 0 transparent;
+  }
+  25%, 65% {
+    background-color: rgba(53, 176, 171, 0.35);
+    box-shadow: -0.4rem 0 0 0 rgba(53, 176, 171, 0.75);
+  }
+  45% {
+    background-color: transparent;
+    box-shadow: -0.4rem 0 0 0 transparent;
+  }
+}
+
+@keyframes target-row-flash {
+  0%, 100% { background-color: transparent; }
+  25%, 65% { background-color: rgba(53, 176, 171, 0.3); }
+  45% { background-color: transparent; }
+}
+
+[data-md-color-scheme="slate"] .md-content :target {
+  animation: target-flash-dark 1.5s ease-in-out;
+}
+
+[data-md-color-scheme="slate"] .md-content tr:has(:target) {
+  animation: target-row-flash-dark 1.5s ease-in-out;
+}
+
+@keyframes target-flash-dark {
+  0%, 100% {
+    background-color: transparent;
+    box-shadow: -0.4rem 0 0 0 transparent;
+  }
+  25%, 65% {
+    background-color: rgba(53, 176, 171, 0.22);
+    box-shadow: -0.4rem 0 0 0 rgba(53, 176, 171, 0.65);
+  }
+  45% {
+    background-color: transparent;
+    box-shadow: -0.4rem 0 0 0 transparent;
+  }
+}
+
+@keyframes target-row-flash-dark {
+  0%, 100% { background-color: transparent; }
+  25%, 65% { background-color: rgba(53, 176, 171, 0.18); }
+  45% { background-color: transparent; }
 }
 
 /* -- Institutional footer ------------------------------------------------- */

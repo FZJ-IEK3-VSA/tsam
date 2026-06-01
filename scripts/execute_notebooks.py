@@ -34,15 +34,14 @@ import nbformat
 from nbclient import NotebookClient
 from nbclient.exceptions import CellExecutionError
 
-# Plotly Python 6.x emits a <script type="module"> with an ESM import for its
-# default "notebook" renderer. mkdocs-material's instant navigation cannot
-# preserve those during in-page content swaps ("Cannot use import statement
-# outside a module"). Switching to the iframe renderer sidesteps the issue:
-# each figure renders inside an iframe loaded from the Plotly CDN, isolated
-# from the parent page's script context. Set via env var so notebooks pick it
-# up without needing per-notebook setup cells. Notebooks that set
-# pio.renderers.default themselves will of course override this.
-os.environ.setdefault("PLOTLY_RENDERER", "iframe_connected")
+# Render Plotly figures as inline <div>s via the "notebook_connected" renderer:
+# the figure flows with the page and auto-sizes, and Plotly.js is pulled once
+# from the CDN. This relies on the docs NOT using mkdocs-material's instant
+# navigation (navigation.instant is intentionally disabled in mkdocs.yml) —
+# under instant nav the renderer's <script> would not re-run on in-page swaps.
+# Set via env var so notebooks pick it up without per-notebook setup cells.
+# Notebooks that set pio.renderers.default themselves will override this.
+os.environ.setdefault("PLOTLY_RENDERER", "notebook_connected")
 
 
 @dataclass
@@ -68,7 +67,7 @@ def execute_one(path: Path, timeout: int) -> Result:
     except CellExecutionError as exc:
         first_line = str(exc).splitlines()[0] if str(exc) else "CellExecutionError"
         return Result(path, time.perf_counter() - start, first_line)
-    except Exception as exc:  # noqa: BLE001 — surface anything as a failure
+    except Exception as exc:
         return Result(path, time.perf_counter() - start, f"{type(exc).__name__}: {exc}")
 
 

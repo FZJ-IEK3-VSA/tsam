@@ -35,7 +35,7 @@ classes: {
   phase_title: { width: 384; height: 32; style: { fill: transparent; stroke: transparent; bold: true; font-size: 22 } }
   phase_body: { width: 384; height: 30; style: { fill: transparent; stroke: transparent; bold: false; font-size: 18 } }
   # individual option chips — fixed width so all three groups are equal width
-  opt: { width: 196; height: 40; style: { fill: "#f4f6f8"; stroke: "#aeb9c4"; bold: false; font-size: 18 } }
+  opt: { width: 150; height: 38; style: { fill: "#f4f6f8"; stroke: "#aeb9c4"; bold: false; font-size: 15 } }
   conn: { style: { stroke: "#8693a0" } }
 }
 
@@ -95,7 +95,7 @@ lcol: "Public API · user entry points" {
 }
 
 # ── Center: the four phases (bold title + stage names) ─────────────────────
-pipeline: "Internal pipeline · run_pipeline()" {
+pipeline: "pipeline/ · run_pipeline()" {
   class: side
   grid-columns: 1
   grid-gap: 16
@@ -137,27 +137,32 @@ pipeline: "Internal pipeline · run_pipeline()" {
   p3 -> p4: "FormattedOutput" { style.font-size: 18; style.font-color: "#3f4a55" }
 }
 
-# ── Right: backends. Clustering & segmentation both feed Representations ───
-rcol: "" {
+# ── Right: algorithms/ — config-agnostic kernels the stages dispatch to ────
+rcol: "algorithms/" {
   class: pad
+  style.font-size: 18
+  style.font-color: "#0f5c58"
+  style.bold: true
   grid-columns: 1
   grid-gap: 16
 
-  clu_back: "Clustering methods" {
+  clu_back: "clustering" {
     class: side
+    width: 360
     grid-columns: 2
     grid-gap: 6
     m1: "averaging" { class: opt }
     m2: "k-means" { class: opt }
     m3: "k-medoids" { class: opt }
     m4: "k-maxoids" { class: opt }
-    m5: "hierarchical (Ward)" { class: opt }
+    m5: "hierarchical" { class: opt }
     m6: "contiguous" { class: opt }
   }
 
   gapR1: "" { class: pad; width: 10; height: 40 }
-  reps: "Representations" {
+  reps: "representations" {
     class: side
+    width: 360
     grid-columns: 2
     grid-gap: 6
     r1: "mean" { class: opt }
@@ -165,20 +170,25 @@ rcol: "" {
     r3: "maxoid" { class: opt }
     r4: "minmax_mean" { class: opt }
     r5: "distribution" { class: opt }
-    r6: "distribution + minmax" { class: opt }
+    r6: "distribution\n+ minmax" { class: opt }
   }
 
   gapR2: "" { class: pad; width: 10; height: 40 }
-  seg_back: "Segmentation" {
+  seg_back: "segmentation" {
     class: side
+    width: 360
+    height: 152
     grid-columns: 1
-    s1: "n_segments merged by\nagglomerative clustering" { class: opt; height: 60; width: 250 }
+    s1: "n_segments merged by\nagglomerative clustering" { class: opt; height: 70; width: 200 }
   }
 }
 
 # ── Edges ─────────────────────────────────────────────────────────────────
 lcol.api -> pipeline
-pipeline.p2 -> rcol.clu_back { class: conn }
-pipeline.p3 -> rcol.seg_back { class: conn }
+pipeline.p2 -> rcol.clu_back: "cluster_and_represent" { class: conn }
+pipeline.p3 -> rcol.seg_back: "segment_typical_periods" { class: conn }
 rcol.clu_back -> rcol.reps: "uses" { style: { stroke: "#4a5560"; stroke-width: 2 } }
 rcol.seg_back -> rcol.reps: "uses" { style: { stroke: "#4a5560"; stroke-width: 2 } }
+
+# transfer path: reuse a fitted clustering on new data (skips the clustering step)
+lcol.res -> pipeline.p2: "ClusteringResult.apply()" { style: { stroke-dash: 4; stroke: "#3f6fb0"; font-size: 15; font-color: "#3f6fb0" } }

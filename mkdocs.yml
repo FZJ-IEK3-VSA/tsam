@@ -13,9 +13,6 @@ theme:
     text: Roboto
     code: Roboto Mono
   features:
-    - navigation.instant
-    - navigation.instant.prefetch
-    - navigation.instant.progress
     - navigation.tabs
     - navigation.sections
     - navigation.indexes
@@ -50,46 +47,37 @@ nav:
   - Home:
     - index.md
     - Installation: installation.md
-    - Getting Started: getting-started.md
-    - Contributing: contributing.md
-    - Migration Guide: migration-guide.md
+    - Quickstart: notebooks/quickstart.ipynb
+  - User Guide:
+    - Overview: user-guide/index.md
+    - Segmentation: notebooks/segmentation.ipynb
+    - How small can you go?: notebooks/tuning.ipynb
+    - Clustering methods: notebooks/clustering_methods.ipynb
+    - Representations: notebooks/representations.ipynb
+    - Extreme periods: notebooks/extreme_periods.ipynb
+    - Optimization workflow: notebooks/optimization_workflow.ipynb
+    - Background:
+      - background/index.md
+      - Mathematical Background: background/math.md
+      - Architecture:
+        - background/architecture/index.md
+        - System Context: background/architecture/context.md
+        - Pipeline Guide: background/architecture/pipeline_guide.md
+      - Decisions:
+        - background/decisions/index.md
+        - 0001 — V4 Pipeline: background/decisions/0001-v4-pipeline.md
+  - Reference:
+    - API:
+      - api/index.md
+      - Configuration: api/configuration.md
+      - Results: api/results.md
+      - Pipeline internals: api/pipeline.md
+      - Tuning: api/tuning.md
+      - Utilities: api/utilities.md
     - Glossary: glossary.md
-  - Examples:
-    - Getting Started:
-      - notebooks/quickstart.ipynb
-      - notebooks/visualization.ipynb
-    - Clustering Methods:
-      - notebooks/clustering_methods.ipynb
-      - notebooks/representations.ipynb
-      - notebooks/k_maxoids.ipynb
-    - Advanced Features:
-      - notebooks/segmentation.ipynb
-      - notebooks/optimization_input.ipynb
-      - notebooks/clustering_transfer.ipynb
-      - notebooks/disaggregation.ipynb
-    - Hyperparameter Tuning:
-      - notebooks/tuning.ipynb
-      - notebooks/pareto_optimization.ipynb
-      - notebooks/building_energy_system.ipynb
-  - Background:
-    - background/index.md
-    - Mathematical Background: background/math.md
-    - Architecture:
-      - background/architecture/index.md
-      - System Context: background/architecture/context.md
-      - Pipeline Guide: background/architecture/pipeline_guide.md
-    - Decisions:
-      - background/decisions/index.md
-      - 0001 — V4 Pipeline: background/decisions/0001-v4-pipeline.md
     - Further Reading: further-reading.md
-  - API Reference:
-    - api/index.md
-    - Configuration: api/configuration.md
-    - Results: api/results.md
-    - Pipeline internals: api/pipeline.md
-    - Tuning: api/tuning.md
-    - Utilities: api/utilities.md
-  - About:
+    - Migration Guide: migration-guide.md
+    - Contributing: contributing.md
     - Changelog: changelog.md
     - Legal Notice: legal-notice.md
 
@@ -170,3 +158,5 @@ extra_javascript:
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
   - https://cdn.jsdelivr.net/npm/panzoom@9.4.3/dist/panzoom.min.js
   - javascripts/diagram-zoom-init.js
+  - javascripts/notebook-prompts.js
+  - javascripts/notebook-download.js
