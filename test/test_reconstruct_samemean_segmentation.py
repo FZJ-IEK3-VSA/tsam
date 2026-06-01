@@ -1,6 +1,6 @@
 """Test for predictOriginalData bug with sameMean + segmentation.
 
-Regression test for the bug where using normalize_column_means=True together
+Regression test for the bug where using scale_by_column_means=True together
 with segmentation caused incorrect denormalization in predictOriginalData().
 
 The bug was: reconstructed values were ~1.5-2x larger than they should be
@@ -34,13 +34,13 @@ def test_data():
 
 
 class TestReconstructSameMeanSegmentation:
-    """Test reconstruction with normalize_column_means + segmentation."""
+    """Test reconstruction with scale_by_column_means + segmentation."""
 
     def _check_reconstruction_bounds(
         self, result: AggregationResult, max_ratio: float = 1.5
     ):
         """Check that reconstructed values are within reasonable bounds."""
-        original = result._aggregation.timeSeries
+        original = result.original
         reconstructed = result.reconstructed
 
         orig_max = original.max()
@@ -64,19 +64,19 @@ class TestReconstructSameMeanSegmentation:
         self._check_reconstruction_bounds(result)
 
     @pytest.mark.filterwarnings("ignore:Max iteration number reached:UserWarning")
-    def test_normalize_column_means_only(self, test_data):
-        """normalize_column_means alone should work correctly."""
+    def test_scale_by_column_means_only(self, test_data):
+        """scale_by_column_means alone should work correctly."""
         result = tsam.aggregate(
             test_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(normalize_column_means=True),
+            cluster=ClusterConfig(scale_by_column_means=True),
         )
         self._check_reconstruction_bounds(result)
 
     @pytest.mark.filterwarnings("ignore:Max iteration number reached:UserWarning")
-    def test_normalize_column_means_with_segments(self, test_data):
-        """normalize_column_means + segmentation should work correctly.
+    def test_scale_by_column_means_with_segments(self, test_data):
+        """scale_by_column_means + segmentation should work correctly.
 
         This is the bug case - previously reconstructed values were ~1.6x too large.
         """
@@ -84,31 +84,31 @@ class TestReconstructSameMeanSegmentation:
             test_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(normalize_column_means=True),
+            cluster=ClusterConfig(scale_by_column_means=True),
             segments=SegmentConfig(n_segments=4),
         )
         self._check_reconstruction_bounds(result)
 
     def test_normalize_with_segments_mean_repr(self, test_data):
-        """normalize_column_means + segmentation + mean representation."""
+        """scale_by_column_means + segmentation + mean representation."""
         result = tsam.aggregate(
             test_data,
             n_clusters=8,
             period_duration=24,
-            cluster=ClusterConfig(normalize_column_means=True, representation="mean"),
+            cluster=ClusterConfig(scale_by_column_means=True, representation="mean"),
             segments=SegmentConfig(n_segments=4),
         )
         self._check_reconstruction_bounds(result)
 
     @pytest.mark.filterwarnings("ignore:Max iteration number reached:UserWarning")
     def test_normalize_with_different_segment_counts(self, test_data):
-        """Test various segment counts with normalize_column_means."""
+        """Test various segment counts with scale_by_column_means."""
         for n_segments in [2, 4, 8]:
             result = tsam.aggregate(
                 test_data,
                 n_clusters=8,
                 period_duration=24,
-                cluster=ClusterConfig(normalize_column_means=True),
+                cluster=ClusterConfig(scale_by_column_means=True),
                 segments=SegmentConfig(n_segments=n_segments),
             )
             self._check_reconstruction_bounds(result)

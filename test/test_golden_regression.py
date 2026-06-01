@@ -132,5 +132,6 @@ class TestGoldenRegression:
             golden,
             check_names=False,
             check_freq=False,
+            check_like=True,  # v4 preserves input column order; golden CSVs are alphabetical
             atol=1e-7,
         )

@@ -9,7 +9,7 @@ Usage:
     >>> result.plot.residuals()  # View reconstruction errors
     >>> result.plot.cluster_representatives()
     >>> result.plot.cluster_members()  # All periods per cluster
-    >>> result.plot.cluster_weights()
+    >>> result.plot.cluster_counts()
     >>> result.plot.accuracy()
 
 For exploring raw data before aggregation, use plotly directly with
@@ -134,7 +134,7 @@ class ResultPlotAccessor:
     >>> result.plot.residuals()  # View reconstruction errors
     >>> result.plot.cluster_representatives()
     >>> result.plot.cluster_members()
-    >>> result.plot.cluster_weights()
+    >>> result.plot.cluster_counts()
     """
 
     def __init__(self, result: AggregationResult):
@@ -159,7 +159,7 @@ class ResultPlotAccessor:
         go.Figure
         """
         typ = self._result.cluster_representatives
-        weights = self._result.cluster_weights
+        counts = self._result.cluster_counts
 
         available_columns = [c for c in typ.columns if c not in ["cluster", "timestep"]]
         columns = _validate_columns(
@@ -170,8 +170,8 @@ class ResultPlotAccessor:
         df = typ[columns].reset_index()
         df.columns = pd.Index(["Period", "Timestep", *columns])
 
-        # Map period IDs to labels with weights
-        df["Period"] = df["Period"].map(lambda p: f"Period {p} (n={weights.get(p, 1)})")
+        # Map period IDs to labels with their occurrence counts
+        df["Period"] = df["Period"].map(lambda p: f"Period {p} (n={counts.get(p, 1)})")
 
         long_df = df.melt(
             id_vars=["Period", "Timestep"],
@@ -246,7 +246,7 @@ class ResultPlotAccessor:
         unstacked = unstack_to_periods(result.original, n_ts * timestep_hours)
         assignments = result.cluster_assignments
         representatives = result.cluster_representatives
-        weights = result.cluster_weights
+        counts = result.cluster_counts
         timesteps = np.arange(n_ts)
 
         all_cluster_ids = sorted(set(assignments))
@@ -292,7 +292,7 @@ class ResultPlotAccessor:
             }
 
         cluster_labels = {
-            cid: f"Cluster {cid} (n={weights.get(cid, 1)})" for cid in cluster_ids
+            cid: f"Cluster {cid} (n={counts.get(cid, 1)})" for cid in cluster_ids
         }
 
         # Determine which dimension is animated vs faceted.
@@ -445,23 +445,23 @@ class ResultPlotAccessor:
 
         return fig
 
-    def cluster_weights(self, title: str = "Cluster Weights") -> go.Figure:
-        """Plot cluster weight distribution.
+    def cluster_counts(self, title: str = "Cluster Counts") -> go.Figure:
+        """Plot how many original periods each cluster represents.
 
         Parameters
         ----------
-        title : str, default "Cluster Weights"
+        title : str, default "Cluster Counts"
             Plot title.
 
         Returns
         -------
         go.Figure
         """
-        weights = self._result.cluster_weights
+        counts = self._result.cluster_counts
         df = pd.DataFrame(
             {
-                "Period": [f"Period {p}" for p in weights],
-                "Count": list(weights.values()),
+                "Period": [f"Period {p}" for p in counts],
+                "Count": list(counts.values()),
             }
         )
 
@@ -478,6 +478,15 @@ class ResultPlotAccessor:
         fig.update_layout(showlegend=False)
 
         return fig
+
+    def cluster_weights(self, title: str = "Cluster Weights") -> go.Figure:
+        """Deprecated alias for :meth:`cluster_counts`."""
+        warnings.warn(
+            "plot.cluster_weights() is deprecated, use plot.cluster_counts().",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self.cluster_counts(title)
 
     def accuracy(self, title: str = "Accuracy Metrics") -> go.Figure:
         """Plot accuracy metrics by column.

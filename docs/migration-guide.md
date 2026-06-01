@@ -1,37 +1,94 @@
-# Migrating from ETHOS.TSAM v2 to v3 { #migration-guide }
+# Migration Guide { #migration-guide }
 
-ETHOS.TSAM v3 replaces the class-based API with a functional API.
-The old `TimeSeriesAggregation` class still works but is deprecated
-and will be removed in a future release.
+## Migrating from v3 to v4 { #migration-v3-to-v4 }
+
+tsam v4 is a pipeline rewrite of the internals. **The legacy class-based
+`TimeSeriesAggregation` API has been removed** — use the `tsam.aggregate()`
+function instead (this guide shows the equivalent for every old parameter).
+There are also behavioral changes that may affect your results.
+
+### Weight semantics
+
+`weights` (top-level parameter to `aggregate()`) now affects
+**only** the clustering distance calculation. Previously, weights were baked
+into normalized data, which forced rescaling, reconstruction, and accuracy
+computation to compensate. In v4, all those steps operate on unweighted data.
+
+**What changes:**
+
+- Cluster *assignments* are identical (the weighted distance matrix is
+  mathematically equivalent).
+- With medoid or maxoid representation and non-uniform weights, the selected
+  representative may differ because the medoid is now chosen in the unweighted
+  output space.
+- Across all golden regression tests, the **only** affected configuration is
+  `hierarchical_weighted` — everything else is bit-identical.
+
+**Action required:** If you use non-uniform `weights` with medoid or maxoid
+representation, verify that your downstream results are acceptable. For most
+users, this change is invisible.
+
+### Column order (new API only)
+
+`cluster_representatives`, `reconstructed`, and `original` now return
+columns in the same order as the input DataFrame. Previously (v3), columns
+were alphabetically sorted.
+
+**Action required:** If your code indexes columns by position (e.g.,
+`df.iloc[:, 0]`), verify that the order matches your expectation. To keep the
+old behavior, sort the columns yourself: `result.cluster_representatives.sort_index(axis=1)`.
+
+### Resolution defaults for non-datetime indices
+
+When the input DataFrame does **not** have a `DatetimeIndex` and no
+`temporal_resolution` is supplied, `aggregate()` now defaults to an hourly
+resolution (1 hour per timestep). Previously the legacy API raised a
+`ValueError` ("`'resolution' argument has to be nonnegative float or int or the
+given timeseries needs a datetime index`").
+
+**Action required:** If you rely on a non-datetime index without passing
+`temporal_resolution`, pass it explicitly (e.g. `temporal_resolution='15min'`)
+to be sure the timestep length matches your data instead of defaulting to 1h.
+
+### Removed deprecated APIs
+
+The v3 deprecation shims have been **removed** in v4:
+
+| Removed | Use instead |
+|---------|-------------|
+| `AggregationResult.cluster_weights` | `AggregationResult.cluster_counts` |
+| `ClusterConfig(normalize_column_means=...)` | `ClusterConfig(scale_by_column_means=...)` |
+| `ClusterConfig(weights=...)` | top-level `aggregate(..., weights={...})` |
+| Verbose representation names (`"meanRepresentation"`, `"distributionRepresentation"`, …) | short names (`"mean"`, `"distribution"`, …) — see [representation values](#representation-method-values) |
+| `LegacyAPIWarning` | — (no longer needed; the legacy API is gone) |
+| `tsam.weights.MIN_WEIGHT` | `tsam.options.min_weight` |
+
+In v4, per-column `weights` are a **top-level input to `aggregate()`**, not part
+of `ClusterConfig` — they are an aggregation parameter, not clustering
+configuration. Passing `weights=` to `ClusterConfig` now raises `TypeError`.
+
+### Newly deprecated (alias kept for one release)
+
+- `result.plot.cluster_weights()` is renamed to `result.plot.cluster_counts()`,
+  matching the `AggregationResult.cluster_counts` attribute. The old name still
+  works but emits a `FutureWarning` and will be removed in a future release.
+
+### Internal changes (no action required)
+
+- The pipeline has been decomposed into stateless functions in
+  `src/tsam/pipeline/`. `tsam.aggregate()` delegates to `run_pipeline()`.
+- All internal identifiers have been renamed from camelCase to snake_case.
+
+---
+
+## Migrating from ETHOS.TSAM v2 to v3 { #migration-v2-to-v3 }
+
+ETHOS.TSAM v3 introduced the functional `aggregate()` API alongside the
+class-based `TimeSeriesAggregation`, which remained importable but emitted a
+`LegacyAPIWarning`. As of **v4 the class-based API has been removed**, so the
+mapping below is also what you need to move off the old class.
 
 This guide covers every change you need to make.
-
-## Heads-up: column order changes in v4 { #v4-column-order }
-
-!!! warning "`aggregate()` result column order will change in v4"
-
-    In **v3**, `aggregate()` returns `cluster_representatives`, `reconstructed`,
-    and `original` with columns **sorted alphabetically**; in **v4** they follow
-    the **input DataFrame's order**. This can break code that reads results *by
-    position* (`.values`, `.iloc[:, 0]`) **silently** — names and shape are
-    unchanged, but each column's data lands in a different slot. Indexing *by
-    name* is unaffected. `aggregate()` emits a `FutureWarning` when input columns
-    are not already alphabetical (the only case that changes).
-
-    To keep the v3 order, sort before — `aggregate(data.sort_index(axis=1), ...)`
-    — or after — `result.cluster_representatives.sort_index(axis=1)`. To adopt
-    v4 now, index results by column name. The legacy `TimeSeriesAggregation`
-    class is unaffected (it sorts alphabetically in both v3 and v4).
-
-    To silence the warning (e.g. you have already migrated):
-
-    ```python
-    import warnings
-
-    warnings.filterwarnings(
-        "ignore", category=FutureWarning, message=".*sorted alphabetically.*"
-    )
-    ```
 
 ## Quick before-and-after
 
@@ -92,7 +149,7 @@ The table below maps every old parameter to its v3 equivalent.
 | `clusterMethod` | `ClusterConfig(method=...)` | See [cluster method values](#cluster-method-values). |
 | `representationMethod` | `ClusterConfig(representation=...)` | See [representation values](#representation-method-values). |
 | `weightDict` | `weights` | Top-level kwarg of `aggregate()`. |
-| `sameMean` | `ClusterConfig(normalize_column_means=...)` | |
+| `sameMean` | `ClusterConfig(scale_by_column_means=...)` | |
 | `sortValues` | `ClusterConfig(use_duration_curves=...)` | |
 | `evalSumPeriods` | `ClusterConfig(include_period_sums=...)` | |
 | `solver` | `ClusterConfig(solver=...)` | |
@@ -265,7 +322,7 @@ object with everything attached.
 | `agg.accuracyIndicators()` | `result.accuracy.summary` |
 | `agg.totalAccuracyIndicators()` | `result.accuracy.weighted_rmse` / `result.accuracy.weighted_mae` |
 | `agg.clusterOrder` | `result.cluster_assignments` |
-| `agg.clusterPeriodNoOccur` | `result.cluster_weights` |
+| `agg.clusterPeriodNoOccur` | `result.cluster_counts` |
 | `agg.clusterCenterIndices` | `result.clustering.cluster_centers` |
 | `agg.indexMatching()` | `result.assignments` |
 | `agg.timeSeries` | `result.original` |
@@ -346,7 +403,7 @@ result.plot.compare()               # Duration curves: original vs reconstructed
 result.plot.residuals()             # Reconstruction errors
 result.plot.heatmap()               # Heatmap of cluster representatives
 result.plot.cluster_assignments()   # Period-to-cluster mapping
-result.plot.cluster_weights()       # Cluster occurrence counts
+result.plot.cluster_counts()       # Cluster occurrence counts
 result.plot.accuracy()              # Accuracy metrics bar chart
 ```
 
@@ -517,17 +574,6 @@ Any code change that alters output values will fail these tests.
 If a future release intentionally changes results (e.g., improved
 algorithm), the golden files will be regenerated and the change
 documented in the changelog.
-
-## Suppressing warnings
-
-During migration you can silence the deprecation warnings:
-
-```python
-import warnings
-from tsam import LegacyAPIWarning
-
-warnings.filterwarnings("ignore", category=LegacyAPIWarning)
-```
 
 ## Removed parameters
 

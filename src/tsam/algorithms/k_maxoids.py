@@ -1,0 +1,138 @@
+"""Exact K-maxoids clustering"""
+
+import numpy as np
+import numpy.random as rnd
+from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
+from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
+from sklearn.utils import check_array
+
+
+class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
+    """
+    k-maxoids class.
+
+    :param n_clusters:  How many maxoids. Must be positive. optional, default: 8
+    :type n_clusters: integer
+
+    :param distance_metric: What distance metric to use. optional, default: 'euclidean'
+    :type distance_metric: string
+    """
+
+    def __init__(
+        self,
+        n_clusters=8,
+        distance_metric="euclidean",
+    ):
+        self.n_clusters = n_clusters
+
+        self.distance_metric = distance_metric
+
+    def _check_init_args(self):
+        # Check n_clusters
+        if (
+            self.n_clusters is None
+            or self.n_clusters <= 0
+            or not isinstance(self.n_clusters, int)
+        ):
+            raise ValueError("n_clusters has to be nonnegative integer")
+
+        # Check distance_metric
+        if callable(self.distance_metric):
+            self.distance_func = self.distance_metric
+        elif self.distance_metric in PAIRWISE_DISTANCE_FUNCTIONS:
+            self.distance_func = PAIRWISE_DISTANCE_FUNCTIONS[self.distance_metric]
+        else:
+            raise ValueError(
+                "distance_metric needs to be "
+                + "callable or one of the "
+                + "following strings: "
+                + f"{PAIRWISE_DISTANCE_FUNCTIONS.keys()}"
+                + f". Instead, '{self.distance_metric}' "
+                + "was given."
+            )
+
+    def fit(self, X, y=None):
+        """Fit K-Maxoids to the provided data.
+
+        :param X: shape=(n_samples, n_features)
+        :type X: array-like or sparse matrix
+
+        :returns: self
+        """
+
+        self._check_init_args()
+
+        # check that the array is good and attempt to convert it to
+        # Numpy array if possible
+        X = self._check_array(X)
+
+        # apply distance metric to get the distance matrix (kept for potential debugging)
+        _D = self.distance_func(X)
+
+        # run mk-maxoids clustering
+        self.cluster_centers_, self.labels_ = self.k_maxoids(X, self.n_clusters)
+
+        return self
+
+    def _check_array(self, X):
+        X = check_array(X)
+
+        # Check that the number of clusters is less than or equal to
+        # the number of samples
+        if self.n_clusters > X.shape[0]:
+            raise ValueError(
+                "The number of medoids "
+                + f"({self.n_clusters}) "
+                + "must be larger than the number "
+                + f"of samples ({X.shape[0]})"
+            )
+
+        return X
+
+    def k_maxoids(self, X, k, n_passes=5, do_logarithmic=False, n_init=100):
+        x_old = X
+        n, _m = X.shape
+        inertia_best = None
+
+        for i in range(n_init):
+            inds = rnd.permutation(np.arange(n))
+
+            X = X[inds]
+            M = np.copy(X[:k])
+            for t in range(n_passes):
+                for j in range(n):
+                    x = X[j]
+                    D = np.sum((M - x) ** 2, axis=1)
+                    i = np.argmin(D)
+                    d = np.sum((M - M[i]) ** 2, axis=1)
+
+                    if do_logarithmic:
+                        D[i] = 1.0
+                        d[i] = 1.0
+                        valx = np.prod(D)
+                        valm = np.prod(d)
+                    else:
+                        D[i] = 0.0
+                        d[i] = 0.0
+                        valx = np.sum(D)
+                        valm = np.sum(d)
+
+                    if valx > valm:
+                        M[i] = x
+
+            d_temp = self.distance_func(x_old, Y=list(M))
+            inertia_temp = np.sum(np.min(d_temp, axis=1))
+
+            if inertia_best is None:
+                m_final = M
+                inertia_best = inertia_temp
+            else:
+                if inertia_temp < inertia_best:
+                    m_final = M
+                    inertia_best = inertia_temp
+
+        D = self.distance_func(x_old, Y=list(m_final))
+
+        I = np.argmin(D, axis=1)
+
+        return list(m_final), I

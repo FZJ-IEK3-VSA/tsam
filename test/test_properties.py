@@ -68,9 +68,9 @@ def test_properties():
 
     occurrenceDict = {i: j for i, j in enumerate(appearances)}
 
-    # make sure that the cluster_weights equal the number of appearances in the cluster_assignments
+    # make sure that the cluster_counts equal the number of appearances in the cluster_assignments
     np.testing.assert_array_almost_equal(
-        [result4.cluster_weights[k] for k in sorted(result4.cluster_weights)],
+        [result4.cluster_counts[k] for k in sorted(result4.cluster_counts)],
         list(occurrenceDict.values()),
         decimal=4,
     )

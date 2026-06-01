@@ -11,7 +11,7 @@ import shutil
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
@@ -19,7 +19,8 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-from tsam.api import _parse_duration_hours, aggregate
+from tsam.api import aggregate
+from tsam.commons import parse_duration_hours
 from tsam.config import (
     ClusterConfig,
     ExtremeConfig,
@@ -72,9 +73,9 @@ def _test_single_config_file(
         )
 
         # Reconstruct configs from serialized dicts
-        cluster = ClusterConfig(**opts["cluster_dict"])
+        cluster = ClusterConfig.from_dict(opts["cluster_dict"])
         extremes = (
-            ExtremeConfig(**opts["extremes_dict"])
+            ExtremeConfig.from_dict(opts["extremes_dict"])
             if opts["extremes_dict"] is not None
             else None
         )
@@ -146,10 +147,10 @@ def _parallel_context(
     serialized_opts = {
         "period_duration": aggregate_opts["period_duration"],
         "temporal_resolution": aggregate_opts["temporal_resolution"],
-        "cluster_dict": asdict(aggregate_opts["cluster"]),
+        "cluster_dict": aggregate_opts["cluster"].to_dict(),
         "segment_representation": aggregate_opts["segment_representation"],
         "extremes_dict": (
-            asdict(aggregate_opts["extremes"])
+            aggregate_opts["extremes"].to_dict()
             if aggregate_opts["extremes"] is not None
             else None
         ),
@@ -553,9 +554,9 @@ def find_optimal_combination(
         cluster = ClusterConfig()
 
     # Parse duration parameters to hours
-    period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
+    period_duration_hours = parse_duration_hours(period_duration, "period_duration")
     temporal_resolution_hours = (
-        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        parse_duration_hours(temporal_resolution, "temporal_resolution")
         if temporal_resolution is not None
         else _infer_temporal_resolution(data)
     )
@@ -751,9 +752,9 @@ def find_pareto_front(
         cluster = ClusterConfig()
 
     # Parse duration parameters to hours
-    period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
+    period_duration_hours = parse_duration_hours(period_duration, "period_duration")
     temporal_resolution_hours = (
-        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        parse_duration_hours(temporal_resolution, "temporal_resolution")
         if temporal_resolution is not None
         else _infer_temporal_resolution(data)
     )
