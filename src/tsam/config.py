@@ -298,7 +298,11 @@ class SegmentConfig:
     """Configuration for temporal segmentation within periods.
 
     Segmentation reduces the temporal resolution within each typical period,
-    grouping consecutive timesteps into segments.
+    grouping consecutive timesteps into segments. The algorithm is fixed:
+    constrained agglomerative clustering that may only merge *adjacent*
+    timesteps. Unlike :class:`ClusterConfig`, there is therefore no ``method``
+    choice — the only adjustable settings are the number of segments and how
+    each segment is represented.
 
     Parameters
     ----------
