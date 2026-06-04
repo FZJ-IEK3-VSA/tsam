@@ -15,8 +15,11 @@ capable of clustering multi-dimensional time series without changing their dimen
   </a>
 </div>
 
-The process of clustering applied in tsam includes for different steps: Preprocessing, clustering, adding extreme periods and
-backscaling. This is shown in the figure below.
+The process of clustering applied in tsam includes four different steps: Preprocessing, clustering, adding extreme periods and
+backscaling. This is shown in the figure below. The first three follow the review's *feature-based merging* steps
+(§3.2.2): preprocessing & normalization, then algorithm / distance metric / representation, then rescaling — and are
+realized as the tsam [pipeline](architecture/pipeline_guide.md). See [Methodological positioning](architecture/context.md#methodological-positioning)
+for how tsam fits into the review's overall taxonomy of aggregation methods.
 
 <div style="text-align: center">
   <a href="https://www.mdpi.com/energies/energies-13-00641/article_deploy/html/images/energies-13-00641-g009.png">

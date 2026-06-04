@@ -27,6 +27,17 @@ clustering, representation, and segmentation options that Phases 2 and 3 draw on
 
 ![Pipeline data flow](../../assets/architecture/pipeline_diagram.svg)
 
+!!! note "Relation to Hoffmann et al. (2020)"
+
+    Phases 1–2 implement the three *feature-based merging* steps from the
+    time-series-aggregation review by
+    [Hoffmann et al. (2020)](https://www.mdpi.com/1996-1073/13/3/641):
+    **Preprocessing and Normalization** (Phase 1), **Algorithms, Distance Metrics,
+    Representation** (Phase 2 clustering), and **Rescaling** (Phase 2 step 4a).
+    Phases 3–4 then reconstruct and package the result. See
+    [Methodological positioning](context.md#methodological-positioning) for how tsam
+    sits in the review's overall taxonomy.
+
 ---
 
 ## Entry points
