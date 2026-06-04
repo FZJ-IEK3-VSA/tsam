@@ -4,6 +4,14 @@ The [Quickstart](../notebooks/quickstart.ipynb) covers the core workflow —
 shrinking a time series to a few typical periods and checking the result. These
 notebooks cover everything else, grouped by what you're trying to do.
 
+Methodologically these are the knobs of *feature-based merging*: the
+[clustering algorithm](../notebooks/clustering_methods.ipynb) and
+[representation](../notebooks/representations.ipynb) below are the two axes of the
+review's §3.2.2.2 step, and [segmentation](../notebooks/segmentation.ipynb) is the
+resolution-variation lever — see
+[Methodological positioning](../background/architecture/context.md#methodological-positioning)
+for where each sits in the aggregation taxonomy.
+
 ## Make it smaller
 
 **[Segmentation](../notebooks/segmentation.ipynb)** — the second reduction lever:
