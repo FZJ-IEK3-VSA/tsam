@@ -23,7 +23,13 @@ def unstack_to_periods(
     **Example.** 365 days of hourly data for 3 columns is an ``(8760, 3)``
     DataFrame. Unstacking with ``n_timesteps_per_period=24`` yields a
     ``(365, 72)`` matrix — each row is a 72-dimensional point
-    (3 columns × 24 hours).
+    (3 columns × 24 hours). Each rows first contains all time steps
+    from the first column of respective period, then all time steps from the
+    second column, and so on. For the example above that means:
+
+    period_1_ (a1_t1,.....a1_t24, a2_t1,...,a2_t24, a3_t1,...,a3_t24)
+    period_2_ (a1_t25,.....a1_t48, a2_t25,...,a2_t48, a3_t25,...,a3_t48)
+    ...
 
     If the series length is not an integer multiple of the period length, the
     last period is padded by repeating the first rows so the reshape succeeds;
