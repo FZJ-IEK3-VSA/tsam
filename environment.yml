@@ -12,7 +12,7 @@ dependencies:
   - networkx >=2.5,<=3.6.1
   - tqdm >=4.21.0,<=4.68.1
   - highspy >=1.7.2,<=1.14.0
-  - plotly >=5.0.0,<=6.6.0
+  - plotly >=5.0.0,<=6.8.0
   # Testing
   - pytest <=9.0.3
   - pytest-cov <=7.1.0
