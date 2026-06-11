@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+## [3.4.1](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.4.0...v3.4.1) (2026-05-31)
+
+
+### Bug Fixes
+
+* warn that aggregate() column order will change in v4 ([#330](https://github.com/FZJ-IEK3-VSA/tsam/issues/330)) ([97f6e6d](https://github.com/FZJ-IEK3-VSA/tsam/commit/97f6e6d984a0eb089547fe0c61f95353498de416))
+
+## [3.4.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.3.0...v3.4.0) (2026-05-15)
+
+
+### Features
+
+* preserve DatetimeIndex through aggregate/disaggregate round-trip ([#267](https://github.com/FZJ-IEK3-VSA/tsam/issues/267)) ([8d0240a](https://github.com/FZJ-IEK3-VSA/tsam/commit/8d0240a2a436afccf73c1bcb90a8d1ceceae0034))
+
+
+### Bug Fixes
+
+* **ci:** gracefully skip GitHub release when already created by release-please ([#260](https://github.com/FZJ-IEK3-VSA/tsam/issues/260)) ([6fc668d](https://github.com/FZJ-IEK3-VSA/tsam/commit/6fc668da8f8d8827d2475ec47b44c1e74317dd01))
+* handle missing columns in weightDict in accuracyIndicators ([#288](https://github.com/FZJ-IEK3-VSA/tsam/issues/288)) ([a475570](https://github.com/FZJ-IEK3-VSA/tsam/commit/a475570e67d19bc2c41bdcb4566d9c5ba5d5c758))
+
 ## [3.3.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.2.1...v3.3.0) (2026-03-30)
 
 

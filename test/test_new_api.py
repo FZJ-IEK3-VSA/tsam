@@ -169,8 +169,6 @@ class TestImports:
         assert hasattr(tsam, "ExtremeConfig")
         assert hasattr(tsam, "AggregationResult")
         assert hasattr(tsam, "AccuracyMetrics")
-        # Legacy
-        assert hasattr(tsam, "TimeSeriesAggregation")
 
     def test_version(self):
         """Test that version is defined."""

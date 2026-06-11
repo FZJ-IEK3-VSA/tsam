@@ -2,9 +2,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import tsam.hyperparametertuning as tune
-import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
+from tsam import ClusterConfig, Distribution, SegmentConfig, aggregate
+from tsam.tuning import (
+    find_clusters_for_reduction,
+    find_optimal_combination,
+    find_pareto_front,
+)
 
 
 def test_getPeriodPair():
@@ -12,19 +16,19 @@ def test_getPeriodPair():
     noRawTimeSteps = 100
     segmentsPerPeriod = 10
     dataReduction = 0.5
-    noPeriods = tune.getNoPeriodsForDataReduction(
+    noPeriods = find_clusters_for_reduction(
         noRawTimeSteps, segmentsPerPeriod, dataReduction
     )
     assert noPeriods == 5
 
     noRawTimeSteps = 101
-    noPeriods = tune.getNoPeriodsForDataReduction(
+    noPeriods = find_clusters_for_reduction(
         noRawTimeSteps, segmentsPerPeriod, dataReduction
     )
     assert noPeriods == 5
 
     segmentsPerPeriod = 2
-    noPeriods = tune.getNoPeriodsForDataReduction(
+    noPeriods = find_clusters_for_reduction(
         noRawTimeSteps, segmentsPerPeriod, dataReduction
     )
     assert noPeriods == 25
@@ -35,45 +39,32 @@ def test_optimalPair():
 
     datareduction = 0.01
 
-    # just take wind
-    aggregation_wind = tune.HyperTunedAggregations(
-        tsam.TimeSeriesAggregation(
-            raw.loc[:, ["Wind"]],
-            hoursPerPeriod=24,
-            clusterMethod="hierarchical",
-            representationMethod="durationRepresentation",
-            distributionPeriodWise=False,
-            rescaleClusterPeriods=False,
-            segmentation=True,
-        )
+    cluster = ClusterConfig(
+        method="hierarchical",
+        representation=Distribution(scope="global"),
     )
 
-    # and identify the best combination for a data reduction of to ~10%.
-    windSegments, windPeriods, _windRMSE = (
-        aggregation_wind.identifyOptimalSegmentPeriodCombination(
-            dataReduction=datareduction
-        )
+    # just take wind, and identify the best combination for a data reduction of ~1%.
+    wind = find_optimal_combination(
+        raw.loc[:, ["Wind"]],
+        data_reduction=datareduction,
+        period_duration=24,
+        cluster=cluster,
+        preserve_column_means=False,
+        show_progress=False,
     )
+    windSegments, windPeriods = wind.n_segments, wind.n_clusters
 
-    # just take solar irradiation
-    aggregation_solar = tune.HyperTunedAggregations(
-        tsam.TimeSeriesAggregation(
-            raw.loc[:, ["GHI"]],
-            hoursPerPeriod=24,
-            clusterMethod="hierarchical",
-            representationMethod="durationRepresentation",
-            distributionPeriodWise=False,
-            rescaleClusterPeriods=False,
-            segmentation=True,
-        )
+    # just take solar irradiation, and identify the best combination for ~1%.
+    solar = find_optimal_combination(
+        raw.loc[:, ["GHI"]],
+        data_reduction=datareduction,
+        period_duration=24,
+        cluster=cluster,
+        preserve_column_means=False,
+        show_progress=False,
     )
-
-    # and identify the best combination for a data reduction of to ~10%.
-    solarSegments, solarPeriods, _solarRMSE = (
-        aggregation_solar.identifyOptimalSegmentPeriodCombination(
-            dataReduction=datareduction
-        )
-    )
+    solarSegments, solarPeriods = solar.n_segments, solar.n_clusters
 
     # according to Hoffmann et al. 2022 is for solar more segments and less days better than for wind
     assert windPeriods > solarPeriods
@@ -97,44 +88,40 @@ def test_steepest_gradient_leads_to_optima():
 
     datareduction = (SEGMENTS_TESTED * 365) / 8760
 
-    # just take wind
-    tunedAggregations = tune.HyperTunedAggregations(
-        tsam.TimeSeriesAggregation(
-            raw,
-            hoursPerPeriod=24,
-            clusterMethod="hierarchical",
-            representationMethod="meanRepresentation",
-            rescaleClusterPeriods=False,
-            segmentation=True,
-        )
-    )
+    cluster = ClusterConfig(method="hierarchical", representation="mean")
 
-    # and identify the best combination for a data reduction.
-    _segmentsOpt, _periodsOpt, RMSEOpt = (
-        tunedAggregations.identifyOptimalSegmentPeriodCombination(
-            dataReduction=datareduction
-        )
+    # identify the best combination for a data reduction.
+    optimal = find_optimal_combination(
+        raw,
+        data_reduction=datareduction,
+        period_duration=24,
+        cluster=cluster,
+        preserve_column_means=False,
+        show_progress=False,
     )
+    RMSEOpt = optimal.rmse
 
-    # test steepest
-    tunedAggregations.identifyParetoOptimalAggregation(
-        untilTotalTimeSteps=365 * SEGMENTS_TESTED
+    # test steepest descent up to the same number of total timesteps
+    pareto = find_pareto_front(
+        raw,
+        period_duration=24,
+        max_timesteps=365 * SEGMENTS_TESTED,
+        cluster=cluster,
+        preserve_column_means=False,
+        show_progress=False,
     )
-    steepestAggregation = tunedAggregations.aggregationHistory[-1]
-    RMSEsteepest = steepestAggregation.totalAccuracyIndicators()["RMSE"]
+    RMSEsteepest = pareto.history[-1]["rmse"]
 
     # only segments
-    aggregation = tsam.TimeSeriesAggregation(
+    aggregation = aggregate(
         raw,
-        noTypicalPeriods=365,
-        hoursPerPeriod=24,
-        segmentation=True,
-        noSegments=SEGMENTS_TESTED,
-        clusterMethod="hierarchical",
-        representationMethod="meanRepresentation",
+        n_clusters=365,
+        period_duration=24,
+        cluster=cluster,
+        segments=SegmentConfig(n_segments=SEGMENTS_TESTED),
     )
 
-    RMSESegments = aggregation.totalAccuracyIndicators()["RMSE"]
+    RMSESegments = aggregation.accuracy.weighted_rmse
 
     assert RMSEsteepest < RMSESegments
 
@@ -147,28 +134,26 @@ def test_paretoOptimalAggregation():
     # reduce the set, since it takes otherwise too long
     raw = raw.iloc[:240, :]
 
-    # set tuned aggregation
-    tunedAggregations = tune.HyperTunedAggregations(
-        tsam.TimeSeriesAggregation(
-            raw,
-            hoursPerPeriod=12,
-            clusterMethod="hierarchical",
-            representationMethod="meanRepresentation",
-            distributionPeriodWise=False,
-            rescaleClusterPeriods=False,
-            segmentation=True,
-        )
+    # determine pareto optimal aggregation
+    pareto = find_pareto_front(
+        raw,
+        period_duration=12,
+        cluster=ClusterConfig(
+            method="hierarchical",
+            representation=Distribution(scope="global"),
+        ),
+        preserve_column_means=False,
+        show_progress=False,
     )
 
-    # determine pareto optimal aggregation
-    tunedAggregations.identifyParetoOptimalAggregation()
+    rmse_history = [entry["rmse"] for entry in pareto.history]
 
     # test if last RMSE is 0
-    assert tunedAggregations._RMSEHistory[-1] == 0
+    assert rmse_history[-1] == 0
 
     # test if RMSE is continously decreasing
-    for i, RMSE in enumerate(tunedAggregations._RMSEHistory[1:]):
-        assert RMSE <= tunedAggregations._RMSEHistory[i]
+    for i, RMSE in enumerate(rmse_history[1:]):
+        assert RMSE <= rmse_history[i]
 
 
 if __name__ == "__main__":

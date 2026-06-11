@@ -106,6 +106,27 @@ def _parse_duration_hours(value: int | float | str, param_name: str) -> float:
     )
 
 
+def _warn_column_order_change(data: pd.DataFrame) -> None:
+    """Warn (only for non-alphabetical input) that v4 will change column order."""
+    try:
+        if list(data.columns) == sorted(data.columns):
+            return  # alphabetical input: v3 and v4 produce identical order
+    except TypeError:
+        return  # unorderable column labels: cannot compare, skip notice
+    warnings.warn(
+        "aggregate() result columns are sorted alphabetically in v3 but will "
+        "follow the input DataFrame's order in v4; your columns are not "
+        "alphabetical, so this output will change. To keep the v3 order, sort "
+        "before (aggregate(data.sort_index(axis=1), ...)) or after "
+        "(result.cluster_representatives.sort_index(axis=1)); to adopt v4 now, "
+        "index results by column name, not position. To silence this warning: "
+        "warnings.filterwarnings('ignore', category=FutureWarning, "
+        "message='.*sorted alphabetically.*').",
+        FutureWarning,
+        stacklevel=3,
+    )
+
+
 def aggregate(
     data: pd.DataFrame,
     n_clusters: int,
@@ -255,6 +276,8 @@ def aggregate(
     # Validate input
     if not isinstance(data, pd.DataFrame):
         raise TypeError(f"data must be a pandas DataFrame, got {type(data).__name__}")
+
+    _warn_column_order_change(data)
 
     if not isinstance(n_clusters, int) or n_clusters < 1:
         raise ValueError(f"n_clusters must be a positive integer, got {n_clusters}")

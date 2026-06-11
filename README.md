@@ -185,7 +185,7 @@ The publications about time series aggregation for energy system optimization mo
 (open access manuscript to be found [**here**](https://arxiv.org/abs/1708.00420))
 
 
-## About Us 
+## About Us
 
 We are the <a href="https://www.fz-juelich.de/en/ice/ice-2">Institute of Climate and Energy Systems – Jülich Systems Analysis (ICE-2)</a> at the <a href="https://www.fz-juelich.de/en"> Forschungszentrum Jülich</a>.
 Our work focuses on independent, interdisciplinary research in energy, bioeconomy, infrastructure, and sustainability. We support a just, greenhouse gas–neutral transformation through open models and policy-relevant science.
