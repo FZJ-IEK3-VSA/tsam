@@ -47,15 +47,35 @@ nav:
   - Home:
     - index.md
     - Installation: installation.md
-    - Quickstart: notebooks/quickstart.ipynb
-  - User Guide:
+    - Migration Guide: migration-guide.md
+    - Glossary: glossary.md
+    - Contributing: contributing.md
+    - Legal Notice: legal-notice.md
+  - Tutorials:
+    - Your first aggregation: notebooks/tutorials/quickstart.ipynb
+  - How-to guides:
     - Overview: user-guide/index.md
-    - Segmentation: notebooks/segmentation.ipynb
-    - How small can you go?: notebooks/tuning.ipynb
-    - Clustering methods: notebooks/clustering_methods.ipynb
-    - Representations: notebooks/representations.ipynb
-    - Extreme periods: notebooks/extreme_periods.ipynb
-    - Optimization workflow: notebooks/optimization_workflow.ipynb
+    - Aggregate a time series: notebooks/how-to/how_to_aggregate.ipynb
+    - Make it smaller:
+      - Segmentation: notebooks/how-to/segmentation.ipynb
+      - How small can you go?: notebooks/how-to/tuning.ipynb
+    - Control what it preserves:
+      - Clustering methods: notebooks/how-to/clustering_methods.ipynb
+      - Representations: notebooks/how-to/representations.ipynb
+      - Extreme periods: notebooks/how-to/extreme_periods.ipynb
+    - Put it to work:
+      - Working with typical periods: notebooks/how-to/working_with_typical_periods.ipynb
+      - Optimization workflow: notebooks/how-to/optimization_workflow.ipynb
+  - Explanation:
+    - How aggregation works:
+      - Overview: notebooks/how_it_works/00_overview.ipynb
+      - Preprocessing: notebooks/how_it_works/01_preprocessing.ipynb
+      - Partitional clustering: notebooks/how_it_works/02_partitional_clustering.ipynb
+      - Agglomerative clustering: notebooks/how_it_works/03_agglomerative_clustering.ipynb
+      - Averaging: notebooks/how_it_works/04_averaging.ipynb
+      - Segmentation: notebooks/how_it_works/05_segmentation.ipynb
+      - Representation & rescaling: notebooks/how_it_works/06_representation_rescaling.ipynb
+      - Extreme periods: notebooks/how_it_works/07_extreme_periods.ipynb
     - Background:
       - background/index.md
       - Mathematical Background: background/math.md
@@ -66,6 +86,7 @@ nav:
       - Decisions:
         - background/decisions/index.md
         - 0001 — V4 Pipeline: background/decisions/0001-v4-pipeline.md
+      - Further Reading: further-reading.md
   - Reference:
     - API:
       - api/index.md
@@ -73,13 +94,9 @@ nav:
       - Results: api/results.md
       - Pipeline internals: api/pipeline.md
       - Tuning: api/tuning.md
-      - Utilities: api/utilities.md
-    - Glossary: glossary.md
-    - Further Reading: further-reading.md
-    - Migration Guide: migration-guide.md
-    - Contributing: contributing.md
+      - Utilities: api/utilities.md    
     - Changelog: changelog.md
-    - Legal Notice: legal-notice.md
+    
 
 plugins:
   - search
@@ -145,6 +162,11 @@ markdown_extensions:
 # Tooling that lives under docs/ but is not a documentation page.
 exclude_docs: |
   scripts/
+  hooks/
+
+# Build hooks (loaded as modules; not affected by exclude_docs above).
+hooks:
+  - docs/hooks/strip_duplicate_mathjax.py
 
 extra:
   generator: false

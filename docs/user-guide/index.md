@@ -1,49 +1,50 @@
-# User Guide
+# How-to guides
 
-The [Quickstart](../notebooks/quickstart.ipynb) covers the core workflow —
-shrinking a time series to a few typical periods and checking the result. These
-notebooks cover everything else, grouped by what you're trying to do.
+Task-focused recipes for getting things done with tsam, assuming you have skimmed the
+[tutorial](../notebooks/tutorials/quickstart.ipynb). For *why* each method works, see the
+[How aggregation works](../notebooks/how_it_works/00_overview.ipynb) explanation series.
 
-Methodologically these are the knobs of *feature-based merging*: the
-[clustering algorithm](../notebooks/clustering_methods.ipynb) and
-[representation](../notebooks/representations.ipynb) below are the two axes of the
-review's §3.2.2.2 step, and [segmentation](../notebooks/segmentation.ipynb) is the
-resolution-variation lever — see
-[Methodological positioning](../background/architecture/context.md#methodological-positioning)
-for where each sits in the aggregation taxonomy.
+## Start here
+
+**[How to aggregate a time series](../notebooks/how-to/how_to_aggregate.ipynb)** — the core
+recipe: load your data, call `aggregate()` with the two parameters that matter, and read the
+outputs a downstream model needs. Everything below is a variation on this.
 
 ## Make it smaller
 
-**[Segmentation](../notebooks/segmentation.ipynb)** — the second reduction lever:
-keep fewer time steps *within* each period by merging adjacent steps into a few
-variable-length segments.
+**[Segmentation](../notebooks/how-to/segmentation.ipynb)** — the second reduction lever: keep
+fewer time steps *within* each period by merging adjacent steps into a few variable-length
+segments.
 
-**[How small can you go?](../notebooks/tuning.ipynb)** — the accuracy-vs-size
-trade-off across both levers (periods and segments), and how to let tsam search
-for the best combination at a target size.
+**[How small can you go?](../notebooks/how-to/tuning.ipynb)** — the accuracy-vs-size trade-off
+across both levers (periods and segments), and how to let tsam search for the best
+combination at a target size.
 
 ## Control what it preserves
 
-**[Clustering methods](../notebooks/clustering_methods.ipynb)** — how periods are
-grouped: hierarchical, k-means, k-medoids, k-maxoids, averaging, contiguous, and
-when to pick each.
+**[Clustering methods](../notebooks/how-to/clustering_methods.ipynb)** — how periods are
+grouped: hierarchical, k-means, k-medoids, k-maxoids, averaging, and contiguous, and when to
+pick each.
 
-**[Representations](../notebooks/representations.ipynb)** — how each cluster
-becomes one profile: mean, medoid, the value distribution, or per-step min/max —
-and why the choice changes which features survive.
+**[Representations](../notebooks/how-to/representations.ipynb)** — how each cluster becomes one
+profile: mean, medoid, the value distribution, or per-step min/max, and why the choice changes
+which features survive.
 
-**[Extreme periods](../notebooks/extreme_periods.ipynb)** — force the peak (or
-trough) day to be kept exactly, so it isn't averaged away.
+**[Extreme periods](../notebooks/how-to/extreme_periods.ipynb)** — force the peak (or trough)
+day to be kept exactly, so it is not averaged away.
 
 ## Put it to work
 
-**[Optimization workflow](../notebooks/optimization_workflow.ipynb)** — the handoff
-to a downstream model: the representatives, counts, and assignments your model
-needs; weighting columns by importance; mapping results back with disaggregation;
-and reusing a clustering across datasets.
+**[Working with typical periods](../notebooks/how-to/working_with_typical_periods.ipynb)** —
+read the links between typical days and the original calendar, map model results back with
+`disaggregate()`, and see how the ordered assignments feed inter-period storage formulations.
+
+**[Optimization workflow](../notebooks/how-to/optimization_workflow.ipynb)** — the full handoff
+to a downstream model: the representatives, counts, and assignments your model needs, weighting
+columns by importance, mapping results back with disaggregation, and reusing a clustering
+across datasets.
 
 ---
 
-For the methods and maths behind the pipeline, see
-[Background](../background/index.md). For function- and class-level detail, see the
-[API Reference](../api/index.md).
+For the methods and maths behind the pipeline, see [Background](../background/index.md). For
+function- and class-level detail, see the [API Reference](../api/index.md).

@@ -40,7 +40,7 @@ result.plot.cluster_representatives()   # ...and a plot of them
 ```
 
 [Install ETHOS.TSAM](installation.md){ .md-button .md-button--primary }
-[Quickstart](notebooks/quickstart.ipynb){ .md-button }
+[Quickstart](notebooks/tutorials/quickstart.ipynb){ .md-button }
 [User Guide](user-guide/index.md){ .md-button }
 
 ## Main features
@@ -51,29 +51,29 @@ result.plot.cluster_representatives()   # ...and a plot of them
   exactly with an MILP solver.
 - **Two aggregation dimensions, freely combined.** Reduce the number of *periods*
   (typical days) and/or the *temporal resolution* within them, via
-  [how small you can go](notebooks/tuning.ipynb).
+  [how small you can go](notebooks/how-to/tuning.ipynb).
 - **Representations that preserve what matters.** Beyond means and medoids, keep
-  the [value distribution](notebooks/representations.ipynb) (duration
+  the [value distribution](notebooks/how-to/representations.ipynb) (duration
   curve), per-time-step min/max, or force **extreme periods** so peaks survive
   aggregation.
 - **Built-in evaluation and plotting.** Every result carries accuracy metrics and
   an interactive `.plot` accessor (Plotly) — see the
-  [Quickstart](notebooks/quickstart.ipynb).
+  [Quickstart](notebooks/tutorials/quickstart.ipynb).
 - **Automatic hyperparameter tuning.** Let tsam
-  [find the period/segment combination](notebooks/tuning.ipynb) that hits a
+  [find the period/segment combination](notebooks/how-to/tuning.ipynb) that hits a
   target data reduction, or map the full Pareto front.
 - **Built for downstream models.** Hand the representatives, counts, and
   assignments to an optimization, then map results back — see the
-  [optimization workflow](notebooks/optimization_workflow.ipynb).
+  [optimization workflow](notebooks/how-to/optimization_workflow.ipynb).
 
 ## Where to start
 
 | If you want to… | Go to |
 |------------------|-------|
 | Install the package | [Installation](installation.md) |
-| Run your first aggregation | [Quickstart](notebooks/quickstart.ipynb) |
+| Run your first aggregation | [Quickstart](notebooks/tutorials/quickstart.ipynb) |
 | Learn the features one by one | [User Guide](user-guide/index.md) |
-| See an end-to-end optimization workflow | [Optimization workflow](notebooks/optimization_workflow.ipynb) |
+| See an end-to-end optimization workflow | [Optimization workflow](notebooks/how-to/optimization_workflow.ipynb) |
 | Look up a function or class | [API Reference](api/index.md) |
 | Understand the methods and maths | [Background](background/index.md) |
 
