@@ -51,6 +51,20 @@
             "packageNameTemplate": "conda-forge/{{{depName}}}",
             "datasourceTemplate": "conda",
             "versioningTemplate": "pep440"
+        },
+        {
+            "customType": "regex",
+            "description": "Track the mirrors-mypy pre-commit hook rev against conda-forge/mypy instead of the GitHub tag. depName is `mypy`, so the custom.regex grouping rule below folds it into the single `mypy` PR alongside pyproject.toml and environment.yml. Resolving via conda means that PR only opens once mypy is on conda-forge (the slowest channel), which guarantees the matching mirrors-mypy `vX.Y.Z` tag and the PyPI release already exist — preventing the race where the hook bumps ahead of conda. The literal `v` tag prefix is matched outside the currentValue capture so it survives write-back (mirrors-mypy tags are `vX.Y.Z`; conda-forge versions are `X.Y.Z`). The built-in pre-commit manager is disabled for this hook in the packageRules below so the rev is not double-managed.",
+            "managerFilePatterns": [
+                "/(^|/)\\.pre-commit-config\\.yaml$/"
+            ],
+            "matchStrings": [
+                "pre-commit/mirrors-mypy\\s+rev:\\s*v(?<currentValue>\\d[^\\s#]*)"
+            ],
+            "depNameTemplate": "mypy",
+            "packageNameTemplate": "conda-forge/mypy",
+            "datasourceTemplate": "conda",
+            "versioningTemplate": "pep440"
         }
     ],
     "packageRules": [
@@ -109,6 +123,12 @@
             "matchManagers": ["pre-commit"],
             "groupName": "pre-commit hooks",
             "commitMessageTopic": "pre-commit hooks"
+        },
+        {
+            "description": "mirrors-mypy is tracked via the conda-forge customManager above (gated on conda-forge availability and grouped into the single `mypy` PR); disable the built-in pre-commit manager for it so the rev is not double-managed.",
+            "matchManagers": ["pre-commit"],
+            "matchDepNames": ["pre-commit/mirrors-mypy"],
+            "enabled": false
         }
     ],
     "vulnerabilityAlerts": {
