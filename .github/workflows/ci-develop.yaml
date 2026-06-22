@@ -15,9 +15,17 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: "3.12"
+      # mypy runs as a repo:local hook against the project's own environment,
+      # so install the project before pre-commit runs. Other hooks use their
+      # own isolated envs and are unaffected.
+      - name: Install project (for the local mypy hook)
+        run: uv pip install --system ".[develop]"
       - uses: pre-commit/action@v3.0.1
 
   test:
