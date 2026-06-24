@@ -17,7 +17,7 @@ jobs:
     name: Run pre-commit and open PR
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.target_branch }}
           fetch-depth: 0
