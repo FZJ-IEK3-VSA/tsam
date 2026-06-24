@@ -15,7 +15,7 @@ dependencies:
   - plotly >=5.0.0,<=6.8.0
   - notebook >=7.5.0,<=7.6.0
   # Testing
-  - pytest <=9.0.3
+  - pytest <=9.1.1
   - pytest-cov <=7.1.0
   - pytest-xdist <=3.8.0
   - codecov <=2.1.13
