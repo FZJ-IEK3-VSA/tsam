@@ -16,10 +16,10 @@ The only optional external dependency is a **MILP solver**, required when `Clust
 
 |                   | Resolution variation    | Typical periods            |
 |-------------------|-------------------------|----------------------------|
-| **Time-based**    | Downsampling *(pandas)* | Time slices / averaging ✅ |
+| **Time-based**    | Downsampling *(pandas)* | Averaging ✅ (consecutive-period blocks; full calendar time-slices not built in) |
 | **Feature-based** | Segmentation ✅         | **Clustering** ✅ *(core)* |
 
-tsam covers the **feature-based** row and the typical-periods column. Its core is **clustering** of periods into typical periods (`kmeans`, `kmedoids`, `kmaxoids`, `hierarchical`); it also implements **segmentation** (merging adjacent time steps), time-based **averaging** of periods (the `averaging` and `contiguous` methods), and **extreme-period** handling. **Downsampling** is intentionally left out — it is a one-liner on the input (`df.resample(...)`), so you coarsen the series with pandas before handing it to tsam rather than asking tsam to do it. tsam also never performs *cross-sectional grouping of time series* (a separate branch in the review's Figure 4): it preserves the input's dimensionality, so an `N`-attribute series stays `N`-attribute throughout.
+tsam covers the **feature-based** row and the typical-periods column. Its core is **clustering** of periods into typical periods (`kmeans`, `kmedoids`, `kmaxoids`, `hierarchical`); it also implements **segmentation** (merging adjacent time steps), time-based **averaging** of consecutive-period blocks (the `averaging` method), and **extreme-period** handling. The `contiguous` method is *not* time-based averaging: it is Ward agglomerative clustering with a temporal-adjacency constraint — feature-based, and the period-level analogue of segmentation (only adjacent periods may merge). **Downsampling** is intentionally left out — it is a one-liner on the input (`df.resample(...)`), so you coarsen the series with pandas before handing it to tsam rather than asking tsam to do it. tsam also never performs *cross-sectional grouping of time series* (a separate branch in the review's Figure 4): it preserves the input's dimensionality, so an `N`-attribute series stays `N`-attribute throughout.
 
 Within feature-based clustering, the review's three steps (§3.2.2) map directly onto the [pipeline](pipeline_guide.md):
 

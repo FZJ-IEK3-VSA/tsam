@@ -101,7 +101,7 @@ lcol: "Public API · user entry points" {
 pipeline: "pipeline/ · run_pipeline()" {
   class: side
   grid-columns: 1
-  grid-gap: 16
+  grid-gap: 26
 
   p1: "" {
     class: phase
@@ -109,7 +109,6 @@ pipeline: "pipeline/ · run_pipeline()" {
     grid-gap: 2
     title: "Phase 1 · Prepare data" { class: phase_title }
     body: "normalize → unstack to periods\n(optional: weights, period sums)" { class: phase_body; height: 54 }
-    tag: "Hoffmann §3.2.2.1 · Preprocessing and Normalization" { class: phase_tag; height: 22 }
   }
   gap1: "" { class: pad; width: 10; height: 42 }
   p2: "" {
@@ -118,7 +117,6 @@ pipeline: "pipeline/ · run_pipeline()" {
     grid-gap: 2
     title: "Phase 2 · Cluster & post-process" { class: phase_title }
     body: "cluster → extremes → rescale → count" { class: phase_body }
-    tag: "Hoffmann §3.2.2.2 Algorithms/Distance/Representation\n§3.2.2.3 Rescaling" { class: phase_tag; height: 40 }
   }
   gap2: "" { class: pad; width: 10; height: 30 }
   p3: "" {
@@ -196,4 +194,4 @@ rcol.clu_back -> rcol.reps: "uses" { style: { stroke: "#4a5560"; stroke-width: 2
 rcol.seg_back -> rcol.reps: "uses" { style: { stroke: "#4a5560"; stroke-width: 2 } }
 
 # transfer path: reuse a fitted clustering on new data (skips the clustering step)
-lcol.res -> pipeline.p2: "ClusteringResult.apply()" { style: { stroke-dash: 4; stroke: "#3f6fb0"; font-size: 15; font-color: "#3f6fb0" } }
+lcol.res -> pipeline.p2: "ClusteringResult\n.apply()" { style: { stroke-dash: 4; stroke: "#3f6fb0"; font-size: 15; font-color: "#3f6fb0" } }

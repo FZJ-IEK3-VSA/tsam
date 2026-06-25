@@ -50,7 +50,7 @@ $$
 With:
 
 $$
-\text{dist}(x_p,c_k)=\sqrt{\sum_{a=1}^{N_a}\sum_{t=1}^{N_t}(x_{p,a,t}-c_k)^2}
+\text{dist}(x_p,c_k)=\sqrt{\sum_{a=1}^{N_a}\sum_{t=1}^{N_t}(x_{p,a,t}-c_{k,a,t})^2}
 $$
 
 And:

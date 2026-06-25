@@ -131,6 +131,29 @@ def _duration_curve_figure(
     )
 
 
+def _cluster_color_map(
+    cluster_ids: list[int] | np.ndarray,
+    palette: list[str] | None = None,
+) -> dict[int, str]:
+    """Map each cluster id to a stable colour from a qualitative palette.
+
+    The ids are sorted before colours are assigned, so a given cluster gets the
+    same colour in every plot (timeline, members, representatives,
+    reconstruction). That lets a cluster be traced from one figure to the next.
+    """
+    if palette is None:
+        palette = px.colors.qualitative.Plotly
+    ids = sorted({int(c) for c in cluster_ids})
+    return {cid: palette[i % len(palette)] for i, cid in enumerate(ids)}
+
+
+def _to_rgba(color: str, alpha: float) -> str:
+    """Convert a ``#rrggbb`` hex colour to an ``rgba(...)`` string."""
+    h = color.lstrip("#")
+    r, g, b = (int(h[i : i + 2], 16) for i in (0, 2, 4))
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+
 class ResultPlotAccessor:
     """Plotting accessor for AggregationResult.
 
@@ -152,6 +175,7 @@ class ResultPlotAccessor:
     def cluster_representatives(
         self,
         columns: list[str] | None = None,
+        units: dict[str, str] | None = None,
         title: str = "Cluster Representatives",
     ) -> go.Figure:
         """Plot all cluster representatives (typical periods).
@@ -180,7 +204,8 @@ class ResultPlotAccessor:
         df.columns = pd.Index(["Period", "Timestep", *columns])
 
         # Map period IDs to labels with their occurrence counts
-        df["Period"] = df["Period"].map(lambda p: f"Period {p} (n={counts.get(p, 1)})")
+        period_label = {p: f"Period {p} (n={counts.get(p, 1)})" for p in counts}
+        df["Period"] = df["Period"].map(lambda p: period_label.get(p, f"Period {p}"))
 
         long_df = df.melt(
             id_vars=["Period", "Timestep"],
@@ -188,14 +213,25 @@ class ResultPlotAccessor:
             value_name="Value",
         )
 
+        # Shared colour map so cluster colours match the other cluster plots.
+        cmap = _cluster_color_map(list(counts.keys()))
+        color_discrete_map = {
+            period_label[p]: color for p, color in cmap.items() if p in period_label
+        }
+
         fig = px.line(
             long_df,
             x="Timestep",
             y="Value",
             color="Period",
+            color_discrete_map=color_discrete_map,
             facet_col="Column" if len(columns) > 1 else None,
             title=title,
         )
+
+        fig.update_xaxes(title_text="timestep")
+        if units and len(columns) == 1 and columns[0] in units:
+            fig.update_yaxes(title_text=f"{columns[0]} [{units[columns[0]]}]")
 
         return fig
 
@@ -204,6 +240,7 @@ class ResultPlotAccessor:
         columns: list[str] | None = None,
         clusters: list[int] | None = None,
         slider: Literal["cluster", "column"] = "cluster",
+        units: dict[str, str] | None = None,
         title: str | None = None,
     ) -> go.Figure:
         """Plot all original periods grouped by cluster with representative highlighted.
@@ -317,8 +354,9 @@ class ResultPlotAccessor:
 
         n_facets = len(facet_labels)
         traces_per_facet = 2  # one bundled member trace + one representative
-        MEMBER = {"color": "rgba(99, 110, 250, 0.3)"}
-        REP = {"color": "#EF553B", "width": 3}
+        # Per-cluster colours, shared with the other cluster plots so a cluster
+        # keeps the same colour across figures.
+        cmap = _cluster_color_map(cluster_ids)
 
         # Precompute NaN-separated x-arrays (one per unique member count).
         # Each member's timesteps are separated by a NaN to break the line.
@@ -348,15 +386,19 @@ class ResultPlotAccessor:
                 else:
                     cid, col = cluster_ids[facet_idx], cast("str", anim_key)
 
+                color = cmap[int(cid)]
                 n_m = len(members_by_cluster[cid])
                 out.append(
                     go.Scatter(
                         x=_member_x[n_m],
                         y=_member_y(cid, col),
                         mode="lines",
-                        line=MEMBER,
-                        name="Member",
-                        legendgroup="Member",
+                        # Members: the cluster colour, faded and thin, so they
+                        # read as "all belong to this cluster" without competing
+                        # with the representative.
+                        line={"color": _to_rgba(color, 0.25), "width": 1},
+                        name="Members",
+                        legendgroup="Members",
                         showlegend=first_member,
                     )
                 )
@@ -367,7 +409,9 @@ class ResultPlotAccessor:
                         x=timesteps,
                         y=_rep_values(cid, col),
                         mode="lines",
-                        line=REP,
+                        # Representative: the same cluster colour, solid and bold,
+                        # highlighted as the one profile that stands in for them all.
+                        line={"color": color, "width": 4},
                         name="Representative",
                         legendgroup="Representative",
                         showlegend=first_rep,
@@ -452,6 +496,172 @@ class ResultPlotAccessor:
                     if key.startswith("yaxis"):
                         fig.layout[key].range = val["range"]
 
+        # Axis titles (x is always the timestep within a period; y is the
+        # column, with units when provided).
+        def _ylabel(c: str) -> str:
+            return f"{c} [{units[c]}]" if units and c in units else c
+
+        fig.update_xaxes(title_text="timestep")
+        if n_facets > 1:
+            if _slider == "cluster":
+                for i, c in enumerate(columns):
+                    fig.update_yaxes(title_text=_ylabel(c), row=1, col=i + 1)
+            else:
+                fig.update_yaxes(title_text="value")
+        else:
+            fig.update_yaxes(
+                title_text=_ylabel(columns[0]) if _slider == "cluster" else "value"
+            )
+
+        return fig
+
+    def clusters_over_time(
+        self,
+        columns: list[str] | None = None,
+        *,
+        reconstructed: bool = False,
+        overlay_original: bool = False,
+        mark_periods: bool = True,
+        units: dict[str, str] | None = None,
+        title: str | None = None,
+    ) -> go.Figure:
+        """Plot the series over time with each period shaded by its cluster.
+
+        Each period (e.g. day) on the time axis is shaded with the colour of the
+        cluster it was assigned to, so you can see which typical period stands in
+        for each stretch of time — and whether a cluster spans several
+        consecutive periods. Cluster colours match :meth:`cluster_members` and
+        :meth:`cluster_representatives`, so a cluster can be traced across plots.
+
+        Parameters
+        ----------
+        columns : list[str], optional
+            Columns to plot, one stacked subplot each. Defaults to all columns.
+        reconstructed : bool, default False
+            Plot the reconstructed series instead of the original.
+        overlay_original : bool, default False
+            Draw the original series as a dotted line on top. Combined with
+            ``reconstructed=True`` this shows where the reconstruction differs.
+        mark_periods : bool, default True
+            Outline each period and add period boundary ticks to the x axis, so
+            period boundaries and runs of consecutive same-cluster periods are
+            easy to see.
+        units : dict[str, str], optional
+            Map of column name to unit (e.g. ``{"Load": "MW"}``), used to label
+            the y axes as ``column [unit]``.
+        title : str, optional
+            Plot title.
+
+        Returns
+        -------
+        go.Figure
+
+        Examples
+        --------
+        >>> result.plot.clusters_over_time(columns=["Load"])
+        >>> result.plot.clusters_over_time(
+        ...     columns=["Load"], reconstructed=True, overlay_original=True
+        ... )
+        """
+        from plotly.subplots import make_subplots
+
+        result = self._result
+        columns = _validate_columns(
+            columns, list(result.original.columns), "original data"
+        )
+        frame = result.reconstructed if reconstructed else result.original
+        original = result.original
+        assignments = result.cluster_assignments
+        cmap = _cluster_color_map(assignments)
+
+        times = frame.index
+        n_periods = len(assignments)
+        steps_per_period = result.n_timesteps_per_period
+        step = (times[1] - times[0]) if len(times) > 1 else 1
+        period_bounds = [times[p * steps_per_period] for p in range(n_periods)]
+        period_bounds.append(times[-1] + step)
+
+        n = len(columns)
+        fig = make_subplots(
+            rows=n,
+            cols=1,
+            shared_xaxes=True,
+            subplot_titles=columns if n > 1 else None,
+        )
+
+        for row, col in enumerate(columns, start=1):
+            if overlay_original:
+                fig.add_trace(
+                    go.Scatter(
+                        x=original.index,
+                        y=original[col],
+                        mode="lines",
+                        line={"color": "#222", "width": 1.0, "dash": "dash"},
+                        name="original",
+                        legendgroup="original",
+                        showlegend=row == 1,
+                    ),
+                    row=row,
+                    col=1,
+                )
+            series_name = "reconstructed" if reconstructed else col
+            fig.add_trace(
+                go.Scatter(
+                    x=times,
+                    y=frame[col],
+                    mode="lines",
+                    line={"color": "#444", "width": 1.2},
+                    name=series_name,
+                    legendgroup=series_name,
+                    showlegend=(row == 1) if reconstructed else True,
+                ),
+                row=row,
+                col=1,
+            )
+            for period, cluster in enumerate(assignments):
+                fig.add_vrect(
+                    x0=period_bounds[period],
+                    x1=period_bounds[period + 1],
+                    fillcolor=cmap[int(cluster)],
+                    opacity=0.18,
+                    line_width=0.5 if mark_periods else 0,
+                    line_color="rgba(0, 0, 0, 0.18)",
+                    layer="below",
+                    row=row,
+                    col=1,
+                )
+
+        # One legend entry per cluster (colours shared across all cluster plots).
+        for cid, color in cmap.items():
+            fig.add_trace(
+                go.Scatter(
+                    x=[None],
+                    y=[None],
+                    mode="markers",
+                    marker={"color": color, "size": 10, "symbol": "square"},
+                    name=f"cluster {cid}",
+                ),
+                row=1,
+                col=1,
+            )
+
+        if mark_periods:
+            fig.update_xaxes(
+                minor={"tickvals": period_bounds, "ticklen": 6, "tickcolor": "grey"}
+            )
+        fig.update_xaxes(title_text="time", row=n, col=1)
+        for row, col in enumerate(columns, start=1):
+            label = f"{col} [{units[col]}]" if units and col in units else col
+            fig.update_yaxes(title_text=label, row=row, col=1)
+        fig.update_layout(
+            title=title
+            or (
+                "Reconstructed series by cluster"
+                if reconstructed
+                else "Series by cluster"
+            ),
+            legend_title="cluster",
+        )
         return fig
 
     def cluster_counts(self, title: str = "Cluster Counts") -> go.Figure:
@@ -603,6 +813,7 @@ class ResultPlotAccessor:
         title: str | None = None,
         time_slice: slice | None = None,
         color: str = "column",
+        units: dict[str, str] | None = None,
     ) -> go.Figure:
         """Compare original vs reconstructed time series.
 
@@ -660,7 +871,7 @@ class ResultPlotAccessor:
         columns = _validate_columns(columns, list(orig.columns), "original data")
 
         if mode == "duration_curve":
-            return _duration_curve_figure(
+            fig = _duration_curve_figure(
                 {"Original": orig, "Reconstructed": recon},
                 columns=columns,
                 title=title,
@@ -707,12 +918,14 @@ class ResultPlotAccessor:
                 )
                 fig.update_layout(height=600)
 
-            return fig
-
         else:
             raise ValueError(
                 f"Unknown mode: {mode}. Use 'overlay', 'side_by_side', or 'duration_curve'."
             )
+
+        if units and len(columns) == 1 and columns[0] in units:
+            fig.update_yaxes(title_text=f"{columns[0]} [{units[columns[0]]}]")
+        return fig
 
     def residuals(
         self,

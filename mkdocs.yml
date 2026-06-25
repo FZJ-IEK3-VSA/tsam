@@ -74,8 +74,9 @@ nav:
       - Agglomerative clustering: notebooks/how_it_works/03_agglomerative_clustering.ipynb
       - Averaging: notebooks/how_it_works/04_averaging.ipynb
       - Segmentation: notebooks/how_it_works/05_segmentation.ipynb
-      - Representation & rescaling: notebooks/how_it_works/06_representation_rescaling.ipynb
-      - Extreme periods: notebooks/how_it_works/07_extreme_periods.ipynb
+      - Representation: notebooks/how_it_works/06_representation.ipynb
+      - Rescaling: notebooks/how_it_works/07_rescaling.ipynb
+      - Extreme periods: notebooks/how_it_works/08_extreme_periods.ipynb
     - Background:
       - background/index.md
       - Mathematical Background: background/math.md

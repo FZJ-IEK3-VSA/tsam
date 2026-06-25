@@ -372,8 +372,19 @@ class TuningResult:
         candidates.sort(key=lambda x: x[0])
         return self.all_results[candidates[0][1]]
 
-    def plot(self, show_labels: bool = True, **kwargs: object) -> object:
-        """Plot results (RMSE vs timesteps)."""
+    def plot(
+        self, show_labels: bool = True, annotate: bool = True, **kwargs: object
+    ) -> object:
+        """Plot results (RMSE vs timesteps).
+
+        Parameters
+        ----------
+        show_labels : bool, default True
+            Show the configuration details on hover.
+        annotate : bool, default True
+            Print the recommended ``periods × segments`` combination next to
+            each point, so each step's configuration is readable without hovering.
+        """
         import plotly.graph_objects as go
 
         summary = self.summary
@@ -383,21 +394,33 @@ class TuningResult:
             f"RMSE: {row['rmse']:.4f}"
             for _, row in summary.iterrows()
         ]
+        point_labels = [
+            f"{int(row['n_clusters'])}×{int(row['n_segments'])}"
+            for _, row in summary.iterrows()
+        ]
+
+        if annotate:
+            mode = "lines+markers+text" if len(summary) > 1 else "markers+text"
+        else:
+            mode = "lines+markers" if len(summary) > 1 else "markers"
 
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
                 x=summary["timesteps"],
                 y=summary["rmse"],
-                mode="lines+markers" if len(summary) > 1 else "markers",
+                mode=mode,
                 marker={"size": 10},
+                text=point_labels if annotate else None,
+                textposition="top center",
                 hovertext=hover_text if show_labels else None,
                 hoverinfo="text" if show_labels else "x+y",
                 **kwargs,
             )
         )
         fig.update_layout(
-            title="Tuning Results: Complexity vs Accuracy",
+            title="Tuning Results: Complexity vs Accuracy "
+            "(label = typical periods × segments)",
             xaxis_title="Timesteps (n_clusters x n_segments)",
             yaxis_title="RMSE",
             hovermode="closest",

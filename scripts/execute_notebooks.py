@@ -109,7 +109,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     notebooks = sorted(
-        p for p in args.notebooks_dir.glob("*.ipynb") if p.name not in args.exclude
+        p
+        for p in args.notebooks_dir.rglob("*.ipynb")
+        if p.name not in args.exclude and ".ipynb_checkpoints" not in p.parts
     )
     if not notebooks:
         print(f"No notebooks to execute in {args.notebooks_dir}", file=sys.stderr)

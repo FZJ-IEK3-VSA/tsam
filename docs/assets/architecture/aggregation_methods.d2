@@ -1,0 +1,76 @@
+# Aggregation pipeline — the two recombinable axes (grouping × representation) and
+# the optional post-steps (extremes, rescale, segmentation), in pipeline order.
+# Required stages are solid blue; OPTIONAL steps are dashed amber. Conceptual
+# companion to the how_it_works overview. Regenerate:
+#   d2 aggregation_methods.d2 aggregation_methods.svg
+
+direction: down
+
+vars: {
+  d2-config: { pad: 12 }
+}
+
+classes: {
+  side: { style: { fill: transparent; stroke: "#bdbdbd"; font-size: 18; bold: true; font-color: "#37414c" } }
+  # required pipeline stages (solid, blue)
+  stage: { width: 340; height: 54; style: { fill: "#ffffff"; stroke: "#1f4ea1"; stroke-width: 2; font-size: 18; bold: true } }
+  # OPTIONAL steps (dashed, amber) — visually distinct from required stages
+  opt: { width: 340; height: 58; style: { fill: "#fff7ed"; stroke: "#d9963a"; stroke-width: 2; stroke-dash: 5; font-size: 15; bold: false } }
+  # data in / out (blue)
+  io: { width: 340; height: 54; style: { fill: "#e7f0fb"; stroke: "#3f6fb0"; stroke-width: 2; font-size: 17 } }
+  # menu container titles
+  menu: { style: { fill: transparent; stroke: "#8fc9c3"; stroke-width: 2; font-size: 16; bold: true; font-color: "#0f5c58" } }
+  # option chips
+  chip: { width: 150; height: 34; style: { fill: "#eef6f5"; stroke: "#8fc9c3"; bold: false; font-size: 14 } }
+}
+
+grid-columns: 2
+grid-gap: 64
+
+# ── Left: the pipeline, top to bottom. Required stages solid; optional dashed. ──
+flow: "Pipeline (top to bottom)" {
+  class: side
+  grid-columns: 1
+  grid-gap: 12
+
+  tin: "Time series\n(periods × timesteps)" { class: io }
+  norm: "Normalize" { class: stage }
+  group: "GROUP the periods\n— Axis 1 —" { class: stage }
+  rep: "REPRESENT each group\n— Axis 2 —" { class: stage }
+  ext: "Extreme periods  ·  optional\nclustering extension — keep peaks/troughs" { class: opt }
+  resc: "Rescale  ·  optional\nrepresentation post-step — restore means" { class: opt }
+  seg: "Segment  ·  optional\nresolution variation — fewer steps / period" { class: opt }
+  out: "Typical periods\n+ occurrence weights" { class: io }
+
+  tin -> norm -> group -> rep -> ext -> resc -> seg -> out
+}
+
+# ── Right: the two choices (any Axis-1 method × any Axis-2 method) ──────────────
+choices: "The two choices you make" {
+  class: side
+  grid-columns: 1
+  grid-gap: 18
+
+  clu: "Axis 1 · Clustering — which periods group together" {
+    class: menu
+    grid-columns: 3
+    grid-gap: 8
+    a1: "k-means" { class: chip }
+    a2: "k-medoids" { class: chip }
+    a3: "k-maxoids" { class: chip }
+    a4: "hierarchical" { class: chip }
+    a5: "contiguous" { class: chip }
+    a6: "averaging" { class: chip }
+  }
+
+  repr: "Axis 2 · Representation — how each group becomes one profile" {
+    class: menu
+    grid-columns: 3
+    grid-gap: 8
+    b1: "mean" { class: chip }
+    b2: "medoid" { class: chip }
+    b3: "maxoid" { class: chip }
+    b4: "distribution" { class: chip }
+    b5: "minmaxmean" { class: chip }
+  }
+}

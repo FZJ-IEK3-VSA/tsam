@@ -150,6 +150,46 @@ class TestClusterMembers:
         assert len(rep_trace.y) == result_segmented.n_timesteps_per_period
 
 
+# ---- clusters_over_time ----------------------------------------------------
+
+
+class TestClustersOverTime:
+    def test_returns_figure(self, result):
+        fig = result.plot.clusters_over_time()
+        assert isinstance(fig, go.Figure)
+
+    def test_single_column(self, result):
+        col = result.original.columns[0]
+        fig = result.plot.clusters_over_time(columns=[col])
+        assert isinstance(fig, go.Figure)
+
+    def test_reconstructed_with_overlay(self, result):
+        col = result.original.columns[0]
+        fig = result.plot.clusters_over_time(
+            columns=[col], reconstructed=True, overlay_original=True
+        )
+        assert isinstance(fig, go.Figure)
+
+    def test_consistent_cluster_colors(self, result):
+        """Legend colours match the shared map used by the other cluster plots."""
+        from tsam.plot import _cluster_color_map
+
+        cmap = _cluster_color_map(result.cluster_assignments)
+        fig = result.plot.clusters_over_time(columns=[result.original.columns[0]])
+        legend_colors = {
+            tr.name: tr.marker.color
+            for tr in fig.data
+            if tr.name and tr.name.startswith("cluster ")
+        }
+        for cid, color in cmap.items():
+            assert legend_colors[f"cluster {cid}"] == color
+
+    def test_with_segmentation(self, result_segmented):
+        col = result_segmented.original.columns[0]
+        fig = result_segmented.plot.clusters_over_time(columns=[col], reconstructed=True)
+        assert isinstance(fig, go.Figure)
+
+
 # ---- cluster_counts --------------------------------------------------------
 
 
