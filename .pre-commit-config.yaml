@@ -5,6 +5,11 @@
 # toggle it off in the pre-commit.ci dashboard (no config-only option exists).
 ci:
   autoupdate_schedule: quarterly
+  # The mypy hook below runs as a `repo: local` / system hook against the
+  # project's own environment, which pre-commit.ci cannot install. Skip it
+  # there; the "Pre-commit" GitHub Actions job runs mypy with `.[develop]`
+  # installed instead.
+  skip: [mypy]
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -31,17 +36,28 @@ repos:
       - id: nbstripout
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.17
+    rev: v0.15.19
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.20.2
+  # mypy runs as a local/system hook against the project's own environment
+  # rather than pre-commit's isolated venv. This keeps mypy, pandas-stubs and
+  # numpy on the single versions pinned in pyproject.toml (the [develop] extra
+  # and runtime deps) — no duplicated pins, no rev to bump. The isolated-venv
+  # approach previously installed an unconstrained numpy (2.5.x) whose PEP 695
+  # stubs broke mypy under our python_version = "3.10" target.
+  #
+  # Requires `.[develop]` in the active env: CI installs it before running
+  # pre-commit, and pre-commit.ci skips this hook (see `ci.skip` above).
+  - repo: local
     hooks:
       - id: mypy
-        additional_dependencies:
-          - pandas-stubs
+        name: mypy
+        entry: mypy
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
         args: [--ignore-missing-imports]
         exclude: ^(docs/|test/|benchmarks/)
