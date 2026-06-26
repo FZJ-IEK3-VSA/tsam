@@ -53,6 +53,7 @@ nav:
     - Legal Notice: legal-notice.md
   - Tutorials:
     - Your first aggregation: notebooks/tutorials/quickstart.ipynb
+    - Comparing clustering methods: notebooks/tutorials/comparing_clustering_methods.ipynb
   - How-to guides:
     - Overview: user-guide/index.md
     - Aggregate a time series: notebooks/how-to/how_to_aggregate.ipynb
