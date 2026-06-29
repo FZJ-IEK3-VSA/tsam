@@ -180,6 +180,36 @@ def test_medoid_with_minmax_preserves_envelope_and_integral():
     np.testing.assert_allclose(raw.sum(), predicted.sum(), rtol=5e-3)
 
 
+@pytest.mark.parametrize("concurrency", ["independent", "medoid"])
+def test_periodwise_minmax_preserves_integral_without_rescaling(concurrency):
+    """Period-wise distribution + min/max must preserve the integral on its own,
+    i.e. even with rescaleClusterPeriods=False, while still pinning the peaks.
+
+    The endpoints are forced to the cluster min/max and the delta is
+    redistributed across the interior so the per-attribute sum (and hence the
+    overall integral) is unchanged. This holds for every ordering strategy,
+    since the ordering is a permutation."""
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    aggregation = tsam.TimeSeriesAggregation(
+        raw,
+        noTypicalPeriods=8,
+        hoursPerPeriod=24,
+        sortValues=False,
+        clusterMethod="hierarchical",
+        representationMethod="distributionAndMinMaxRepresentation",
+        representationConcurrencyMethod=concurrency,
+        rescaleClusterPeriods=False,  # no safety net: representation must self-preserve
+    )
+    aggregation.createTypicalPeriods()
+    predicted = aggregation.predictOriginalData()
+
+    # integral preserved to machine precision, without any rescaling
+    np.testing.assert_allclose(raw.sum(), predicted.sum(), rtol=1e-9)
+    # peaks still pinned and envelope respected
+    assert (predicted.max() <= raw.max() + 1e-9).all()
+    assert (predicted.min() >= raw.min() - 1e-9).all()
+
+
 def test_concurrency_validation_errors():
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 

@@ -142,8 +142,16 @@ def _pinMinMaxPreserveSum(repr_values, lo, hi):
     out = repr_values.astype(float).copy()
     n_attrs, T = out.shape
     if T < 3:
-        out[:, 0] = lo
-        out[:, -1] = hi
+        # With fewer than three points there is no interior mass to absorb the
+        # shift introduced by pinning the endpoints, so min/max pinning cannot
+        # preserve the per-attribute sum (the integral). This is in particular
+        # the case for the segment representation, which represents each segment
+        # by a single value (``T == 1``): a single value cannot carry both the
+        # min and the max, and forcing it to ``hi`` inflates the
+        # duration-weighted integral (a ~1-2% deviation in the reconstructed
+        # time series). Preserving the integral takes priority over pinning the
+        # envelope here, so the sum-preserving duration-curve values are
+        # returned unchanged.
         return out
 
     target = out.sum(axis=1)  # the sum we must preserve, per attribute
