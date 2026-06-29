@@ -4,6 +4,115 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from scipy.optimize import linear_sum_assignment
+
+# Ordering strategies that derive the synthetic time axis of the duration
+# representation. They differ only in how the per-attribute ordering of the
+# duration-curve values is computed; the duration-curve values themselves
+# (and therefore every attribute's marginal distribution) are identical.
+CONCURRENCY_METHODS = (
+    "independent",
+    "reference",
+    "medoid",
+    "consensus",
+    "assignment",
+)
+
+
+def _orderingForCluster(
+    cluster_data, means, repr_values, concurrencyMethod, referenceAttributeIdx
+):
+    """
+    Derive the ``order`` array (shape ``n_attrs x timeStepsPerPeriod``) that
+    places each attribute's sorted duration-curve values onto the synthetic
+    time axis of a single cluster.
+
+    The duration-curve values (``repr_values``) and hence each attribute's
+    marginal distribution are independent of this choice; the strategies only
+    differ in how strongly the attributes' co-incidence (concurrency) across a
+    common time axis is preserved.
+
+    :param cluster_data: Cluster members reshaped to (n_attrs, n_cands, timesteps)
+    :type cluster_data: np.ndarray
+
+    :param means: Per-attribute mean profile over the cluster members,
+        shape (n_attrs, timesteps), already rounded for stable tie-breaking
+    :type means: np.ndarray
+
+    :param repr_values: Per-attribute duration curve (sorted, ascending),
+        shape (n_attrs, timesteps)
+    :type repr_values: np.ndarray
+
+    :param concurrencyMethod: One of :data:`CONCURRENCY_METHODS`
+    :type concurrencyMethod: str
+
+    :param referenceAttributeIdx: Reference attribute index, only used by the
+        ``"reference"`` method
+    :type referenceAttributeIdx: int or None
+    """
+    n_attrs, timeStepsPerPeriod = means.shape
+
+    if concurrencyMethod == "independent":
+        # Each attribute is reordered by its OWN mean profile. Fits each
+        # attribute's distribution best, but the resulting time axes differ
+        # between attributes, so concurrency is lost.
+        return means.argsort(axis=1, kind="stable")
+
+    if concurrencyMethod == "reference":
+        # Derive a single temporal ordering from the reference attribute's mean
+        # profile and apply it to every attribute. All attributes share one time
+        # axis, so their co-incidence with the reference attribute is preserved.
+        ref_order = means[referenceAttributeIdx].argsort(kind="stable")
+        return np.broadcast_to(ref_order, (n_attrs, timeStepsPerPeriod))
+
+    if concurrencyMethod == "medoid":
+        # Order each attribute by the cluster medoid's own per-attribute ranks.
+        # The medoid is a real, physically consistent multivariate period, so
+        # reproducing its per-attribute rank pattern preserves its joint
+        # co-occurrence (empirical copula) across all attribute pairs, while
+        # each attribute still takes the values of its own duration curve.
+        # cluster_data: (n_attrs, n_cands, timesteps) -> flat members (n_cands, n_attrs*timesteps)
+        flat_members = cluster_data.transpose(1, 0, 2).reshape(
+            cluster_data.shape[1], -1
+        )
+        distMatrix = np.linalg.norm(
+            flat_members[:, None, :] - flat_members[None, :, :], axis=2
+        )
+        medoidIdx = np.argmin(distMatrix.sum(axis=0))
+        medoidProfile = cluster_data[:, medoidIdx, :]  # (n_attrs, timesteps)
+        return np.round(medoidProfile, 10).argsort(axis=1, kind="stable")
+
+    if concurrencyMethod == "consensus":
+        # Derive one shared time axis from a consensus of all attributes' mean
+        # profiles via the first principal component, then broadcast it to every
+        # attribute. Balances concurrency across all attributes instead of
+        # privileging one, without needing a manual reference choice.
+        std = means.std(axis=1, keepdims=True)
+        std[std == 0] = 1.0
+        z = (means - means.mean(axis=1, keepdims=True)) / std
+        # First principal component of the (timesteps x n_attrs) profile matrix.
+        _, _, vt = np.linalg.svd(z.T, full_matrices=False)
+        scores = z.T @ vt[0]
+        shared_order = np.round(scores, 10).argsort(kind="stable")
+        return np.broadcast_to(shared_order, (n_attrs, timeStepsPerPeriod))
+
+    if concurrencyMethod == "assignment":
+        # Optimal single shared ordering: assign duration-curve ranks to
+        # timesteps to minimise the total squared deviation from the cluster's
+        # mean profile across all attributes simultaneously.
+        # cost[r, t] = sum_attr (repr_values[attr, r] - means[attr, t])^2
+        cost = (
+            (repr_values[:, :, None] - means[:, None, :]) ** 2
+        ).sum(axis=0)  # (timesteps_rank, timesteps_time)
+        rank_idx, time_idx = linear_sum_assignment(cost)
+        shared_order = np.empty(timeStepsPerPeriod, dtype=int)
+        shared_order[rank_idx] = time_idx
+        return np.broadcast_to(shared_order, (n_attrs, timeStepsPerPeriod))
+
+    raise ValueError(
+        f"Unknown concurrencyMethod '{concurrencyMethod}'. "
+        f"Expected one of {CONCURRENCY_METHODS}."
+    )
 
 
 def durationRepresentation(
@@ -13,6 +122,7 @@ def durationRepresentation(
     timeStepsPerPeriod,
     representMinMax=False,
     referenceAttributeIdx=None,
+    concurrencyMethod=None,
 ):
     """
     Represents the candidates of a given cluster group (clusterOrder)
@@ -35,8 +145,41 @@ def durationRepresentation(
         curve. If None (default), each attribute is reordered by its own mean
         profile, which fits every distribution best but breaks concurrency
         across attributes. Only supported with distributionPeriodWise=True.
+        Equivalent to ``concurrencyMethod="reference"``.
     :type referenceAttributeIdx: int or None
+
+    :param concurrencyMethod: Strategy used to derive the synthetic time axis of
+        the duration representation, one of :data:`CONCURRENCY_METHODS`. All
+        strategies preserve every attribute's marginal distribution (duration
+        curve) and differ only in how the attributes' concurrency across a
+        common time axis is preserved:
+
+        - ``"independent"`` (default): each attribute ordered by its own mean
+          profile; best marginal fit, concurrency across attributes is lost.
+        - ``"reference"``: single ordering from ``referenceAttributeIdx``'s mean
+          profile, broadcast to all attributes.
+        - ``"medoid"``: each attribute ordered by the cluster medoid's own ranks,
+          reproducing a real period's joint co-occurrence across all attributes.
+        - ``"consensus"``: single ordering from the first principal component of
+          all attributes' mean profiles.
+        - ``"assignment"``: optimal single ordering minimising total squared
+          deviation from the cluster mean profile across all attributes.
+
+        Only supported with ``distributionPeriodWise=True``. If None, falls back
+        to ``"reference"`` when ``referenceAttributeIdx`` is given, otherwise
+        ``"independent"``.
+    :type concurrencyMethod: str or None
     """
+    # Resolve the ordering strategy, keeping referenceAttributeIdx working as the
+    # back-compatible way of requesting the "reference" strategy.
+    if concurrencyMethod is None:
+        concurrencyMethod = (
+            "reference" if referenceAttributeIdx is not None else "independent"
+        )
+    if concurrencyMethod == "reference" and referenceAttributeIdx is None:
+        raise ValueError(
+            "concurrencyMethod='reference' requires a referenceAttributeIdx."
+        )
 
     # make pd.DataFrame each row represents a candidate, and the columns are defined by two levels: the attributes and
     # the time steps inside the candidates.
@@ -83,20 +226,13 @@ def durationRepresentation(
             # Round means before argsort to ensure identical tie-breaking
             # across platforms and numpy versions.
             means = np.round(cluster_data.mean(axis=1), 10)
-            if referenceAttributeIdx is None:
-                # Default: each attribute is reordered by its OWN mean profile.
-                # Fits each attribute's distribution best, but the resulting
-                # time axes differ between attributes, so concurrency is lost.
-                order = means.argsort(axis=1, kind="stable")
-            else:
-                # Concurrency-preserving variant: derive a single temporal
-                # ordering from the reference attribute's mean profile and apply
-                # it to every attribute. All attributes share one time axis, so
-                # their co-incidence with the reference attribute is preserved,
-                # while each attribute still takes the values of its own fitted
-                # duration curve.
-                ref_order = means[referenceAttributeIdx].argsort(kind="stable")
-                order = np.broadcast_to(ref_order, (n_attrs, timeStepsPerPeriod))
+            order = _orderingForCluster(
+                cluster_data,
+                means,
+                repr_values,
+                concurrencyMethod,
+                referenceAttributeIdx,
+            )
             rows = np.arange(n_attrs)[:, None]
             final_repr = np.empty_like(repr_values)
             final_repr[rows, order] = repr_values
@@ -104,11 +240,11 @@ def durationRepresentation(
             clusterCenters.append(final_repr.ravel())
 
     else:
-        if referenceAttributeIdx is not None:
+        if concurrencyMethod != "independent":
             raise ValueError(
-                "A representationReferenceAttribute (concurrency-preserving "
-                "duration representation) is only supported with "
-                "distributionPeriodWise=True."
+                "A concurrency-preserving duration representation "
+                f"(concurrencyMethod='{concurrencyMethod}') is only supported "
+                "with distributionPeriodWise=True."
             )
         clusterCentersList = []
         for a in candidates_df.columns.levels[0]:

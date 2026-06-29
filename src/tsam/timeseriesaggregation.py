@@ -136,6 +136,7 @@ class TimeSeriesAggregation:
         representationDict=None,
         distributionPeriodWise=True,
         representationReferenceAttribute=None,
+        representationConcurrencyMethod=None,
         segmentRepresentationMethod=None,
         predefClusterOrder=None,
         predefClusterCenterIndices=None,
@@ -253,6 +254,19 @@ class TimeSeriesAggregation:
             distributionPeriodWise=True. (default: None)
         :type representationReferenceAttribute: string
 
+        :param representationConcurrencyMethod: Strategy used by the distribution-based representations to derive the
+            synthetic time axis, one of 'independent', 'reference', 'medoid', 'consensus' or 'assignment'. All
+            strategies preserve every attribute's marginal distribution (duration curve); they differ in how the
+            attributes' concurrency (co-incidence in time) across a common time axis is preserved. 'independent'
+            (default) orders each attribute by its own mean profile (best marginal fit, no concurrency); 'reference'
+            broadcasts the ordering of representationReferenceAttribute; 'medoid' orders by the cluster medoid's own
+            ranks (a real period, preserving joint co-occurrence across all attributes); 'consensus' uses the first
+            principal component of all attributes' mean profiles; 'assignment' solves for the ordering that minimises
+            the total deviation from the cluster mean profile across all attributes. Only supported with
+            distributionPeriodWise=True. If None, falls back to 'reference' when representationReferenceAttribute is
+            given, otherwise 'independent'. (default: None)
+        :type representationConcurrencyMethod: string
+
         :param segmentRepresentationMethod: Chosen representation for the segments. If specified, the segments are
             represented in the chosen way. Otherwise, it is inherited from the representationMethod.
             |br| Options are:
@@ -347,6 +361,8 @@ class TimeSeriesAggregation:
         self.distributionPeriodWise = distributionPeriodWise
 
         self.representationReferenceAttribute = representationReferenceAttribute
+
+        self.representationConcurrencyMethod = representationConcurrencyMethod
 
         self.segmentRepresentationMethod = segmentRepresentationMethod
 
@@ -520,6 +536,40 @@ class TimeSeriesAggregation:
                 raise ValueError(
                     "representationReferenceAttribute is only supported with "
                     "distributionPeriodWise=True."
+                )
+
+        # check representationConcurrencyMethod
+        from tsam.utils.durationRepresentation import CONCURRENCY_METHODS
+
+        if self.representationConcurrencyMethod is not None:
+            if self.representationConcurrencyMethod not in CONCURRENCY_METHODS:
+                raise ValueError(
+                    "representationConcurrencyMethod needs to be one of "
+                    f"{CONCURRENCY_METHODS}."
+                )
+            if self.representationConcurrencyMethod != "independent":
+                distributionMethods = (
+                    "durationRepresentation",
+                    "distributionRepresentation",
+                    "distributionAndMinMaxRepresentation",
+                )
+                if self.representationMethod not in distributionMethods:
+                    raise ValueError(
+                        "representationConcurrencyMethod is only supported for the "
+                        f"distribution-based representationMethods {distributionMethods}."
+                    )
+                if not self.distributionPeriodWise:
+                    raise ValueError(
+                        "representationConcurrencyMethod is only supported with "
+                        "distributionPeriodWise=True."
+                    )
+            if (
+                self.representationConcurrencyMethod == "reference"
+                and self.representationReferenceAttribute is None
+            ):
+                raise ValueError(
+                    "representationConcurrencyMethod='reference' requires "
+                    "representationReferenceAttribute to be set."
                 )
 
         # check representationMethod
@@ -1171,6 +1221,7 @@ class TimeSeriesAggregation:
                     representationDict=self.representationDict,
                     timeStepsPerPeriod=self.timeStepsPerPeriod,
                     referenceAttributeIdx=self._representationReferenceAttributeIdx,
+                    concurrencyMethod=self.representationConcurrencyMethod,
                 )
         else:
             cluster_duration = time.time()
@@ -1191,6 +1242,7 @@ class TimeSeriesAggregation:
                     distributionPeriodWise=self.distributionPeriodWise,
                     timeStepsPerPeriod=self.timeStepsPerPeriod,
                     referenceAttributeIdx=self._representationReferenceAttributeIdx,
+                    concurrencyMethod=self.representationConcurrencyMethod,
                     n_extra_columns=-delClusterParams if delClusterParams else 0,
                 )
             else:
@@ -1534,4 +1586,46 @@ class TimeSeriesAggregation:
         return np.sqrt(
             self.accuracyIndicators().pow(2).sum()
             / len(self.normalizedTimeSeries.columns)
+        )
+
+    def concurrencyIndicators(self):
+        """
+        Quantifies how well the joint structure (concurrency / co-incidence in
+        time) across the attributes is preserved by the aggregation, by
+        comparing the cross-attribute correlation of the reconstructed time
+        series with that of the original.
+
+        While :func:`accuracyIndicators` measures per-attribute error (including
+        the duration-curve / marginal-distribution error ``RMSE_duration``),
+        this measures the *between*-attribute structure that the distribution
+        representation can destroy. Lower values are better.
+
+        :returns: **pd.Series** containing
+
+            - ``corr_frobenius``: Frobenius norm of the difference between the
+              Pearson correlation matrices of the original and reconstructed
+              attributes.
+            - ``spearman_frobenius``: same for the Spearman rank-correlation
+              matrices (a copula proxy, invariant to monotone marginal changes).
+        :rtype: pandas.Series
+        """
+        if not hasattr(self, "predictedData"):
+            self.predictOriginalData()
+
+        # only meaningful for more than one attribute
+        if self.weightDict:
+            orig = self.normalizedTimeSeries / pd.Series(self.weightDict)
+        else:
+            orig = self.normalizedTimeSeries
+        pred = self.normalizedPredictedData[orig.columns]
+
+        def _frob(method):
+            diff = orig.corr(method=method) - pred.corr(method=method)
+            return float(np.sqrt(np.square(diff.values).sum()))
+
+        return pd.Series(
+            {
+                "corr_frobenius": _frob("pearson"),
+                "spearman_frobenius": _frob("spearman"),
+            }
         )

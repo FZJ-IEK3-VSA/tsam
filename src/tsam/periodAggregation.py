@@ -14,6 +14,7 @@ def aggregatePeriods(
     distributionPeriodWise=True,
     timeStepsPerPeriod=None,
     referenceAttributeIdx=None,
+    concurrencyMethod=None,
     n_extra_columns=0,
 ):
     """
@@ -69,6 +70,7 @@ def aggregatePeriods(
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
             referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
 
     if clusterMethod == "k_means":
@@ -87,6 +89,7 @@ def aggregatePeriods(
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
             referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
 
     if clusterMethod == "k_medoids":
@@ -104,6 +107,7 @@ def aggregatePeriods(
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
             referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
 
     if clusterMethod == "k_maxoids":
@@ -121,6 +125,7 @@ def aggregatePeriods(
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
             referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
 
     if clusterMethod == "hierarchical" or clusterMethod == "adjacent_periods":
@@ -151,6 +156,7 @@ def aggregatePeriods(
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
             referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
 
     return clusterCenters, clusterCenterIndices, clusterOrder

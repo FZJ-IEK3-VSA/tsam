@@ -59,17 +59,54 @@ class Distribution:
         reference attribute is preserved) while each attribute still fits its
         own distribution. If None (default), every attribute is ordered
         independently, which fits each distribution best but breaks concurrency
-        across attributes. Only valid with ``scope="cluster"``.
+        across attributes. Only valid with ``scope="cluster"``. Equivalent to
+        ``concurrency="reference"``.
+    concurrency : {"independent", "reference", "medoid", "consensus", \
+"assignment"}, optional
+        Strategy used to derive the synthetic time axis. All strategies preserve
+        every attribute's marginal distribution; they differ in how the
+        attributes' concurrency (co-incidence in time) is preserved:
+
+        - ``"independent"``: each attribute ordered by its own mean profile
+          (best marginal fit, concurrency across attributes lost).
+        - ``"reference"``: single ordering from ``reference_attribute``,
+          broadcast to all attributes.
+        - ``"medoid"``: each attribute ordered by the cluster medoid's own
+          ranks, reproducing a real period's joint co-occurrence across all
+          attributes (no manual reference needed).
+        - ``"consensus"``: single ordering from the first principal component of
+          all attributes' mean profiles.
+        - ``"assignment"``: optimal single ordering minimising total deviation
+          from the cluster mean profile across all attributes.
+
+        Only valid with ``scope="cluster"``. If None (default), resolves to
+        ``"reference"`` when ``reference_attribute`` is given, otherwise
+        ``"independent"``.
     """
 
     scope: Literal["cluster", "global"] = "cluster"
     preserve_minmax: bool = False
     reference_attribute: str | None = None
+    concurrency: (
+        Literal["independent", "reference", "medoid", "consensus", "assignment"] | None
+    ) = None
 
     def __post_init__(self) -> None:
         if self.reference_attribute is not None and self.scope != "cluster":
             raise ValueError(
                 "reference_attribute is only supported with scope='cluster'."
+            )
+        if (
+            self.concurrency is not None
+            and self.concurrency != "independent"
+            and self.scope != "cluster"
+        ):
+            raise ValueError(
+                "concurrency is only supported with scope='cluster'."
+            )
+        if self.concurrency == "reference" and self.reference_attribute is None:
+            raise ValueError(
+                "concurrency='reference' requires reference_attribute to be set."
             )
 
     def to_dict(self) -> dict[str, Any]:
@@ -81,6 +118,8 @@ class Distribution:
             result["preserve_minmax"] = self.preserve_minmax
         if self.reference_attribute is not None:
             result["reference_attribute"] = self.reference_attribute
+        if self.concurrency is not None:
+            result["concurrency"] = self.concurrency
         return result
 
     @classmethod
@@ -90,6 +129,7 @@ class Distribution:
             scope=data.get("scope", "cluster"),
             preserve_minmax=data.get("preserve_minmax", False),
             reference_attribute=data.get("reference_attribute"),
+            concurrency=data.get("concurrency"),
         )
 
 

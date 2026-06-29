@@ -545,6 +545,8 @@ def _apply_representation_params(
             params["representationReferenceAttribute"] = (
                 representation.reference_attribute
             )
+        if representation.concurrency is not None:
+            params["representationConcurrencyMethod"] = representation.concurrency
     elif isinstance(representation, MinMaxMean):
         params["representationMethod"] = "minmaxmeanRepresentation"
         # Build representationDict: columns not in max/min default to mean
@@ -647,6 +649,15 @@ def _build_old_params(
         ):
             raise ValueError(
                 "reference_attribute is not supported for segment representations; "
+                "set it on the cluster representation instead."
+            )
+        if (
+            isinstance(seg_rep, Distribution)
+            and seg_rep.concurrency is not None
+            and seg_rep.concurrency != "independent"
+        ):
+            raise ValueError(
+                "concurrency is not supported for segment representations; "
                 "set it on the cluster representation instead."
             )
         if isinstance(seg_rep, (Distribution, MinMaxMean)):

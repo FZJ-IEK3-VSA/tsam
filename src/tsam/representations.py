@@ -13,6 +13,7 @@ def representations(
     distributionPeriodWise=True,
     timeStepsPerPeriod=None,
     referenceAttributeIdx=None,
+    concurrencyMethod=None,
 ):
     clusterCenterIndices = None
     if representationMethod is None:
@@ -42,6 +43,7 @@ def representations(
             timeStepsPerPeriod,
             representMinMax=False,
             referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
     elif representationMethod == "distributionAndMinMaxRepresentation":
         clusterCenters = durationRepresentation(
@@ -51,6 +53,7 @@ def representations(
             timeStepsPerPeriod,
             representMinMax=True,
             referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
     else:
         raise ValueError("Chosen 'representationMethod' does not exist.")
