@@ -12,6 +12,7 @@ def durationRepresentation(
     distributionPeriodWise,
     timeStepsPerPeriod,
     representMinMax=False,
+    referenceAttributeIdx=None,
 ):
     """
     Represents the candidates of a given cluster group (clusterOrder)
@@ -25,6 +26,16 @@ def durationRepresentation(
 
     :param representMinMax: If in every cluster the minimum and the maximum of the attribute should be represented
     :type representMinMax: bool
+
+    :param referenceAttributeIdx: If given, the integer index of the attribute
+        whose mean profile defines a single temporal ordering that is applied to
+        all attributes. This keeps the attributes aligned on a common time axis
+        (preserving their co-incidence/concurrency with the reference attribute)
+        while every attribute still takes the values of its own fitted duration
+        curve. If None (default), each attribute is reordered by its own mean
+        profile, which fits every distribution best but breaks concurrency
+        across attributes. Only supported with distributionPeriodWise=True.
+    :type referenceAttributeIdx: int or None
     """
 
     # make pd.DataFrame each row represents a candidate, and the columns are defined by two levels: the attributes and
@@ -68,11 +79,24 @@ def durationRepresentation(
                 repr_values[:, 0] = flat[:, 0]
                 repr_values[:, -1] = flat[:, -1]
 
-            # Reorder each attribute's repr_values by its mean profile.
+            # Reorder each attribute's repr_values by a mean profile.
             # Round means before argsort to ensure identical tie-breaking
             # across platforms and numpy versions.
             means = np.round(cluster_data.mean(axis=1), 10)
-            order = means.argsort(axis=1, kind="stable")
+            if referenceAttributeIdx is None:
+                # Default: each attribute is reordered by its OWN mean profile.
+                # Fits each attribute's distribution best, but the resulting
+                # time axes differ between attributes, so concurrency is lost.
+                order = means.argsort(axis=1, kind="stable")
+            else:
+                # Concurrency-preserving variant: derive a single temporal
+                # ordering from the reference attribute's mean profile and apply
+                # it to every attribute. All attributes share one time axis, so
+                # their co-incidence with the reference attribute is preserved,
+                # while each attribute still takes the values of its own fitted
+                # duration curve.
+                ref_order = means[referenceAttributeIdx].argsort(kind="stable")
+                order = np.broadcast_to(ref_order, (n_attrs, timeStepsPerPeriod))
             rows = np.arange(n_attrs)[:, None]
             final_repr = np.empty_like(repr_values)
             final_repr[rows, order] = repr_values
@@ -80,6 +104,12 @@ def durationRepresentation(
             clusterCenters.append(final_repr.ravel())
 
     else:
+        if referenceAttributeIdx is not None:
+            raise ValueError(
+                "A representationReferenceAttribute (concurrency-preserving "
+                "duration representation) is only supported with "
+                "distributionPeriodWise=True."
+            )
         clusterCentersList = []
         for a in candidates_df.columns.levels[0]:
             meanVals = []
@@ -196,7 +226,9 @@ def _representMinMax(
         weighted_mid_sum = float(np.sum(mid_weights * mid_orig))
         # and derive how much the other values have to be changed to preserve
         # the mean of the duration curve
-        correction_factor = -delta_sum / weighted_mid_sum if weighted_mid_sum != 0 else 0.0
+        correction_factor = (
+            -delta_sum / weighted_mid_sum if weighted_mid_sum != 0 else 0.0
+        )
 
         if correction_factor < -1 or correction_factor > 1:
             warnings.warn(

@@ -135,6 +135,7 @@ class TimeSeriesAggregation:
         representationMethod=None,
         representationDict=None,
         distributionPeriodWise=True,
+        representationReferenceAttribute=None,
         segmentRepresentationMethod=None,
         predefClusterOrder=None,
         predefClusterCenterIndices=None,
@@ -243,6 +244,15 @@ class TimeSeriesAggregation:
             each cluster should be separately preserved or that of the original time series only (default: True)
         :type distributionPeriodWise:
 
+        :param representationReferenceAttribute: Name of one of the attributes (columns of timeSeries). If specified
+            together with 'distributionRepresentation' or 'distributionAndMinMaxRepresentation', a single temporal
+            ordering is derived from this attribute's mean profile and applied to all attributes. This preserves the
+            concurrency (co-incidence in time) of the attributes with the reference attribute while still fitting each
+            attribute's distribution. If None (default), every attribute is ordered by its own mean profile, which fits
+            the distributions best but breaks the concurrency across attributes. Only supported with
+            distributionPeriodWise=True. (default: None)
+        :type representationReferenceAttribute: string
+
         :param segmentRepresentationMethod: Chosen representation for the segments. If specified, the segments are
             represented in the chosen way. Otherwise, it is inherited from the representationMethod.
             |br| Options are:
@@ -335,6 +345,8 @@ class TimeSeriesAggregation:
         self.representationDict = representationDict
 
         self.distributionPeriodWise = distributionPeriodWise
+
+        self.representationReferenceAttribute = representationReferenceAttribute
 
         self.segmentRepresentationMethod = segmentRepresentationMethod
 
@@ -485,6 +497,30 @@ class TimeSeriesAggregation:
                 + "the following: "
                 + f"{self.REPRESENTATION_METHODS}"
             )
+
+        # check representationReferenceAttribute
+        if self.representationReferenceAttribute is not None:
+            if self.representationReferenceAttribute not in self.timeSeries.columns:
+                raise ValueError(
+                    "representationReferenceAttribute needs to be one of the "
+                    "attributes (columns) of the time series: "
+                    f"{list(self.timeSeries.columns)}"
+                )
+            distributionMethods = (
+                "durationRepresentation",
+                "distributionRepresentation",
+                "distributionAndMinMaxRepresentation",
+            )
+            if self.representationMethod not in distributionMethods:
+                raise ValueError(
+                    "representationReferenceAttribute is only supported for the "
+                    f"distribution-based representationMethods {distributionMethods}."
+                )
+            if not self.distributionPeriodWise:
+                raise ValueError(
+                    "representationReferenceAttribute is only supported with "
+                    "distributionPeriodWise=True."
+                )
 
         # check representationMethod
         if self.segmentRepresentationMethod is None:
@@ -1082,6 +1118,16 @@ class TimeSeriesAggregation:
         """
         self._preProcessTimeSeries()
 
+        # Map the reference attribute name to its integer index in the (now
+        # alphabetically sorted) columns, matching the attribute order used by
+        # the duration representation.
+        if self.representationReferenceAttribute is not None:
+            self._representationReferenceAttributeIdx = list(
+                self.timeSeries.columns
+            ).index(self.representationReferenceAttribute)
+        else:
+            self._representationReferenceAttributeIdx = None
+
         # Compute effective number of clusters for the clustering algorithm
         effective_n_clusters = self.noTypicalPeriods
 
@@ -1124,6 +1170,7 @@ class TimeSeriesAggregation:
                     representationMethod=self.representationMethod,
                     representationDict=self.representationDict,
                     timeStepsPerPeriod=self.timeStepsPerPeriod,
+                    referenceAttributeIdx=self._representationReferenceAttributeIdx,
                 )
         else:
             cluster_duration = time.time()
@@ -1143,6 +1190,7 @@ class TimeSeriesAggregation:
                     representationDict=self.representationDict,
                     distributionPeriodWise=self.distributionPeriodWise,
                     timeStepsPerPeriod=self.timeStepsPerPeriod,
+                    referenceAttributeIdx=self._representationReferenceAttributeIdx,
                     n_extra_columns=-delClusterParams if delClusterParams else 0,
                 )
             else:
