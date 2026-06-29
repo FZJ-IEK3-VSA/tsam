@@ -1,10 +1,11 @@
+import dataclasses
 import time
 
 import numpy as np
 import pandas as pd
 
-import tsam.timeseriesaggregation as tsam
 from conftest import RESULTS_DIR, TESTDATA_CSV
+from tsam import ClusterConfig, aggregate
 
 
 def test_cluster_order():
@@ -24,42 +25,26 @@ def test_cluster_order():
 
     starttime = time.time()
 
-    aggregation_wind = tsam.TimeSeriesAggregation(
+    # Derive a clustering on a single attribute, then transfer it to the full data.
+    aggregation_wind = aggregate(
         raw_wind,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod="hierarchical",
-        representationMethod="meanRepresentation",
+        n_clusters=8,
+        period_duration=24,
+        cluster=ClusterConfig(method="hierarchical", representation="mean"),
     )
+    clustering_wind = aggregation_wind.clustering
 
-    typPeriods_wind = aggregation_wind.createTypicalPeriods()
-
-    aggregation_predefClusterOrder = tsam.TimeSeriesAggregation(
-        raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod="hierarchical",
-        representationMethod="meanRepresentation",
-        predefClusterOrder=aggregation_wind.clusterOrder,
-    )
-
+    # Transfer the cluster assignments only (cluster centers are recomputed).
     typPeriods_predefClusterOrder = (
-        aggregation_predefClusterOrder.createTypicalPeriods()
+        dataclasses.replace(clustering_wind, cluster_centers=None)
+        .apply(raw)
+        .cluster_representatives
     )
 
-    aggregation_predefClusterOrderAndClusterCenters = tsam.TimeSeriesAggregation(
-        raw,
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        clusterMethod="hierarchical",
-        representationMethod="meanRepresentation",
-        predefClusterOrder=aggregation_wind.clusterOrder,
-        predefClusterCenterIndices=aggregation_wind.clusterCenterIndices,
-    )
-
-    typPeriods_predefClusterOrderAndClusterCenters = (
-        aggregation_predefClusterOrderAndClusterCenters.createTypicalPeriods()
-    )
+    # Transfer cluster assignments together with the cluster centers.
+    typPeriods_predefClusterOrderAndClusterCenters = clustering_wind.apply(
+        raw
+    ).cluster_representatives
 
     print("Clustering took " + str(time.time() - starttime))
 

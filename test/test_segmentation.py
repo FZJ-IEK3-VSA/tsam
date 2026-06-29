@@ -2,12 +2,10 @@ import time
 
 import numpy as np
 import pandas as pd
-import pytest
 
-import tsam.timeseriesaggregation as tsam
 from conftest import RESULTS_DIR, TESTDATA_CSV
-
-pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
+from tsam import ClusterConfig, SegmentConfig, aggregate
+from tsam.representations import representations
 
 
 def test_segmentation():
@@ -20,17 +18,15 @@ def test_segmentation():
 
     starttime = time.time()
 
-    aggregation = tsam.TimeSeriesAggregation(
+    result = aggregate(
         raw,
-        noTypicalPeriods=20,
-        hoursPerPeriod=24,
-        clusterMethod="hierarchical",
-        representationMethod="meanRepresentation",
-        segmentation=True,
-        noSegments=12,
+        n_clusters=20,
+        period_duration=24,
+        cluster=ClusterConfig(method="hierarchical", representation="mean"),
+        segments=SegmentConfig(n_segments=12),
     )
 
-    typPeriods = aggregation.createTypicalPeriods()
+    typPeriods = result.cluster_representatives
 
     print("Clustering took " + str(time.time() - starttime))
 
@@ -92,7 +88,7 @@ def test_representation_in_segmentation():
         [5, 5, 5, 5, 5, 7, 3, 2, 2, 2, 2, 0, 0, 0, 0, 1, 1, 1, 1, 1, 6, 6, 4, 4]
     )
 
-    clusterCenters_mean, _clusterCenterIndices = tsam.representations(
+    clusterCenters_mean, _clusterCenterIndices = representations(
         segmentationCandidates,
         clusterOrder,
         default="meanRepresentation",
@@ -101,7 +97,7 @@ def test_representation_in_segmentation():
         timeStepsPerPeriod=1,
     )
 
-    clusterCenters_dist, _clusterCenterIndices = tsam.representations(
+    clusterCenters_dist, _clusterCenterIndices = representations(
         segmentationCandidates,
         clusterOrder,
         default="meanRepresentation",

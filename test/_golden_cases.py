@@ -1,33 +1,23 @@
-"""Parametrized equivalence tests: old TimeSeriesAggregation vs new tsam.aggregate().
+"""Shared golden-regression cases — new-API only.
 
-Every config is tested against every compatible dataset (cross-product).
-To extend coverage add a ``BaseConfig`` to ``_configs.CONFIGS``, a dataset to
-``_configs.DATASETS``, or a comparison method to ``TestOldNewEquivalence``.
+Self-contained helper for ``test_golden_regression.py`` (and benchmarks).
+Defines the datasets, the algorithm configurations expressed purely with the
+new :func:`tsam.aggregate` API, and the cross-product of config x dataset that
+makes up the golden-file regression suite.
 
-Old-API kwargs live in ``_configs.py`` (shared with generate_golden.py and
-benchmarks/bench.py).  New-API kwargs are defined here in ``_NEW_KWARGS``.
+This module intentionally contains **no** reference to the legacy
+``tsam.timeseriesaggregation`` API so that it keeps working once the legacy
+wrapper is removed.
 """
 
 from __future__ import annotations
 
-import warnings
-from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pytest
 
-import tsam.timeseriesaggregation as old_tsam
-from _configs import (
-    CONFIGS as BASE_CONFIGS,
-)
-from _configs import (
-    DATASETS,
-    SMALL_DATASET_CLUSTERS,
-    case_ids,
-    get_data,
-)
 from tsam import (
     ClusterConfig,
     Distribution,
@@ -36,10 +26,64 @@ from tsam import (
     SegmentConfig,
     aggregate,
 )
-from tsam.exceptions import LegacyAPIWarning
 
 # ---------------------------------------------------------------------------
-# New-API kwargs for each config ID
+# Paths
+# ---------------------------------------------------------------------------
+
+TEST_DIR = Path(__file__).parent
+TEST_DATA_DIR = TEST_DIR / "data"
+GOLDEN_DIR = TEST_DATA_DIR / "golden"
+
+EXAMPLES_DIR = TEST_DIR.parent / "docs" / "notebooks"
+TESTDATA_CSV = EXAMPLES_DIR / "testdata.csv"
+WIDE_CSV = TEST_DATA_DIR / "wide.csv"
+
+
+# ---------------------------------------------------------------------------
+# Datasets
+# ---------------------------------------------------------------------------
+
+
+def _make_constant() -> pd.DataFrame:
+    """Two constant columns, 10 days of hourly data."""
+    idx = pd.date_range("2020-01-01", periods=10 * 24, freq="h")
+    return pd.DataFrame({"A": 42.0, "B": 7.0}, index=idx)
+
+
+def _make_with_zero_column() -> pd.DataFrame:
+    """testdata with an extra all-zero column."""
+    df = pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True)
+    df["Zero"] = 0.0
+    return df
+
+
+DATASETS = {
+    "testdata": lambda: pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True),
+    "wide": lambda: pd.read_csv(WIDE_CSV, index_col=0, parse_dates=True),
+    "constant": _make_constant,
+    "with_zero_column": _make_with_zero_column,
+}
+
+_DATA_CACHE: dict[str, pd.DataFrame] = {}
+
+
+def get_data(name: str, max_timesteps: int | None = None) -> pd.DataFrame:
+    """Return dataset by name, optionally truncated. Full data is cached."""
+    if name not in _DATA_CACHE:
+        _DATA_CACHE[name] = DATASETS[name]()
+    df = _DATA_CACHE[name]
+    if max_timesteps is not None:
+        return df.iloc[:max_timesteps]
+    return df
+
+
+# Smaller datasets cannot support the default cluster count.
+SMALL_DATASET_CLUSTERS: dict[str, int] = {"constant": 3}
+
+
+# ---------------------------------------------------------------------------
+# Algorithm configurations (new-API kwargs for ``aggregate``)
 # ---------------------------------------------------------------------------
 
 _NEW_KWARGS: dict[str, dict] = {
@@ -434,74 +478,386 @@ _NEW_KWARGS: dict[str, dict] = {
     },
 }
 
-_RTOL: dict[str, float] = {
-    "kmeans": 1e-5,
-    "kmaxoids": 1e-5,
-    "kmeans_segmentation": 1e-5,
-    "kmaxoids_segmentation": 1e-5,
-    "kmeans_duration_curves": 1e-5,
-    "kmeans_extremes_append": 1e-5,
-    "kmeans_distribution": 1e-5,
-    "kmeans_weighted": 1e-5,
-    "kmaxoids_weighted": 1e-5,
-    "kmeans_weighted_distribution": 1e-5,
-    "kmeans_weighted_segmentation": 1e-5,
-}
-
-_WINDOWS_OPENMP_RUNTIME_WARNING_CASE_IDS = {
-    "kmeans_distribution/testdata",
-    "kmeans_segmentation/testdata",
-    "kmeans/constant",
-}
-_WINDOWS_KMEANS_MKL_WARNING_CASE_IDS = {
-    "kmeans_distribution/testdata",
-    "kmeans/constant",
-    "kmeans_segmentation/testdata",
+# Per-config metadata: seed, dataset restriction, data truncation, tolerance.
+_META: dict[str, dict] = {
+    "hierarchical_default": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_mean": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "kmeans": {"seed": 42, "only_datasets": None, "max_timesteps": None, "rtol": 1e-05},
+    "hierarchical_distribution": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_segmentation": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_no_rescale": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "contiguous": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "averaging": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "kmaxoids": {
+        "seed": 42,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-05,
+    },
+    "kmedoids": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": 2016,
+        "rtol": 1e-10,
+    },
+    "hierarchical_maxoid": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_distribution_minmax": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "distribution_global": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "distribution_minmax_global": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "minmaxmean": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_weighted": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "segmentation_samemean": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "segmentation_distribution_global": {
+        "seed": None,
+        "only_datasets": ["testdata", "with_zero_column"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "extremes_append": {
+        "seed": None,
+        "only_datasets": ["testdata", "with_zero_column"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "extremes_replace": {
+        "seed": None,
+        "only_datasets": ["testdata", "with_zero_column"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "extremes_new_cluster": {
+        "seed": None,
+        "only_datasets": ["testdata", "with_zero_column"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "extremes_min_value": {
+        "seed": None,
+        "only_datasets": ["testdata", "with_zero_column"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "extremes_max_period": {
+        "seed": None,
+        "only_datasets": ["testdata", "with_zero_column"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "extremes_min_period": {
+        "seed": None,
+        "only_datasets": ["testdata", "with_zero_column"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "extremes_multi": {
+        "seed": None,
+        "only_datasets": ["testdata", "with_zero_column"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "extremes_with_segmentation": {
+        "seed": None,
+        "only_datasets": ["testdata", "with_zero_column"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "extremes_wide_multi": {
+        "seed": None,
+        "only_datasets": ["wide"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "extremes_constant": {
+        "seed": None,
+        "only_datasets": ["constant"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "extremes_zero_column": {
+        "seed": None,
+        "only_datasets": ["with_zero_column"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "kmeans_segmentation": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-05,
+    },
+    "kmedoids_segmentation": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": 2016,
+        "rtol": 1e-10,
+    },
+    "kmaxoids_segmentation": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-05,
+    },
+    "averaging_segmentation": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "contiguous_segmentation": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_duration_curves": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_eval_sum_periods": {
+        "seed": None,
+        "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "kmeans_duration_curves": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-05,
+    },
+    "hierarchical_rescale_exclude": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_round": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "kmeans_extremes_append": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-05,
+    },
+    "contiguous_extremes_append": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "kmeans_weighted": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-05,
+    },
+    "kmedoids_weighted": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": 2016,
+        "rtol": 1e-10,
+    },
+    "kmaxoids_weighted": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-05,
+    },
+    "hierarchical_weighted_duration_curves": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_weighted_extremes": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_weighted_samemean": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_weighted_rescale_exclude": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "kmeans_weighted_distribution": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-05,
+    },
+    "hierarchical_weighted_segmentation": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "kmeans_distribution": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-05,
+    },
+    "extremes_replace_segmentation": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_weighted_segmentation_extremes": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_weighted_segmentation_samemean": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_weighted_segmentation_distribution": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "kmeans_weighted_segmentation": {
+        "seed": 42,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-05,
+    },
+    "hierarchical_weighted_no_rescale": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
 }
 
 
 # ---------------------------------------------------------------------------
-# Build cross-product: BaseConfig x Dataset → EquivalenceCase
+# Build cross-product: config x dataset → GoldenCase
 # ---------------------------------------------------------------------------
 
 
 @dataclass
-class EquivalenceCase:
-    """Fully resolved test case (config + dataset) with both old and new kwargs."""
+class GoldenCase:
+    """Fully resolved test case (config + dataset) using new-API kwargs."""
 
     id: str
     dataset: str
-    old_kwargs: dict
     new_kwargs: dict
     seed: int | None = None
     rtol: float = 1e-10
     max_timesteps: int | None = None
+    only_datasets: set[str] = field(default_factory=set)
 
 
-def _build_cases() -> list[EquivalenceCase]:
-    cases: list[EquivalenceCase] = []
-    for base in BASE_CONFIGS:
-        new_kw_base = _NEW_KWARGS[base.id]
-        eligible = base.only_datasets or set(DATASETS)
+def _build_cases() -> list[GoldenCase]:
+    cases: list[GoldenCase] = []
+    for config_id, new_kw_base in _NEW_KWARGS.items():
+        meta = _META[config_id]
+        eligible = (
+            set(meta["only_datasets"]) if meta["only_datasets"] else set(DATASETS)
+        )
         for ds in sorted(eligible):
             n_override = SMALL_DATASET_CLUSTERS.get(ds)
-
-            old_kw = dict(base.old_kwargs)
             new_kw = dict(new_kw_base)
-
             if n_override is not None:
-                old_kw["noTypicalPeriods"] = n_override
                 new_kw["n_clusters"] = n_override
-
             cases.append(
-                EquivalenceCase(
-                    id=f"{base.id}/{ds}",
+                GoldenCase(
+                    id=f"{config_id}/{ds}",
                     dataset=ds,
-                    old_kwargs=old_kw,
                     new_kwargs=new_kw,
-                    seed=base.seed,
-                    rtol=_RTOL.get(base.id, 1e-10),
-                    max_timesteps=base.max_timesteps,
+                    seed=meta["seed"],
+                    rtol=meta["rtol"],
+                    max_timesteps=meta["max_timesteps"],
                 )
             )
     return cases
@@ -510,121 +866,13 @@ def _build_cases() -> list[EquivalenceCase]:
 CASES = _build_cases()
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+def case_ids(cases: list) -> list[str]:
+    """Extract test IDs from a list of cases (any object with an ``id`` attr)."""
+    return [c.id for c in cases]
 
 
-def _run_old(data: pd.DataFrame, case: EquivalenceCase):
-    """Run old API and return (result_df, agg_object)."""
-    if case.seed is not None:
-        np.random.seed(case.seed)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", LegacyAPIWarning)
-        agg = old_tsam.TimeSeriesAggregation(timeSeries=data, **case.old_kwargs)
-        result = agg.createTypicalPeriods()
-    return result, agg
-
-
-def _run_new(data: pd.DataFrame, case: EquivalenceCase):
-    """Run new API and return AggregationResult."""
+def run_new(data: pd.DataFrame, case: GoldenCase):
+    """Run the new API for a case and return the ``AggregationResult``."""
     if case.seed is not None:
         np.random.seed(case.seed)
     return aggregate(data, **case.new_kwargs)
-
-
-@contextmanager
-def _suppress_windows_kmeans_warnings(case: EquivalenceCase):
-    """Suppress known Windows-specific OpenMP/KMeans warnings for selected cases."""
-    with warnings.catch_warnings():
-        if case.id in _WINDOWS_OPENMP_RUNTIME_WARNING_CASE_IDS:
-            warnings.filterwarnings(
-                "ignore",
-                category=RuntimeWarning,
-                module="threadpoolctl",
-            )
-        if case.id in _WINDOWS_KMEANS_MKL_WARNING_CASE_IDS:
-            warnings.filterwarnings(
-                "ignore",
-                message="KMeans is known to have a memory leak on Windows with MKL.*",
-                category=UserWarning,
-            )
-        yield
-
-
-# ---------------------------------------------------------------------------
-# Parametrized test class
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
-@pytest.mark.filterwarnings("ignore:At least one maximal value:UserWarning")
-@pytest.mark.filterwarnings(
-    "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
-)
-class TestOldNewEquivalence:
-    """Parametrized comparison of old and new API across all configs x datasets."""
-
-    @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
-    def test_cluster_representatives(self, case: EquivalenceCase):
-        """Typical-period DataFrames must be equal."""
-        data = get_data(case.dataset)
-        with _suppress_windows_kmeans_warnings(case):
-            old_result, _ = _run_old(data, case)
-            new_result = _run_new(data, case)
-
-        pd.testing.assert_frame_equal(
-            old_result,
-            new_result.cluster_representatives,
-            check_names=False,
-        )
-
-    @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
-    def test_cluster_assignments(self, case: EquivalenceCase):
-        """Cluster order arrays must match."""
-        data = get_data(case.dataset)
-        with _suppress_windows_kmeans_warnings(case):
-            _, old_agg = _run_old(data, case)
-            new_result = _run_new(data, case)
-
-        np.testing.assert_array_equal(
-            old_agg.clusterOrder,
-            new_result.cluster_assignments,
-        )
-
-    @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
-    def test_accuracy(self, case: EquivalenceCase):
-        """RMSE and MAE must match within tolerance."""
-        data = get_data(case.dataset)
-        with _suppress_windows_kmeans_warnings(case):
-            _, old_agg = _run_old(data, case)
-            new_result = _run_new(data, case)
-
-        old_acc = old_agg.accuracyIndicators()
-
-        np.testing.assert_allclose(
-            old_acc["RMSE"].values,
-            new_result.accuracy.rmse.values,
-            rtol=case.rtol,
-        )
-        np.testing.assert_allclose(
-            old_acc["MAE"].values,
-            new_result.accuracy.mae.values,
-            rtol=case.rtol,
-        )
-
-    @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
-    def test_reconstruction(self, case: EquivalenceCase):
-        """Reconstructed time series must match."""
-        data = get_data(case.dataset)
-        with _suppress_windows_kmeans_warnings(case):
-            _, old_agg = _run_old(data, case)
-            new_result = _run_new(data, case)
-
-        old_reconstructed = old_agg.predictOriginalData()
-
-        pd.testing.assert_frame_equal(
-            old_reconstructed,
-            new_result.reconstructed,
-            check_names=False,
-        )

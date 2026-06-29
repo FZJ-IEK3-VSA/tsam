@@ -360,23 +360,6 @@ class TestDisaggregateEdgeCases:
                     )
                 pos += d
 
-    def test_reconstructed_unchanged_by_refactor(self, sample_data):
-        """predictOriginalData still matches via the shared _expand_periods helper."""
-        import warnings
-
-        from tsam.timeseriesaggregation import TimeSeriesAggregation
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            agg = TimeSeriesAggregation(sample_data, noTypicalPeriods=8)
-            agg.createTypicalPeriods()
-            reconstructed_old_api = agg.predictOriginalData()
-
-        result = aggregate(sample_data, n_clusters=8)
-        np.testing.assert_allclose(
-            result.reconstructed.values, reconstructed_old_api.values, rtol=1e-10
-        )
-
 
 class TestDisaggregateValidation:
     """Tests for disaggregate input validation."""

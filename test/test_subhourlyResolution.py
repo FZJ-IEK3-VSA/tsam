@@ -3,12 +3,9 @@ import time
 
 import numpy as np
 import pandas as pd
-import pytest
 
-import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
-
-pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
+from tsam import ClusterConfig, aggregate
 
 
 def test_subhourlyResolution():
@@ -23,25 +20,28 @@ def test_subhourlyResolution():
 
     starttime = time.time()
 
-    aggregation1 = tsam.TimeSeriesAggregation(
-        raw, noTypicalPeriods=8, hoursPerPeriod=24, clusterMethod="hierarchical"
+    aggregation1 = aggregate(
+        raw,
+        n_clusters=8,
+        period_duration=24,
+        cluster=ClusterConfig(method="hierarchical"),
     )
 
-    typPeriods1 = aggregation1.createTypicalPeriods()
+    typPeriods1 = aggregation1.cluster_representatives
 
     print("Clustering took " + str(time.time() - starttime))
 
     starttime = time.time()
 
     # cluster dataframe with 15 min. intervals to six hours per period, which equals 24 time steps per period
-    aggregation2 = tsam.TimeSeriesAggregation(
+    aggregation2 = aggregate(
         rawSubhourlyInndex,
-        noTypicalPeriods=8,
-        hoursPerPeriod=6,
-        clusterMethod="hierarchical",
+        n_clusters=8,
+        period_duration=6,
+        cluster=ClusterConfig(method="hierarchical"),
     )
 
-    typPeriods2 = aggregation2.createTypicalPeriods()
+    typPeriods2 = aggregation2.cluster_representatives
 
     print("Clustering took " + str(time.time() - starttime))
 

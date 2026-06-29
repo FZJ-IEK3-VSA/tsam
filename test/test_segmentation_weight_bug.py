@@ -1,19 +1,17 @@
 """Test for segmentation + weights bug (GitHub issue #178).
 
-When segmentation is used together with weights, predictOriginalData()
+When segmentation is used together with weights, the reconstructed data
 returned values scaled by the weight factor (e.g. weight=100 → output 100×
-too large). The root cause: the segmentation path in predictOriginalData()
-uses predictedSegmentedNormalizedTypicalPeriods which still has weights
-baked in, but _postProcessTimeSeries was called with applyWeighting=False.
+too large). The root cause: the segmentation reconstruction path used
+predicted segmented normalized typical periods which still had weights
+baked in, but the post-processing was applied without removing the
+weighting.
 """
 
 import numpy as np
 import pandas as pd
-import pytest
 
-import tsam.timeseriesaggregation as tsam
-
-pytestmark = pytest.mark.filterwarnings("ignore::tsam.exceptions.LegacyAPIWarning")
+from tsam import ClusterConfig, SegmentConfig, aggregate
 
 
 def _make_data():
@@ -37,13 +35,18 @@ def _make_data():
     )
 
 
-COMMON = {
-    "noTypicalPeriods": 4,
-    "hoursPerPeriod": 24,
-    "clusterMethod": "hierarchical",
-    "segmentation": True,
-    "noSegments": 4,
-}
+def _aggregate(data, weights=None, normalize_column_means=False):
+    return aggregate(
+        data,
+        n_clusters=4,
+        period_duration=24,
+        cluster=ClusterConfig(
+            method="hierarchical",
+            normalize_column_means=normalize_column_means,
+        ),
+        segments=SegmentConfig(n_segments=4),
+        weights=weights,
+    )
 
 
 class TestSegmentationWeightLeak:
@@ -53,19 +56,16 @@ class TestSegmentationWeightLeak:
         """Uniform weights + segmentation must produce the same
         reconstructed data as no weights at all."""
         data = _make_data()
-        agg_none = tsam.TimeSeriesAggregation(data.copy(), **COMMON)
-        agg_none.createTypicalPeriods()
+        result_none = _aggregate(data.copy())
 
-        agg_uniform = tsam.TimeSeriesAggregation(
+        result_uniform = _aggregate(
             data.copy(),
-            **COMMON,
-            weightDict={"Solar": 100, "Wind": 100, "Load": 100},
+            weights={"Solar": 100, "Wind": 100, "Load": 100},
         )
-        agg_uniform.createTypicalPeriods()
 
         pd.testing.assert_frame_equal(
-            agg_none.predictOriginalData(),
-            agg_uniform.predictOriginalData(),
+            result_none.reconstructed,
+            result_uniform.reconstructed,
             atol=1e-6,
         )
 
@@ -73,13 +73,11 @@ class TestSegmentationWeightLeak:
         """Column means of reconstructed data must stay close to the
         original means, not be multiplied by the weight."""
         data = _make_data()
-        agg = tsam.TimeSeriesAggregation(
+        result = _aggregate(
             data.copy(),
-            **COMMON,
-            weightDict={"Solar": 100, "Wind": 1, "Load": 1},
+            weights={"Solar": 100, "Wind": 1, "Load": 1},
         )
-        agg.createTypicalPeriods()
-        pred = agg.predictOriginalData()
+        pred = result.reconstructed
 
         for col in data.columns:
             orig_mean = data[col].mean()
@@ -97,13 +95,11 @@ class TestSegmentationWeightLeak:
         """Reconstructed values must stay within the original data range,
         not be inflated by weight factors."""
         data = _make_data()
-        agg = tsam.TimeSeriesAggregation(
+        result = _aggregate(
             data.copy(),
-            **COMMON,
-            weightDict={"Solar": 50, "Wind": 1, "Load": 1},
+            weights={"Solar": 50, "Wind": 1, "Load": 1},
         )
-        agg.createTypicalPeriods()
-        pred = agg.predictOriginalData()
+        pred = result.reconstructed
 
         for col in data.columns:
             assert pred[col].max() <= data[col].max() + 1e-6, (
@@ -118,14 +114,12 @@ class TestSegmentationWeightLeak:
     def test_segmentation_samemean_weights(self):
         """sameMean + segmentation + weights must not produce scaled output."""
         data = _make_data()
-        agg = tsam.TimeSeriesAggregation(
+        result = _aggregate(
             data.copy(),
-            **COMMON,
-            sameMean=True,
-            weightDict={"Solar": 100, "Wind": 1, "Load": 1},
+            weights={"Solar": 100, "Wind": 1, "Load": 1},
+            normalize_column_means=True,
         )
-        agg.createTypicalPeriods()
-        pred = agg.predictOriginalData()
+        pred = result.reconstructed
 
         for col in data.columns:
             assert pred[col].max() <= data[col].max() + 1e-6
