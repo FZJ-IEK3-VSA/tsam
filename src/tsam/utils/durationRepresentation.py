@@ -115,6 +115,71 @@ def _orderingForCluster(
     )
 
 
+def _pinMinMaxPreserveSum(repr_values, lo, hi):
+    """
+    Pin the first/last value of every attribute's duration curve to the cluster
+    minimum/maximum while keeping each attribute's total (the integral) unchanged.
+
+    The plain duration curve (``repr_values``) already has the property that its
+    per-attribute sum equals the average member sum, which is what makes the
+    aggregation integral-preserving. Naively overwriting the endpoints with the
+    cluster min/max shifts that sum (and hence the integral, unless a later
+    rescaling step happens to repair it). Instead, the delta introduced at the
+    endpoints is redistributed across the interior points with a bounded
+    water-fill (clipped to ``[lo, hi]``), so the sum is preserved and the result
+    stays inside the cluster envelope.
+
+    :param repr_values: Duration curves, shape (n_attrs, timeStepsPerPeriod),
+        ascending per attribute
+    :type repr_values: np.ndarray
+
+    :param lo: Per-attribute cluster minimum, shape (n_attrs,)
+    :type lo: np.ndarray
+
+    :param hi: Per-attribute cluster maximum, shape (n_attrs,)
+    :type hi: np.ndarray
+    """
+    out = repr_values.astype(float).copy()
+    n_attrs, T = out.shape
+    if T < 3:
+        out[:, 0] = lo
+        out[:, -1] = hi
+        return out
+
+    target = out.sum(axis=1)  # the sum we must preserve, per attribute
+    out[:, 0] = lo
+    out[:, -1] = hi
+    target_mid = target - lo - hi
+    mid = out[:, 1:-1].copy()
+    lo_c = lo[:, None]
+    hi_c = hi[:, None]
+    tol = np.maximum(np.abs(target_mid), 1.0) * 1e-13
+
+    for _ in range(50):
+        resid = target_mid - mid.sum(axis=1)
+        if np.all(np.abs(resid) <= tol):
+            break
+        room = np.where(resid[:, None] > 0, hi_c - mid, mid - lo_c)
+        total = room.sum(axis=1)
+        active = total > 1e-15
+        if not active.any():
+            break
+        step = np.minimum(np.abs(resid), total)
+        scale = np.where(active, np.sign(resid) * step / np.where(active, total, 1.0), 0.0)
+        mid = mid + scale[:, None] * room
+        np.clip(mid, lo_c, hi_c, out=mid)
+
+    if np.any(np.abs(target_mid - mid.sum(axis=1)) > np.maximum(np.abs(target_mid), 1.0) * 1e-6):
+        warnings.warn(
+            "Could not preserve both the cluster min/max and the integral for "
+            "every attribute (the cluster is too small or its envelope too "
+            "narrow). The integral of the affected attributes may deviate "
+            "slightly."
+        )
+    out[:, 1:-1] = mid
+    return out
+
+
 def durationRepresentation(
     candidates,
     clusterOrder,
@@ -219,8 +284,9 @@ def durationRepresentation(
             )
 
             if representMinMax:
-                repr_values[:, 0] = flat[:, 0]
-                repr_values[:, -1] = flat[:, -1]
+                repr_values = _pinMinMaxPreserveSum(
+                    repr_values, flat[:, 0], flat[:, -1]
+                )
 
             # Reorder each attribute's repr_values by a mean profile.
             # Round means before argsort to ensure identical tie-breaking

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
 from tsam import (
     ClusterConfig,
