@@ -397,9 +397,23 @@ class SegmentConfig:
         - "mean": Average value of timesteps in segment
         - "medoid": Actual timestep closest to segment mean
         - "distribution": Preserve distribution within segment
-        - ``Distribution(...)``: Distribution with additional options; some
-          behave differently for single-value segments, see :class:`Distribution`
+        - ``Distribution(...)``: Distribution with additional options (see Notes)
         - ``MinMaxMean(...)``: Per-column min/max/mean
+
+    Notes
+    -----
+    A segment collapses each attribute to a **single value**, so the
+    ``Distribution`` options behave differently than for a cluster
+    representation:
+
+    - ``scope="local"`` (the default) is equivalent to ``"mean"`` — each
+      segment's single value is the mean of its timesteps. Only
+      ``scope="global"`` produces a distinct result (it matches the whole
+      period's value distribution rather than each segment's mean).
+    - ``preserve_minmax`` only takes effect with ``scope="global"``; a single
+      value cannot carry both the min and the max, so with ``scope="local"`` it
+      is silently ignored and the integral-preserving mean is kept (a
+      ``UserWarning`` is emitted).
     """
 
     n_segments: int
@@ -410,6 +424,20 @@ class SegmentConfig:
             raise ValueError(f"n_segments must be positive, got {self.n_segments}")
         # Note: Upper bound validation (n_segments <= timesteps_per_period)
         # is performed in api.aggregate() when period_duration is known.
+        if (
+            isinstance(self.representation, Distribution)
+            and self.representation.preserve_minmax
+            and self.representation.scope == "local"
+        ):
+            warnings.warn(
+                'preserve_minmax has no effect on a scope="local" segment '
+                "representation: each segment collapses to a single value per "
+                "attribute, which cannot carry both the min and the max, so the "
+                'integral-preserving mean is kept. Use scope="global" to preserve '
+                "segment min/max.",
+                UserWarning,
+                stacklevel=2,
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
