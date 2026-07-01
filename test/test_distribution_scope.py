@@ -38,14 +38,14 @@ class TestScopeRename:
             assert Distribution(scope="global").scope == "global"
 
     def test_cluster_alias_warns_and_normalizes_to_local(self):
-        with pytest.warns(DeprecationWarning, match='scope="cluster" is deprecated'):
+        with pytest.warns(FutureWarning, match='scope="cluster" is deprecated'):
             dist = Distribution(scope="cluster")
         assert dist.scope == "local"
 
     def test_to_dict_omits_default_and_normalized_scope(self):
         # "local" is the default, so it is omitted from the serialized form.
         assert "scope" not in Distribution(scope="local").to_dict()
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             assert "scope" not in Distribution(scope="cluster").to_dict()
         # "global" is non-default and is serialized.
         assert Distribution(scope="global").to_dict()["scope"] == "global"
@@ -53,7 +53,7 @@ class TestScopeRename:
     def test_from_dict_accepts_deprecated_and_missing_scope(self):
         assert Distribution.from_dict({}).scope == "local"
         assert Distribution.from_dict({"scope": "global"}).scope == "global"
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             assert Distribution.from_dict({"scope": "cluster"}).scope == "local"
 
     def test_cluster_alias_is_behaviourally_identical_to_local(self):
@@ -62,7 +62,7 @@ class TestScopeRename:
 
         def run(scope):
             with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
+                warnings.simplefilter("ignore", FutureWarning)
                 return aggregate(
                     raw,
                     n_clusters=8,
@@ -114,9 +114,9 @@ class TestSegmentDistribution:
             SegmentConfig(n_segments=4, representation=Distribution(scope="local"))
 
     def test_deprecated_cluster_alias_also_warns_on_segment(self):
-        # "cluster" normalizes to "local" (DeprecationWarning), then the segment
+        # "cluster" normalizes to "local" (FutureWarning), then the segment
         # preserve_minmax no-op warning fires too.
-        with pytest.warns((DeprecationWarning, UserWarning)):
+        with pytest.warns((FutureWarning, UserWarning)):
             SegmentConfig(
                 n_segments=4,
                 representation=Distribution(scope="cluster", preserve_minmax=True),

@@ -65,7 +65,11 @@ them against the cap. This is two independent changes with different scopes:
       (previously it could drift by a few percent, especially without rescaling).
     - Single-value segments (`distribution_minmax` with `n_segments`) keep the
       segment **mean** rather than being pushed to the segment maximum, since one
-      value cannot carry both the minimum and the maximum.
+      value cannot carry both the minimum and the maximum. Because a segment is a
+      single value, `Distribution(scope="local")` as a *segment* representation is
+      equivalent to `"mean"`, and `preserve_minmax` only takes effect with
+      `scope="global"` — `SegmentConfig` now emits a `UserWarning` if you set
+      `preserve_minmax=True` with `scope="local"`.
 2. **Cluster-period rescaling.** Because `preserve_column_means` **defaults to
    `True`**, this step runs in almost every aggregation, on the shared path for
    **every** representation — it is not an opt-in corner case. It is identical to
@@ -117,6 +121,12 @@ configuration. Passing `weights=` to `ClusterConfig` now raises `TypeError`.
 - `result.plot.cluster_weights()` is renamed to `result.plot.cluster_counts()`,
   matching the `AggregationResult.cluster_counts` attribute. The old name still
   works but emits a `FutureWarning` and will be removed in a future release.
+- `Distribution(scope="cluster")` is renamed to `Distribution(scope="local")`.
+  `"cluster"` was misleading for **segment** representations, where the group
+  whose distribution is preserved is a segment, not a cluster; `"local"` is
+  stage-neutral (each group's own distribution) versus `"global"` (the enclosing
+  whole's). The old value still works — it is normalized to `"local"` and emits a
+  `FutureWarning` — and is behaviourally identical.
 
 ### Internal changes (no action required)
 

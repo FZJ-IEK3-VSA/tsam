@@ -125,7 +125,7 @@ class Distribution:
                 "instead (the two are equivalent). The name was renamed because "
                 '"cluster" is misleading for segment representations, where the '
                 "group being preserved is a segment, not a cluster.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
             # frozen dataclass: normalize the deprecated alias in place.
