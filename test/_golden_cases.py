@@ -107,6 +107,48 @@ _NEW_KWARGS: dict[str, dict] = {
         "period_duration": 24,
         "cluster": ClusterConfig(method="hierarchical", representation="distribution"),
     },
+    "hierarchical_distribution_medoid": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="hierarchical",
+            representation=Distribution(concurrency="medoid"),
+        ),
+    },
+    "hierarchical_distribution_consensus": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="hierarchical",
+            representation=Distribution(concurrency="consensus"),
+        ),
+    },
+    "hierarchical_distribution_assignment": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="hierarchical",
+            representation=Distribution(concurrency="assignment"),
+        ),
+    },
+    "hierarchical_distribution_reference": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="hierarchical",
+            representation=Distribution(
+                concurrency="reference", reference_attribute="Load"
+            ),
+        ),
+    },
+    "hierarchical_distribution_medoid_minmax": {
+        "n_clusters": 8,
+        "period_duration": 24,
+        "cluster": ClusterConfig(
+            method="hierarchical",
+            representation=Distribution(concurrency="medoid", preserve_minmax=True),
+        ),
+    },
     "hierarchical_segmentation": {
         "n_clusters": 8,
         "period_duration": 24,
@@ -496,6 +538,36 @@ _META: dict[str, dict] = {
     "hierarchical_distribution": {
         "seed": None,
         "only_datasets": None,
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_distribution_medoid": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_distribution_consensus": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_distribution_assignment": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_distribution_reference": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
+    "hierarchical_distribution_medoid_minmax": {
+        "seed": None,
+        "only_datasets": ["testdata"],
         "max_timesteps": None,
         "rtol": 1e-10,
     },
