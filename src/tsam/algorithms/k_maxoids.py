@@ -94,12 +94,12 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         n, _m = X.shape
         inertia_best = None
 
-        for restart in range(n_init):
+        for _ in range(n_init):
             inds = rnd.permutation(np.arange(n))
 
             X = X[inds]
             M = np.copy(X[:k])
-            for t in range(n_passes):
+            for _ in range(n_passes):
                 for j in range(n):
                     x = X[j]
                     D = np.sum((M - x) ** 2, axis=1)
