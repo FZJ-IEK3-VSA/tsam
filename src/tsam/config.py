@@ -365,6 +365,19 @@ class SegmentConfig:
         - "distribution": Preserve distribution within segment
         - ``Distribution(...)``: Distribution with additional options
         - ``MinMaxMean(...)``: Per-column min/max/mean
+
+        Note on ``Distribution`` with segments: each segment collapses to a
+        single value per attribute, which limits some options.
+
+        - ``scope`` ("cluster"/"global") is respected.
+        - ``preserve_minmax`` only takes effect with ``scope="global"``. With
+          ``scope="cluster"`` a segment cannot carry both its min and max in one
+          value, so the integral-preserving mean is kept and the flag has no
+          effect.
+        - ``concurrency`` / ``reference_attribute`` are not supported for
+          segments (there is no within-period time axis to order once each
+          segment is a single value); set them on the cluster representation
+          instead, where the ordering is applied before segmentation.
     """
 
     n_segments: int

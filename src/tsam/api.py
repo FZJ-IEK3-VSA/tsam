@@ -231,8 +231,10 @@ def aggregate(
         ):
             raise ValueError(
                 "concurrency / reference_attribute are not supported for segment "
-                "representations (a segment's time axis is the segment structure, "
-                "not per-timestep). Set them on the cluster representation instead."
+                "representations: each segment collapses to a single value per "
+                "attribute (one time step), so there is no within-period time "
+                "axis left to order. Set them on the cluster representation "
+                "instead — the ordering is applied before segmentation."
             )
 
     # Validate extreme columns exist in data
