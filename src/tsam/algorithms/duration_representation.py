@@ -105,9 +105,6 @@ def duration_representation(
                     options.minmax_tolerance,
                 )
 
-            # Reorder each attribute's repr_values onto the synthetic time axis.
-            # Round means before argsort to ensure identical tie-breaking
-            # across platforms and numpy versions.
             means = np.round(cluster_data.mean(axis=1), 10)
             order = compute_ordering(
                 cluster_data,

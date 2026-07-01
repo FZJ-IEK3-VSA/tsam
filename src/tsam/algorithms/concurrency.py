@@ -18,6 +18,30 @@ from collections.abc import Callable
 import numpy as np
 
 
+def _deterministic_argmin(values: np.ndarray) -> int:
+    """Index of the minimum, with a platform-stable tie-break.
+
+    Rounds before comparing so values that are equal in exact arithmetic but
+    differ by floating-point noise across BLAS/platforms collapse to one value;
+    ``argmin`` then returns the lowest such index identically everywhere.
+    """
+    return int(np.argmin(np.round(values, 10)))
+
+
+def _first_principal_component(matrix: np.ndarray) -> np.ndarray:
+    """First right singular vector of ``matrix``, with a canonical sign.
+
+    A singular vector's sign is arbitrary and platform-dependent, and a flip
+    would reverse any ordering derived from it. Forcing the largest-magnitude
+    component to be positive makes the result deterministic.
+    """
+    _, _, vt = np.linalg.svd(matrix, full_matrices=False)
+    pc: np.ndarray = vt[0]
+    if pc[np.argmax(np.abs(pc))] < 0:
+        pc = -pc
+    return np.asarray(pc)
+
+
 def _independent(
     cluster_data: np.ndarray,
     means: np.ndarray,
@@ -65,16 +89,10 @@ def _medoid(
     across all attribute pairs, while each attribute still takes the values of
     its own duration curve.
     """
-    n_attrs, n_cands, _ = cluster_data.shape
-    # Flatten each member to a single multivariate vector: (n_cands, n_attrs*T)
-    flat_members = cluster_data.transpose(1, 0, 2).reshape(n_cands, -1)
-    dist_matrix = np.linalg.norm(
-        flat_members[:, None, :] - flat_members[None, :, :], axis=2
-    )
-    # Round before argmin so exact distance ties resolve to the lowest index
-    # identically across platforms / BLAS implementations (determinism).
-    medoid_idx = int(np.argmin(np.round(dist_matrix.sum(axis=0), 10)))
-    medoid_profile = cluster_data[:, medoid_idx, :]  # (n_attrs, T)
+    n_cands = cluster_data.shape[1]
+    members = cluster_data.transpose(1, 0, 2).reshape(n_cands, -1)
+    distances = np.linalg.norm(members[:, None, :] - members[None, :, :], axis=2)
+    medoid_profile = cluster_data[:, _deterministic_argmin(distances.sum(axis=0)), :]
     return np.round(medoid_profile, 10).argsort(axis=1, kind="stable")
 
 
@@ -95,15 +113,7 @@ def _consensus(
     std = means.std(axis=1, keepdims=True)
     std[std == 0] = 1.0
     z = (means - means.mean(axis=1, keepdims=True)) / std
-    # First principal component of the (timesteps x n_attrs) profile matrix.
-    _, _, vt = np.linalg.svd(z.T, full_matrices=False)
-    pc = vt[0]
-    # The sign of a singular vector is arbitrary and platform-dependent; a flip
-    # would reverse the ordering. Canonicalise so the largest-magnitude
-    # component is positive, making the result deterministic.
-    if pc[np.argmax(np.abs(pc))] < 0:
-        pc = -pc
-    scores = z.T @ pc
+    scores = z.T @ _first_principal_component(z.T)
     shared_order = np.round(scores, 10).argsort(kind="stable")
     return np.broadcast_to(shared_order, (n_attrs, n_timesteps))
 
@@ -118,12 +128,12 @@ def _assignment(
 
     Assigns duration-curve ranks to timesteps to minimise the total squared
     deviation from the cluster's mean profile across all attributes
-    simultaneously (a linear assignment problem).
+    simultaneously (a linear assignment problem). The cost of placing rank ``r``
+    at timestep ``t`` is that squared deviation summed over attributes.
     """
     from scipy.optimize import linear_sum_assignment
 
     n_attrs, n_timesteps = means.shape
-    # cost[r, t] = sum_attr (repr_values[attr, r] - means[attr, t])^2
     cost = ((repr_values[:, :, None] - means[:, None, :]) ** 2).sum(axis=0)
     rank_idx, time_idx = linear_sum_assignment(cost)
     shared_order = np.empty(n_timesteps, dtype=int)

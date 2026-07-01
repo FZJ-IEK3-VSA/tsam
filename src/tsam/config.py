@@ -73,6 +73,16 @@ class Distribution:
 
         Only valid with ``scope="cluster"``. If None, resolves to ``"reference"``
         when ``reference_attribute`` is given, otherwise ``"independent"``.
+
+    Notes
+    -----
+    When used as a segment representation (``SegmentConfig.representation``),
+    each segment is a single value per attribute, which constrains two options:
+    ``preserve_minmax`` only takes effect with ``scope="global"`` (a single
+    value cannot carry both min and max, so ``scope="cluster"`` keeps the
+    integral-preserving mean), and ``concurrency`` / ``reference_attribute`` are
+    not supported (there is no within-period time axis left to order — set them
+    on the cluster representation, where ordering runs before segmentation).
     """
 
     scope: Literal["cluster", "global"] = "cluster"
@@ -363,21 +373,9 @@ class SegmentConfig:
         - "mean": Average value of timesteps in segment
         - "medoid": Actual timestep closest to segment mean
         - "distribution": Preserve distribution within segment
-        - ``Distribution(...)``: Distribution with additional options
+        - ``Distribution(...)``: Distribution with additional options; some
+          behave differently for single-value segments, see :class:`Distribution`
         - ``MinMaxMean(...)``: Per-column min/max/mean
-
-        Note on ``Distribution`` with segments: each segment collapses to a
-        single value per attribute, which limits some options.
-
-        - ``scope`` ("cluster"/"global") is respected.
-        - ``preserve_minmax`` only takes effect with ``scope="global"``. With
-          ``scope="cluster"`` a segment cannot carry both its min and max in one
-          value, so the integral-preserving mean is kept and the flag has no
-          effect.
-        - ``concurrency`` / ``reference_attribute`` are not supported for
-          segments (there is no within-period time axis to order once each
-          segment is a single value); set them on the cluster representation
-          instead, where the ordering is applied before segmentation.
     """
 
     n_segments: int
