@@ -9,6 +9,7 @@ import pandas as pd
 from tsam.commons import parse_duration_hours
 from tsam.config import (
     ClusterConfig,
+    Distribution,
     ExtremeConfig,
     SegmentConfig,
 )
@@ -220,6 +221,18 @@ def aggregate(
             raise ValueError(
                 f"n_segments ({segments.n_segments}) cannot exceed "
                 f"timesteps per period ({n_timesteps_per_period})"
+            )
+        seg_rep = segments.representation
+        if isinstance(seg_rep, Distribution) and (
+            seg_rep.reference_attribute is not None
+            or (
+                seg_rep.concurrency is not None and seg_rep.concurrency != "independent"
+            )
+        ):
+            raise ValueError(
+                "concurrency / reference_attribute are not supported for segment "
+                "representations (a segment's time axis is the segment structure, "
+                "not per-timestep). Set them on the cluster representation instead."
             )
 
     # Validate extreme columns exist in data

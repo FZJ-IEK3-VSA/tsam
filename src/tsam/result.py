@@ -244,6 +244,25 @@ class AggregationResult:
         )
 
     @cached_property
+    def concurrency(self) -> pd.Series:
+        """Cross-attribute concurrency-preservation metrics.
+
+        Measures how well the joint structure (co-incidence in time) across
+        attributes is preserved, complementing the per-attribute error in
+        :attr:`accuracy`. Returns ``corr_frobenius`` and ``spearman_frobenius``
+        (lower is better; ``NaN`` for single-attribute data). Computed lazily on
+        first access.
+
+        See Also
+        --------
+        accuracy : Per-attribute (marginal) error metrics.
+        """
+        from tsam.pipeline.accuracy import compute_concurrency
+
+        assert self._norm_values is not None and self._normalized_predicted is not None
+        return compute_concurrency(self._norm_values, self._normalized_predicted)
+
+    @cached_property
     def n_clusters(self) -> int:
         """Number of clusters (typical periods).
 

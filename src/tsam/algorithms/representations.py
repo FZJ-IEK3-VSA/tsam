@@ -15,6 +15,7 @@ def representations(
     representation_dict: dict[str, str] | None = None,
     distribution_period_wise: bool = True,
     n_timesteps_per_period: int | None = None,
+    reference_attribute_idx: int | None = None,
 ) -> tuple[list[np.ndarray], list[int] | None]:
     """Compute each cluster's representative profile with the chosen method.
 
@@ -69,6 +70,8 @@ def representations(
             period_wise,
             n_timesteps_per_period,  # type: ignore[arg-type]
             represent_min_max=representation_method.preserve_minmax,
+            concurrency_method=representation_method.concurrency,
+            reference_attribute_idx=reference_attribute_idx,
         )
         return cluster_centers, cluster_center_indices
 
