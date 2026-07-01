@@ -122,7 +122,7 @@ def bounded_water_fill(
     upper: float,
     target_weighted_sum: float,
     *,
-    tolerance: float,
+    rel_tolerance: float,
     max_passes: int = 100,
 ) -> tuple[np.ndarray, bool, int]:
     """Adjust ``values`` within ``[lower, upper]`` to hit a weighted-sum target.
@@ -146,8 +146,10 @@ def bounded_water_fill(
         Inclusive bounds enforced on every element.
     target_weighted_sum : float
         Desired value of ``sum(weights * values)``.
-    tolerance : float
-        Absolute convergence tolerance on the weighted-sum residual.
+    rel_tolerance : float
+        Relative convergence tolerance; the absolute tolerance on the
+        weighted-sum residual is ``max(abs(target_weighted_sum), 1) *
+        rel_tolerance``.
     max_passes : int
         Safety cap on redistribution passes.
 
@@ -158,6 +160,7 @@ def bounded_water_fill(
         (``False`` if the passes were exhausted or no feasible room remained),
         and the number of redistribution passes performed.
     """
+    tolerance = max(abs(target_weighted_sum), 1.0) * rel_tolerance
     adjusted = np.clip(np.array(values, dtype=float), lower, upper)
     passes = 0
     while passes < max_passes:

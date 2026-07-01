@@ -120,7 +120,6 @@ def rescale_representatives(
         # cap - the condition that previously let the downstream min/max
         # representation overshoot the input envelope.
         target = sum_raw - sum_peak
-        tolerance = max(abs(sum_raw), 1.0) * options.rescale_tolerance
         weights_wo_peak = weighting_vec[idx_wo_peak]
 
         if sum_clu_wo_peak > 0 and target > 0:
@@ -134,7 +133,7 @@ def rescale_representatives(
             0.0,
             scale_ub,
             target,
-            tolerance=tolerance,
+            rel_tolerance=options.rescale_tolerance,
             max_passes=options.rescale_max_iterations,
         )
         arr[idx_wo_peak, ci, :] = rescaled
