@@ -249,7 +249,7 @@ class AggregationResult:
 
         Measures how well the joint structure (co-incidence in time) across
         attributes is preserved, complementing the per-attribute error in
-        :attr:`accuracy`. Returns ``corr_frobenius`` and ``spearman_frobenius``
+        :attr:`accuracy`. Returns ``pearson_error`` and ``spearman_error``
         (lower is better; ``NaN`` for single-attribute data). Computed lazily on
         first access.
 
