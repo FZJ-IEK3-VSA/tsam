@@ -21,6 +21,8 @@ class Options:
         self._rescale_max_iterations: int = 20
         self._rescale_tolerance: float = 1e-6
         self._min_weight: float = 1e-6
+        self._minmax_max_passes: int = 100
+        self._minmax_tolerance: float = 1e-12
 
     @property
     def rescale_max_iterations(self) -> int:
@@ -59,11 +61,37 @@ class Options:
             raise ValueError(f"min_weight must be a positive number, got {value}")
         self._min_weight = float(value)
 
+    @property
+    def minmax_max_passes(self) -> int:
+        """Max water-fill passes for distribution min/max preservation (default: 100)."""
+        return self._minmax_max_passes
+
+    @minmax_max_passes.setter
+    def minmax_max_passes(self, value: int) -> None:
+        if not isinstance(value, int) or value < 1:
+            raise ValueError(
+                f"minmax_max_passes must be a positive integer, got {value}"
+            )
+        self._minmax_max_passes = value
+
+    @property
+    def minmax_tolerance(self) -> float:
+        """Relative tolerance for distribution min/max sum preservation (default: 1e-12)."""
+        return self._minmax_tolerance
+
+    @minmax_tolerance.setter
+    def minmax_tolerance(self, value: float) -> None:
+        if not isinstance(value, (int, float)) or value <= 0:
+            raise ValueError(f"minmax_tolerance must be a positive number, got {value}")
+        self._minmax_tolerance = float(value)
+
     def reset(self) -> None:
         """Reset all options to defaults."""
         self._rescale_max_iterations = 20
         self._rescale_tolerance = 1e-6
         self._min_weight = 1e-6
+        self._minmax_max_passes = 100
+        self._minmax_tolerance = 1e-12
 
     def __repr__(self) -> str:
         return (
@@ -71,6 +99,8 @@ class Options:
             f"  rescale_max_iterations={self.rescale_max_iterations},\n"
             f"  rescale_tolerance={self.rescale_tolerance},\n"
             f"  min_weight={self.min_weight},\n"
+            f"  minmax_max_passes={self.minmax_max_passes},\n"
+            f"  minmax_tolerance={self.minmax_tolerance},\n"
             f")"
         )
 

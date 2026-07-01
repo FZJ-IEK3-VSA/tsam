@@ -5,6 +5,9 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from tsam.commons import bounded_water_fill
+from tsam.options import options
+
 
 def duration_representation(
     candidates,
@@ -65,8 +68,9 @@ def duration_representation(
             )
 
             if represent_min_max:
-                repr_values[:, 0] = flat[:, 0]
-                repr_values[:, -1] = flat[:, -1]
+                repr_values = _pin_min_max_preserve_sum(
+                    repr_values, flat[:, 0], flat[:, -1]
+                )
 
             # Reorder each attribute's repr_values by its mean profile.
             # Round means before argsort to ensure identical tie-breaking
@@ -148,6 +152,63 @@ def duration_representation(
     return cluster_centers
 
 
+def _pin_min_max_preserve_sum(repr_values, lower, upper):
+    """Pin each attribute's duration-curve endpoints to the cluster min/max.
+
+    The plain duration curve already has the integral-preserving property that
+    its per-attribute sum equals the average member sum. Naively overwriting the
+    endpoints with the cluster min/max shifts that sum (and the integral, unless
+    a later rescaling happens to repair it). Instead, the delta introduced at the
+    endpoints is water-filled back across the interior points (clipped to the
+    ``[min, max]`` envelope), so the sum is preserved and the result stays inside
+    the envelope.
+
+    With fewer than three points there is no interior mass to absorb the shift,
+    so the sum cannot be preserved while pinning both endpoints. This is the case
+    for the segment representation (``T == 1``): a single value cannot carry both
+    the min and the max, and forcing it to the max inflates the integral. There
+    the integral takes priority and the duration-curve values are returned
+    unchanged.
+
+    :param repr_values: Ascending duration curves, shape (n_attrs, n_points)
+    :type repr_values: np.ndarray
+    :param lower: Per-attribute cluster minimum, shape (n_attrs,)
+    :type lower: np.ndarray
+    :param upper: Per-attribute cluster maximum, shape (n_attrs,)
+    :type upper: np.ndarray
+    """
+    out = repr_values.astype(float).copy()
+    _, n_points = out.shape
+    if n_points < 3:
+        return out
+
+    for a in range(out.shape[0]):
+        lo, hi = float(lower[a]), float(upper[a])
+        # Sum to preserve across the interior once the endpoints are pinned.
+        target_mid = float(out[a].sum()) - lo - hi
+        out[a, 0] = lo
+        out[a, -1] = hi
+        tol = max(abs(target_mid), 1.0) * options.minmax_tolerance
+        mid, feasible, _ = bounded_water_fill(
+            out[a, 1:-1],
+            np.ones(n_points - 2),
+            lo,
+            hi,
+            target_mid,
+            tolerance=tol,
+            max_passes=options.minmax_max_passes,
+        )
+        if not feasible:
+            warnings.warn(
+                "Could not preserve both the cluster min/max and the integral "
+                "for an attribute (the cluster is too small or its envelope too "
+                "narrow). The integral of the affected attribute may deviate "
+                "slightly."
+            )
+        out[a, 1:-1] = mid
+    return out
+
+
 def _represent_min_max(
     representation_values, sorted_attr, means_and_weights_sorted, keep_sum=True
 ):
@@ -189,13 +250,16 @@ def _represent_min_max(
         # due to the change of the min and max values
         # of the duration curve
         delta_sum = delta_max * appearance_max + delta_min * appearance_min
+
+        mid_weights = np.asarray(
+            means_and_weights_sorted[1].iloc[1:-1].values, dtype=float
+        )
+        mid_orig = np.asarray(representation_values[1:-1], dtype=float)
+        weighted_mid_sum = float(np.sum(mid_weights * mid_orig))
         # and derive how much the other values have to be changed to preserve
         # the mean of the duration curve
         correction_factor = (
-            -delta_sum
-            / (
-                means_and_weights_sorted[1].iloc[1:-1] * representation_values[1:-1]
-            ).sum()
+            -delta_sum / weighted_mid_sum if weighted_mid_sum != 0 else 0.0
         )
 
         if correction_factor < -1 or correction_factor > 1:
@@ -204,12 +268,32 @@ def _represent_min_max(
             )
             return representation_values
 
-        # correct the values of the duration curve such
-        # that the mean of the duration curve is preserved
-        # since the min and max values are changed
-        representation_values[1:-1] = np.multiply(
-            representation_values[1:-1], (1 + correction_factor)
+        # Initial multiplicative correction: preserves the weighted sum exactly
+        # and keeps zero-valued segments at zero (matching the distribution
+        # shape of the cluster). When no bound is violated, no further work is
+        # needed and this matches the legacy behaviour.
+        corrected = mid_orig * (1 + correction_factor)
+
+        # Clip to the cluster envelope and water-fill the mass that got clipped
+        # back into segments that still have room, so the result is
+        # envelope-safe while preserving the sum up to feasibility.
+        target_weighted_sum = weighted_mid_sum - delta_sum
+        tol = max(abs(target_weighted_sum), 1.0) * options.minmax_tolerance
+        corrected, feasible, _ = bounded_water_fill(
+            corrected,
+            mid_weights,
+            float(sorted_attr.min()),
+            float(sorted_attr.max()),
+            target_weighted_sum,
+            tolerance=tol,
+            max_passes=options.minmax_max_passes,
         )
+        if not feasible:
+            warnings.warn(
+                "The cluster is too small to preserve the sum of the duration curve and additionally the min and max values of the original cluster members. The min max values of the cluster are not preserved. This does not necessarily mean that the min and max values of the original time series are not preserved."
+            )
+
+        representation_values[1:-1] = corrected
 
     # change the values of the duration curve such that the min and max
     # values are preserved
