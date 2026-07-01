@@ -476,7 +476,7 @@ def find_optimal_combination(
     Args:
         data: Input time series data.
         data_reduction: Target reduction factor (e.g., 0.01 for 1% of original size).
-        period_duration: Length of each period (default: 24). Accepts int/float
+        period_duration: Length of each period. Accepts int/float
             hours (e.g., 24 for daily, 168 for weekly) or a pandas Timedelta
             string (e.g., '24h', '1d', '1w').
         temporal_resolution: Time resolution of input data. Accepts float hours
@@ -484,19 +484,16 @@ def find_optimal_combination(
             string (e.g., '1h', '15min', '30min'). If not provided, inferred
             from the datetime index.
         cluster: Clustering configuration.
-        segment_representation: How to represent each segment, "mean" or "medoid"
-            (default: "mean").
+        segment_representation: How to represent each segment, "mean" or "medoid".
         extremes: Configuration for preserving extreme periods.
         weights: Per-column weights that influence all pipeline stages.
         preserve_column_means: Whether to rescale results to preserve original
-            column means (default: True).
+            column means.
         round_decimals: Round results to this many decimal places.
-        numerical_tolerance: Numerical tolerance for floating-point comparisons
-            (default: 1e-13).
-        show_progress: Show progress bar during search (default: True).
+        numerical_tolerance: Numerical tolerance for floating-point comparisons.
+        show_progress: Show progress bar during search.
         save_all_results: If True, save all AggregationResults in the all_results
-            attribute. Useful for detailed analysis but increases memory usage
-            (default: False).
+            attribute. Useful for detailed analysis but increases memory usage.
         n_jobs: Number of parallel jobs. If None or 1, runs sequentially.
             Use -1 for all available CPUs, or a positive integer for
             a specific number of workers. Parallel execution uses a file-based
@@ -645,7 +642,7 @@ def find_pareto_front(
 
     Args:
         data: Input time series data.
-        period_duration: Length of each period (default: 24). Accepts int/float
+        period_duration: Length of each period. Accepts int/float
             hours (e.g., 24 for daily, 168 for weekly) or a pandas Timedelta
             string (e.g., '24h', '1d', '1w').
         temporal_resolution: Time resolution of input data. Accepts float hours
@@ -659,16 +656,14 @@ def find_pareto_front(
             counts. Useful for faster exploration with large steps or specific
             ranges. Examples: range(10, 500, 10), [10, 50, 100, 200, 500].
         cluster: Clustering configuration.
-        segment_representation: How to represent each segment, "mean" or "medoid"
-            (default: "mean").
+        segment_representation: How to represent each segment, "mean" or "medoid".
         extremes: Configuration for preserving extreme periods.
         weights: Per-column weights that influence all pipeline stages.
         preserve_column_means: Whether to rescale results to preserve original
-            column means (default: True).
+            column means.
         round_decimals: Round results to this many decimal places.
-        numerical_tolerance: Numerical tolerance for floating-point comparisons
-            (default: 1e-13).
-        show_progress: Show progress bar (default: True).
+        numerical_tolerance: Numerical tolerance for floating-point comparisons.
+        show_progress: Show progress bar.
         n_jobs: Number of parallel jobs for testing configurations.
             If None or 1, runs sequentially. Use -1 for all available CPUs.
             During steepest-descent phase, tests both directions in parallel.

@@ -50,7 +50,7 @@ def aggregate(
             4-20 for energy system models.
         period_duration: Length of each period. Accepts an int/float in hours
             (e.g., 24 for daily, 168 for weekly) or a pandas Timedelta string
-            (e.g., '24h', '1d', '1w'). Defaults to 24.
+            (e.g., '24h', '1d', '1w').
         temporal_resolution: Time resolution of input data. Accepts a float in
             hours (e.g., 1.0 for hourly, 0.25 for 15-minute) or a pandas
             Timedelta string (e.g., '1h', '15min', '30min'). If not provided,
@@ -67,17 +67,17 @@ def aggregate(
             ``{"demand": 2.0, "solar": 1.0}``.
         preserve_column_means: Rescale typical periods so each column's weighted
             mean matches the original data's mean. Ensures total energy/load is
-            preserved when weights represent occurrence counts. Defaults to True.
+            preserved when weights represent occurrence counts.
         rescale_exclude_columns: Column names to exclude from rescaling when
             ``preserve_column_means`` is True. Useful for binary/indicator
-            columns (0/1 values) that should not be rescaled. If None (default),
+            columns (0/1 values) that should not be rescaled. If None,
             all columns are rescaled.
         round_decimals: Round output values to this many decimal places. If not
             provided, no rounding is applied.
         numerical_tolerance: Tolerance for numerical precision issues. Controls
             when warnings are raised for aggregated values exceeding the original
             time series bounds. Increase this value to silence warnings caused by
-            floating-point precision errors. Defaults to 1e-13.
+            floating-point precision errors.
 
     Returns:
         An object containing the aggregated periods
@@ -277,7 +277,7 @@ def unstack_to_periods(
         data: Time series data with datetime index.
         period_duration: Length of each period. Accepts an int/float in hours
             (e.g., 24 for daily, 168 for weekly) or a pandas Timedelta string
-            (e.g., '24h', '1d', '1w'). Defaults to 24.
+            (e.g., '24h', '1d', '1w').
 
     Returns:
         Reshaped data with shape (n_periods, n_timesteps_per_period) for each

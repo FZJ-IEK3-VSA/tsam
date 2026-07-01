@@ -637,11 +637,10 @@ class ClusteringResult:
         segment_centers: Indices of timesteps used as segment centers, per typical
             period. Required for fully deterministic segment replication.
         preserve_column_means: Whether to rescale typical periods to match
-            original data means (default: True).
+            original data means.
         rescale_exclude_columns: Column names to exclude from rescaling. Useful
             for binary columns.
-        representation: How to compute typical periods from cluster members
-            (default: "medoid").
+        representation: How to compute typical periods from cluster members.
         segment_representation: How to compute segment values. Only used if
             segmentation is present.
         temporal_resolution: Time resolution of input data in hours. If not
@@ -1144,8 +1143,7 @@ class ClusteringResult:
                 provided, uses stored temporal_resolution or infers from data
                 index.
             round_decimals: Round output values to this many decimal places.
-            numerical_tolerance: Tolerance for numerical precision issues
-                (default: 1e-13).
+            numerical_tolerance: Tolerance for numerical precision issues.
 
         Returns:
             Aggregation result using this clustering.

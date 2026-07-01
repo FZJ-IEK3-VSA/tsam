@@ -140,7 +140,7 @@ class ResultPlotAccessor:
 
         Args:
             columns: Columns to plot. If None, plots all available columns.
-            title: Plot title. Defaults to "Cluster Representatives".
+            title: Plot title.
 
         Returns:
             A Plotly figure of the cluster representatives.
@@ -194,7 +194,7 @@ class ResultPlotAccessor:
             columns: Columns to plot. If None, plots all columns.
             clusters: Cluster indices to include. If None, includes all clusters.
             slider: Which dimension to put on the slider; the other dimension
-                becomes ``facet_col``. Defaults to ``"cluster"``.
+                becomes ``facet_col``.
 
                 - ``"cluster"``: slider flips through clusters, columns are facets.
                 - ``"column"``: slider flips through columns, clusters are facets.
@@ -429,7 +429,7 @@ class ResultPlotAccessor:
         """Plot how many original periods each cluster represents.
 
         Args:
-            title: Plot title. Defaults to "Cluster Counts".
+            title: Plot title.
 
         Returns:
             A bar chart of cluster counts.
@@ -469,7 +469,7 @@ class ResultPlotAccessor:
         """Plot accuracy metrics by column.
 
         Args:
-            title: Plot title. Defaults to "Accuracy Metrics".
+            title: Plot title.
 
         Returns:
             A grouped bar chart of accuracy metrics per column.
@@ -506,7 +506,7 @@ class ResultPlotAccessor:
         """Plot segment durations (if segmentation was used).
 
         Args:
-            title: Plot title. Defaults to "Segment Durations".
+            title: Plot title.
 
         Returns:
             A bar chart of average segment durations.
@@ -566,7 +566,7 @@ class ResultPlotAccessor:
 
         Args:
             columns: Columns to compare. If None, compares all columns.
-            mode: Comparison mode. Defaults to "overlay".
+            mode: Comparison mode.
 
                 - "overlay": Both series on same axes
                 - "side_by_side": Separate subplots
@@ -649,7 +649,7 @@ class ResultPlotAccessor:
 
         Args:
             columns: Columns to plot. If None, plots all.
-            mode: Display mode. Defaults to "time_series".
+            mode: Display mode.
 
                 - "time_series": Residuals over time
                 - "histogram": Distribution of residuals

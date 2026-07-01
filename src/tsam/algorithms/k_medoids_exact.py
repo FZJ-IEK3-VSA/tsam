@@ -16,11 +16,11 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
     """k-medoids class.
 
     Args:
-        n_clusters: How many medoids. Must be positive (default: 8).
-        distance_metric: What distance metric to use (default: 'euclidean').
-        timelimit: The time limit of the solver (default: 100).
-        threads: Threads to use by the optimization solver (default: 7).
-        solver: The solver to use (default: 'highs').
+        n_clusters: How many medoids. Must be positive.
+        distance_metric: What distance metric to use.
+        timelimit: The time limit of the solver.
+        threads: Threads to use by the optimization solver.
+        solver: The solver to use.
     """
 
     def __init__(
@@ -201,7 +201,7 @@ def _solve_given_pyomo_model(M, solver="highs"):
 
     Args:
         M: Concrete model instance that gets solved.
-        solver: Defines the solver for the pyomo model. Defaults to "highs".
+        solver: Defines the solver for the pyomo model.
 
     Returns:
         A tuple ``(r_x, r_y, r_obj)`` of the assignment matrix, the medoid

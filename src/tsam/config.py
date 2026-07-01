@@ -43,10 +43,9 @@ class Distribution:
 
     Args:
         scope: "cluster" preserves each cluster's distribution separately;
-            "global" preserves the overall time series distribution. Defaults
-            to "cluster".
+            "global" preserves the overall time series distribution.
         preserve_minmax: If True, also preserves min/max values per timestep
-            (equivalent to old "distribution_minmax"). Defaults to False.
+            (equivalent to old "distribution_minmax").
     """
 
     scope: Literal["cluster", "global"] = "cluster"
@@ -132,7 +131,7 @@ class ClusterConfig:
     """Configuration for the clustering algorithm.
 
     Args:
-        method: Clustering algorithm to use. Defaults to "hierarchical".
+        method: Clustering algorithm to use.
 
             - "averaging": Sequential averaging of periods
             - "kmeans": K-means clustering (fast, uses centroids)
@@ -166,15 +165,13 @@ class ClusterConfig:
             for kmedoids, hierarchical, and contiguous, and "maxoid" for kmaxoids.
         scale_by_column_means: Divide each column by its mean after MinMax
             normalization, so all columns have equal mean before clustering.
-            Useful when columns have very different scales. Defaults to False.
+            Useful when columns have very different scales.
         use_duration_curves: Sort values within each period before clustering.
             Matches periods by their value distribution rather than timing.
-            Defaults to False.
         include_period_sums: Include period totals as additional features for
-            clustering. Helps preserve total energy/load values. Defaults to
-            False.
-        solver: MILP solver for the kmedoids method. Options: "highs" (default,
-            open source), "cbc", "gurobi", "cplex". Defaults to "highs".
+            clustering. Helps preserve total energy/load values.
+        solver: MILP solver for the kmedoids method. Options: "highs"
+            (open source), "cbc", "gurobi", "cplex".
     """
 
     method: ClusterMethod
@@ -293,7 +290,7 @@ class SegmentConfig:
         n_segments: Number of segments per period. Must be less than or equal to
             the number of timesteps per period. For example, period_duration=24
             with hourly data has 24 timesteps, so n_segments could be 1-24.
-        representation: How to represent each segment. Defaults to "mean".
+        representation: How to represent each segment.
 
             - "mean": Average value of timesteps in segment
             - "medoid": Actual timestep closest to segment mean
@@ -336,7 +333,7 @@ class ExtremeConfig:
     in the aggregated representation (e.g., peak demand for capacity sizing).
 
     Args:
-        method: How to handle extreme periods. Defaults to "append".
+        method: How to handle extreme periods.
 
             - "append": Add extreme periods as additional cluster centers
             - "replace": Replace the nearest cluster center with the extreme

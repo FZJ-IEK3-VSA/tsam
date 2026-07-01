@@ -11,8 +11,8 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
     """k-maxoids class.
 
     Args:
-        n_clusters: How many maxoids. Must be positive (default: 8).
-        distance_metric: What distance metric to use (default: 'euclidean').
+        n_clusters: How many maxoids. Must be positive.
+        distance_metric: What distance metric to use.
     """
 
     def __init__(
