@@ -50,31 +50,47 @@ given timeseries needs a datetime index`").
 `temporal_resolution`, pass it explicitly (e.g. `temporal_resolution='15min'`)
 to be sure the timestep length matches your data instead of defaulting to 1h.
 
-### Integral and min/max preservation for the distribution representation
+### Integral and min/max preservation
 
-The `distribution` and `distribution_minmax` representations now preserve the
-**integral** (per-attribute sum) and the per-cluster **min/max** by construction.
-Internally, the old iterated *multiply-and-clip* correction is replaced by a
-bounded water-fill that redistributes values within the `[min, max]` envelope
-instead of flattening them against the cap.
+Two internal corrections that could push values outside the input envelope or
+shift the integral (per-attribute sum) were replaced by a bounded *water-fill*
+that redistributes values within the `[min, max]` envelope instead of flattening
+them against the cap. This is two independent changes with different scopes:
+
+1. **Min/max representation** (`distribution_minmax`, i.e.
+   `Distribution(preserve_minmax=True)`). By code path, this affects **only**
+   representations that preserve min/max — `mean`, `medoid`, `maxoid`,
+   `minmax_mean`, and plain `distribution` never execute this code. Changes:
+    - The integral is now preserved when pinning the per-cluster min/max
+      (previously it could drift by a few percent, especially without rescaling).
+    - Single-value segments (`distribution_minmax` with `n_segments`) keep the
+      segment **mean** rather than being pushed to the segment maximum, since one
+      value cannot carry both the minimum and the maximum.
+2. **Cluster-period rescaling** (`preserve_column_means=True`, the default).
+   This is on the shared path for **every** representation. It is identical to
+   the old behavior *unless* a representative value would have been clipped
+   against the `[0, scale_ub]` envelope; where that clipping occurred, values are
+   now redistributed instead of flattened, so the integral is better preserved.
 
 **What changes:**
 
-- With rescaling enabled (`preserve_column_means=True`, the default), integral
-  errors that the old code left behind are eliminated — including large ones for
-  `distribution_minmax` combined with segmentation.
-- With rescaling disabled, the cluster-scope `distribution_minmax`
-  representation now preserves the integral exactly (previously it could drift by
-  a few percent).
-- Single-value segments (`n_segments` with `distribution_minmax`) keep the
-  segment **mean** rather than being pushed to the segment maximum, since one
-  value cannot carry both the minimum and the maximum. This preserves the
-  integral but means individual segment values differ from v3.
+- Results differ for `distribution_minmax` (new min/max algorithm) and for any
+  configuration where rescaling clipped values against the envelope. The largest
+  improvements are for `distribution_minmax` combined with segmentation.
+- The differences are usually small relative to the values but can reach ~20% at
+  an individual peak cell, and are **not** always accompanied by the
+  "maximal value … exceeds" warning.
+- On the packaged example datasets, the common `mean` / `medoid` / `kmeans`
+  paths are bit-identical to v3; the observed changes are confined to
+  `distribution_minmax`, `maxoid`/`kmaxoids`, and rescale-heavy configurations
+  (contiguous, extremes). Note this is an observation on the example data, not a
+  guarantee — the rescaling change above can in principle affect any
+  representation on other data.
 
-**Action required:** Numerical results for `distribution` / `distribution_minmax`
-representations differ slightly from v3 (values shift within the envelope while
-the integral is better preserved). If you pinned exact aggregated outputs,
-regenerate your references.
+**Action required:** If you use `distribution_minmax`, `maxoid`/`kmaxoids`, or
+rely on exact aggregated values with rescaling enabled, regenerate any pinned
+references. Aggregate metrics (integral, min/max envelope) are preserved or
+improved.
 
 ### Removed deprecated APIs
 
