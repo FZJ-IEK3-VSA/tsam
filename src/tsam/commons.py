@@ -167,11 +167,10 @@ def bounded_water_fill(
         residual = target_weighted_sum - float(np.sum(weights * adjusted))
         if abs(residual) <= tolerance:
             return adjusted, True, passes
-        # Room to grow toward the cap, or depth to shrink toward the floor.
         room = (upper - adjusted) if residual > 0 else (adjusted - lower)
         capacity = float(np.sum(weights * room))
         if capacity <= tolerance:
-            break  # no feasible room left inside [lower, upper]
+            break
         step = min(abs(residual), capacity)
         adjusted = adjusted + np.sign(residual) * step * room / capacity
         np.clip(adjusted, lower, upper, out=adjusted)

@@ -114,11 +114,8 @@ def rescale_representatives(
                 scale_ub * original_data[column].max() / original_data[column].mean()
             )
 
-        # Bounded, sum-preserving rescale: one multiplicative shape-preserving
-        # warm start, then water-fill the residual within [0, scale_ub] so the
-        # integral is restored without flattening the distribution against the
-        # cap - the condition that previously let the downstream min/max
-        # representation overshoot the input envelope.
+        # Shape-preserving warm start, then water-fill the residual within
+        # [0, scale_ub] (see bounded_water_fill).
         target = sum_raw - sum_peak
         weights_wo_peak = weighting_vec[idx_wo_peak]
 
@@ -126,7 +123,6 @@ def rescale_representatives(
             arr[idx_wo_peak, ci, :] *= target / sum_clu_wo_peak
         np.nan_to_num(arr[:, ci, :], copy=False, nan=0.0)
 
-        # One weight per period, broadcast across the timesteps of that period.
         rescaled, converged, iterations = bounded_water_fill(
             arr[idx_wo_peak, ci, :],
             weights_wo_peak[:, None],

@@ -220,7 +220,6 @@ def _pin_min_max_preserve_sum(
     infeasible = 0
     for a in range(out.shape[0]):
         lo, hi = float(lower[a]), float(upper[a])
-        # Sum to preserve across the interior once the endpoints are pinned.
         target_mid = float(out[a].sum()) - lo - hi
         out[a, 0] = lo
         out[a, -1] = hi
@@ -275,8 +274,6 @@ def _represent_min_max(
     if np.any(np.array(representation_values) < 0):
         raise ValueError("Negative values in the duration curve representation")
 
-    # Change of the endpoints toward the original min/max, and how often each
-    # endpoint occurs in the original series.
     delta_max = sorted_attr.max() - representation_values[-1]
     appearance_max = means_and_weights_sorted[1].iloc[-1]
     delta_min = sorted_attr.min() - representation_values[0]
@@ -285,27 +282,21 @@ def _represent_min_max(
     if delta_min == 0 and delta_max == 0:
         return representation_values
 
-    # Sum shift introduced by moving the endpoints to the original min/max.
     delta_sum = delta_max * appearance_max + delta_min * appearance_min
 
     mid_weights = np.asarray(means_and_weights_sorted[1].iloc[1:-1].values, dtype=float)
     mid_orig = np.asarray(representation_values[1:-1], dtype=float)
     weighted_mid_sum = float(np.sum(mid_weights * mid_orig))
-    # How much the interior values must change to preserve the mean.
     correction_factor = -delta_sum / weighted_mid_sum if weighted_mid_sum != 0 else 0.0
 
     if correction_factor < -1 or correction_factor > 1:
         warnings.warn(_MINMAX_INFEASIBLE_MSG)
         return representation_values
 
-    # Initial multiplicative correction: preserves the weighted sum exactly and
-    # keeps zero-valued segments at zero (matching the cluster distribution
-    # shape). When no bound is violated this matches the legacy behaviour.
+    # Multiplicative warm start: preserves the weighted sum exactly and keeps
+    # zero-valued segments at zero; matches legacy behaviour when no bound is hit.
     corrected = mid_orig * (1 + correction_factor)
 
-    # Clip to the cluster envelope and water-fill the clipped mass back into
-    # segments with room, keeping the result envelope-safe while preserving the
-    # sum up to feasibility.
     target_weighted_sum = weighted_mid_sum - delta_sum
     corrected, feasible, _ = bounded_water_fill(
         corrected,
@@ -321,7 +312,6 @@ def _represent_min_max(
 
     representation_values[1:-1] = corrected
 
-    # Finally pin the endpoints to the original min/max.
     representation_values[-1] += delta_max
     representation_values[0] += delta_min
 
