@@ -66,11 +66,14 @@ them against the cap. This is two independent changes with different scopes:
     - Single-value segments (`distribution_minmax` with `n_segments`) keep the
       segment **mean** rather than being pushed to the segment maximum, since one
       value cannot carry both the minimum and the maximum.
-2. **Cluster-period rescaling** (`preserve_column_means=True`, the default).
-   This is on the shared path for **every** representation. It is identical to
+2. **Cluster-period rescaling.** Because `preserve_column_means` **defaults to
+   `True`**, this step runs in almost every aggregation, on the shared path for
+   **every** representation — it is not an opt-in corner case. It is identical to
    the old behavior *unless* a representative value would have been clipped
    against the `[0, scale_ub]` envelope; where that clipping occurred, values are
    now redistributed instead of flattened, so the integral is better preserved.
+   So "I only use the defaults" does not by itself mean your results are
+   unchanged — it depends on whether any representative hit the envelope.
 
 **What changes:**
 
