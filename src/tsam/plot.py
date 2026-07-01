@@ -49,24 +49,16 @@ def _validate_columns(
 ) -> list[str]:
     """Validate and filter column names, warning about invalid ones.
 
-    Parameters
-    ----------
-    requested : list[str] | None
-        Columns requested by user. If None, returns all available.
-    available : list[str]
-        Columns available in the data.
-    context : str
-        Description for error messages (e.g., "original data").
+    Args:
+        requested: Columns requested by user. If None, returns all available.
+        available: Columns available in the data.
+        context: Description for error messages (e.g., "original data").
 
-    Returns
-    -------
-    list[str]
+    Returns:
         Valid columns to use.
 
-    Raises
-    ------
-    ValueError
-        If no valid columns remain after filtering.
+    Raises:
+        ValueError: If no valid columns remain after filtering.
     """
     if requested is None:
         return available
@@ -127,14 +119,13 @@ class ResultPlotAccessor:
 
     Provides convenient plotting methods directly on the result object.
 
-    Examples
-    --------
-    >>> result = tsam.aggregate(df, n_clusters=8)
-    >>> result.plot.compare()  # Compare original vs reconstructed
-    >>> result.plot.residuals()  # View reconstruction errors
-    >>> result.plot.cluster_representatives()
-    >>> result.plot.cluster_members()
-    >>> result.plot.cluster_counts()
+    Examples:
+        >>> result = tsam.aggregate(df, n_clusters=8)
+        >>> result.plot.compare()  # Compare original vs reconstructed
+        >>> result.plot.residuals()  # View reconstruction errors
+        >>> result.plot.cluster_representatives()
+        >>> result.plot.cluster_members()
+        >>> result.plot.cluster_counts()
     """
 
     def __init__(self, result: AggregationResult):
@@ -147,16 +138,12 @@ class ResultPlotAccessor:
     ) -> go.Figure:
         """Plot all cluster representatives (typical periods).
 
-        Parameters
-        ----------
-        columns : list[str], optional
-            Columns to plot.
-        title : str, default "Cluster Representatives"
-            Plot title.
+        Args:
+            columns: Columns to plot. If None, plots all available columns.
+            title: Plot title. Defaults to "Cluster Representatives".
 
-        Returns
-        -------
-        go.Figure
+        Returns:
+            A Plotly figure of the cluster representatives.
         """
         typ = self._result.cluster_representatives
         counts = self._result.cluster_counts
@@ -203,30 +190,23 @@ class ResultPlotAccessor:
         representative as a bold line. A slider lets you flip through
         either clusters or columns.
 
-        Parameters
-        ----------
-        columns : list[str], optional
-            Columns to plot. If None, plots all columns.
-        clusters : list[int], optional
-            Cluster indices to include. If None, includes all clusters.
-        slider : ``"cluster"`` or ``"column"``, default ``"cluster"``
-            Which dimension to put on the slider.
-            The other dimension becomes ``facet_col``.
+        Args:
+            columns: Columns to plot. If None, plots all columns.
+            clusters: Cluster indices to include. If None, includes all clusters.
+            slider: Which dimension to put on the slider; the other dimension
+                becomes ``facet_col``. Defaults to ``"cluster"``.
 
-            - ``"cluster"``: slider flips through clusters, columns are facets.
-            - ``"column"``: slider flips through columns, clusters are facets.
-        title : str, optional
-            Plot title. Defaults to "Cluster Members".
+                - ``"cluster"``: slider flips through clusters, columns are facets.
+                - ``"column"``: slider flips through columns, clusters are facets.
+            title: Plot title. Defaults to "Cluster Members".
 
-        Returns
-        -------
-        go.Figure
+        Returns:
+            A Plotly figure with member periods and highlighted representatives.
 
-        Examples
-        --------
-        >>> result.plot.cluster_members(columns=["Load"])
-        >>> result.plot.cluster_members(clusters=[0, 3])  # specific clusters
-        >>> result.plot.cluster_members(slider="column")  # flip through columns
+        Examples:
+            >>> result.plot.cluster_members(columns=["Load"])
+            >>> result.plot.cluster_members(clusters=[0, 3])  # specific clusters
+            >>> result.plot.cluster_members(slider="column")  # flip through columns
         """
         from plotly.subplots import make_subplots
 
@@ -448,14 +428,11 @@ class ResultPlotAccessor:
     def cluster_counts(self, title: str = "Cluster Counts") -> go.Figure:
         """Plot how many original periods each cluster represents.
 
-        Parameters
-        ----------
-        title : str, default "Cluster Counts"
-            Plot title.
+        Args:
+            title: Plot title. Defaults to "Cluster Counts".
 
-        Returns
-        -------
-        go.Figure
+        Returns:
+            A bar chart of cluster counts.
         """
         counts = self._result.cluster_counts
         df = pd.DataFrame(
@@ -491,14 +468,11 @@ class ResultPlotAccessor:
     def accuracy(self, title: str = "Accuracy Metrics") -> go.Figure:
         """Plot accuracy metrics by column.
 
-        Parameters
-        ----------
-        title : str, default "Accuracy Metrics"
-            Plot title.
+        Args:
+            title: Plot title. Defaults to "Accuracy Metrics".
 
-        Returns
-        -------
-        go.Figure
+        Returns:
+            A grouped bar chart of accuracy metrics per column.
         """
         acc = self._result.accuracy
         columns = list(acc.rmse.index)
@@ -531,19 +505,14 @@ class ResultPlotAccessor:
     def segment_durations(self, title: str = "Segment Durations") -> go.Figure:
         """Plot segment durations (if segmentation was used).
 
-        Parameters
-        ----------
-        title : str, default "Segment Durations"
-            Plot title.
+        Args:
+            title: Plot title. Defaults to "Segment Durations".
 
-        Returns
-        -------
-        go.Figure
+        Returns:
+            A bar chart of average segment durations.
 
-        Raises
-        ------
-        ValueError
-            If no segmentation was used.
+        Raises:
+            ValueError: If no segmentation was used.
         """
         if self._result.segment_durations is None:
             raise ValueError("No segmentation was used in this aggregation")
@@ -595,27 +564,25 @@ class ResultPlotAccessor:
     ) -> go.Figure:
         """Compare original vs reconstructed time series.
 
-        Parameters
-        ----------
-        columns : list[str], optional
-            Columns to compare. If None, compares all columns.
-        mode : str, default "overlay"
-            Comparison mode:
-            - "overlay": Both series on same axes
-            - "side_by_side": Separate subplots
-            - "duration_curve": Compare sorted values
-        title : str, optional
-            Plot title.
+        Args:
+            columns: Columns to compare. If None, compares all columns.
+            mode: Comparison mode. Defaults to "overlay".
 
-        Returns
-        -------
-        go.Figure
+                - "overlay": Both series on same axes
+                - "side_by_side": Separate subplots
+                - "duration_curve": Compare sorted values
+            title: Plot title.
 
-        Examples
-        --------
-        >>> result.plot.compare()  # Compare all columns
-        >>> result.plot.compare(columns=["Load"])  # Compare specific column
-        >>> result.plot.compare(mode="duration_curve")
+        Returns:
+            A Plotly figure comparing original and reconstructed series.
+
+        Raises:
+            ValueError: If an unknown mode is given.
+
+        Examples:
+            >>> result.plot.compare()  # Compare all columns
+            >>> result.plot.compare(columns=["Load"])  # Compare specific column
+            >>> result.plot.compare(mode="duration_curve")
         """
         orig = self._result.original
         recon = self._result.reconstructed
@@ -680,29 +647,27 @@ class ResultPlotAccessor:
     ) -> go.Figure:
         """Plot residuals (original - reconstructed).
 
-        Parameters
-        ----------
-        columns : list[str], optional
-            Columns to plot. If None, plots all.
-        mode : str, default "time_series"
-            Display mode:
-            - "time_series": Residuals over time
-            - "histogram": Distribution of residuals
-            - "by_period": Mean absolute error per period (bar chart)
-            - "by_timestep": Mean absolute error by timestep within period
-        title : str, optional
-            Plot title.
+        Args:
+            columns: Columns to plot. If None, plots all.
+            mode: Display mode. Defaults to "time_series".
 
-        Returns
-        -------
-        go.Figure
+                - "time_series": Residuals over time
+                - "histogram": Distribution of residuals
+                - "by_period": Mean absolute error per period (bar chart)
+                - "by_timestep": Mean absolute error by timestep within period
+            title: Plot title.
 
-        Examples
-        --------
-        >>> result.plot.residuals()  # Time series of residuals
-        >>> result.plot.residuals(mode="histogram")  # Error distribution
-        >>> result.plot.residuals(mode="by_period")  # Which periods have highest error
-        >>> result.plot.residuals(mode="by_timestep")  # Error pattern within day
+        Returns:
+            A Plotly figure of the residuals.
+
+        Raises:
+            ValueError: If an unknown mode is given.
+
+        Examples:
+            >>> result.plot.residuals()  # Time series of residuals
+            >>> result.plot.residuals(mode="histogram")  # Error distribution
+            >>> result.plot.residuals(mode="by_period")  # Which periods have highest error
+            >>> result.plot.residuals(mode="by_timestep")  # Error pattern within day
         """
         resid = self._result.residuals
         columns = _validate_columns(columns, list(resid.columns), "residuals")

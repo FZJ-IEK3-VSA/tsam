@@ -19,6 +19,13 @@ def time_index_to_dict(idx: pd.DatetimeIndex) -> dict[str, Any] | list[str]:
 
     Regular indices are stored as ``{start, periods, freq}`` (~3 values).
     Irregular indices fall back to a full ISO string list.
+
+    Args:
+        idx: The DatetimeIndex to serialize.
+
+    Returns:
+        A ``{start, periods, freq}`` dict for regular indices, or a list of
+        ISO-formatted timestamp strings for irregular ones.
     """
     freq = pd.infer_freq(idx)
     if freq is not None:
@@ -29,7 +36,15 @@ def time_index_to_dict(idx: pd.DatetimeIndex) -> dict[str, Any] | list[str]:
 def time_index_from_dict(
     raw: dict[str, Any] | list[str],
 ) -> pd.DatetimeIndex:
-    """Deserialize a DatetimeIndex from either compact or list format."""
+    """Deserialize a DatetimeIndex from either compact or list format.
+
+    Args:
+        raw: A ``{start, periods, freq}`` dict or a list of ISO timestamp strings,
+            as produced by :func:`time_index_to_dict`.
+
+    Returns:
+        The reconstructed DatetimeIndex.
+    """
     if isinstance(raw, dict):
         return pd.date_range(raw["start"], periods=raw["periods"], freq=raw["freq"])
     return pd.DatetimeIndex(raw)
@@ -38,11 +53,18 @@ def time_index_from_dict(
 def parse_duration_hours(value: int | float | str, param_name: str) -> float:
     """Parse a duration value to hours.
 
-    Accepts:
-    - int/float: interpreted as hours (e.g., 24 -> 24.0 hours)
-    - str: pandas Timedelta string (e.g., '24h', '1d', '15min')
+    Args:
+        value: The duration to parse. An int or float is interpreted as hours
+            (e.g., 24 -> 24.0 hours); a string is parsed as a pandas Timedelta
+            string (e.g., '24h', '1d', '15min').
+        param_name: Name of the calling parameter, used in error messages.
 
-    Returns duration in hours as float.
+    Returns:
+        The duration in hours.
+
+    Raises:
+        ValueError: If ``value`` is a string that cannot be parsed as a duration.
+        TypeError: If ``value`` is not an int, float, or string.
     """
     if isinstance(value, (int, float)):
         return float(value)
@@ -65,18 +87,13 @@ def weighted_mean(
 ) -> float:
     """Weighted arithmetic mean of per-column values.
 
-    Parameters
-    ----------
-    per_column : pd.Series
-        One value per column (e.g. per-column MAE).
-    weights : dict or None
-        Column name → weight. Missing columns default to 1.
-        ``None`` is equivalent to uniform weights.
+    Args:
+        per_column: One value per column (e.g. per-column MAE).
+        weights: Column name to weight. Missing columns default to 1.
+            ``None`` is equivalent to uniform weights.
 
-    Returns
-    -------
-    float
-        ``sum(value_i * w_i) / sum(w_i)``
+    Returns:
+        ``sum(value_i * w_i) / sum(w_i)``.
     """
     if weights:
         w = pd.Series(weights).reindex(per_column.index, fill_value=1.0)
@@ -94,18 +111,13 @@ def weighted_rms(
     the RMSE you would obtain by pooling all (weighted) residuals into
     a single series.
 
-    Parameters
-    ----------
-    per_column : pd.Series
-        One RMSE value per column.
-    weights : dict or None
-        Column name → weight. Missing columns default to 1.
-        ``None`` is equivalent to uniform weights.
+    Args:
+        per_column: One RMSE value per column.
+        weights: Column name to weight. Missing columns default to 1.
+            ``None`` is equivalent to uniform weights.
 
-    Returns
-    -------
-    float
-        ``sqrt(sum(value_i² * w_i) / sum(w_i))``
+    Returns:
+        ``sqrt(sum(value_i² * w_i) / sum(w_i))``.
     """
     squared = per_column**2
     if weights:

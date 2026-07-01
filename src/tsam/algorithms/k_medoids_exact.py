@@ -13,23 +13,14 @@ from pyomo.contrib import appsi
 
 
 class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
-    """
-    k-medoids class.
+    """k-medoids class.
 
-    :param n_clusters:  How many medoids. Must be positive. optional, default: 8
-    :type n_clusters: integer
-
-    :param distance_metric: What distance metric to use. optional, default: 'euclidean'
-    :type distance_metric: string
-
-    :param timelimit: Specify the time limit of the solver. optional, default:  100
-    :type timelimit: integer
-
-    :param threads: Threads to use by the optimization solver. optional, default: 7
-    :type threads: integer
-
-    :param solver: Specifies the solver. optional, default: 'highs'
-    :type solver: string
+    Args:
+        n_clusters: How many medoids. Must be positive (default: 8).
+        distance_metric: What distance metric to use (default: 'euclidean').
+        timelimit: The time limit of the solver (default: 100).
+        threads: Threads to use by the optimization solver (default: 7).
+        solver: The solver to use (default: 'highs').
     """
 
     def __init__(
@@ -77,10 +68,12 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
     def fit(self, X, y=None):
         """Fit K-Medoids to the provided data.
 
-        :param X: shape=(n_samples, n_features)
-        :type X: array-like or sparse matrix
+        Args:
+            X: Data of shape (n_samples, n_features).
+            y: Ignored; present for scikit-learn API compatibility.
 
-        :returns: self
+        Returns:
+            self.
         """
 
         self._check_init_args()
@@ -130,13 +123,11 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         return X
 
     def _k_medoids_exact(self, distances, n_clusters):
-        """
-        Parameters
-        ----------
-        distances : int, required
-            Pairwise distances between each row.
-        n_clusters : int, required
-            Number of clusters.
+        """Solve the exact k-medoids problem.
+
+        Args:
+            distances: Pairwise distances between each row.
+            n_clusters: Number of clusters.
         """
 
         # Create pyomo model
@@ -150,9 +141,12 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
 def _setup_k_medoids(distances, n_clusters):
     """Define the k-medoids model with pyomo.
-    In the spatial aggregation community, it is referred to as Hess Model for political districting
-    with an additional constraint of cluster-sizes/populations.
-    (W Hess, JB Weaver, HJ Siegfeldt, JN Whelan, and PA Zitlau. Nonpartisan political redistricting by computer. Operations Research, 13(6):998–1006, 1965.)
+
+    In the spatial aggregation community, it is referred to as Hess Model for
+    political districting with an additional constraint of
+    cluster-sizes/populations. (W Hess, JB Weaver, HJ Siegfeldt, JN Whelan, and
+    PA Zitlau. Nonpartisan political redistricting by computer. Operations
+    Research, 13(6):998-1006, 1965.)
     """
     # Create model
     M = pyomo.ConcreteModel()
@@ -203,17 +197,15 @@ def _setup_k_medoids(distances, n_clusters):
 
 
 def _solve_given_pyomo_model(M, solver="highs"):
-    """Solves a given pyomo model clustering model an returns the clusters
+    """Solve a given pyomo clustering model and return the clusters.
 
     Args:
-        M (pyomo.ConcreteModel): Concrete model instance that gets solved.
-        solver (str, optional): solver, defines the solver for the pyomo model. Defaults to "highs".
-
-    Raises:
-        ValueError: [description]
+        M: Concrete model instance that gets solved.
+        solver: Defines the solver for the pyomo model. Defaults to "highs".
 
     Returns:
-        [type]: [description]
+        A tuple ``(r_x, r_y, r_obj)`` of the assignment matrix, the medoid
+        selection vector, and the objective value.
     """
     # create optimization problem
     if solver == "highs":

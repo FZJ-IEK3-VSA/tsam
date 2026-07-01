@@ -1,4 +1,4 @@
-"""Orders a set of representation values to fit several candidate value sets"""
+"""Orders a set of representation values to fit several candidate value sets."""
 
 import warnings
 
@@ -13,18 +13,21 @@ def duration_representation(
     n_timesteps_per_period,
     represent_min_max=False,
 ):
-    """
-    Represents the candidates of a given cluster group (cluster_order)
-    such that for every attribute the number of time steps is best fit.
+    """Represent each cluster group so every attribute's timestep count is best fit.
 
-    :param candidates: Dissimilarity matrix where each row represents a candidate
-    :type candidates: np.ndarray
+    Represents the candidates of a given cluster group (cluster_order) such that
+    for every attribute the number of time steps is best fit.
 
-    :param cluster_order: Integer array where the index refers to the candidate and the Integer entry to the group
-    :type cluster_order: np.array
-
-    :param represent_min_max: If in every cluster the minimum and the maximum of the attribute should be represented
-    :type represent_min_max: bool
+    Args:
+        candidates: Dissimilarity matrix where each row represents a candidate.
+        cluster_order: Integer array where the index refers to the candidate and
+            the integer entry to the group.
+        distribution_period_wise: If True, the distribution of each cluster is
+            preserved; if False, only the distribution of the total time series
+            is preserved.
+        n_timesteps_per_period: Number of time steps per period.
+        represent_min_max: If in every cluster the minimum and the maximum of the
+            attribute should be represented.
     """
 
     # make pd.DataFrame each row represents a candidate, and the columns are defined by two levels: the attributes and
@@ -151,23 +154,18 @@ def duration_representation(
 def _represent_min_max(
     representation_values, sorted_attr, means_and_weights_sorted, keep_sum=True
 ):
-    """
-    Represents the the min and max values of the original time series in the
-    duration curve representation such that the min and max values of the
-    original time series are preserved.
+    """Preserve the original time series' min and max in the duration curve.
 
-    :param representation_values: The duration curve representation values
-    :type representation_values: np.array
+    Represents the min and max values of the original time series in the duration
+    curve representation such that the min and max values of the original time
+    series are preserved.
 
-    :param sorted_attr: The sorted original time series
-    :type sorted_attr: np.array
-
-    :param means_and_weights_sorted: The number of occureance of
-     the original time series.
-    :type means_and_weights_sorted: pd.DataFrame
-
-    :param keep_sum: If the sum of the duration curve should be preserved
-    :type keep_sum: bool
+    Args:
+        representation_values: The duration curve representation values.
+        sorted_attr: The sorted original time series.
+        means_and_weights_sorted: The number of occurrence of the original time
+            series.
+        keep_sum: If the sum of the duration curve should be preserved.
     """
 
     if np.any(np.array(representation_values) < 0):

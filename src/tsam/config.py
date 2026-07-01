@@ -41,14 +41,12 @@ Solver = Literal["highs", "cbc", "gurobi", "cplex"]
 class Distribution:
     """Representation that preserves the value distribution (duration curve).
 
-    Parameters
-    ----------
-    scope : "cluster" or "global", default "cluster"
-        "cluster": preserve each cluster's distribution separately
-        "global": preserve the overall time series distribution
-    preserve_minmax : bool, default False
-        If True, also preserves min/max values per timestep
-        (equivalent to old "distribution_minmax").
+    Args:
+        scope: "cluster" preserves each cluster's distribution separately;
+            "global" preserves the overall time series distribution. Defaults
+            to "cluster".
+        preserve_minmax: If True, also preserves min/max values per timestep
+            (equivalent to old "distribution_minmax"). Defaults to False.
     """
 
     scope: Literal["cluster", "global"] = "cluster"
@@ -78,12 +76,11 @@ class MinMaxMean:
 
     Columns not listed in max_columns or min_columns default to mean.
 
-    Parameters
-    ----------
-    max_columns : list[str]
-        Columns represented by their maximum value across cluster members.
-    min_columns : list[str]
-        Columns represented by their minimum value across cluster members.
+    Args:
+        max_columns: Columns represented by their maximum value across cluster
+            members.
+        min_columns: Columns represented by their minimum value across cluster
+            members.
     """
 
     max_columns: list[str] = field(default_factory=list)
@@ -134,58 +131,50 @@ def representation_from_dict(data: str | dict) -> Representation:
 class ClusterConfig:
     """Configuration for the clustering algorithm.
 
-    Parameters
-    ----------
-    method : str, default "hierarchical"
-        Clustering algorithm to use:
-        - "averaging": Sequential averaging of periods
-        - "kmeans": K-means clustering (fast, uses centroids)
-        - "kmedoids": K-medoids using MILP optimization (uses actual periods)
-        - "kmaxoids": K-maxoids (selects most dissimilar periods)
-        - "hierarchical": Agglomerative hierarchical clustering
-        - "contiguous": Hierarchical with temporal contiguity constraint
+    Args:
+        method: Clustering algorithm to use. Defaults to "hierarchical".
 
-    representation : str, Distribution, or MinMaxMean, optional
-        How to represent cluster centers. Accepts either a string shortcut
-        or a typed representation object for additional options:
+            - "averaging": Sequential averaging of periods
+            - "kmeans": K-means clustering (fast, uses centroids)
+            - "kmedoids": K-medoids using MILP optimization (uses actual periods)
+            - "kmaxoids": K-maxoids (selects most dissimilar periods)
+            - "hierarchical": Agglomerative hierarchical clustering
+            - "contiguous": Hierarchical with temporal contiguity constraint
+        representation: How to represent cluster centers. Accepts either a
+            string shortcut or a typed representation object for additional
+            options.
 
-        String shortcuts:
-        - "mean": Centroid (average of cluster members)
-        - "medoid": Actual period closest to centroid
-        - "maxoid": Actual period most dissimilar to others
-        - "distribution": Preserve value distribution (duration curve)
-        - "distribution_minmax": Distribution + preserve min/max values
-        - "minmax_mean": Combine min/max/mean per timestep
+            String shortcuts:
 
-        Typed objects (for additional options):
-        - ``Distribution(scope="cluster"|"global", preserve_minmax=False)``:
-          Preserve value distribution. ``scope`` controls whether each
-          cluster's distribution is preserved separately ("cluster") or
-          the overall time series distribution ("global").
-        - ``MinMaxMean(max_columns=[...], min_columns=[...])``:
-          Combine min/max/mean per column. Columns not listed default to mean.
+            - "mean": Centroid (average of cluster members)
+            - "medoid": Actual period closest to centroid
+            - "maxoid": Actual period most dissimilar to others
+            - "distribution": Preserve value distribution (duration curve)
+            - "distribution_minmax": Distribution + preserve min/max values
+            - "minmax_mean": Combine min/max/mean per timestep
 
-        Default depends on method:
-        - "mean" for averaging, kmeans
-        - "medoid" for kmedoids, hierarchical, contiguous
-        - "maxoid" for kmaxoids
+            Typed objects (for additional options):
 
-    scale_by_column_means : bool, default False
-        Divide each column by its mean after MinMax normalization, so all
-        columns have equal mean before clustering.
-        Useful when columns have very different scales.
+            - ``Distribution(scope="cluster"|"global", preserve_minmax=False)``:
+              Preserve value distribution. ``scope`` controls whether each
+              cluster's distribution is preserved separately ("cluster") or
+              the overall time series distribution ("global").
+            - ``MinMaxMean(max_columns=[...], min_columns=[...])``:
+              Combine min/max/mean per column. Columns not listed default to mean.
 
-    use_duration_curves : bool, default False
-        Sort values within each period before clustering.
-        Matches periods by their value distribution rather than timing.
-
-    include_period_sums : bool, default False
-        Include period totals as additional features for clustering.
-        Helps preserve total energy/load values.
-
-    solver : str, default "highs"
-        MILP solver for kmedoids method.
-        Options: "highs" (default, open source), "cbc", "gurobi", "cplex"
+            Default depends on method: "mean" for averaging and kmeans, "medoid"
+            for kmedoids, hierarchical, and contiguous, and "maxoid" for kmaxoids.
+        scale_by_column_means: Divide each column by its mean after MinMax
+            normalization, so all columns have equal mean before clustering.
+            Useful when columns have very different scales. Defaults to False.
+        use_duration_curves: Sort values within each period before clustering.
+            Matches periods by their value distribution rather than timing.
+            Defaults to False.
+        include_period_sums: Include period totals as additional features for
+            clustering. Helps preserve total energy/load values. Defaults to
+            False.
+        solver: MILP solver for the kmedoids method. Options: "highs" (default,
+            open source), "cbc", "gurobi", "cplex". Defaults to "highs".
     """
 
     method: ClusterMethod
@@ -300,21 +289,17 @@ class SegmentConfig:
     Segmentation reduces the temporal resolution within each typical period,
     grouping consecutive timesteps into segments.
 
-    Parameters
-    ----------
-    n_segments : int
-        Number of segments per period.
-        Must be less than or equal to the number of timesteps per period.
-        Example: period_duration=24 with hourly data has 24 timesteps,
-        so n_segments could be 1-24.
+    Args:
+        n_segments: Number of segments per period. Must be less than or equal to
+            the number of timesteps per period. For example, period_duration=24
+            with hourly data has 24 timesteps, so n_segments could be 1-24.
+        representation: How to represent each segment. Defaults to "mean".
 
-    representation : str, Distribution, or MinMaxMean, default "mean"
-        How to represent each segment:
-        - "mean": Average value of timesteps in segment
-        - "medoid": Actual timestep closest to segment mean
-        - "distribution": Preserve distribution within segment
-        - ``Distribution(...)``: Distribution with additional options
-        - ``MinMaxMean(...)``: Per-column min/max/mean
+            - "mean": Average value of timesteps in segment
+            - "medoid": Actual timestep closest to segment mean
+            - "distribution": Preserve distribution within segment
+            - ``Distribution(...)``: Distribution with additional options
+            - ``MinMaxMean(...)``: Per-column min/max/mean
     """
 
     n_segments: int
@@ -350,30 +335,22 @@ class ExtremeConfig:
     Extreme periods contain critical peak values that must be preserved
     in the aggregated representation (e.g., peak demand for capacity sizing).
 
-    Parameters
-    ----------
-    method : str, default "append"
-        How to handle extreme periods:
-        - "append": Add extreme periods as additional cluster centers
-        - "replace": Replace the nearest cluster center with the extreme
-        - "new_cluster": Add as new cluster and reassign affected periods
+    Args:
+        method: How to handle extreme periods. Defaults to "append".
 
-    max_value : list[str], optional
-        Column names where the maximum value should be preserved.
-        The entire period containing that single extreme value becomes an extreme period.
-        Example: ["electricity_demand"] to preserve peak demand hour.
-
-    min_value : list[str], optional
-        Column names where the minimum value should be preserved.
-        Example: ["temperature"] to preserve coldest hour.
-
-    max_period : list[str], optional
-        Column names where the period with maximum total should be preserved.
-        Example: ["solar_generation"] to preserve highest solar day.
-
-    min_period : list[str], optional
-        Column names where the period with minimum total should be preserved.
-        Example: ["wind_generation"] to preserve lowest wind day.
+            - "append": Add extreme periods as additional cluster centers
+            - "replace": Replace the nearest cluster center with the extreme
+            - "new_cluster": Add as new cluster and reassign affected periods
+        max_value: Column names where the maximum value should be preserved. The
+            entire period containing that single extreme value becomes an extreme
+            period, e.g. ["electricity_demand"] to preserve the peak demand hour.
+        min_value: Column names where the minimum value should be preserved, e.g.
+            ["temperature"] to preserve the coldest hour.
+        max_period: Column names where the period with maximum total should be
+            preserved, e.g. ["solar_generation"] to preserve the highest solar
+            day.
+        min_period: Column names where the period with minimum total should be
+            preserved, e.g. ["wind_generation"] to preserve the lowest wind day.
     """
 
     method: ExtremeMethod = "append"

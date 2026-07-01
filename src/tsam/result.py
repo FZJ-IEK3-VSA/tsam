@@ -34,36 +34,28 @@ if TYPE_CHECKING:
 class AccuracyMetrics:
     """Accuracy metrics comparing aggregated to original time series.
 
-    Attributes
-    ----------
-    rmse : pd.Series
-        Root Mean Square Error per column, comparing the original and
-        reconstructed time series point-by-point over time.
-    mae : pd.Series
-        Mean Absolute Error per column, comparing the original and
-        reconstructed time series point-by-point over time.
-    rmse_duration : pd.Series
-        RMSE on duration curves per column. Duration curves are created
-        by sorting values in descending order, so this metric captures
-        how well the aggregation preserves the overall value distribution
-        regardless of temporal ordering.
-    rescale_deviations : pd.DataFrame
-        Rescaling deviation information per column. Contains columns:
-        - deviation_pct: Final deviation percentage after rescaling
-        - converged: Whether rescaling converged within max iterations
-        - iterations: Number of iterations used
-        Only populated if rescaling was enabled, otherwise empty DataFrame.
-    weighted_rmse : float
-        Weighted root-mean-square of per-column RMSE values:
-        ``sqrt(sum(rmse_i² * w_i) / sum(w_i))``.
-        Equals the RMSE over all pooled (weighted) residuals.
-        With uniform weights this matches the old ``totalAccuracyIndicators()["RMSE"]``.
-    weighted_mae : float
-        Weighted arithmetic mean of per-column MAE values:
-        ``sum(mae_i * w_i) / sum(w_i)``.
-    weighted_rmse_duration : float
-        Weighted root-mean-square of per-column duration-curve RMSE values:
-        ``sqrt(sum(rmse_dur_i² * w_i) / sum(w_i))``.
+    Attributes:
+        rmse: Root Mean Square Error per column, comparing the original and
+            reconstructed time series point-by-point over time.
+        mae: Mean Absolute Error per column, comparing the original and
+            reconstructed time series point-by-point over time.
+        rmse_duration: RMSE on duration curves per column. Duration curves are
+            created by sorting values in descending order, so this metric captures
+            how well the aggregation preserves the overall value distribution
+            regardless of temporal ordering.
+        rescale_deviations: Rescaling deviation information per column. Contains
+            columns: deviation_pct (final deviation percentage after rescaling),
+            converged (whether rescaling converged within max iterations), and
+            iterations (number of iterations used). Only populated if rescaling
+            was enabled, otherwise empty DataFrame.
+        weighted_rmse: Weighted root-mean-square of per-column RMSE values:
+            ``sqrt(sum(rmse_i² * w_i) / sum(w_i))``. Equals the RMSE over all
+            pooled (weighted) residuals. With uniform weights this matches the old
+            ``totalAccuracyIndicators()["RMSE"]``.
+        weighted_mae: Weighted arithmetic mean of per-column MAE values:
+            ``sum(mae_i * w_i) / sum(w_i)``.
+        weighted_rmse_duration: Weighted root-mean-square of per-column
+            duration-curve RMSE values: ``sqrt(sum(rmse_dur_i² * w_i) / sum(w_i))``.
     """
 
     rmse: pd.Series
@@ -78,9 +70,7 @@ class AccuracyMetrics:
     def summary(self) -> pd.DataFrame:
         """Summary DataFrame with all metrics per column.
 
-        Returns
-        -------
-        pd.DataFrame
+        Returns:
             DataFrame with columns: rmse, mae, rmse_duration, and deviation_pct
             (if rescaling was enabled). Index is the original column names.
         """
@@ -118,64 +108,47 @@ class AggregationResult:
     This class holds all outputs from the aggregation process and provides
     convenient methods for accessing and exporting the results.
 
-    Attributes
-    ----------
-    cluster_representatives : pd.DataFrame
-        The aggregated typical periods with MultiIndex (cluster, timestep).
-        Each row represents one timestep in one cluster representative.
+    Attributes:
+        cluster_representatives: The aggregated typical periods with MultiIndex
+            (cluster, timestep). Each row represents one timestep in one cluster
+            representative.
+        cluster_assignments: Which cluster each original period belongs to.
+            Length equals the number of original periods. Values are cluster
+            indices (0 to n_clusters-1).
+        cluster_counts: How many original periods each cluster represents. Keys
+            are cluster indices, values are occurrence counts. Values can be
+            fractional due to partial-period adjustment.
+        n_clusters: Number of clusters (typical periods).
+        n_timesteps_per_period: Number of timesteps in each period.
+        n_segments: Number of segments per period if segmentation was used, else
+            None.
+        segment_durations: Duration (in timesteps) for each segment in each
+            typical period. Outer tuple has one entry per typical period, inner
+            tuple has duration for each segment. Use for transferring to another
+            aggregation.
+        accuracy: Accuracy metrics comparing reconstructed to original data.
+        clustering_duration: Time taken for clustering in seconds.
+        is_transferred: Whether this result was created by applying a transferred
+            clustering (via ``ClusteringResult.apply()``) rather than by
+            clustering this data directly.
 
-    cluster_assignments : np.ndarray
-        Which cluster each original period belongs to.
-        Length equals the number of original periods.
-        Values are cluster indices (0 to n_clusters-1).
+    Examples:
+        >>> result = tsam.aggregate(df, n_clusters=8)
+        >>> result.cluster_representatives
+                            solar  wind  demand
+        cluster timestep
+        0       0           0.12   0.45   0.78
+                1           0.15   0.42   0.82
+        ...
 
-    cluster_counts : dict[int, float]
-        How many original periods each cluster represents.
-        Keys are cluster indices, values are occurrence counts.
-        Values can be fractional due to partial-period adjustment.
+        >>> result.cluster_counts
+        {0: 45, 1: 52, 2: 38, ...}
 
-    n_clusters : int
-        Number of clusters (typical periods).
-
-    n_timesteps_per_period : int
-        Number of timesteps in each period.
-
-    n_segments : int | None
-        Number of segments per period if segmentation was used, else None.
-
-    segment_durations : tuple[tuple[int, ...], ...] | None
-        Duration (in timesteps) for each segment in each typical period.
-        Outer tuple has one entry per typical period, inner tuple has
-        duration for each segment. Use for transferring to another aggregation.
-
-    accuracy : AccuracyMetrics
-        Accuracy metrics comparing reconstructed to original data.
-
-    clustering_duration : float
-        Time taken for clustering in seconds.
-
-    is_transferred : bool
-        Whether this result was created by applying a transferred clustering
-        (via ``ClusteringResult.apply()``) rather than by clustering this data directly.
-
-    Examples
-    --------
-    >>> result = tsam.aggregate(df, n_clusters=8)
-    >>> result.cluster_representatives
-                        solar  wind  demand
-    cluster timestep
-    0       0           0.12   0.45   0.78
-            1           0.15   0.42   0.82
-    ...
-
-    >>> result.cluster_counts
-    {0: 45, 1: 52, 2: 38, ...}
-
-    >>> result.accuracy.rmse
-    solar     0.023
-    wind      0.041
-    demand    0.015
-    dtype: float64
+        >>> result.accuracy.rmse
+        solar     0.023
+        wind      0.041
+        demand    0.015
+        dtype: float64
     """
 
     cluster_representatives: pd.DataFrame
@@ -282,16 +255,13 @@ class AggregationResult:
     def original(self) -> pd.DataFrame:
         """Original time series data.
 
-        Returns
-        -------
-        pd.DataFrame
+        Returns:
             The original input time series with datetime index.
 
-        Examples
-        --------
-        >>> result = tsam.aggregate(df, n_clusters=8)
-        >>> result.original.shape == df.shape
-        True
+        Examples:
+            >>> result = tsam.aggregate(df, n_clusters=8)
+            >>> result.original.shape == df.shape
+            True
         """
         return self._original_data
 
@@ -301,16 +271,13 @@ class AggregationResult:
 
         Each original period is replaced by its assigned cluster representative.
 
-        Returns
-        -------
-        pd.DataFrame
+        Returns:
             Reconstructed time series with same shape as original.
 
-        Examples
-        --------
-        >>> result = tsam.aggregate(df, n_clusters=8)
-        >>> result.reconstructed.shape == df.shape
-        True
+        Examples:
+            >>> result = tsam.aggregate(df, n_clusters=8)
+            >>> result.reconstructed.shape == df.shape
+            True
         """
         return self._reconstructed_data
 
@@ -320,25 +287,19 @@ class AggregationResult:
         Each original period is replaced by its assigned cluster representative
         from ``data``. The result uses the original datetime index.
 
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Typical-period data matching ``cluster_representatives``:
+        Args:
+            data: Typical-period data matching ``cluster_representatives``:
+                a ``(cluster, timestep)`` MultiIndex for non-segmented, or a
+                ``(cluster, segment, duration)`` MultiIndex for segmented.
 
-            - ``(cluster, timestep)`` MultiIndex for non-segmented, or
-            - ``(cluster, segment, duration)`` MultiIndex for segmented.
+        Returns:
+            Disaggregated data with the original datetime index. For segmented
+            input, non-segment-start timesteps are NaN.
 
-        Returns
-        -------
-        pd.DataFrame
-            Disaggregated data with the original datetime index.
-            For segmented input, non-segment-start timesteps are NaN.
-
-        Examples
-        --------
-        >>> result = tsam.aggregate(df, n_clusters=8)
-        >>> optimized = run_optimization(result.cluster_representatives)
-        >>> full_year = result.disaggregate(optimized)
+        Examples:
+            >>> result = tsam.aggregate(df, n_clusters=8)
+            >>> optimized = run_optimization(result.cluster_representatives)
+            >>> full_year = result.disaggregate(optimized)
         """
         expanded = self.clustering.disaggregate(data)
         # Trim to original length (last period may be padded) and restore datetime index
@@ -352,24 +313,19 @@ class AggregationResult:
 
         Positive values indicate the original exceeded the reconstruction.
 
-        Returns
-        -------
-        pd.DataFrame
+        Returns:
             Residual time series with same shape as original.
 
-        Examples
-        --------
-        >>> result = tsam.aggregate(df, n_clusters=8)
-        >>> result.residuals.mean()  # Should be close to zero
+        Examples:
+            >>> result = tsam.aggregate(df, n_clusters=8)
+            >>> result.residuals.mean()  # Should be close to zero
         """
         return cast("pd.DataFrame", self.original - self.reconstructed)
 
     def to_dict(self) -> dict:
         """Export results as a dictionary for serialization.
 
-        Returns
-        -------
-        dict
+        Returns:
             Dictionary containing all result data in serializable format.
         """
         return {
@@ -397,11 +353,9 @@ class AggregationResult:
     def timestep_index(self) -> list[int]:
         """Get the timestep or segment indices.
 
-        Returns
-        -------
-        list[int]
-            List of indices [0, 1, ..., n-1] where n is n_segments
-            if segmentation was used, otherwise n_timesteps_per_period.
+        Returns:
+            List of indices [0, 1, ..., n-1] where n is n_segments if
+            segmentation was used, otherwise n_timesteps_per_period.
         """
         n = self.n_segments if self.n_segments else self.n_timesteps_per_period
         return list(range(n))
@@ -413,9 +367,7 @@ class AggregationResult:
         Returns the actual cluster IDs from the cluster_representatives
         DataFrame, which is the authoritative source.
 
-        Returns
-        -------
-        list[int]
+        Returns:
             Sorted list of cluster indices present in cluster_representatives.
         """
         return sorted(self.cluster_representatives.index.get_level_values(0).unique())
@@ -427,33 +379,30 @@ class AggregationResult:
         Returns a DataFrame with one row per original timestep containing
         assignment information for transferring results to another aggregation.
 
-        Columns
-        -------
-        period_idx : int
-            Index of the original period (0-indexed, 0 to n_original_periods-1).
-        timestep_idx : int
-            Timestep index within the period (0 to n_timesteps_per_period-1).
-        cluster_idx : int
-            Which cluster this period is assigned to (0 to n_clusters-1).
-        segment_idx : int (only if segmentation was used)
-            Which segment this timestep belongs to within its period.
+        The returned DataFrame has these columns:
 
-        Returns
-        -------
-        pd.DataFrame
+        - period_idx: Index of the original period (0-indexed, 0 to
+          n_original_periods-1).
+        - timestep_idx: Timestep index within the period (0 to
+          n_timesteps_per_period-1).
+        - cluster_idx: Which cluster this period is assigned to (0 to
+          n_clusters-1).
+        - segment_idx (only if segmentation was used): Which segment this
+          timestep belongs to within its period.
+
+        Returns:
             DataFrame indexed by original time index with assignment columns.
 
-        Examples
-        --------
-        >>> result = tsam.aggregate(df, n_clusters=8)
-        >>> result.assignments.head()
-                             period_idx  timestep_idx  cluster_idx
-        2010-01-01 00:00:00          0             0            3
-        2010-01-01 01:00:00          0             1            3
-        ...
+        Examples:
+            >>> result = tsam.aggregate(df, n_clusters=8)
+            >>> result.assignments.head()
+                                 period_idx  timestep_idx  cluster_idx
+            2010-01-01 00:00:00          0             0            3
+            2010-01-01 01:00:00          0             1            3
+            ...
 
-        >>> # Save and reload assignments
-        >>> result.assignments.to_csv("assignments.csv")
+            >>> # Save and reload assignments
+            >>> result.assignments.to_csv("assignments.csv")
         """
         # Build period_idx and timestep_idx for each original timestep
         period_indices = []
@@ -495,20 +444,17 @@ class AggregationResult:
 
         Returns a plotting accessor with methods for visualizing the results.
 
-        Returns
-        -------
-        ResultPlotAccessor
+        Returns:
             Accessor with plotting methods.
 
-        Examples
-        --------
-        >>> result = tsam.aggregate(df, n_clusters=8)
-        >>> result.plot.compare()  # Compare original vs reconstructed
-        >>> result.plot.residuals()  # View reconstruction errors
-        >>> result.plot.cluster_representatives()
-        >>> result.plot.cluster_members()  # All periods per cluster
-        >>> result.plot.cluster_counts()
-        >>> result.plot.accuracy()
+        Examples:
+            >>> result = tsam.aggregate(df, n_clusters=8)
+            >>> result.plot.compare()  # Compare original vs reconstructed
+            >>> result.plot.residuals()  # View reconstruction errors
+            >>> result.plot.cluster_representatives()
+            >>> result.plot.cluster_members()  # All periods per cluster
+            >>> result.plot.cluster_counts()
+            >>> result.plot.accuracy()
         """
         from tsam.plot import ResultPlotAccessor
 
@@ -599,17 +545,13 @@ def _expand_segments_to_timesteps(
     All other timesteps are NaN. Callers can ``.ffill()`` the result
     to get a step function if needed.
 
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Segmented data with ``(cluster, segment)`` MultiIndex.
-    segment_durations : tuple of tuples
-        Duration per segment per cluster.  ``segment_durations[i][j]`` is the
-        number of timesteps for cluster *i*, segment *j*.
+    Args:
+        data: Segmented data with ``(cluster, segment)`` MultiIndex.
+        segment_durations: Duration per segment per cluster.
+            ``segment_durations[i][j]`` is the number of timesteps for
+            cluster *i*, segment *j*.
 
-    Returns
-    -------
-    pd.DataFrame
+    Returns:
         Data with ``(cluster, timestep)`` MultiIndex at full resolution.
         Only the first timestep of each segment has values; the rest are NaN.
     """
@@ -645,16 +587,11 @@ def _expand_periods(
     Selects rows from ``data`` according to ``cluster_assignments``, mapping
     each original period to its cluster representative.
 
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Typical-period data with ``(cluster, timestep)`` MultiIndex.
-    cluster_assignments : tuple of int
-        Cluster assignment for each original period.
+    Args:
+        data: Typical-period data with ``(cluster, timestep)`` MultiIndex.
+        cluster_assignments: Cluster assignment for each original period.
 
-    Returns
-    -------
-    pd.DataFrame
+    Returns:
         Flat DataFrame with integer index, one row per original timestep.
     """
     unstacked = data.unstack(level=1)  # rows=cluster, cols=(col, timestep)
@@ -683,52 +620,53 @@ class ClusteringResult:
     `apply()`; the trailing ``*_config`` attributes are kept for reference only
     and are not used when re-applying.
 
-    Attributes
-    ----------
-    period_duration : float
-        Length of each period in hours (e.g., 24 for daily periods).
-    cluster_assignments : tuple[int, ...]
-        Cluster assignments for each original period. Length equals the number
-        of original periods in the data.
-    n_timesteps_per_period : int
-        Number of timesteps in each period. Used to validate that new data has
-        compatible structure when calling `apply()`.
-    cluster_centers : tuple[int, ...], optional
-        Indices of original periods used as cluster centers. If not provided,
-        centers are recalculated when applying.
-    segment_assignments : tuple[tuple[int, ...], ...], optional
-        Segment assignments per timestep, per typical period. Only present if
-        segmentation was used.
-    segment_durations : tuple[tuple[int, ...], ...], optional
-        Duration (in timesteps) per segment, per typical period. Required if
-        ``segment_assignments`` is present.
-    segment_centers : tuple[tuple[int, ...], ...], optional
-        Indices of timesteps used as segment centers, per typical period.
-        Required for fully deterministic segment replication.
-    preserve_column_means : bool, default True
-        Whether to rescale typical periods to match original data means.
-    rescale_exclude_columns : tuple[str, ...], optional
-        Column names to exclude from rescaling. Useful for binary columns.
-    representation : str, default "medoid"
-        How to compute typical periods from cluster members.
-    segment_representation : str, optional
-        How to compute segment values. Only used if segmentation is present.
-    temporal_resolution : float, optional
-        Time resolution of input data in hours. If not provided, inferred.
-    cluster_config : ClusterConfig, optional
-        Reference only. Clustering configuration used to create this result.
-    segment_config : SegmentConfig, optional
-        Reference only. Segmentation configuration used to create this result.
-    extremes_config : ExtremeConfig, optional
-        Reference only. Extreme-period configuration used to create this result.
+    Attributes:
+        period_duration: Length of each period in hours (e.g., 24 for daily
+            periods).
+        cluster_assignments: Cluster assignments for each original period. Length
+            equals the number of original periods in the data.
+        n_timesteps_per_period: Number of timesteps in each period. Used to
+            validate that new data has compatible structure when calling
+            `apply()`.
+        cluster_centers: Indices of original periods used as cluster centers. If
+            not provided, centers are recalculated when applying.
+        segment_assignments: Segment assignments per timestep, per typical period.
+            Only present if segmentation was used.
+        segment_durations: Duration (in timesteps) per segment, per typical
+            period. Required if ``segment_assignments`` is present.
+        segment_centers: Indices of timesteps used as segment centers, per typical
+            period. Required for fully deterministic segment replication.
+        preserve_column_means: Whether to rescale typical periods to match
+            original data means (default: True).
+        rescale_exclude_columns: Column names to exclude from rescaling. Useful
+            for binary columns.
+        representation: How to compute typical periods from cluster members
+            (default: "medoid").
+        segment_representation: How to compute segment values. Only used if
+            segmentation is present.
+        temporal_resolution: Time resolution of input data in hours. If not
+            provided, inferred.
+        extreme_cluster_indices: Indices of the clusters holding extreme periods
+            injected by extreme-period handling. None if no extremes were added.
+        weights: Per-column weights that were applied during clustering. None if
+            the aggregation was unweighted.
+        time_index: Original ``DatetimeIndex`` of the input data, kept so that
+            ``disaggregate()`` can round-trip results to the original timestamps.
+        cluster_config: Reference only. Clustering configuration used to create
+            this result.
+        segment_config: Reference only. Segmentation configuration used to create
+            this result.
+        extremes_config: Reference only. Extreme-period configuration used to
+            create this result.
+        version: tsam serialization-format version stored with the result.
+            Populated when the result is written to JSON.
 
-    Examples
-    --------
-    >>> result = tsam.aggregate(df_wind, n_clusters=8)
-    >>> clustering = result.clustering
-    >>> clustering.to_json("clustering.json")  # save
-    >>> clustering = ClusteringResult.from_json("clustering.json")  # load
-    >>> result2 = clustering.apply(df_all)  # apply to new data
+    Examples:
+        >>> result = tsam.aggregate(df_wind, n_clusters=8)
+        >>> clustering = result.clustering
+        >>> clustering.to_json("clustering.json")  # save
+        >>> clustering = ClusteringResult.from_json("clustering.json")  # load
+        >>> result2 = clustering.apply(df_all)  # apply to new data
     """
 
     # === Transfer fields (used by apply()) ===
@@ -945,9 +883,7 @@ class ClusteringResult:
         Returns a DataFrame with one row per original period showing
         cluster assignments.
 
-        Returns
-        -------
-        pd.DataFrame
+        Returns:
             DataFrame with cluster_assignments indexed by original period.
         """
         df = pd.DataFrame(
@@ -969,11 +905,10 @@ class ClusteringResult:
         Returns a DataFrame showing segment durations per typical period.
         Returns None if no segmentation is defined.
 
-        Returns
-        -------
-        pd.DataFrame | None
+        Returns:
             DataFrame with typical periods as rows and segments as columns,
-            values are segment durations in timesteps.
+            values are segment durations in timesteps. None if no segmentation
+            is defined.
         """
         if self.segment_durations is None:
             return None
@@ -1080,20 +1015,16 @@ class ClusteringResult:
     def to_json(self, path: str) -> None:
         """Save clustering result to a JSON file.
 
-        Parameters
-        ----------
-        path : str
-            File path to save to.
+        Args:
+            path: File path to save to.
 
-        Notes
-        -----
-        If the clustering used the 'replace' extreme method, a warning will be
-        issued because the saved clustering cannot be perfectly reproduced when
-        loaded and applied later. See :meth:`apply` for details.
+        Note:
+            If the clustering used the 'replace' extreme method, a warning will be
+            issued because the saved clustering cannot be perfectly reproduced when
+            loaded and applied later. See :meth:`apply` for details.
 
-        Examples
-        --------
-        >>> result.clustering.to_json("clustering.json")
+        Examples:
+            >>> result.clustering.to_json("clustering.json")
         """
         import json
 
@@ -1119,20 +1050,15 @@ class ClusteringResult:
     def from_json(cls, path: str) -> ClusteringResult:
         """Load clustering result from a JSON file.
 
-        Parameters
-        ----------
-        path : str
-            File path to load from.
+        Args:
+            path: File path to load from.
 
-        Returns
-        -------
-        ClusteringResult
+        Returns:
             Loaded clustering result.
 
-        Examples
-        --------
-        >>> clustering = ClusteringResult.from_json("clustering.json")
-        >>> result = clustering.apply(new_data)
+        Examples:
+            >>> clustering = ClusteringResult.from_json("clustering.json")
+            >>> result = clustering.apply(new_data)
         """
         import json
 
@@ -1147,37 +1073,29 @@ class ClusteringResult:
         full timesteps using the stored segment durations, then periods are
         mapped back using cluster assignments.
 
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Typical-period data with one of:
+        Args:
+            data: Typical-period data with one of:
 
-            - A ``(cluster, timestep)`` MultiIndex — works for any clustering,
-              segmented or not. Periods are expanded directly.
-            - A ``(cluster, segment, duration)`` MultiIndex — segments are
-              expanded to timesteps first (NaN between segment starts),
-              then periods are expanded.
+                - A ``(cluster, timestep)`` MultiIndex — works for any clustering,
+                  segmented or not. Periods are expanded directly.
+                - A ``(cluster, segment, duration)`` MultiIndex — segments are
+                  expanded to timesteps first (NaN between segment starts),
+                  then periods are expanded.
 
-        Returns
-        -------
-        pd.DataFrame
-            Disaggregated data with integer-indexed rows
-            (one row per original timestep). For segmented input,
-            non-segment-start timesteps are NaN — use ``.ffill()``
-            for a step function.
+        Returns:
+            Disaggregated data with integer-indexed rows (one row per original
+            timestep). For segmented input, non-segment-start timesteps are NaN —
+            use ``.ffill()`` for a step function.
 
-        Raises
-        ------
-        ValueError
-            If the index structure, cluster IDs, or number of timesteps/segments
-            do not match this clustering.
+        Raises:
+            ValueError: If the index structure, cluster IDs, or number of
+                timesteps/segments do not match this clustering.
 
-        Examples
-        --------
-        >>> clustering = ClusteringResult.from_json("clustering.json")
-        >>> result = clustering.apply(df)
-        >>> optimized = run_optimization(result.cluster_representatives)
-        >>> full_year = clustering.disaggregate(optimized)
+        Examples:
+            >>> clustering = ClusteringResult.from_json("clustering.json")
+            >>> result = clustering.apply(df)
+            >>> optimized = run_optimization(result.cluster_representatives)
+            >>> full_year = clustering.disaggregate(optimized)
         """
         is_segmented_input = data.index.nlevels > 2
         is_segmented_clustering = self.segment_durations is not None
@@ -1219,49 +1137,40 @@ class ClusteringResult:
         Uses the stored cluster assignments and transfer fields to aggregate
         a different dataset with the same clustering structure deterministically.
 
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Input time series data with a datetime index.
-            Must have the same number of periods as the original data.
+        Args:
+            data: Input time series data with a datetime index. Must have the same
+                number of periods as the original data.
+            temporal_resolution: Time resolution of input data in hours. If not
+                provided, uses stored temporal_resolution or infers from data
+                index.
+            round_decimals: Round output values to this many decimal places.
+            numerical_tolerance: Tolerance for numerical precision issues
+                (default: 1e-13).
 
-        temporal_resolution : float, optional
-            Time resolution of input data in hours.
-            If not provided, uses stored temporal_resolution or infers from data index.
-
-        round_decimals : int, optional
-            Round output values to this many decimal places.
-
-        numerical_tolerance : float, default 1e-13
-            Tolerance for numerical precision issues.
-
-        Returns
-        -------
-        AggregationResult
+        Returns:
             Aggregation result using this clustering.
 
-        Notes
-        -----
-        **Extreme period transfer limitations:**
+        Note:
+            **Extreme period transfer limitations:**
 
-        The 'replace' extreme method creates a hybrid cluster representation where
-        some columns use the medoid values and others use the extreme period values.
-        This hybrid representation cannot be perfectly reproduced during transfer.
-        When applying a clustering that used 'replace', a warning will be issued
-        and the transferred result will use the medoid representation for all columns.
+            The 'replace' extreme method creates a hybrid cluster representation
+            where some columns use the medoid values and others use the extreme
+            period values. This hybrid representation cannot be perfectly
+            reproduced during transfer. When applying a clustering that used
+            'replace', a warning will be issued and the transferred result will
+            use the medoid representation for all columns.
 
-        For exact transfer with extreme periods, use 'append' or 'new_cluster'
-        extreme methods instead.
+            For exact transfer with extreme periods, use 'append' or 'new_cluster'
+            extreme methods instead.
 
-        Examples
-        --------
-        >>> # Cluster on wind data, apply to full dataset
-        >>> result_wind = tsam.aggregate(df_wind, n_clusters=8)
-        >>> result_all = result_wind.clustering.apply(df_all)
+        Examples:
+            >>> # Cluster on wind data, apply to full dataset
+            >>> result_wind = tsam.aggregate(df_wind, n_clusters=8)
+            >>> result_all = result_wind.clustering.apply(df_all)
 
-        >>> # Load saved clustering and apply
-        >>> clustering = ClusteringResult.from_json("clustering.json")
-        >>> result = clustering.apply(df)
+            >>> # Load saved clustering and apply
+            >>> clustering = ClusteringResult.from_json("clustering.json")
+            >>> result = clustering.apply(df)
         """
         from tsam.api import _build_aggregation_result
         from tsam.pipeline import run_pipeline

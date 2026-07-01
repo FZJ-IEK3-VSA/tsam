@@ -41,131 +41,96 @@ def aggregate(
     This function reduces a time series dataset to a smaller set of
     representative "typical periods" using clustering algorithms.
 
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Input time series data with a datetime index.
-        Each column represents a different variable (e.g., solar, wind, demand).
-        The index should be a DatetimeIndex with regular intervals.
+    Args:
+        data: Input time series data with a datetime index. Each column
+            represents a different variable (e.g., solar, wind, demand). The
+            index should be a DatetimeIndex with regular intervals.
+        n_clusters: Number of clusters (typical periods) to create. Higher
+            values mean more accuracy but less data reduction. Typical range:
+            4-20 for energy system models.
+        period_duration: Length of each period. Accepts an int/float in hours
+            (e.g., 24 for daily, 168 for weekly) or a pandas Timedelta string
+            (e.g., '24h', '1d', '1w'). Defaults to 24.
+        temporal_resolution: Time resolution of input data. Accepts a float in
+            hours (e.g., 1.0 for hourly, 0.25 for 15-minute) or a pandas
+            Timedelta string (e.g., '1h', '15min', '30min'). If not provided,
+            inferred from the datetime index.
+        cluster: Clustering configuration. If not provided, uses defaults:
+            method "hierarchical" and representation "medoid".
+        segments: Segmentation configuration for reducing temporal resolution
+            within periods. If not provided, no segmentation is applied.
+        extremes: Configuration for preserving extreme periods. If not provided,
+            no extreme period handling is applied.
+        weights: Per-column weights that influence all pipeline stages
+            (clustering, segmentation, representation, rescaling). Higher weight
+            means more influence on distance calculations, e.g.
+            ``{"demand": 2.0, "solar": 1.0}``.
+        preserve_column_means: Rescale typical periods so each column's weighted
+            mean matches the original data's mean. Ensures total energy/load is
+            preserved when weights represent occurrence counts. Defaults to True.
+        rescale_exclude_columns: Column names to exclude from rescaling when
+            ``preserve_column_means`` is True. Useful for binary/indicator
+            columns (0/1 values) that should not be rescaled. If None (default),
+            all columns are rescaled.
+        round_decimals: Round output values to this many decimal places. If not
+            provided, no rounding is applied.
+        numerical_tolerance: Tolerance for numerical precision issues. Controls
+            when warnings are raised for aggregated values exceeding the original
+            time series bounds. Increase this value to silence warnings caused by
+            floating-point precision errors. Defaults to 1e-13.
 
-    n_clusters : int
-        Number of clusters (typical periods) to create.
-        Higher values = more accuracy but less data reduction.
-        Typical range: 4-20 for energy system models.
+    Returns:
+        An object containing the aggregated periods
+        (``cluster_representatives``), the cluster assignment of each original
+        period, the occurrence count per cluster (``cluster_counts``), accuracy
+        metrics (RMSE, MAE), and a ``to_dict()`` method.
 
-    period_duration : int, float, or str, default 24
-        Length of each period. Accepts:
-        - int/float: hours (e.g., 24 for daily, 168 for weekly)
-        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
+    Raises:
+        ValueError: If input data is invalid or parameters are inconsistent.
+        TypeError: If parameter types are incorrect.
 
-    temporal_resolution : float or str, optional
-        Time resolution of input data. Accepts:
-        - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
-        - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
-        If not provided, inferred from the datetime index.
+    Examples:
+        Basic usage with defaults:
 
-    cluster : ClusterConfig, optional
-        Clustering configuration. If not provided, uses defaults:
-        - method: "hierarchical"
-        - representation: "medoid"
+        >>> import tsam
+        >>> result = tsam.aggregate(df, n_clusters=8)
+        >>> typical = result.cluster_representatives
 
-    segments : SegmentConfig, optional
-        Segmentation configuration for reducing temporal resolution
-        within periods. If not provided, no segmentation is applied.
+        With custom clustering:
 
-    extremes : ExtremeConfig, optional
-        Configuration for preserving extreme periods.
-        If not provided, no extreme period handling is applied.
+        >>> from tsam import aggregate, ClusterConfig
+        >>> result = aggregate(
+        ...     df,
+        ...     n_clusters=8,
+        ...     cluster=ClusterConfig(method="kmeans", representation="mean"),
+        ... )
 
-    weights : dict[str, float], optional
-        Per-column weights that influence all pipeline stages
-        (clustering, segmentation, representation, rescaling).
-        Higher weight = more influence on distance calculations.
-        Example: {"demand": 2.0, "solar": 1.0}
+        With segmentation (reduce to 12 timesteps per period):
 
-    preserve_column_means : bool, default True
-        Rescale typical periods so each column's weighted mean matches
-        the original data's mean. Ensures total energy/load is preserved
-        when weights represent occurrence counts.
+        >>> from tsam import aggregate, SegmentConfig
+        >>> result = aggregate(
+        ...     df,
+        ...     n_clusters=8,
+        ...     segments=SegmentConfig(n_segments=12),
+        ... )
 
-    rescale_exclude_columns : list[str], optional
-        Column names to exclude from rescaling when preserve_column_means=True.
-        Useful for binary/indicator columns (0/1 values) that should not be
-        rescaled. If None (default), all columns are rescaled.
+        Preserving peak demand periods:
 
-    round_decimals : int, optional
-        Round output values to this many decimal places.
-        If not provided, no rounding is applied.
+        >>> from tsam import aggregate, ExtremeConfig
+        >>> result = aggregate(
+        ...     df,
+        ...     n_clusters=8,
+        ...     extremes=ExtremeConfig(max_value=["demand"]),
+        ... )
 
-    numerical_tolerance : float, default 1e-13
-        Tolerance for numerical precision issues.
-        Controls when warnings are raised for aggregated values exceeding
-        the original time series bounds. Increase this value to silence
-        warnings caused by floating-point precision errors.
+        Transferring assignments to new data:
 
-    Returns
-    -------
-    AggregationResult
-        Object containing:
-        - cluster_representatives: DataFrame with aggregated periods
-        - cluster_assignments: Which cluster each original period belongs to
-        - cluster_counts: Occurrence count per cluster
-        - accuracy: RMSE, MAE metrics
-        - Methods: to_dict()
+        >>> result1 = aggregate(df_wind, n_clusters=8)
+        >>> result2 = result1.clustering.apply(df_all)
 
-    Raises
-    ------
-    ValueError
-        If input data is invalid or parameters are inconsistent.
-    TypeError
-        If parameter types are incorrect.
-
-    Examples
-    --------
-    Basic usage with defaults:
-
-    >>> import tsam
-    >>> result = tsam.aggregate(df, n_clusters=8)
-    >>> typical = result.cluster_representatives
-
-    With custom clustering:
-
-    >>> from tsam import aggregate, ClusterConfig
-    >>> result = aggregate(
-    ...     df,
-    ...     n_clusters=8,
-    ...     cluster=ClusterConfig(method="kmeans", representation="mean"),
-    ... )
-
-    With segmentation (reduce to 12 timesteps per period):
-
-    >>> from tsam import aggregate, SegmentConfig
-    >>> result = aggregate(
-    ...     df,
-    ...     n_clusters=8,
-    ...     segments=SegmentConfig(n_segments=12),
-    ... )
-
-    Preserving peak demand periods:
-
-    >>> from tsam import aggregate, ExtremeConfig
-    >>> result = aggregate(
-    ...     df,
-    ...     n_clusters=8,
-    ...     extremes=ExtremeConfig(max_value=["demand"]),
-    ... )
-
-    Transferring assignments to new data:
-
-    >>> result1 = aggregate(df_wind, n_clusters=8)
-    >>> result2 = result1.clustering.apply(df_all)
-
-    See Also
-    --------
-    ClusterConfig : Clustering algorithm configuration
-    SegmentConfig : Temporal segmentation configuration
-    ExtremeConfig : Extreme period preservation configuration
-    AggregationResult : Result object with all outputs
+    Note:
+        See ``ClusterConfig``, ``SegmentConfig``, ``ExtremeConfig``, and
+        ``AggregationResult`` for related configuration and result objects.
     """
     # Validate input
     if not isinstance(data, pd.DataFrame):
@@ -308,35 +273,30 @@ def unstack_to_periods(
     Transforms a flat time series into a DataFrame with periods as rows and
     timesteps as a MultiIndex level, suitable for creating heatmaps with plotly.
 
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Time series data with datetime index.
-    period_duration : int, float, or str, default 24
-        Length of each period. Accepts:
-        - int/float: hours (e.g., 24 for daily, 168 for weekly)
-        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
+    Args:
+        data: Time series data with datetime index.
+        period_duration: Length of each period. Accepts an int/float in hours
+            (e.g., 24 for daily, 168 for weekly) or a pandas Timedelta string
+            (e.g., '24h', '1d', '1w'). Defaults to 24.
 
-    Returns
-    -------
-    pd.DataFrame
-        Reshaped data with shape (n_periods, n_timesteps_per_period) for each column.
-        Suitable for ``px.imshow(result["column"].values.T)`` to create heatmaps.
+    Returns:
+        Reshaped data with shape (n_periods, n_timesteps_per_period) for each
+        column. Suitable for ``px.imshow(result["column"].values.T)`` to create
+        heatmaps.
 
-    Examples
-    --------
-    >>> import tsam
-    >>> import plotly.express as px
-    >>>
-    >>> # Reshape data for heatmap visualization
-    >>> unstacked = tsam.unstack_to_periods(df, period_duration=24)
-    >>>
-    >>> # Create heatmap with plotly
-    >>> px.imshow(
-    ...     unstacked["Load"].values.T,
-    ...     labels={"x": "Day", "y": "Hour", "color": "Load"},
-    ...     title="Load Heatmap"
-    ... )
+    Examples:
+        >>> import tsam
+        >>> import plotly.express as px
+        >>>
+        >>> # Reshape data for heatmap visualization
+        >>> unstacked = tsam.unstack_to_periods(df, period_duration=24)
+        >>>
+        >>> # Create heatmap with plotly
+        >>> px.imshow(
+        ...     unstacked["Load"].values.T,
+        ...     labels={"x": "Day", "y": "Hour", "color": "Load"},
+        ...     title="Load Heatmap"
+        ... )
     """
     period_hours = parse_duration_hours(period_duration, "period_duration")
 

@@ -1,4 +1,4 @@
-"""Exact K-maxoids clustering"""
+"""Exact K-maxoids clustering."""
 
 import numpy as np
 import numpy.random as rnd
@@ -8,14 +8,11 @@ from sklearn.utils import check_array
 
 
 class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
-    """
-    k-maxoids class.
+    """k-maxoids class.
 
-    :param n_clusters:  How many maxoids. Must be positive. optional, default: 8
-    :type n_clusters: integer
-
-    :param distance_metric: What distance metric to use. optional, default: 'euclidean'
-    :type distance_metric: string
+    Args:
+        n_clusters: How many maxoids. Must be positive (default: 8).
+        distance_metric: What distance metric to use (default: 'euclidean').
     """
 
     def __init__(
@@ -54,10 +51,12 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
     def fit(self, X, y=None):
         """Fit K-Maxoids to the provided data.
 
-        :param X: shape=(n_samples, n_features)
-        :type X: array-like or sparse matrix
+        Args:
+            X: Data of shape (n_samples, n_features).
+            y: Ignored; present for scikit-learn API compatibility.
 
-        :returns: self
+        Returns:
+            self.
         """
 
         self._check_init_args()

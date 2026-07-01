@@ -38,24 +38,19 @@ def normalize(
     dominate the clustering distance — a temperature column ranging 0–40 would
     overshadow a solar capacity factor ranging 0–1.
 
-    Parameters
-    ----------
-    data
-        Raw input time series, one column per attribute.
-    scale_by_column_means
-        If ``True``, additionally divide each scaled column by its mean so all
-        columns carry equal weight irrespective of their typical level.
+    Args:
+        data: Raw input time series, one column per attribute.
+        scale_by_column_means: If ``True``, additionally divide each scaled
+            column by its mean so all columns carry equal weight irrespective of
+            their typical level.
 
-    Returns
-    -------
-    NormalizedData
+    Returns:
         The normalized values plus the fitted ``MinMaxScaler``, the stored
         per-column mean, and the ``scale_by_column_means`` flag — the most
         widely read intermediate in the pipeline.
 
-    See Also
-    --------
-    denormalize : Invert this transformation back to original units.
+    Note:
+        `denormalize` inverts this transformation back to original units.
     """
     data = data.astype(float)
 
@@ -98,23 +93,17 @@ def denormalize(
     No weight removal is needed because weights were never baked into the data
     that reaches this stage.
 
-    Parameters
-    ----------
-    df
-        Normalized values to convert back to original units (typical periods,
-        optionally segmented).
-    norm_data
-        The object returned by `normalize`, carrying the fitted scaler and
-        stored mean.
+    Args:
+        df: Normalized values to convert back to original units (typical
+            periods, optionally segmented).
+        norm_data: The object returned by `normalize`, carrying the fitted
+            scaler and stored mean.
 
-    Returns
-    -------
-    pd.DataFrame
+    Returns:
         The same data expressed in the original input units.
 
-    See Also
-    --------
-    normalize : The forward transformation this inverts.
+    Note:
+        `normalize` is the forward transformation this inverts.
     """
     result = df.copy()
 
