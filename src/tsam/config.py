@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Literal, get_args
 
@@ -43,21 +44,43 @@ class Distribution:
 
     Parameters
     ----------
-    scope : "cluster" or "global", default "cluster"
-        "cluster": preserve each cluster's distribution separately
-        "global": preserve the overall time series distribution
+    scope : "local" or "global", default "local"
+        "local": preserve each group's own distribution separately. The group is
+        a cluster of periods for a cluster representation, or a segment of
+        timesteps for a segment representation.
+        "global": preserve only the distribution of the enclosing whole (the
+        full time series for a cluster representation, a single period for a
+        segment representation).
+
+        ``"cluster"`` is accepted as a deprecated alias for ``"local"`` (the old
+        name, which was misleading for segment representations where the group is
+        a segment, not a cluster).
     preserve_minmax : bool, default False
         If True, also preserves min/max values per timestep
         (equivalent to old "distribution_minmax").
     """
 
-    scope: Literal["cluster", "global"] = "cluster"
+    # "cluster" is a deprecated alias for "local"; normalized in __post_init__.
+    scope: Literal["local", "global", "cluster"] = "local"
     preserve_minmax: bool = False
+
+    def __post_init__(self) -> None:
+        if self.scope == "cluster":
+            warnings.warn(
+                'Distribution scope="cluster" is deprecated; use scope="local" '
+                "instead (the two are equivalent). The name was renamed because "
+                '"cluster" is misleading for segment representations, where the '
+                "group being preserved is a segment, not a cluster.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            # frozen dataclass: normalize the deprecated alias in place.
+            object.__setattr__(self, "scope", "local")
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         result: dict[str, Any] = {"type": "distribution"}
-        if self.scope != "cluster":
+        if self.scope != "local":
             result["scope"] = self.scope
         if self.preserve_minmax:
             result["preserve_minmax"] = self.preserve_minmax
@@ -67,7 +90,7 @@ class Distribution:
     def from_dict(cls, data: dict) -> Distribution:
         """Create from dictionary (e.g., loaded from JSON)."""
         return cls(
-            scope=data.get("scope", "cluster"),
+            scope=data.get("scope", "local"),
             preserve_minmax=data.get("preserve_minmax", False),
         )
 
@@ -158,10 +181,11 @@ class ClusterConfig:
         - "minmax_mean": Combine min/max/mean per timestep
 
         Typed objects (for additional options):
-        - ``Distribution(scope="cluster"|"global", preserve_minmax=False)``:
+        - ``Distribution(scope="local"|"global", preserve_minmax=False)``:
           Preserve value distribution. ``scope`` controls whether each
-          cluster's distribution is preserved separately ("cluster") or
-          the overall time series distribution ("global").
+          cluster's distribution is preserved separately ("local") or
+          only the overall time series distribution ("global"). ``"cluster"``
+          is a deprecated alias for ``"local"``.
         - ``MinMaxMean(max_columns=[...], min_columns=[...])``:
           Combine min/max/mean per column. Columns not listed default to mean.
 

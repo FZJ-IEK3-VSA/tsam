@@ -165,7 +165,7 @@ The table below maps every old parameter to its v3 equivalent.
 | `addPeakMin` | `ExtremeConfig(min_value=...)` | |
 | `addMeanMax` | `ExtremeConfig(max_period=...)` | |
 | `addMeanMin` | `ExtremeConfig(min_period=...)` | |
-| `distributionPeriodWise` | `Distribution(scope="cluster"\|"global")` | See [representation objects](#typed-representation-objects). |
+| `distributionPeriodWise` | `Distribution(scope="local"\|"global")` | See [representation objects](#typed-representation-objects). |
 | `representationDict` | `MinMaxMean(max_columns=[...], min_columns=[...])` | See [representation objects](#typed-representation-objects). |
 
 ### Cluster method values { #cluster-method-values }

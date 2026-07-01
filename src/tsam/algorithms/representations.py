@@ -62,7 +62,7 @@ def representations(
 
     # --- Dispatch on Representation objects first ---
     if isinstance(representation_method, Distribution):
-        period_wise = representation_method.scope == "cluster"
+        period_wise = representation_method.scope == "local"
         cluster_centers = duration_representation(
             candidates,
             cluster_order,
