@@ -50,6 +50,32 @@ given timeseries needs a datetime index`").
 `temporal_resolution`, pass it explicitly (e.g. `temporal_resolution='15min'`)
 to be sure the timestep length matches your data instead of defaulting to 1h.
 
+### Integral and min/max preservation for the distribution representation
+
+The `distribution` and `distribution_minmax` representations now preserve the
+**integral** (per-attribute sum) and the per-cluster **min/max** by construction.
+Internally, the old iterated *multiply-and-clip* correction is replaced by a
+bounded water-fill that redistributes values within the `[min, max]` envelope
+instead of flattening them against the cap.
+
+**What changes:**
+
+- With rescaling enabled (`preserve_column_means=True`, the default), integral
+  errors that the old code left behind are eliminated — including large ones for
+  `distribution_minmax` combined with segmentation.
+- With rescaling disabled, the cluster-scope `distribution_minmax`
+  representation now preserves the integral exactly (previously it could drift by
+  a few percent).
+- Single-value segments (`n_segments` with `distribution_minmax`) keep the
+  segment **mean** rather than being pushed to the segment maximum, since one
+  value cannot carry both the minimum and the maximum. This preserves the
+  integral but means individual segment values differ from v3.
+
+**Action required:** Numerical results for `distribution` / `distribution_minmax`
+representations differ slightly from v3 (values shift within the envelope while
+the integral is better preserved). If you pinned exact aggregated outputs,
+regenerate your references.
+
 ### Removed deprecated APIs
 
 The v3 deprecation shims have been **removed** in v4:
