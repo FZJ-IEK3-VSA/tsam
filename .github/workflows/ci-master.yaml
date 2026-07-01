@@ -15,10 +15,18 @@ jobs:
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: "3.12"
+      # mypy runs as a repo:local hook against the project's own environment,
+      # so install the project before pre-commit runs. Other hooks use their
+      # own isolated envs and are unaffected.
+      - name: Install project (for the local mypy hook)
+        run: uv pip install --system ".[develop]"
       - uses: pre-commit/action@v3.0.1
 
   # Extended PyPI cross-platform testing
@@ -33,11 +41,11 @@ jobs:
         os: [ubuntu-latest, ubuntu-22.04, macos-latest, macos-15-intel, windows-latest, windows-2022]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: astral-sh/setup-uv@v8.1.0
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
 
@@ -113,11 +121,11 @@ jobs:
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: astral-sh/setup-uv@v8.1.0
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
 
