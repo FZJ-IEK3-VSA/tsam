@@ -149,7 +149,7 @@ def test_medoid_improves_concurrency_over_independent():
     medoid = _aggregate(raw, "medoid")
 
     assert (
-        medoid.concurrency["pearson_error"] < independent.concurrency["pearson_error"]
+        medoid.concurrency.correlation_error < independent.concurrency.correlation_error
     )
     np.testing.assert_allclose(
         medoid.accuracy.rmse_duration.values,

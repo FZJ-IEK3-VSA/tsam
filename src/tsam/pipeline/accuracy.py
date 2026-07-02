@@ -160,11 +160,12 @@ def compute_concurrency(
     Returns
     -------
     pd.Series
-        ``pearson_error`` — Frobenius norm of the difference between the Pearson
-        correlation matrices of the original and reconstructed attributes;
-        ``spearman_error`` — the same for the Spearman rank-correlation matrices
-        (a copula proxy, invariant to monotone marginal changes). Lower is
-        better; both are ``NaN`` when fewer than two attributes are present.
+        ``correlation_error`` — Frobenius norm of the difference between the
+        Pearson correlation matrices of the original and reconstructed
+        attributes; ``rank_correlation_error`` — the same for the Spearman
+        rank-correlation matrices (a copula proxy, invariant to monotone marginal
+        changes). Lower is better; both are ``NaN`` when fewer than two
+        attributes are present.
 
     See Also
     --------
@@ -173,12 +174,17 @@ def compute_concurrency(
     pred = normalized_predicted[normalized_original.columns]
 
     if len(normalized_original.columns) < 2:
-        return pd.Series({"pearson_error": np.nan, "spearman_error": np.nan})
+        return pd.Series(
+            {"correlation_error": np.nan, "rank_correlation_error": np.nan}
+        )
 
     def _frob(method: Literal["pearson", "spearman"]) -> float:
         diff = normalized_original.corr(method=method) - pred.corr(method=method)
         return float(np.sqrt(np.square(diff.values).sum()))
 
     return pd.Series(
-        {"pearson_error": _frob("pearson"), "spearman_error": _frob("spearman")}
+        {
+            "correlation_error": _frob("pearson"),
+            "rank_correlation_error": _frob("spearman"),
+        }
     )
