@@ -444,6 +444,10 @@ class AggregationResult:
                 "weighted_mae": self.accuracy.weighted_mae,
                 "weighted_rmse_duration": self.accuracy.weighted_rmse_duration,
             },
+            "concurrency": {
+                "correlation_error": self.concurrency.correlation_error,
+                "rank_correlation_error": self.concurrency.rank_correlation_error,
+            },
             "clustering_duration": self.clustering_duration,
         }
 
