@@ -62,3 +62,18 @@ python benchmarks/make_docs_figures.py                          # renders the fi
 
 The scaling dimensions are native pytest parameters, so any slice is one `-k`
 away. See `benchmarks/README.md` for the full matrix and the `benchmem` workflow.
+
+## Full data
+
+The numbers behind the figures — median wall-clock **seconds** for one year of
+4 columns and 12 clusters, on an Apple M3. A `—` is a case the benchmark suite
+skipped (see the note above); it is not a failure. Regenerated with the figures by
+`make_docs_figures.py`.
+
+### Clustering methods
+
+--8<-- "docs/assets/benchmarks/method_runtime.md"
+
+### Representations (hierarchical)
+
+--8<-- "docs/assets/benchmarks/representation_runtime.md"

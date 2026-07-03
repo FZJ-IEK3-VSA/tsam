@@ -93,6 +93,31 @@ def _render(
     print(f"wrote {OUT_DIR / out}")
 
 
+_RES_ORDER = [240, 60, 15, 5]
+_RES_LABEL = {240: "4h", 60: "1h", 15: "15min", 5: "5min"}
+
+
+def _write_table(s: pd.DataFrame, key: str, order: list[str], out: str) -> None:
+    """Write the underlying runtimes (seconds) as a markdown table partial.
+
+    Rows are ``(key, period)``; columns are the four resolutions. Included into the
+    docs page via a pymdownx snippet, so the numbers stay in sync with the figures.
+    """
+    header = (
+        f"| {key} | period | " + " | ".join(_RES_LABEL[r] for r in _RES_ORDER) + " |"
+    )
+    rule = "|" + "|".join(["---"] * (2 + len(_RES_ORDER))) + "|"
+    lines = [header, rule]
+    for name in [v for v in order if v in set(s[key])]:
+        for period_hours, period_label in ((24, "daily"), (168, "weekly")):
+            rows = s[(s[key] == name) & (s["period_hours"] == period_hours)]
+            by_res = dict(zip(rows["resolution_min"], rows["value"]))
+            cells = [f"{by_res[r]:.3f}" if r in by_res else "—" for r in _RES_ORDER]
+            lines.append(f"| `{name}` | {period_label} | " + " | ".join(cells) + " |")
+    (OUT_DIR / out).write_text("\n".join(lines) + "\n")
+    print(f"wrote {OUT_DIR / out}")
+
+
 def main() -> None:
     df = _load(sys.argv[1] if len(sys.argv) > 1 else None)
     scale = df[
@@ -107,12 +132,21 @@ def main() -> None:
         title="How clustering methods scale — 1 year, 4 columns, 12 clusters",
         out="method_scaling.html",
     )
+    _write_table(scale, key="method", order=METHODS, out="method_runtime.md")
+
+    rep = df[df["node.func"] == "test_representation"].copy()
     _render(
-        df[df["node.func"] == "test_representation"].copy(),
+        rep,
         color="representation",
         order=REPRESENTATIONS,
         title="Representation cost — hierarchical, 1 year, 4 columns, 12 clusters",
         out="representation_scaling.html",
+    )
+    _write_table(
+        rep,
+        key="representation",
+        order=REPRESENTATIONS,
+        out="representation_runtime.md",
     )
 
 
