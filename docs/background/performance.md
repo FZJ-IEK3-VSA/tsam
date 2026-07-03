@@ -43,12 +43,20 @@ segmentation — stay within ~2× of the baseline.
 at every scale here. Reach for `kmedoids` or `kmaxoids` only when the period count
 is small and their exact representativeness matters.
 
-## Representation is cheap
+## Representation is usually cheap
 
-Given hierarchical clustering, the *representation* you pick — plain `mean` /
-`medoid`, duration-preserving `distribution`, concurrency-preserving orderings, or
-`minmax_mean` — barely changes the runtime: all of them scale together, within a
-small factor of each other.
+The **clustering method is what decides your runtime** — the representation you
+layer on top is a second-order cost. Given hierarchical clustering, most choices —
+plain `mean` / `medoid`, duration-preserving `distribution`, or `minmax_mean` —
+stay within a small factor of each other and track the clustering cost.
+
+The one exception is `concurrency="assignment"`: it reorders each period with an
+optimal assignment whose cost climbs steeply with the period *length*, so it stays
+cheap on daily periods but reaches ~30 s on weekly periods at 5-minute resolution
+(2016 steps per period) — see the bottom-right cell of the representation heatmap
+under [Full data](#full-data). If you need concurrency preservation on long,
+fine-resolution periods, prefer `concurrency="consensus"`, which stays cheap
+throughout.
 
 <iframe src="../../assets/benchmarks/representation_scaling.html" width="100%" height="470" frameborder="0"></iframe>
 
@@ -66,14 +74,10 @@ away. See `benchmarks/README.md` for the full matrix and the `benchmem` workflow
 ## Full data
 
 The numbers behind the figures — median wall-clock **seconds** for one year of
-4 columns and 12 clusters, on an Apple M3. A `—` is a case the benchmark suite
-skipped (see the note above); it is not a failure. Regenerated with the figures by
-`make_docs_figures.py`.
+4 columns and 12 clusters, on an Apple M3. Colour is log-scaled (pale = fast,
+red = slow); a blank cell is a case the benchmark suite skipped (see the note
+above), not a failure. Regenerated with the figures by `make_docs_figures.py`.
 
-### Clustering methods
+<iframe src="../../assets/benchmarks/method_runtime.html" width="100%" height="400" frameborder="0"></iframe>
 
---8<-- "docs/assets/benchmarks/method_runtime.md"
-
-### Representations (hierarchical)
-
---8<-- "docs/assets/benchmarks/representation_runtime.md"
+<iframe src="../../assets/benchmarks/representation_runtime.html" width="100%" height="470" frameborder="0"></iframe>
