@@ -46,17 +46,19 @@ is small and their exact representativeness matters.
 ## Representation is usually cheap
 
 The **clustering method is what decides your runtime** — the representation you
-layer on top is a second-order cost. Given hierarchical clustering, most choices —
-plain `mean` / `medoid`, duration-preserving `distribution`, or `minmax_mean` —
+layer on top is a second-order cost. Given hierarchical clustering, the plain
+choices — `mean` / `medoid`, duration-preserving `distribution`, or `minmax_mean` —
 stay within a small factor of each other and track the clustering cost.
 
-The one exception is `concurrency="assignment"`: it reorders each period with an
-optimal assignment whose cost climbs steeply with the period *length*, so it stays
-cheap on daily periods but reaches ~30 s on weekly periods at 5-minute resolution
-(2016 steps per period) — see the bottom-right cell of the representation heatmap
-under [Full data](#full-data). If you need concurrency preservation on long,
-fine-resolution periods, prefer `concurrency="consensus"`, which stays cheap
-throughout.
+The **concurrency-preserving** representations are the pricier family, because they
+do extra per-period reordering whose cost grows with the period *length*.
+`concurrency="consensus"` carries a modest, steady overhead (~1.5–2× the plain
+representations, still sub-second here). `concurrency="assignment"` — an optimal
+per-period assignment — climbs much more steeply: fine on daily periods, but ~1.5 s
+on weekly / 15-min and ~30 s on weekly / 5-min (2016 steps per period). See the
+representation heatmap under [Full data](#full-data). If you need concurrency
+preservation on long, fine-resolution periods, `consensus` is far cheaper than
+`assignment`.
 
 <iframe src="../../assets/benchmarks/representation_scaling.html" width="100%" height="470" frameborder="0"></iframe>
 
