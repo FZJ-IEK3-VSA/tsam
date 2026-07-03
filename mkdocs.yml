@@ -155,7 +155,6 @@ markdown_extensions:
 # Tooling that lives under docs/ but is not a documentation page.
 exclude_docs: |
   scripts/
-  assets/benchmarks/*.md
 
 extra:
   generator: false

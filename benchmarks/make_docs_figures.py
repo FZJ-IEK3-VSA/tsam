@@ -1,7 +1,8 @@
 """Render the docs performance figures from a saved ``pytest-benchmark`` run.
 
 Loads the run into a tidy DataFrame via ``pytest_benchmem.load_long_df`` and writes
-two self-contained plotly HTML figures into ``docs/assets/benchmarks/``. Wall-clock
+self-contained plotly HTML into ``docs/assets/benchmarks/``: two line figures
+(method / representation scaling) and two log-coloured runtime heatmaps. Wall-clock
 time only, in seconds.
 
 Usage::
@@ -19,10 +20,13 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 import pytest_benchmem as pb
 from _data import METHODS
 from bench_scaling import REPRESENTATIONS as _REPS
+from plotly.subplots import make_subplots
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -95,26 +99,79 @@ def _render(
 
 _RES_ORDER = [240, 60, 15, 5]
 _RES_LABEL = {240: "4h", 60: "1h", 15: "15min", 5: "5min"}
+_HEAT_PERIODS = [(24, "daily (365 periods)"), (168, "weekly (52 periods)")]
+# Log-scale colourbar ticks: 0.01 s .. 10 s.
+_CBAR = {"tickvals": [-2, -1, 0, 1], "ticktext": ["0.01", "0.1", "1", "10"]}
 
 
-def _write_table(s: pd.DataFrame, key: str, order: list[str], out: str) -> None:
-    """Write the underlying runtimes (seconds) as a markdown table partial.
+def _heatmap(s: pd.DataFrame, key: str, order: list[str], title: str, out: str) -> None:
+    """Write the underlying runtimes as a log-coloured heatmap (cell text = seconds).
 
-    Rows are ``(key, period)``; columns are the four resolutions. Included into the
-    docs page via a pymdownx snippet, so the numbers stay in sync with the figures.
+    Rows are the methods/representations, columns the four resolutions, faceted into
+    daily vs weekly. Colour is ``log10(seconds)`` so the orders-of-magnitude spread
+    stays legible; the printed number is the actual runtime. A skipped case is a
+    blank cell.
     """
-    header = (
-        f"| {key} | period | " + " | ".join(_RES_LABEL[r] for r in _RES_ORDER) + " |"
-    )
-    rule = "|" + "|".join(["---"] * (2 + len(_RES_ORDER))) + "|"
-    lines = [header, rule]
-    for name in [v for v in order if v in set(s[key])]:
-        for period_hours, period_label in ((24, "daily"), (168, "weekly")):
+    names = [v for v in order if v in set(s[key])]
+    res_labels = [_RES_LABEL[r] for r in _RES_ORDER]
+    logs, texts = {}, {}
+    for period_hours, _ in _HEAT_PERIODS:
+        z = np.full((len(names), len(_RES_ORDER)), np.nan)
+        text = [["—"] * len(_RES_ORDER) for _ in names]
+        for i, name in enumerate(names):
             rows = s[(s[key] == name) & (s["period_hours"] == period_hours)]
             by_res = dict(zip(rows["resolution_min"], rows["value"]))
-            cells = [f"{by_res[r]:.3f}" if r in by_res else "—" for r in _RES_ORDER]
-            lines.append(f"| `{name}` | {period_label} | " + " | ".join(cells) + " |")
-    (OUT_DIR / out).write_text("\n".join(lines) + "\n")
+            for j, r in enumerate(_RES_ORDER):
+                if r in by_res:
+                    z[i, j] = np.log10(by_res[r])
+                    text[i][j] = f"{by_res[r]:.2f}"
+        logs[period_hours], texts[period_hours] = z, text
+    zmin = float(np.nanmin(list(logs.values())))
+    zmax = float(np.nanmax(list(logs.values())))
+
+    fig = make_subplots(
+        rows=1,
+        cols=2,
+        shared_yaxes=True,
+        horizontal_spacing=0.06,
+        subplot_titles=[label for _, label in _HEAT_PERIODS],
+    )
+    for col, (period_hours, _) in enumerate(_HEAT_PERIODS, start=1):
+        fig.add_trace(
+            go.Heatmap(
+                z=logs[period_hours],
+                x=res_labels,
+                y=names,
+                text=texts[period_hours],
+                texttemplate="%{text}",
+                textfont={"size": 12},
+                zmin=zmin,
+                zmax=zmax,
+                colorscale="YlOrRd",
+                xgap=2,
+                ygap=2,
+                showscale=(col == 2),
+                colorbar={"title": "runtime (s)", "len": 0.9, **_CBAR},
+                hovertemplate="%{y} · %{x}: %{text}s<extra></extra>",
+            ),
+            row=1,
+            col=col,
+        )
+    fig.update_yaxes(autorange="reversed")  # first method on top
+    fig.update_layout(
+        title=title,
+        template="plotly_white",
+        height=max(260, 96 + 46 * len(names)),
+        margin={"l": 120, "r": 20, "t": 70, "b": 40},
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    fig.write_html(
+        OUT_DIR / out,
+        include_plotlyjs="cdn",
+        full_html=True,
+        config={"displayModeBar": False, "responsive": True},
+    )
     print(f"wrote {OUT_DIR / out}")
 
 
@@ -132,7 +189,13 @@ def main() -> None:
         title="How clustering methods scale — 1 year, 4 columns, 12 clusters",
         out="method_scaling.html",
     )
-    _write_table(scale, key="method", order=METHODS, out="method_runtime.md")
+    _heatmap(
+        scale,
+        key="method",
+        order=METHODS,
+        title="Method runtimes (seconds) — 1 year, 4 columns, 12 clusters",
+        out="method_runtime.html",
+    )
 
     rep = df[df["node.func"] == "test_representation"].copy()
     _render(
@@ -142,11 +205,12 @@ def main() -> None:
         title="Representation cost — hierarchical, 1 year, 4 columns, 12 clusters",
         out="representation_scaling.html",
     )
-    _write_table(
+    _heatmap(
         rep,
         key="representation",
         order=REPRESENTATIONS,
-        out="representation_runtime.md",
+        title="Representation runtimes (seconds) — hierarchical, 1 year, 4 columns",
+        out="representation_runtime.html",
     )
 
 
