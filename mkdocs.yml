@@ -13,9 +13,6 @@ theme:
     text: Roboto
     code: Roboto Mono
   features:
-    - navigation.instant
-    - navigation.instant.prefetch
-    - navigation.instant.progress
     - navigation.tabs
     - navigation.sections
     - navigation.indexes
