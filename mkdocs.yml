@@ -78,6 +78,7 @@ nav:
     - Decisions:
       - background/decisions/index.md
       - 0001 — V4 Pipeline: background/decisions/0001-v4-pipeline.md
+    - Performance & Scaling: background/performance.md
     - Further Reading: further-reading.md
   - API Reference:
     - api/index.md

@@ -63,6 +63,7 @@ develop = [
   "pytest-cov<=7.1.0",
   "pytest-xdist<=3.8.0",
   "pytest-benchmark<=5.2.3",
+  "pytest-benchmem[plot]<=0.4.8",
   "codecov<=2.1.13",
   "mkdocs>=1.6,<=1.6.1",
   "mkdocs-material>=9.5,<=9.7.6",
@@ -97,6 +98,9 @@ packages = ["src/tsam"]
 
 [tool.pytest.ini_options]
 testpaths = ["test"] # Sets the path where to look for tests
+# Also collect benchmark modules (benchmarks/bench_*.py) when explicitly
+# targeted; harmless for normal runs since those live outside testpaths.
+python_files = ["test_*.py", "*_test.py", "bench_*.py"]
 pythonpath = [
   "test",
 ] # Sets the path which should be prepended to pythonpath relative to the root folder
