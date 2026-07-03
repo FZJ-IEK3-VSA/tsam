@@ -1,4 +1,4 @@
-"""Make the sibling helper modules (``_data``, ``_timeout``) importable."""
+"""Make the sibling helper module (``_data``) importable."""
 
 from __future__ import annotations
 

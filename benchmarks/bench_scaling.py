@@ -15,12 +15,13 @@ Derived per case: ``timesteps = horizon / resolution``,
 width while keeping the period count — and hence the clustering problem —
 realistic.
 
+Every launched case is bounded up front, so the suite stays fast without any
+runtime timeout machinery: a memory budget drops the biggest corners, and the
+explosion-prone ``kmedoids`` / ``kmaxoids`` are only run where they stay tractable
+(see ``_slow_feasible``). Each case is measured exactly once — we want the scaling
+shape, not statistical rigor.
+
 Select any slice from the CLI with ``-k``; the full cross-product is the default.
-To keep the suite fast, any case slower than ``CASE_TIMEOUT_S`` is dropped: cheap
-methods are measured once and, if over budget, their wider-column variants are
-skipped; the hang-prone ``kmedoids`` / ``kmaxoids`` are probed in a subprocess and
-hard-killed. Cases over the memory budget or with ``clusters > periods`` are also
-skipped.
 
 Examples::
 
@@ -29,8 +30,6 @@ Examples::
 """
 
 from __future__ import annotations
-
-import time
 
 import numpy as np
 import pytest
@@ -45,10 +44,12 @@ from _data import (
     derive,
     make_data,
 )
-from _timeout import completes_within
 
 import tsam
 from tsam import ClusterConfig, Distribution, MinMaxMean
+
+# One measured call per case — we want the scaling shape, not statistical rigor.
+ROUNDS = 1
 
 # Representation methods to compare (all clustered with hierarchical). The base
 # columns are GHI, T, Wind, Load, so the min/max references below always exist.
@@ -64,17 +65,23 @@ REPRESENTATIONS = [
     ("minmax_mean", MinMaxMean(max_columns=["Load"], min_columns=["T"])),
 ]
 
-# Cases slower than this are dropped so the suite stays fast and bounded. Cheap
-# methods are measured once and, if over budget, their wider-column variants are
-# skipped. The hang-prone MILP/heuristic methods are probed in a subprocess and
-# hard-killed — with a longer budget, since they are only usable on small period
-# counts and we still want a few data points to show how they scale.
-CASE_TIMEOUT_S = 3.0
-SLOW_TIMEOUT_S = 15.0
-# One measured call per case — we want the scaling shape, not statistical rigor.
-ROUNDS = 1
-# (method, resolution_min, period_hours) -> smallest columns count that timed out
-_timed_out: dict[tuple[str, int, int], int] = {}
+
+def _slow_feasible(
+    method: str, columns: int, resolution_min: int, period_hours: int
+) -> bool:
+    """Whether an expensive method is cheap enough to benchmark at this point.
+
+    ``kmedoids`` (exact MILP) and ``kmaxoids`` can run for minutes, so they are
+    measured only at the base column width (the method figure uses 4 columns
+    anyway) and — for ``kmedoids`` — only where the period count stays small: every
+    weekly point, but daily only at hourly resolution. Everything else is skipped
+    rather than launched, so no single case can blow up the suite.
+    """
+    if method not in SLOW_METHODS:
+        return True
+    if columns != REP_COLUMNS:
+        return False
+    return not (method == "kmedoids" and period_hours < 168 and resolution_min < 60)
 
 
 @pytest.mark.parametrize("method", METHODS)
@@ -90,23 +97,8 @@ def test_scale(benchmark, resolution_min, period_hours, columns, clusters, metho
         pytest.skip(f"clusters={clusters} exceeds periods={periods}")
     if timesteps * columns > MAX_INPUT_CELLS:
         pytest.skip(f"input {timesteps}x{columns} exceeds memory budget")
-
-    key = (method, resolution_min, period_hours)
-    if key in _timed_out and columns >= _timed_out[key]:
-        pytest.skip(f"{method}: wider inputs skipped after an earlier timeout")
-
-    # Hang-prone methods: hard-kill in a subprocess before we ever run them here.
-    if method in SLOW_METHODS and not completes_within(
-        SLOW_TIMEOUT_S,
-        timesteps,
-        columns,
-        method,
-        period_hours,
-        resolution_hours,
-        clusters,
-    ):
-        _timed_out[key] = min(columns, _timed_out.get(key, columns))
-        pytest.skip(f"{method} exceeded {SLOW_TIMEOUT_S:.0f}s at columns={columns}")
+    if not _slow_feasible(method, columns, resolution_min, period_hours):
+        pytest.skip(f"{method} not benchmarked at this scale (would run for minutes)")
 
     data = make_data(timesteps, columns, resolution_hours=resolution_hours)
     benchmark.extra_info.update(
@@ -123,12 +115,8 @@ def test_scale(benchmark, resolution_min, period_hours, columns, clusters, metho
         }
     )
 
-    elapsed = 0.0
-
     def run():
-        nonlocal elapsed
         np.random.seed(42)  # determinism for kmeans / kmaxoids
-        start = time.perf_counter()
         result = tsam.aggregate(
             data,
             n_clusters=clusters,
@@ -137,14 +125,8 @@ def test_scale(benchmark, resolution_min, period_hours, columns, clusters, metho
             cluster=ClusterConfig(method=method),
         )
         _ = result.reconstructed  # force reconstruction (computed lazily)
-        elapsed = time.perf_counter() - start
 
     benchmark.pedantic(run, rounds=ROUNDS, iterations=1)
-
-    # Cheap methods aren't probed up-front; if this one blew the budget, skip its
-    # wider-column variants (which are strictly heavier).
-    if method not in SLOW_METHODS and elapsed > CASE_TIMEOUT_S:
-        _timed_out[key] = min(columns, _timed_out.get(key, columns))
 
 
 @pytest.mark.parametrize("period_hours", PERIOD_HOURS, ids=lambda v: f"period_{v}h")

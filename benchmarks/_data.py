@@ -1,9 +1,9 @@
 """Deterministic synthetic data + the benchmark dimension levels.
 
-The generator tiles/replicates the real ``testdata.csv`` so benchmark inputs
-scale to any ``(n_rows, n_cols)`` while keeping realistic time-series structure.
-Everything is seeded, so a given ``(n_rows, n_cols)`` always yields byte-identical
-data — a hard requirement for comparable, regression-grade benchmark numbers.
+The generator tiles the real ``testdata.csv`` so benchmark inputs scale to any
+``(n_rows, n_cols)`` while keeping realistic time-series structure. Everything is
+seeded, so a given ``(n_rows, n_cols)`` always yields identical data — needed for
+comparable benchmark numbers across runs.
 
 ``bench_scaling.py`` parametrizes over the level lists below; the figure scripts
 import them for axis ordering.
@@ -41,16 +41,17 @@ def make_data(
 ) -> pd.DataFrame:
     """Build a deterministic ``n_rows x n_cols`` time series from real testdata.
 
-    Rows are produced by tiling the base year and applying small seeded jitter so
-    tiled periods are not byte-identical. Columns beyond the base four are seeded
-    scaled/noised replicas of the base attributes, preserving realistic
-    correlation structure while widening the clustering feature matrix.
+    Rows tile the real base year; columns cycle the four base attributes, each with
+    small seeded jitter so no two columns (or tiled periods) are identical. Runtime,
+    not accuracy, is what these benchmarks measure, so this keeps just enough
+    realistic structure to give the clustering real work while staying seeded and
+    reproducible.
 
     Args:
         n_rows: Number of time steps (rows) to generate.
         n_cols: Number of attribute columns to generate.
         resolution_hours: Spacing of the DatetimeIndex, in hours.
-        seed: RNG seed controlling jitter and column replicas.
+        seed: RNG seed controlling the per-column jitter.
 
     Returns:
         A DataFrame with a regular DatetimeIndex. The first ``min(n_cols, 4)``
@@ -59,20 +60,13 @@ def make_data(
     """
     rng = np.random.RandomState(seed)
     base = _base_values()
-    n_base = base.shape[0]
+    tiled = np.tile(base, (int(np.ceil(n_rows / base.shape[0])), 1))[:n_rows]
 
-    reps = int(np.ceil(n_rows / n_base))
-    tiled = np.tile(base, (reps, 1))[:n_rows]
-    tiled = tiled * (1.0 + 0.02 * rng.standard_normal(tiled.shape))
-
-    columns = []
+    values = np.empty((n_rows, n_cols))
     names = []
     for i in range(n_cols):
-        attr = i % 4
-        replica = i // 4
-        scale = 1.0 if replica == 0 else 0.5 + rng.rand()
-        noise = rng.standard_normal(n_rows) * tiled[:, attr].std() * 0.01
-        columns.append(tiled[:, attr] * scale + noise)
+        attr, replica = i % 4, i // 4
+        values[:, i] = tiled[:, attr] * (1.0 + 0.02 * rng.standard_normal(n_rows))
         names.append(
             _BASE_COLS[attr] if replica == 0 else f"{_BASE_COLS[attr]}_{replica}"
         )
@@ -80,7 +74,7 @@ def make_data(
     index = pd.date_range(
         "2010-01-01", periods=n_rows, freq=pd.Timedelta(hours=resolution_hours)
     )
-    return pd.DataFrame(np.column_stack(columns), index=index, columns=names)
+    return pd.DataFrame(values, index=index, columns=names)
 
 
 # ---------------------------------------------------------------------------
@@ -105,7 +99,8 @@ METHODS = [
     "kmedoids",
 ]
 
-# Methods whose worst case can explode; these get the subprocess timeout gate.
+# Methods whose worst case can run for minutes (exact MILP / heuristic). They are
+# benchmarked only where they stay tractable — see ``bench_scaling._slow_feasible``.
 SLOW_METHODS = {"kmedoids", "kmaxoids"}
 
 # Skip cases whose input array (timesteps x columns) exceeds this, to avoid OOM

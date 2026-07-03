@@ -44,7 +44,7 @@ small factor of each other.
 
 ```bash
 uv pip install -e ".[develop]"
-pytest benchmarks/ --benchmark-only --benchmark-save=headline   # ~8 min
+pytest benchmarks/ --benchmark-only --benchmark-save=headline   # a few minutes
 python benchmarks/make_docs_figures.py                          # renders the figure
 ```
 
