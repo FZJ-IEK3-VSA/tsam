@@ -7,18 +7,30 @@ thousands of parallel series. The one decision that actually costs you is the
 
 <iframe src="../../assets/benchmarks/method_scaling.html" width="100%" height="470" frameborder="0"></iframe>
 
-One figure, one year of data, aggregated from hourly down to 5-minute resolution —
-for every clustering method, at daily (365 periods) and weekly (52 periods):
+One figure, one year of data, aggregated from 4-hourly down to 5-minute
+resolution — for every clustering method, at daily (365 periods) and weekly
+(52 periods):
 
 - **Fast, even at scale.** `averaging`, `contiguous` and `hierarchical` stay well
   under a second — even at 5-minute resolution (~100 000 timesteps), and ~0.75 s
   at 1000 series.
 - **Methods differ by orders of magnitude.** `kmeans` runs ~10× the cheap methods;
   the exact-MILP `kmedoids` and heuristic `kmaxoids` are heavier still.
-- **And that gap depends on your setup.** `kmedoids` is infeasible on 365 *daily*
-  periods past hourly, yet comfortable on 52 *weekly* ones. Which method is
-  affordable moves with the period length and resolution — it is not fixed.
-  (A line ends where that method got too slow and was dropped.)
+- **And that gap depends on your setup.** `kmedoids` is only tractable on 365
+  *daily* periods right at hourly resolution, yet comfortable across every
+  *weekly* one (just 52 periods). Which method is affordable moves with the period
+  length and resolution — it is not fixed. (A method's line stops where the
+  benchmark suite dropped it — see the note below.)
+
+!!! note "A missing point is a benchmark cutoff, not a usability limit"
+    To keep the suite quick to re-run, it only measures cases that finish in
+    roughly a second and skips the ones that would take tens of seconds to
+    minutes — so those methods simply have no dot here. That threshold is ours,
+    not yours. An aggregation that takes 20 s, or even a few minutes, is often
+    perfectly fine for a workflow you run occasionally: if it is a one-off or a
+    monthly job, judge it against *your* time budget, not against whether it
+    appears on this chart. The gaps mark where a method stops being *cheap*, not
+    where it stops being *usable*.
 
 **Why it stays fast:** cost tracks the number of **periods** — the clustering
 candidates — which for a one-year horizon is ~365 (daily) or ~52 (weekly),

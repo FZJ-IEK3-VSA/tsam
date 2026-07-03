@@ -86,7 +86,7 @@ def make_data(
 # and split into daily or weekly periods. Columns range up to large multi-region
 # models; clusters up to ~50 typical periods.
 HORIZON_HOURS = 8760  # one year
-RESOLUTIONS_MIN = [60, 15, 5]  # 1h, 15min, 5min
+RESOLUTIONS_MIN = [240, 60, 15, 5]  # 4h, 1h, 15min, 5min
 PERIOD_HOURS = [24, 168]  # daily, weekly
 COLUMNS = [4, 256, 1000]  # single region -> large multi-region model
 CLUSTERS = [12]  # n_clusters (typical periods); cost is nearly flat in this axis

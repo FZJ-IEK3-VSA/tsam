@@ -10,7 +10,7 @@ actually dials — as native pytest dimensions, so any slice is one `-k` away:
 
 | dimension | ids | levels (`_data.py`) |
 |-----------|-----|----------------------|
-| `resolution_min` | `res_60min` … | `RESOLUTIONS_MIN` = 1h / 15min / 5min |
+| `resolution_min` | `res_60min` … | `RESOLUTIONS_MIN` = 4h / 1h / 15min / 5min |
 | `period_hours`   | `period_24h`, `period_168h` | `PERIOD_HOURS` = daily / weekly |
 | `columns`        | `columns_4` …    | `COLUMNS` |
 | `clusters`       | `clusters_12`    | `CLUSTERS` |

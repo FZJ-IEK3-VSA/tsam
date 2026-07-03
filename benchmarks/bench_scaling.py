@@ -73,15 +73,17 @@ def _slow_feasible(
 
     ``kmedoids`` (exact MILP) and ``kmaxoids`` can run for minutes, so they are
     measured only at the base column width (the method figure uses 4 columns
-    anyway) and — for ``kmedoids`` — only where the period count stays small: every
-    weekly point, but daily only at hourly resolution. Everything else is skipped
-    rather than launched, so no single case can blow up the suite.
+    anyway). ``kmedoids`` on the 365-period daily grid is erratic at every
+    resolution except the hourly point (both finer *and* coarser blow up), so on
+    daily it is allowed only at exactly 1h; weekly (52 periods) is cheap
+    throughout. Everything else is skipped rather than launched, so no single case
+    can blow up the suite.
     """
     if method not in SLOW_METHODS:
         return True
     if columns != REP_COLUMNS:
         return False
-    return not (method == "kmedoids" and period_hours < 168 and resolution_min < 60)
+    return not (method == "kmedoids" and period_hours < 168 and resolution_min != 60)
 
 
 @pytest.mark.parametrize("method", METHODS)

@@ -31,7 +31,10 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "docs" / "assets" / "benchmarks"
 PERIOD = {24: "daily (365 periods)", 168: "weekly (52 periods)"}
 PERIOD_ORDER = list(PERIOD.values())
-RES_TICKS = {"tickvals": [8760, 35040, 105120], "ticktext": ["1h", "15min", "5min"]}
+RES_TICKS = {
+    "tickvals": [2190, 8760, 35040, 105120],
+    "ticktext": ["4h", "1h", "15min", "5min"],
+}
 REPRESENTATIONS = [k for k, _ in _REPS]
 
 
