@@ -22,13 +22,13 @@ jobs:
           ref: ${{ inputs.target_branch }}
           fetch-depth: 0
 
-      - uses: astral-sh/setup-uv@v8.2.0
+      - uses: astral-sh/setup-uv@v8.3.1
         with:
           enable-cache: true
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       # mypy runs as a repo:local hook against the project's own environment,
       # so install the project before pre-commit runs.
