@@ -75,7 +75,7 @@ develop = [
   "mypy<=2.1.0",
   "pandas-stubs<=3.0.3.260530",
   "pre-commit<=4.6.0",
-  "plotly>=5.0.0,<=6.8.0",
+  "plotly>=5.0.0,<=6.9.0",
   "notebook>=7.5.0,<=7.6.0",
 ]
 plot = ["plotly>=5.0.0"]
