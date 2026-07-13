@@ -28,7 +28,7 @@ dependencies:
   - mkdocs-gen-files >=0.5,<=0.6.1
   - mkdocs-literate-nav >=0.6,<=0.6.3
   # Linting and formatting
-  - ruff <=0.15.20
+  - ruff <=0.15.21
   - mypy <=2.1.0
   - pre-commit <=4.6.0
   - pandas-stubs <=3.0.3.260530
