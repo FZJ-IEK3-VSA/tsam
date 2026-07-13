@@ -22,7 +22,7 @@ jobs:
           ref: ${{ inputs.target_branch }}
           fetch-depth: 0
 
-      - uses: astral-sh/setup-uv@v8.3.1
+      - uses: astral-sh/setup-uv@v8.3.2
         with:
           enable-cache: true
 
