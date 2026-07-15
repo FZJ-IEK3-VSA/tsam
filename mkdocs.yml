@@ -71,13 +71,15 @@ nav:
     - How aggregation works:
       - Overview: notebooks/how_it_works/00_overview.ipynb
       - Preprocessing: notebooks/how_it_works/01_preprocessing.ipynb
-      - Partitional clustering: notebooks/how_it_works/02_partitional_clustering.ipynb
-      - Agglomerative clustering: notebooks/how_it_works/03_agglomerative_clustering.ipynb
-      - Averaging: notebooks/how_it_works/04_averaging.ipynb
-      - Segmentation: notebooks/how_it_works/05_segmentation.ipynb
-      - Representation: notebooks/how_it_works/06_representation.ipynb
-      - Rescaling: notebooks/how_it_works/07_rescaling.ipynb
-      - Extreme periods: notebooks/how_it_works/08_extreme_periods.ipynb
+      - Clustering:
+        - Partitional clustering: notebooks/how_it_works/_02_clustering/01_partitional_clustering.ipynb
+        - Agglomerative clustering: notebooks/how_it_works/_02_clustering/02_agglomerative_clustering.ipynb
+        - Extremal-prototype selection: notebooks/how_it_works/_02_clustering/03_extremal_prototype_selection.ipynb
+        - Averaging: notebooks/how_it_works/_02_clustering/04_averaging.ipynb
+      - Representation: notebooks/how_it_works/03_representation.ipynb
+      - Extreme periods: notebooks/how_it_works/04_extreme_periods.ipynb
+      - Rescaling: notebooks/how_it_works/05_rescaling.ipynb
+      - Segmentation: notebooks/how_it_works/06_segmentation.ipynb
     - Background:
       - background/index.md
       - Mathematical Background: background/math.md
@@ -96,9 +98,9 @@ nav:
       - Results: api/results.md
       - Pipeline internals: api/pipeline.md
       - Tuning: api/tuning.md
-      - Utilities: api/utilities.md    
+      - Utilities: api/utilities.md
     - Changelog: changelog.md
-    
+
 
 plugins:
   - search

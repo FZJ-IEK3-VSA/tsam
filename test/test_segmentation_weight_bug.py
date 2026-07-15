@@ -1,7 +1,7 @@
 """Test for segmentation + weights bug (GitHub issue #178).
 
 When segmentation is used together with weights, the reconstructed data
-returned values scaled by the weight factor (e.g. weight=100 → output 100×
+returned values scaled by the weight factor (e.g. weight=100 → output 100x
 too large). The root cause: the segmentation reconstruction path used
 predicted segmented normalized typical periods which still had weights
 baked in, but the post-processing was applied without removing the
@@ -15,7 +15,7 @@ from tsam import ClusterConfig, SegmentConfig, aggregate
 
 
 def _make_data():
-    """Small synthetic dataset: 30 days × 24h."""
+    """Small synthetic dataset: 30 days x 24h."""
     rng = np.random.default_rng(42)
     n = 30 * 24
     index = pd.date_range("2020-01-01", periods=n, freq="h")

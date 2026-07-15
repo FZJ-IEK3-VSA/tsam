@@ -382,7 +382,7 @@ class TuningResult:
         show_labels : bool, default True
             Show the configuration details on hover.
         annotate : bool, default True
-            Print the recommended ``periods × segments`` combination next to
+            Print the recommended ``periods x segments`` combination next to
             each point, so each step's configuration is readable without hovering.
         """
         import plotly.graph_objects as go
@@ -395,7 +395,7 @@ class TuningResult:
             for _, row in summary.iterrows()
         ]
         point_labels = [
-            f"{int(row['n_clusters'])}×{int(row['n_segments'])}"
+            f"{int(row['n_clusters'])}x{int(row['n_segments'])}"
             for _, row in summary.iterrows()
         ]
 
@@ -420,7 +420,7 @@ class TuningResult:
         )
         fig.update_layout(
             title="Tuning Results: Complexity vs Accuracy "
-            "(label = typical periods × segments)",
+            "(label = typical periods x segments)",
             xaxis_title="Timesteps (n_clusters x n_segments)",
             yaxis_title="RMSE",
             hovermode="closest",

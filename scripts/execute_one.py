@@ -1,4 +1,5 @@
 """Execute a single notebook and write outputs in place."""
+
 import os
 import sys
 from pathlib import Path

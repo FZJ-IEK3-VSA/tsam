@@ -72,7 +72,7 @@ Turns the raw input into the candidate matrix the clustering stage consumes
 1. **Normalize** — scale every column to `[0, 1]` so no column dominates the
    distance. → [`normalize`][tsam.pipeline.normalize.normalize]
 2. **Unstack to periods** — reshape the flat series into a
-   `(period × timestep-feature)` matrix. →
+   `(period x timestep-feature)` matrix. →
    [`unstack_to_periods`][tsam.pipeline.periods.unstack_to_periods]
 - **2a · Apply weights** *(optional, `weights`)* — bake per-column weights into
   a copy of the candidates so they influence clustering distance only.

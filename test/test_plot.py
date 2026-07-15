@@ -186,7 +186,9 @@ class TestClustersOverTime:
 
     def test_with_segmentation(self, result_segmented):
         col = result_segmented.original.columns[0]
-        fig = result_segmented.plot.clusters_over_time(columns=[col], reconstructed=True)
+        fig = result_segmented.plot.clusters_over_time(
+            columns=[col], reconstructed=True
+        )
         assert isinstance(fig, go.Figure)
 
 

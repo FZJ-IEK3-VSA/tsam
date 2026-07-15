@@ -14,7 +14,7 @@ def unstack_to_periods(
     normalized_ts: pd.DataFrame,
     n_timesteps_per_period: int,
 ) -> PeriodProfiles:
-    """Reshape the flat time series into a (period × timestep-feature) matrix.
+    """Reshape the flat time series into a (period x timestep-feature) matrix.
 
     Clustering groups whole periods, so the flat series must first become a
     matrix where each row is one period and each column is an
@@ -23,7 +23,7 @@ def unstack_to_periods(
     **Example.** 365 days of hourly data for 3 columns is an ``(8760, 3)``
     DataFrame. Unstacking with ``n_timesteps_per_period=24`` yields a
     ``(365, 72)`` matrix — each row is a 72-dimensional point
-    (3 columns × 24 hours). Each rows first contains all time steps
+    (3 columns x 24 hours). Each rows first contains all time steps
     from the first column of respective period, then all time steps from the
     second column, and so on. For the example above that means:
 

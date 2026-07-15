@@ -22,7 +22,7 @@ jobs:
       - uses: pre-commit/action@v3.0.1
 
   # Extended PyPI cross-platform testing
-  # (6 OS variants × all Python versions)
+  # (6 OS variants x all Python versions)
   test:
     name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}
