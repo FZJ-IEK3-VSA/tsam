@@ -48,57 +48,57 @@ nav:
     - index.md
     - Installation: installation.md
     - Migration Guide: migration-guide.md
-    - Glossary: glossary.md
     - Contributing: contributing.md
     - Legal Notice: legal-notice.md
   - Tutorials:
-    - Your first aggregation: notebooks/tutorials/quickstart.ipynb
-    - Comparing clustering methods: notebooks/tutorials/comparing_clustering_methods.ipynb
+    - Your first aggregation: tutorials/quickstart.ipynb
+    - Comparing clustering methods: tutorials/comparing_clustering_methods.ipynb
   - How-to guides:
-    - Overview: user-guide/index.md
-    - Aggregate a time series: notebooks/how-to/how_to_aggregate.ipynb
+    - Overview: how-to/index.md
+    - Aggregate a time series: how-to/how_to_aggregate.ipynb
     - Make it smaller:
-      - Segmentation: notebooks/how-to/segmentation.ipynb
-      - How small can you go?: notebooks/how-to/tuning.ipynb
+      - Segmentation: how-to/segmentation.ipynb
+      - How small can you go?: how-to/tuning.ipynb
     - Control what it preserves:
-      - Clustering methods: notebooks/how-to/clustering_methods.ipynb
-      - Representations: notebooks/how-to/representations.ipynb
-      - Extreme periods: notebooks/how-to/extreme_periods.ipynb
+      - Clustering methods: how-to/clustering_methods.ipynb
+      - Representations: how-to/representations.ipynb
+      - Extreme periods: how-to/extreme_periods.ipynb
     - Put it to work:
-      - Working with typical periods: notebooks/how-to/working_with_typical_periods.ipynb
-      - Optimization workflow: notebooks/how-to/optimization_workflow.ipynb
+      - Working with typical periods: how-to/working_with_typical_periods.ipynb
+      - Optimization workflow: how-to/optimization_workflow.ipynb
   - Explanation:
     - How aggregation works:
-      - Overview: notebooks/how_it_works/00_overview.ipynb
-      - Preprocessing: notebooks/how_it_works/01_preprocessing.ipynb
+      - Overview: explanation/how-it-works/00_overview.ipynb
+      - Preprocessing: explanation/how-it-works/01_preprocessing.ipynb
       - Clustering:
-        - Partitional clustering: notebooks/how_it_works/_02_clustering/01_partitional_clustering.ipynb
-        - Agglomerative clustering: notebooks/how_it_works/_02_clustering/02_agglomerative_clustering.ipynb
-        - Extremal-prototype selection: notebooks/how_it_works/_02_clustering/03_extremal_prototype_selection.ipynb
-        - Averaging: notebooks/how_it_works/_02_clustering/04_averaging.ipynb
-      - Representation: notebooks/how_it_works/03_representation.ipynb
-      - Extreme periods: notebooks/how_it_works/04_extreme_periods.ipynb
-      - Rescaling: notebooks/how_it_works/05_rescaling.ipynb
-      - Segmentation: notebooks/how_it_works/06_segmentation.ipynb
+        - Partitional clustering: explanation/how-it-works/02_clustering/01_partitional_clustering.ipynb
+        - Agglomerative clustering: explanation/how-it-works/02_clustering/02_agglomerative_clustering.ipynb
+        - Extremal-prototype selection: explanation/how-it-works/02_clustering/03_extremal_prototype_selection.ipynb
+        - Averaging: explanation/how-it-works/02_clustering/04_averaging.ipynb
+      - Representation: explanation/how-it-works/03_representation.ipynb
+      - Extreme periods: explanation/how-it-works/04_extreme_periods.ipynb
+      - Rescaling: explanation/how-it-works/05_rescaling.ipynb
+      - Segmentation: explanation/how-it-works/06_segmentation.ipynb
     - Background:
-      - background/index.md
-      - Mathematical Background: background/math.md
+      - explanation/background/index.md
+      - Mathematical Background: explanation/background/math.md
       - Architecture:
-        - background/architecture/index.md
-        - System Context: background/architecture/context.md
-        - Pipeline Guide: background/architecture/pipeline_guide.md
+        - explanation/background/architecture/index.md
+        - System Context: explanation/background/architecture/context.md
+        - Pipeline Guide: explanation/background/architecture/pipeline_guide.md
       - Decisions:
-        - background/decisions/index.md
-        - 0001 — V4 Pipeline: background/decisions/0001-v4-pipeline.md
-      - Further Reading: further-reading.md
+        - explanation/background/decisions/index.md
+        - 0001 — V4 Pipeline: explanation/background/decisions/0001-v4-pipeline.md
+      - Further Reading: explanation/further-reading.md
   - Reference:
     - API:
-      - api/index.md
-      - Configuration: api/configuration.md
-      - Results: api/results.md
-      - Pipeline internals: api/pipeline.md
-      - Tuning: api/tuning.md
-      - Utilities: api/utilities.md
+      - reference/api/index.md
+      - Configuration: reference/api/configuration.md
+      - Results: reference/api/results.md
+      - Pipeline internals: reference/api/pipeline.md
+      - Tuning: reference/api/tuning.md
+      - Utilities: reference/api/utilities.md
+    - Glossary: reference/glossary.md
     - Changelog: changelog.md
 
 

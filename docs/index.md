@@ -38,10 +38,11 @@ result.cluster_representatives   # the 8 typical days
 result.accuracy.rmse             # how well they match the original
 result.plot.cluster_representatives()   # ...and a plot of them
 ```
+This content of this documentation is structured using the [diataxis-systematic](https://diataxis.fr/). Tutorials are intended to teach you skills with ETHOS.TSAM, whereas How-To Guides are focussed on getting a specific task done. The explanation section provides you with high level background information about algorithms, software architecture and design decision. The reference section provides low level imeplementation API and implementation details.
 
 [Install ETHOS.TSAM](installation.md){ .md-button .md-button--primary }
-[Quickstart](notebooks/tutorials/quickstart.ipynb){ .md-button }
-[User Guide](user-guide/index.md){ .md-button }
+[Create your first aggregation](tutorials/quickstart.ipynb){ .md-button }
+[How-to](how-to/index.md){ .md-button }
 
 ## Main features
 
@@ -51,31 +52,31 @@ result.plot.cluster_representatives()   # ...and a plot of them
   exactly with an MILP solver.
 - **Two aggregation dimensions, freely combined.** Reduce the number of *periods*
   (typical days) and/or the *temporal resolution* within them, via
-  [how small you can go](notebooks/how-to/tuning.ipynb).
+  [how small you can go](how-to/tuning.ipynb).
 - **Representations that preserve what matters.** Beyond means and medoids, keep
-  the [value distribution](notebooks/how-to/representations.ipynb) (duration
+  the [value distribution](how-to/representations.ipynb) (duration
   curve), per-time-step min/max, or force **extreme periods** so peaks survive
   aggregation.
 - **Built-in evaluation and plotting.** Every result carries accuracy metrics and
   an interactive `.plot` accessor (Plotly) — see the
-  [Quickstart](notebooks/tutorials/quickstart.ipynb).
+  [Quickstart](tutorials/quickstart.ipynb).
 - **Automatic hyperparameter tuning.** Let tsam
-  [find the period/segment combination](notebooks/how-to/tuning.ipynb) that hits a
+  [find the period/segment combination](how-to/tuning.ipynb) that hits a
   target data reduction, or map the full Pareto front.
 - **Built for downstream models.** Hand the representatives, counts, and
   assignments to an optimization, then map results back — see the
-  [optimization workflow](notebooks/how-to/optimization_workflow.ipynb).
+  [optimization workflow](how-to/optimization_workflow.ipynb).
 
 ## Where to start
 
 | If you want to… | Go to |
 |------------------|-------|
 | Install the package | [Installation](installation.md) |
-| Run your first aggregation | [Quickstart](notebooks/tutorials/quickstart.ipynb) |
-| Learn the features one by one | [User Guide](user-guide/index.md) |
-| See an end-to-end optimization workflow | [Optimization workflow](notebooks/how-to/optimization_workflow.ipynb) |
-| Look up a function or class | [API Reference](api/index.md) |
-| Understand the methods and maths | [Background](background/index.md) |
+| Run your first aggregation | [Quickstart](tutorials/quickstart.ipynb) |
+| Learn the features one by one | [User Guide](how-to/index.md) |
+| See an end-to-end optimization workflow | [Optimization workflow](how-to/optimization_workflow.ipynb) |
+| Look up a function or class | [API Reference](reference/api/index.md) |
+| Understand the methods and maths | [Background](explanation/background/index.md) |
 
 ## About
 
@@ -87,4 +88,4 @@ at ICE-2 and is tightly integrated with
 [ETHOS.FINE](https://github.com/FZJ-IEK3-VSA/FINE).
 
 If you use ETHOS.TSAM in scientific work, please
-[cite one of our publications](further-reading.md).
+[cite one of our publications](explanation/further-reading.md).

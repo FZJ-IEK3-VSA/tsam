@@ -2,8 +2,8 @@
 
 The mkdocs build is configured with ``execute: false`` so that mkdocs-jupyter
 only renders pre-executed notebooks. This script is the producer step: it
-discovers ``docs/notebooks/*.ipynb``, runs each in its own kernel via
-``nbclient``, and writes the executed notebook back in place.
+discovers ``docs/**/*.ipynb``, runs each in its own kernel via ``nbclient``,
+and writes the executed notebook back in place.
 
 Each notebook gets its own kernel subprocess, so a ThreadPoolExecutor is
 sufficient — the GIL is not the bottleneck. Notebooks run in their own
@@ -76,8 +76,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--notebooks-dir",
         type=Path,
-        default=Path("docs/notebooks"),
-        help="Directory containing notebooks (default: docs/notebooks)",
+        default=Path("docs"),
+        help="Directory searched recursively for notebooks (default: docs)",
     )
     parser.add_argument(
         "--workers",

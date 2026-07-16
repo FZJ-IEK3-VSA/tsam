@@ -106,7 +106,7 @@ jobs:
       library_name: ${{ matrix.dependencies.library_name }}
       multiprocessing_example_string: "-n auto"
       multiprocessing_pytest_string: "-n auto"
-      ipynb_example_folder: docs/notebooks/
+      ipynb_example_folder: docs/
 
   docs:
     name: Build docs
