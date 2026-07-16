@@ -185,25 +185,36 @@ body[data-md-color-scheme="slate"] .jupyter-wrapper {
   display: block;
 }
 
-/* -- Landing page logo row (TSAM + JSA side by side) --------------------- */
+/* -- Landing page logo row (TSAM + JSA side by side) ---------------------
+ *
+ * Size these by height, not width. The JSA header is a 7.13:1 banner while
+ * the TSAM logo is 3.09:1, so equal widths render the JSA lockup ~3.7x
+ * shorter and shrink its two lines of institute text past legibility. The
+ * README sizes both with height="80px" for the same reason.
+ * `object-fit: contain` guards the narrow-viewport case, where `max-width`
+ * wins over the intrinsic ratio. */
 .landing-logos {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 2rem;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   margin-bottom: 1rem;
 }
 
 .landing-logos .tsam-logo-light img,
 .landing-logos .tsam-logo-dark img {
-  max-width: 400px;
-  height: auto;
+  height: 90px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 .landing-logos .jsa-logo img {
-  max-width: 250px;
-  height: auto;
+  height: 56px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 /* Invert JSA header in dark mode so it remains visible */
@@ -588,14 +599,20 @@ body[data-md-color-scheme="slate"] .jupyter-wrapper {
   flex-shrink: 0;
 }
 
-.footer-logo--jsa {
-  width: 200px;
-  height: auto;
+/* Height-based for the same reason as the landing row; the JSA lockup needs
+   to run taller than the Helmholtz wordmark, whose glyphs stay legible small.
+   Scoped through the parent so these outrank Material's `.md-typeset img`
+   (specificity 0-1-1), which forces `height: auto` and would otherwise win
+   silently — the Helmholtz SVG has no intrinsic size, so it collapses to
+   0x0 and vanishes when its height is not honoured. */
+.footer-institutional__logos .footer-logo--jsa {
+  height: 44px;
+  width: auto;
 }
 
-.footer-logo--helmholtz {
-  width: 120px;
-  height: auto;
+.footer-institutional__logos .footer-logo--helmholtz {
+  height: 24px;
+  width: auto;
 }
 
 .footer-institutional__text {

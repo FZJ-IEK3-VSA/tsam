@@ -40,7 +40,7 @@ result.plot.cluster_representatives()   # ...and a plot of them
 ```
 [Install ETHOS.TSAM](installation.md){ .md-button .md-button--primary }
 [Create your first aggregation](tutorials/quickstart.ipynb){ .md-button }
-[How-to](how-to/index.md){ .md-button }
+[Glossary](reference/glossary.md){ .md-button }
 
 ## How this documentation is organized
 
