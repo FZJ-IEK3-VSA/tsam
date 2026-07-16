@@ -81,7 +81,6 @@ nav:
       - Segmentation: explanation/how-it-works/06_segmentation.ipynb
     - Background:
       - explanation/background/index.md
-      - Mathematical Background: explanation/background/math.md
       - Architecture:
         - explanation/background/architecture/index.md
         - System Context: explanation/background/architecture/context.md
@@ -98,6 +97,7 @@ nav:
       - Pipeline internals: reference/api/pipeline.md
       - Tuning: reference/api/tuning.md
       - Utilities: reference/api/utilities.md
+    - Notation and equations: reference/notation.md
     - Glossary: reference/glossary.md
     - Changelog: changelog.md
 

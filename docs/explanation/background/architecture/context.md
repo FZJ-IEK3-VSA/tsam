@@ -12,14 +12,9 @@ The only optional external dependency is a **MILP solver**, required when `Clust
 
 ## Methodological positioning
 
-[Hoffmann et al. (2020)](https://www.mdpi.com/1996-1073/13/3/641) classify time-series aggregation methods along two axes (their **Table 3**): *how* periods are merged — **time-based** (by position on the time axis) vs **feature-based** (by similarity) — and *what form* the result takes — a **resolution variation** (fewer, coarser steps) or a set of **typical periods**:
+[Hoffmann et al. (2020)](https://www.mdpi.com/1996-1073/13/3/641) classify time-series aggregation methods along two axes: *how* periods are merged — **time-based** (by position on the time axis) vs **feature-based** (by similarity) — and *what form* the result takes — a **resolution variation** (fewer, coarser steps) or a set of **typical periods**. The [How aggregation works overview](../../how-it-works/00_overview.ipynb) walks that taxonomy and shows where each tsam method lands in it.
 
-|                   | Resolution variation    | Typical periods            |
-|-------------------|-------------------------|----------------------------|
-| **Time-based**    | Downsampling *(pandas)* | Averaging ✅ (consecutive-period blocks; full calendar time-slices not built in) |
-| **Feature-based** | Segmentation ✅         | **Clustering** ✅ *(core)* |
-
-tsam covers the **feature-based** row and the typical-periods column. Its core is **clustering** of periods into typical periods (`kmeans`, `kmedoids`, `kmaxoids`, `hierarchical`); it also implements **segmentation** (merging adjacent time steps), time-based **averaging** of consecutive-period blocks (the `averaging` method), and **extreme-period** handling. The `contiguous` method is *not* time-based averaging: it is Ward agglomerative clustering with a temporal-adjacency constraint — feature-based, and the period-level analogue of segmentation (only adjacent periods may merge). **Downsampling** is intentionally left out — it is a one-liner on the input (`df.resample(...)`), so you coarsen the series with pandas before handing it to tsam rather than asking tsam to do it. tsam also never performs *cross-sectional grouping of time series* (a separate branch in the review's Figure 4): it preserves the input's dimensionality, so an `N`-attribute series stays `N`-attribute throughout.
+In short: tsam covers the **feature-based** row and the typical-periods column. Its core is **clustering** of periods into typical periods (`kmeans`, `kmedoids`, `kmaxoids`, `hierarchical`); it also implements **segmentation** (merging adjacent time steps), time-based **averaging** of consecutive-period blocks (the `averaging` method), and **extreme-period** handling. **Downsampling** is intentionally left out — it is a one-liner on the input (`df.resample(...)`), so you coarsen the series with pandas before handing it to tsam. tsam also never performs *cross-sectional grouping of time series*: it preserves the input's dimensionality, so an `N`-attribute series stays `N`-attribute throughout.
 
 Within feature-based clustering, the review's three steps (§3.2.2) map directly onto the [pipeline](pipeline_guide.md):
 
@@ -29,4 +24,4 @@ Within feature-based clustering, the review's three steps (§3.2.2) map directly
 | 3.2.2.2 Algorithms, Distance Metrics, Representation | Phase 2 — cluster centers (method · distance · representation) |
 | 3.2.2.3 Rescaling | Phase 2 — optional `preserve_column_means` |
 
-For the equations behind each step, see the [Mathematical Background](../math.md); for the full data flow, the [Pipeline Guide](pipeline_guide.md).
+For the equations behind each step, see [Notation and equations](../../../reference/notation.md); for the full data flow, the [Pipeline Guide](pipeline_guide.md).
