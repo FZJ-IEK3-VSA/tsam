@@ -46,5 +46,6 @@ across datasets.
 
 ---
 
-For the methods and maths behind the pipeline, see [Background](../explanation/background/index.md). For
-function- and class-level detail, see the [API Reference](../reference/api/index.md).
+For the methods behind the pipeline, see [How aggregation works](../explanation/how-it-works/00_overview.ipynb);
+for the equations, [Notation and equations](../reference/notation.md); and for function- and
+class-level detail, the [API Reference](../reference/api/index.md).

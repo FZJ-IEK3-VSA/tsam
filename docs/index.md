@@ -38,11 +38,21 @@ result.cluster_representatives   # the 8 typical days
 result.accuracy.rmse             # how well they match the original
 result.plot.cluster_representatives()   # ...and a plot of them
 ```
-This content of this documentation is structured using the [diataxis-systematic](https://diataxis.fr/). Tutorials are intended to teach you skills with ETHOS.TSAM, whereas How-To Guides are focussed on getting a specific task done. The explanation section provides you with high level background information about algorithms, software architecture and design decision. The reference section provides low level imeplementation API and implementation details.
-
 [Install ETHOS.TSAM](installation.md){ .md-button .md-button--primary }
 [Create your first aggregation](tutorials/quickstart.ipynb){ .md-button }
 [How-to](how-to/index.md){ .md-button }
+
+## How this documentation is organized
+
+It follows the [Diátaxis framework](https://diataxis.fr/), which splits documentation by what
+you came for:
+
+| Section | Use it to |
+|---------|-----------|
+| **[Tutorials](tutorials/quickstart.ipynb)** | Learn tsam by working through a complete example. |
+| **[How-to guides](how-to/index.md)** | Get one specific task done. |
+| **[Explanation](explanation/how-it-works/00_overview.ipynb)** | Understand the algorithms, the architecture, and the decisions behind them. |
+| **[Reference](reference/api/index.md)** | Look up the API, the notation, and implementation details. |
 
 ## Main features
 
@@ -73,10 +83,12 @@ This content of this documentation is structured using the [diataxis-systematic]
 |------------------|-------|
 | Install the package | [Installation](installation.md) |
 | Run your first aggregation | [Quickstart](tutorials/quickstart.ipynb) |
-| Learn the features one by one | [User Guide](how-to/index.md) |
+| Solve a specific task | [How-to guides](how-to/index.md) |
 | See an end-to-end optimization workflow | [Optimization workflow](how-to/optimization_workflow.ipynb) |
+| Understand how aggregation works | [How aggregation works](explanation/how-it-works/00_overview.ipynb) |
+| Look up an equation or symbol | [Notation and equations](reference/notation.md) |
 | Look up a function or class | [API Reference](reference/api/index.md) |
-| Understand the methods and maths | [Background](explanation/background/index.md) |
+| Upgrade from v2 or v3 | [Migration guide](migration-guide.md) |
 
 ## About
 

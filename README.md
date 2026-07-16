@@ -170,7 +170,7 @@ Please respect our [code of conduct](https://github.com/FZJ-IEK3-VSA/README_asse
 
 ## Acknowledgement
 
-This work is supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050   A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/) and the program ["Energy System Design"](https://www.esd.kit.edu/index.php) and within the [BMWi/BMWk](https://www.bmwk.de/Navigation/DE/Home/home.html) funded project [**METIS**](https://www.fz-juelich.de/de/ice/ice-2/projekte/metis).
+This work is supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050 – A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/) and the program ["Energy System Design"](https://www.esd.kit.edu/index.php) and within the [BMWi/BMWk](https://www.bmwk.de/Navigation/DE/Home/home.html) funded project [**METIS**](https://www.fz-juelich.de/de/ice/ice-2/projekte/metis).
 
 <a href="https://www.helmholtz.de/en/">
   <picture>
