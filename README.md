@@ -126,30 +126,19 @@ reconstructed = result.reconstructed
 cluster_representatives.to_csv('cluster_representatives.csv')
 ```
 
-### Legacy API
+### Coming from version 2 or 3?
 
-For backward compatibility, the class-based API of TSAM Version 2 is still available.
-```python
-import tsam.timeseriesaggregation as tsam_legacy
-
-aggregation = tsam_legacy.TimeSeriesAggregation(
-    raw,
-    noTypicalPeriods=8,
-    hoursPerPeriod=24,
-    segmentation=True,
-    noSegments=8,
-    representationMethod="distributionAndMinMaxRepresentation",
-    clusterMethod='hierarchical'
-)
-cluster_representatives = aggregation.createTypicalPeriods()
-```
+The class-based `TimeSeriesAggregation` API has been **removed in version 4** — use
+`tsam.aggregate()` as shown above. The
+[**migration guide**](https://tsam.readthedocs.io/en/latest/migration-guide/) maps every old
+parameter, method, and default to its replacement.
 
 ### Detailed examples
-Detailed examples can be found at:/docs/notebooks/
 
-A [**quickstart example**](/docs/notebooks/quickstart.ipynb) shows the capabilities of ETHOS.TSAM as a Jupyter notebook.
+The documentation is built around runnable notebooks:
 
-A [**second example**](/docs/notebooks/optimization_workflow.ipynb) shows in more detail how to access the relevant aggregation results required for parameterizing e.g. an optimization.
+* [**Your first aggregation**](https://tsam.readthedocs.io/en/latest/tutorials/quickstart/) — the whole workflow end to end, as a Jupyter notebook.
+* [**Optimization workflow**](https://tsam.readthedocs.io/en/latest/how-to/optimization_workflow/) — how to access the aggregation results needed to parameterize e.g. an optimization.
 
 The example time series are based on a department [publication](https://www.mdpi.com/1996-1073/10/3/361) and the [test reference years of the DWD](https://www.dwd.de/DE/leistungen/testreferenzjahre/testreferenzjahre.html).
 
@@ -160,29 +149,13 @@ The example time series are based on a department [publication](https://www.mdpi
 
 ## Citing and further reading
 
-If you want to use ETHOS.TSAM in a published work, **please kindly cite** our latest journal articles:
+If you want to use ETHOS.TSAM in a published work, **please kindly cite**:
 * Hoffmann et al. (2022):\
 [**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342)
 
-
-If you are further interested in the impact of time series aggregation on the cost-optimal results on different energy system use cases, you can find a publication which validates the methods and describes their cababilites via the following [**link**](https://www.sciencedirect.com/science/article/pii/S0960148117309783). A second publication introduces a method how to model state variables (e.g. the state of charge of energy storage components) between the aggregated typical periods which can be found [**here**](https://www.sciencedirect.com/science/article/pii/S0306261918300242). Finally yet importantly the potential of time series aggregation to simplify mixed integer linear problems is investigated [**here**](https://www.mdpi.com/1996-1073/12/14/2825).
-
-The publications about time series aggregation for energy system optimization models published alongside the development of ETHOS.TSAM are listed below:
-* Hoffmann et al. (2021):\
-[**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342)\
-(open access manuscript to be found [**here**](https://arxiv.org/abs/1710.07593))
-* Hoffmann et al. (2021):\
-[**Typical periods or typical time steps? A multi-model analysis to determine the optimal temporal aggregation for energy system models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261921011545)
-* Hoffmann et al. (2020):\
-[**A Review on Time Series Aggregation Methods for Energy System Models**](https://www.mdpi.com/1996-1073/13/3/641)
-* Kannengießer et al. (2019):\
-[**Reducing Computational Load for Mixed Integer Linear Programming: An Example for a District and an Island Energy System**](https://www.mdpi.com/1996-1073/12/14/2825)
-* Kotzur et al. (2018):\
-[**Time series aggregation for energy system design: Modeling seasonal storage**](https://www.sciencedirect.com/science/article/pii/S0306261918300242)\
-(open access manuscript to be found [**here**](https://arxiv.org/abs/1710.07593))
-* Kotzur et al. (2018):\
-[**Impact of different time series aggregation methods on optimal energy system design**](https://www.sciencedirect.com/science/article/abs/pii/S0960148117309783)\
-(open access manuscript to be found [**here**](https://arxiv.org/abs/1708.00420))
+The full list of publications behind ETHOS.TSAM and the aggregation methods it implements —
+with open-access links — is kept in one place in the documentation:
+[**Further reading**](https://tsam.readthedocs.io/en/latest/explanation/further-reading/).
 
 
 ## About Us
