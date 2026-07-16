@@ -51,8 +51,10 @@ nav:
     - Contributing: contributing.md
     - Legal Notice: legal-notice.md
   - Tutorials:
+    - Overview: tutorials/index.md
     - Your first aggregation: tutorials/quickstart.ipynb
     - Comparing clustering methods: tutorials/comparing_clustering_methods.ipynb
+    - Choosing a method: tutorials/choosing_a_method.ipynb
   - How-to guides:
     - Overview: how-to/index.md
     - Aggregate a time series: how-to/how_to_aggregate.ipynb
@@ -171,6 +173,7 @@ exclude_docs: |
 # Build hooks (loaded as modules; not affected by exclude_docs above).
 hooks:
   - docs/hooks/strip_duplicate_mathjax.py
+  - docs/hooks/notebook_asset_paths.py
 
 extra:
   generator: false

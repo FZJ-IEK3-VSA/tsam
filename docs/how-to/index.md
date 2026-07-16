@@ -4,6 +4,24 @@ Task-focused recipes for getting things done with tsam, assuming you have skimme
 [tutorial](../tutorials/quickstart.ipynb). For *why* each method works, see the
 [How aggregation works](../explanation/how-it-works/00_overview.ipynb) explanation series.
 
+## Pick a lever
+
+`aggregate()` makes four decisions for you. Find the one you need to change:
+
+| I want to… | Change | Page |
+|---|---|---|
+| just make it smaller, sensibly | nothing — the default is strong | [Aggregate a time series](how_to_aggregate.ipynb) |
+| control **which days group together** | `ClusterConfig(method=…)` | [Clustering methods](clustering_methods.ipynb) |
+| control **what each group becomes** | `ClusterConfig(representation=…)` | [Representations](representations.ipynb) |
+| keep **one specific day** exactly | `extremes=ExtremeConfig(…)` | [Extreme periods](extreme_periods.ipynb) |
+| cut detail **inside** each day | `segments=SegmentConfig(…)` | [Segmentation](segmentation.ipynb) |
+| hit a **target size** | let tsam search both levers | [How small can you go?](tuning.ipynb) |
+| keep **calendar order** | `method="contiguous"` | [Clustering methods](clustering_methods.ipynb) |
+| preserve the **duration curve** | `representation="distribution"` | [Representations](representations.ipynb) |
+
+Not sure which applies? [Choosing a method](../tutorials/choosing_a_method.ipynb) works through all
+four levers on one dataset and ends in a table keyed to what you are modelling.
+
 ## Start here
 
 **[How to aggregate a time series](how_to_aggregate.ipynb)** — the core
