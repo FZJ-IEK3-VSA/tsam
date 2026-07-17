@@ -16,6 +16,10 @@ cost you. Assumes nothing.
 the same twelve days and the same budget, and watch them disagree. Explains *why* each method carves
 the data differently, and what that means for the typical periods your model sees.
 
+**[Comparing representations](comparing_representations.ipynb)** — the other axis. Put all six
+representations on the *same* cluster and read off what each keeps: a real day, the peak, or the
+average. No rule keeps all three, and the table shows which trade you are making.
+
 **[Choosing a method](choosing_a_method.ipynb)** — the four levers `aggregate()` sets for you, what
 each one throws away, and how to read a configuration off what you are modelling. Includes the three
 different ways to preserve a peak and why they are not interchangeable.
@@ -23,5 +27,5 @@ different ways to preserve a peak and why they are not interchangeable.
 ---
 
 Once these make sense, the [how-to guides](../how-to/index.md) are the task-oriented recipes, and
-[How aggregation works](../explanation/how-it-works/00_overview.ipynb) traces the whole pipeline by
+[How aggregation works](../explanation/how-aggregation-works/00_overview.ipynb) traces the whole pipeline by
 hand on a six-day dataset.

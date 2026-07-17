@@ -35,7 +35,7 @@ TEST_DIR = Path(__file__).parent
 TEST_DATA_DIR = TEST_DIR / "data"
 GOLDEN_DIR = TEST_DATA_DIR / "golden"
 
-EXAMPLES_DIR = TEST_DIR.parent / "docs" / "notebooks"
+EXAMPLES_DIR = TEST_DIR.parent / "docs" / "data"
 TESTDATA_CSV = EXAMPLES_DIR / "testdata.csv"
 WIDE_CSV = TEST_DATA_DIR / "wide.csv"
 

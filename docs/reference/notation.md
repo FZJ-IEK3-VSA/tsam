@@ -52,7 +52,7 @@ The normalized series is then **unstacked**: each period becomes one row-vector 
 dimensions are $N_a \cdot N_t$. The number of attributes never changes — tsam reduces
 timesteps, not columns.
 
-*Derived in:* [Preprocessing](../explanation/how-it-works/01_preprocessing.ipynb)
+*Derived in:* [Preprocessing](../explanation/how-aggregation-works/01_preprocessing.ipynb)
 
 ## Clustering
 
@@ -83,12 +83,12 @@ $$
 \min_{z}\ \sum_{i}\sum_{j} d_{i,j}\, z_{i,j} \;=\; J
 $$
 
-*Derived in:* [Partitional clustering](../explanation/how-it-works/02_clustering/01_partitional_clustering.ipynb)
+*Derived in:* [Partitional clustering](../explanation/how-aggregation-works/02_clustering/01_partitional_clustering.ipynb)
 — including the MILP's three constraints.
 Other methods carry their own objectives: Ward's merge cost $\Delta(A,B)$ in
-[Agglomerative clustering](../explanation/how-it-works/02_clustering/02_agglomerative_clustering.ipynb)
+[Agglomerative clustering](../explanation/how-aggregation-works/02_clustering/02_agglomerative_clustering.ipynb)
 and the spread objective $E(M)$ in
-[Extremal-prototype selection](../explanation/how-it-works/02_clustering/03_extremal_prototype_selection.ipynb).
+[Extremal-prototype selection](../explanation/how-aggregation-works/02_clustering/03_extremal_prototype_selection.ipynb).
 
 ## Rescaling
 
@@ -106,7 +106,7 @@ $$
 The numerator is the original total; the denominator is what the occurrence-weighted
 representatives sum to before correction. If they already match, the factor is 1.
 
-*Derived in:* [Rescaling and denormalisation](../explanation/how-it-works/05_rescaling.ipynb)
+*Derived in:* [Rescaling and denormalisation](../explanation/how-aggregation-works/05_rescaling.ipynb)
 
 ## Denormalization
 
@@ -117,11 +117,11 @@ c'^*_{k,a,t} = c^*_{k,a,t} \left( \max x'_a - \min x'_a \right) + \min x'_a
 \qquad \forall \qquad a
 $$
 
-*Derived in:* [Rescaling and denormalisation](../explanation/how-it-works/05_rescaling.ipynb)
+*Derived in:* [Rescaling and denormalisation](../explanation/how-aggregation-works/05_rescaling.ipynb)
 
 ## Output
 
 The result is a set of typical periods, each with an occurrence count
 $\lvert\mathbb{C}_k\rvert$, optionally made of segments of differing length. Segmentation
 applies the same Ward criterion *within* periods rather than across them — see
-[Segmentation](../explanation/how-it-works/06_segmentation.ipynb).
+[Segmentation](../explanation/how-aggregation-works/06_segmentation.ipynb).

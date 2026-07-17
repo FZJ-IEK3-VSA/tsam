@@ -1,0 +1,31 @@
+# Line endings: LF, in the repository and in the working tree, on every platform.
+#
+# Why this exists: tsam is developed on both Windows and Linux, and several tools
+# in this repo rewrite whole files rather than editing them in place — nbstripout
+# and ruff-format rewrite notebooks on every commit, and `d2` regenerates the
+# architecture SVGs. On Windows those tools emit CRLF, so a one-line edit turns
+# into a whole-file diff and real changes become impossible to review. Pinning
+# eol=lf makes the line ending a property of the repository instead of a property
+# of whoever last touched the file.
+#
+# LF is already what the repository mostly holds, so this codifies the existing
+# convention rather than changing it. Nothing here needs CRLF: there are no
+# .bat/.cmd/.ps1 scripts, and no binary assets (logos and diagrams are SVG).
+#
+# After changing this file, renormalise the working tree in one dedicated commit:
+#     git add --renormalize .
+* text=auto eol=lf
+
+# Belt and braces for binary assets, should any be added later: git must never
+# rewrite these, and diffing them is meaningless.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.xlsx binary
+*.zip binary
+*.woff binary
+*.woff2 binary
+*.ttf binary

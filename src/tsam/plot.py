@@ -154,6 +154,201 @@ def _to_rgba(color: str, alpha: float) -> str:
     return f"rgba({r}, {g}, {b}, {alpha})"
 
 
+# Distinguishable at small sizes and without relying on colour alone.
+_PATH_SYMBOLS = (
+    "circle",
+    "square",
+    "diamond",
+    "triangle-up",
+    "x",
+    "star",
+    "hexagon",
+    "cross",
+)
+
+
+class AttributeSpace:
+    """A plane spanned by two attributes, in which each period is drawn as a path.
+
+    A period is not a *point* in attribute space: it is a sequence of timesteps,
+    so in a plane spanned by two attributes it traces a **path** from its first
+    timestep to its last. Drawing periods this way makes the difference between
+    representation rules legible — a ``medoid`` re-traces one member's path
+    exactly, while a ``mean`` cuts a new path through the middle of the group
+    that no member ever followed.
+
+    Paths are added one at a time so that members and representatives can be
+    styled differently in the same figure.
+
+    Parameters
+    ----------
+    x_attr, y_attr : str
+        Names of the two attributes spanning the plane. Used for axis titles.
+    units : dict[str, str], optional
+        Maps attribute name to a unit string, e.g. ``{"solar": "W/m²"}``.
+        Attributes missing from the mapping are labelled without a unit.
+    title : str, optional
+        Figure title.
+    legend_title : str, default "period"
+        Heading for the legend.
+
+    Examples
+    --------
+    >>> space = AttributeSpace("solar", "load", units={"solar": "W/m²", "load": "MW"})
+    >>> space.add_path([0.1, 0.8, 0.6], [3.0, 4.5, 4.0], name="day 0")
+    >>> space.add_path([0.2, 0.4, 0.3], [3.2, 3.9, 3.6], name="mean", dash="dot")
+    >>> fig = space.figure
+    """
+
+    def __init__(
+        self,
+        x_attr: str,
+        y_attr: str,
+        *,
+        units: dict[str, str] | None = None,
+        title: str | None = None,
+        legend_title: str = "period",
+    ) -> None:
+        self.x_attr = x_attr
+        self.y_attr = y_attr
+        self.units = units or {}
+        self._n_paths = 0
+        self._fig = go.Figure()
+        self._fig.update_layout(
+            title=title,
+            xaxis_title=self._axis_label(x_attr),
+            yaxis_title=self._axis_label(y_attr),
+            legend_title=legend_title,
+        )
+
+    def _axis_label(self, attr: str) -> str:
+        unit = self.units.get(attr)
+        return f"{attr} [{unit}]" if unit else attr
+
+    def add_path(
+        self,
+        x,
+        y,
+        name: str,
+        *,
+        color: str | None = None,
+        symbol: str | None = None,
+        dash: str | None = None,
+        width: float = 2,
+        arrows: bool = True,
+        label_steps: bool = True,
+        step_labels: list[str] | None = None,
+        legendgroup: str | None = None,
+    ) -> AttributeSpace:
+        """Add one period to the plane as a path through its timesteps.
+
+        Parameters
+        ----------
+        x, y : array-like
+            The period's values for the two attributes, one entry per timestep,
+            in chronological order.
+        name : str
+            Legend entry for this path.
+        color : str, optional
+            Any plotly colour. Defaults to the next colour of the qualitative
+            palette, so successive paths are distinguishable without being
+            named.
+        symbol : str, optional
+            Marker symbol (``"circle"``, ``"square"``, ``"diamond"``, ``"x"``,
+            …). Defaults to the next symbol of an eight-symbol cycle, so paths
+            stay distinguishable in greyscale and for colour-blind readers.
+            Pass ``"circle"`` explicitly to opt out of the cycle.
+        dash : str, optional
+            Line dash style, e.g. ``"dot"``. Useful to separate derived profiles
+            (representatives) from real ones (members).
+        width : float, default 2
+            Line width.
+        arrows : bool, default True
+            Draw an arrowhead on each segment, pointing from one timestep to the
+            next, so the direction of travel through the period is unambiguous.
+        label_steps : bool, default True
+            Annotate each marker with its timestep label.
+        step_labels : list[str], optional
+            Text for each timestep. Defaults to ``t0, t1, …``.
+        legendgroup : str, optional
+            Group paths in the legend, so clicking toggles them together.
+
+        Returns
+        -------
+        AttributeSpace
+            ``self``, so calls can be chained.
+        """
+        x = np.asarray(x, dtype=float)
+        y = np.asarray(y, dtype=float)
+        if x.shape != y.shape:
+            raise ValueError(
+                f"x and y must have the same shape, got {x.shape} and {y.shape}."
+            )
+
+        if color is None:
+            palette = px.colors.qualitative.Plotly
+            color = palette[self._n_paths % len(palette)]
+        if symbol is None:
+            symbol = _PATH_SYMBOLS[self._n_paths % len(_PATH_SYMBOLS)]
+        if step_labels is None:
+            step_labels = [f"t{i}" for i in range(len(x))]
+
+        self._fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=y,
+                name=name,
+                legendgroup=legendgroup or name,
+                mode="lines+markers+text" if label_steps else "lines+markers",
+                text=step_labels if label_steps else None,
+                textposition="top center",
+                textfont={"size": 9, "color": color},
+                marker={"size": 9, "color": color, "symbol": symbol},
+                line={"color": color, "width": width, "dash": dash},
+                hovertemplate=(
+                    f"{name}<br>%{{text}}<br>"
+                    f"{self.x_attr} = %{{x:.3f}}<br>{self.y_attr} = %{{y:.3f}}"
+                    "<extra></extra>"
+                ),
+                customdata=step_labels,
+            )
+        )
+
+        if arrows and len(x) > 1:
+            # A second, legend-less trace carrying only arrowheads. `angleref`
+            # rotates each marker to the incoming segment, so the first point —
+            # which has no incoming segment — is given size 0 instead.
+            self._fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=y,
+                    mode="markers",
+                    marker={
+                        "symbol": "arrow",
+                        "size": [0] + [11] * (len(x) - 1),
+                        "angleref": "previous",
+                        "color": color,
+                        "standoff": 5,
+                    },
+                    legendgroup=legendgroup or name,
+                    showlegend=False,
+                    hoverinfo="skip",
+                )
+            )
+
+        self._n_paths += 1
+        return self
+
+    @property
+    def figure(self) -> go.Figure:
+        """The assembled plotly figure."""
+        return self._fig
+
+    def show(self, **kwargs) -> None:
+        """Display the figure."""
+        self._fig.show(**kwargs)
+
+
 class ResultPlotAccessor:
     """Plotting accessor for AggregationResult.
 
@@ -589,6 +784,7 @@ class ResultPlotAccessor:
             subplot_titles=columns if n > 1 else None,
         )
 
+        shapes: list[dict] = []
         for row, col in enumerate(columns, start=1):
             if overlay_original:
                 fig.add_trace(
@@ -618,18 +814,32 @@ class ResultPlotAccessor:
                 row=row,
                 col=1,
             )
-            for period, cluster in enumerate(assignments):
-                fig.add_vrect(
-                    x0=period_bounds[period],
-                    x1=period_bounds[period + 1],
-                    fillcolor=cmap[int(cluster)],
-                    opacity=0.18,
-                    line_width=0.5 if mark_periods else 0,
-                    line_color="rgba(0, 0, 0, 0.18)",
-                    layer="below",
-                    row=row,
-                    col=1,
-                )
+            # Collected rather than added one at a time: every `add_vrect` call
+            # re-validates the shapes already on the figure, so shading a year of
+            # days column by column is quadratic (minutes, not milliseconds).
+            # These are exactly the shapes add_vrect would emit for this subplot.
+            axis = "" if row == 1 else str(row)
+            shapes.extend(
+                {
+                    "type": "rect",
+                    "xref": f"x{axis}",
+                    "yref": f"y{axis} domain",
+                    "x0": period_bounds[period],
+                    "x1": period_bounds[period + 1],
+                    "y0": 0,
+                    "y1": 1,
+                    "fillcolor": cmap[int(cluster)],
+                    "opacity": 0.18,
+                    "layer": "below",
+                    "line": {
+                        "width": 0.5 if mark_periods else 0,
+                        "color": "rgba(0, 0, 0, 0.18)",
+                    },
+                }
+                for period, cluster in enumerate(assignments)
+            )
+
+        fig.update_layout(shapes=shapes)
 
         # One legend entry per cluster (colours shared across all cluster plots).
         for cid, color in cmap.items():

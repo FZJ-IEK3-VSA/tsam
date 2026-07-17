@@ -8,7 +8,7 @@ This section contains conceptual and design material about tsam — the *why* an
 | [Decisions](decisions/index.md) | Append-only Architecture Decision Records (ADRs) capturing *why* major design choices were made, including alternatives considered. |
 | [Further Reading](../further-reading.md) | Published papers about ETHOS.TSAM and the aggregation methods it implements. |
 
-For the mathematics itself, the [How aggregation works](../how-it-works/00_overview.ipynb)
+For the mathematics itself, the [How aggregation works](../how-aggregation-works/00_overview.ipynb)
 series derives each step on worked data, and
 [Notation and equations](../../reference/notation.md) collects every symbol and formula on
 one page.

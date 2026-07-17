@@ -1,7 +1,9 @@
-# Aggregation pipeline — the two recombinable axes (grouping × representation) and
-# the optional post-steps (extremes, rescale, segmentation), in pipeline order.
-# Required stages are solid blue; OPTIONAL steps are dashed amber. Conceptual
-# companion to the how-it-works overview. Regenerate:
+# Aggregation pipeline — the two recombinable axes (grouping × representation), the
+# optional post-steps (extremes, rescale, segmentation) and the return path
+# (denormalize, reconstruct), in pipeline order. Required stages are solid blue;
+# OPTIONAL steps are dashed amber. The right column lists the options each stage
+# takes, in the same top-to-bottom order as the stages they configure. Conceptual
+# companion to the how-aggregation-works overview. Regenerate:
 #   d2 aggregation_methods.d2 aggregation_methods.svg
 
 direction: down
@@ -20,8 +22,15 @@ classes: {
   io: { width: 340; height: 54; style: { fill: "#e7f0fb"; stroke: "#3f6fb0"; stroke-width: 2; font-size: 17 } }
   # menu container titles
   menu: { style: { fill: transparent; stroke: "#8fc9c3"; stroke-width: 2; font-size: 16; bold: true; font-color: "#0f5c58" } }
-  # option chips
+  # menu container titles for OPTIONAL steps — amber, to match the dashed stages
+  menu_opt: { style: { fill: transparent; stroke: "#d9963a"; stroke-width: 2; stroke-dash: 5; font-size: 16; bold: true; font-color: "#8a5a12" } }
+  # option chips: method names (short)
   chip: { width: 150; height: 34; style: { fill: "#eef6f5"; stroke: "#8fc9c3"; bold: false; font-size: 14 } }
+  # option chips: keyword-argument names (long) — wider so they do not wrap
+  kwchip: { width: 230; height: 34; style: { fill: "#eef6f5"; stroke: "#8fc9c3"; bold: false; font-size: 14 } }
+  # option chips for OPTIONAL steps — amber
+  kwchip_opt: { width: 230; height: 34; style: { fill: "#fff7ed"; stroke: "#d9963a"; bold: false; font-size: 14 } }
+  chip_opt: { width: 150; height: 34; style: { fill: "#fff7ed"; stroke: "#d9963a"; bold: false; font-size: 14 } }
 }
 
 grid-columns: 2
@@ -40,16 +49,28 @@ flow: "Pipeline (top to bottom)" {
   ext: "Extreme periods  ·  optional\nclustering extension — keep peaks/troughs" { class: opt }
   resc: "Rescale  ·  optional\nrepresentation post-step — restore means" { class: opt }
   seg: "Segment  ·  optional\nresolution variation — fewer steps / period" { class: opt }
+  den: "Denormalize" { class: stage }
   out: "Typical periods\n+ occurrence weights" { class: io }
+  rec: "Reconstruct  ·  optional\nexpand back to a full-length series" { class: opt }
 
-  tin -> norm -> group -> rep -> ext -> resc -> seg -> out
+  tin -> norm -> group -> rep -> ext -> resc -> seg -> den -> out -> rec
 }
 
-# ── Right: the two choices (any Axis-1 method × any Axis-2 method) ──────────────
-choices: "The two choices you make" {
+# ── Right: the options each stage takes, in the same order as the stages ────────
+choices: "The choices you make" {
   class: side
   grid-columns: 1
   grid-gap: 18
+
+  scal: "Scaling & weighting — what the distance sees" {
+    class: menu
+    grid-columns: 2
+    grid-gap: 8
+    w1: "weights={col: w}" { class: kwchip }
+    w2: "scale_by_column_means" { class: kwchip }
+    w3: "use_duration_curves" { class: kwchip }
+    w4: "include_period_sums" { class: kwchip }
+  }
 
   clu: "Axis 1 · Clustering — which periods group together" {
     class: menu
@@ -71,6 +92,24 @@ choices: "The two choices you make" {
     b2: "medoid" { class: chip }
     b3: "maxoid" { class: chip }
     b4: "distribution" { class: chip }
-    b5: "minmaxmean" { class: chip }
+    b5: "distribution_minmax" { class: kwchip }
+    b6: "minmax_mean" { class: chip }
+  }
+
+  extm: "Extreme periods  ·  optional — how a peak is fitted in" {
+    class: menu_opt
+    grid-columns: 3
+    grid-gap: 8
+    e1: "append" { class: chip_opt }
+    e2: "replace" { class: chip_opt }
+    e3: "new_cluster" { class: chip_opt }
+  }
+
+  rescm: "Rescale  ·  optional — which means are restored" {
+    class: menu_opt
+    grid-columns: 2
+    grid-gap: 8
+    r1: "preserve_column_means" { class: kwchip_opt }
+    r2: "rescale_exclude_columns" { class: kwchip_opt }
   }
 }

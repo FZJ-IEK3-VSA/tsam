@@ -9,7 +9,7 @@ import pytest
 
 import tsam
 from conftest import TESTDATA_CSV
-from tsam.plot import ResultPlotAccessor, _validate_columns
+from tsam.plot import AttributeSpace, ResultPlotAccessor, _validate_columns
 
 
 @pytest.fixture(scope="module")
@@ -191,6 +191,31 @@ class TestClustersOverTime:
         )
         assert isinstance(fig, go.Figure)
 
+    def test_one_shape_per_period_per_column(self, result):
+        """Each period is shaded once in every column subplot."""
+        cols = list(result.original.columns)
+        fig = result.plot.clusters_over_time(columns=cols)
+        n_periods = len(result.cluster_assignments)
+        assert len(fig.layout.shapes) == n_periods * len(cols)
+
+    def test_period_shading_is_not_quadratic(self, result):
+        """Regression guard: shapes are assigned in one batch, not per-period.
+
+        Adding each period rectangle with ``fig.add_vrect`` re-validates every
+        shape already on the figure, so a full year over several columns took
+        minutes. The batched assignment is ~5000x faster; this asserts the whole
+        call stays well under a second even for all columns at full resolution.
+        """
+        import time
+
+        cols = list(result.original.columns)
+        start = time.perf_counter()
+        result.plot.clusters_over_time(columns=cols)
+        elapsed = time.perf_counter() - start
+        # The old path took ~20 minutes here; a generous ceiling still catches a
+        # regression to per-shape validation without being flaky on a slow CI box.
+        assert elapsed < 15.0, f"clusters_over_time took {elapsed:.1f}s"
+
 
 # ---- cluster_counts --------------------------------------------------------
 
@@ -311,3 +336,66 @@ class TestResiduals:
     def test_invalid_mode_raises(self, result):
         with pytest.raises(ValueError, match="Unknown mode"):
             result.plot.residuals(mode="invalid")
+
+
+# ---- AttributeSpace --------------------------------------------------------
+
+
+class TestAttributeSpace:
+    def test_returns_figure(self):
+        space = AttributeSpace("solar", "load")
+        space.add_path([0.0, 1.0, 0.5], [3.0, 4.0, 3.5], name="day 0")
+        assert isinstance(space.figure, go.Figure)
+
+    def test_axis_labels_use_units(self):
+        space = AttributeSpace("solar", "load", units={"solar": "W/m²"})
+        assert space.figure.layout.xaxis.title.text == "solar [W/m²]"
+        # an attribute without a unit is labelled bare
+        assert space.figure.layout.yaxis.title.text == "load"
+
+    def test_add_path_is_chainable(self):
+        space = AttributeSpace("a", "b")
+        returned = space.add_path([0, 1], [0, 1], name="one").add_path(
+            [1, 2], [1, 2], name="two"
+        )
+        assert returned is space
+
+    def test_arrows_add_a_hidden_trace(self):
+        """Each path is one visible trace, plus an arrowhead trace when arrows=True."""
+        with_arrows = AttributeSpace("a", "b")
+        with_arrows.add_path([0, 1, 2], [0, 1, 0], name="p", arrows=True)
+        without = AttributeSpace("a", "b")
+        without.add_path([0, 1, 2], [0, 1, 0], name="p", arrows=False)
+
+        assert len(with_arrows.figure.data) == 2
+        assert len(without.figure.data) == 1
+        arrow_trace = with_arrows.figure.data[1]
+        assert arrow_trace.marker.symbol == "arrow"
+        assert arrow_trace.showlegend is False
+        # the first point has no incoming segment, so it carries no arrowhead
+        assert arrow_trace.marker.size[0] == 0
+
+    def test_single_point_path_has_no_arrows(self):
+        space = AttributeSpace("a", "b")
+        space.add_path([0.0], [0.0], name="p", arrows=True)
+        assert len(space.figure.data) == 1
+
+    def test_symbols_cycle_so_paths_differ_without_colour(self):
+        space = AttributeSpace("a", "b")
+        for i in range(3):
+            space.add_path([0, 1], [i, i], name=f"p{i}", arrows=False)
+        symbols = [trace.marker.symbol for trace in space.figure.data]
+        assert len(set(symbols)) == 3
+
+    def test_explicit_symbol_and_colour_are_respected(self):
+        space = AttributeSpace("a", "b")
+        space.add_path(
+            [0, 1], [0, 1], name="p", symbol="square", color="#123456", arrows=False
+        )
+        assert space.figure.data[0].marker.symbol == "square"
+        assert space.figure.data[0].marker.color == "#123456"
+
+    def test_mismatched_lengths_raise(self):
+        space = AttributeSpace("a", "b")
+        with pytest.raises(ValueError, match="same shape"):
+            space.add_path([0, 1, 2], [0, 1], name="p")

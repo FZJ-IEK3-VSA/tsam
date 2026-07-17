@@ -7,7 +7,7 @@
 //
 // Everything else is resolved against the site root rather than a fixed number
 // of `../` hops, because notebook pages sit at three different depths
-// (/tutorials/x/, /explanation/how-it-works/x/, /explanation/how-it-works/
+// (/tutorials/x/, /explanation/how-aggregation-works/x/, /explanation/how-aggregation-works/
 // 02_clustering/x/). Material publishes the relative path back to the site root
 // in its `__config` script; that value is build-time and prefix-agnostic, so it
 // works both on the bare site and under ReadTheDocs' /en/<version>/ mount.

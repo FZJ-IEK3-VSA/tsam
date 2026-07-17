@@ -51,7 +51,7 @@ you came for:
 |---------|-----------|
 | **[Tutorials](tutorials/quickstart.ipynb)** | Learn tsam by working through a complete example. |
 | **[How-to guides](how-to/index.md)** | Get one specific task done. |
-| **[Explanation](explanation/how-it-works/00_overview.ipynb)** | Understand the algorithms, the architecture, and the decisions behind them. |
+| **[Explanation](explanation/how-aggregation-works/00_overview.ipynb)** | Understand the algorithms, the architecture, and the decisions behind them. |
 | **[Reference](reference/api/index.md)** | Look up the API, the notation, and implementation details. |
 
 ## Main features
@@ -85,7 +85,7 @@ you came for:
 | Run your first aggregation | [Quickstart](tutorials/quickstart.ipynb) |
 | Solve a specific task | [How-to guides](how-to/index.md) |
 | See an end-to-end optimization workflow | [Optimization workflow](how-to/optimization_workflow.ipynb) |
-| Understand how aggregation works | [How aggregation works](explanation/how-it-works/00_overview.ipynb) |
+| Understand how aggregation works | [How aggregation works](explanation/how-aggregation-works/00_overview.ipynb) |
 | Look up an equation or symbol | [Notation and equations](reference/notation.md) |
 | Look up a function or class | [API Reference](reference/api/index.md) |
 | Upgrade from v2 or v3 | [Migration guide](migration-guide.md) |

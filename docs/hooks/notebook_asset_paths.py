@@ -12,7 +12,7 @@ built site, because the two resolve it against different directories:
   ``/a/b/nb/`` — one level deeper than the notebook's own directory.
 
 So a verbatim path is off by exactly one level and 404s. ``docs/explanation/
-how-it-works/00_overview.ipynb`` referencing ``../../assets/architecture/x.svg``
+how-aggregation-works/00_overview.ipynb`` referencing ``../../assets/architecture/x.svg``
 resolves to ``/explanation/assets/architecture/x.svg`` instead of
 ``/assets/architecture/x.svg``.
 

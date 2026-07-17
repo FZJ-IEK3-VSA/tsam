@@ -2,7 +2,7 @@
 
 Task-focused recipes for getting things done with tsam, assuming you have skimmed the
 [tutorial](../tutorials/quickstart.ipynb). For *why* each method works, see the
-[How aggregation works](../explanation/how-it-works/00_overview.ipynb) explanation series.
+[How aggregation works](../explanation/how-aggregation-works/00_overview.ipynb) explanation series.
 
 ## Pick a lever
 
@@ -13,8 +13,8 @@ Task-focused recipes for getting things done with tsam, assuming you have skimme
 | just make it smaller, sensibly | nothing — the default is strong | [Aggregate a time series](how_to_aggregate.ipynb) |
 | control **which days group together** | `ClusterConfig(method=…)` | [Clustering methods](clustering_methods.ipynb) |
 | control **what each group becomes** | `ClusterConfig(representation=…)` | [Representations](representations.ipynb) |
-| keep **one specific day** exactly | `extremes=ExtremeConfig(…)` | [Extreme periods](extreme_periods.ipynb) |
-| cut detail **inside** each day | `segments=SegmentConfig(…)` | [Segmentation](segmentation.ipynb) |
+| keep **one specific period** exactly | `extremes=ExtremeConfig(…)` | [Extreme periods](extreme_periods.ipynb) |
+| cut detail **inside** each period | `segments=SegmentConfig(…)` | [Segmentation](segmentation.ipynb) |
 | hit a **target size** | let tsam search both levers | [How small can you go?](tuning.ipynb) |
 | keep **calendar order** | `method="contiguous"` | [Clustering methods](clustering_methods.ipynb) |
 | preserve the **duration curve** | `representation="distribution"` | [Representations](representations.ipynb) |
@@ -64,6 +64,6 @@ across datasets.
 
 ---
 
-For the methods behind the pipeline, see [How aggregation works](../explanation/how-it-works/00_overview.ipynb);
+For the methods behind the pipeline, see [How aggregation works](../explanation/how-aggregation-works/00_overview.ipynb);
 for the equations, [Notation and equations](../reference/notation.md); and for function- and
 class-level detail, the [API Reference](../reference/api/index.md).
