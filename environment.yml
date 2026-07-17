@@ -10,9 +10,9 @@ dependencies:
   - numpy >=1.22.4,<=2.4.6
   - pyomo >=6.4.3,<=6.10.1
   - networkx >=2.5,<=3.6.1
-  - tqdm >=4.21.0,<=4.68.3
-  - highspy >=1.7.2,<=1.15.0
-  - plotly >=5.0.0,<=6.8.0
+  - tqdm >=4.21.0,<=4.68.4
+  - highspy >=1.7.2,<=1.15
+  - plotly >=5.0.0,<=6.9.0
   - notebook >=7.5.0,<=7.6.0
   # Testing
   - pytest <=9.1.1
@@ -28,7 +28,7 @@ dependencies:
   - mkdocs-gen-files >=0.5,<=0.6.1
   - mkdocs-literate-nav >=0.6,<=0.6.3
   # Linting and formatting
-  - ruff <=0.15.19
+  - ruff <=0.15.21
   - mypy <=2.1.0
   - pre-commit <=4.6.0
   - pandas-stubs <=3.0.3.260530
