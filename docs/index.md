@@ -99,5 +99,5 @@ issues are welcome. It is part of the
 at ICE-2 and is tightly integrated with
 [ETHOS.FINE](https://github.com/FZJ-IEK3-VSA/FINE).
 
-If you use ETHOS.TSAM in scientific work, please
+If you use or reference ETHOS.TSAM in scientific work, please
 [cite one of our publications](explanation/further-reading.md).

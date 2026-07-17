@@ -35,6 +35,7 @@ To avoid dependency conflicts, it is recommended that you install ETHOS.TSAM in 
 
 ```bash
 uv venv tsam_env
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install tsam
 ```
 
