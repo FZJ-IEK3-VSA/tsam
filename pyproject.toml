@@ -101,7 +101,17 @@ pythonpath = [
   "test",
 ] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
-filterwarnings = ["ignore::tsam.exceptions.LegacyAPIWarning"]
+# Scoped to tsam's own test runs only: this table is read from tsam's
+# pyproject.toml, so downstream users still see the warning -- both when calling
+# tsam directly and from their own pytest suites, which use their own config.
+# The `pytest.warns`/`catch_warnings` blocks in test_column_order_warning.py
+# reset the filters themselves, so the warning stays under test.
+filterwarnings = [
+  "ignore::tsam.exceptions.LegacyAPIWarning",
+  # tsam's own fixtures deliberately use non-alphabetical columns, so the v4
+  # column-order notice fires on nearly every test and drowns the output.
+  "ignore:.*sorted alphabetically.*:FutureWarning",
+]
 
 [tool.ruff]
 target-version = "py310"

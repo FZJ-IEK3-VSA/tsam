@@ -101,9 +101,7 @@ class Distribution:
             and self.concurrency != "independent"
             and self.scope != "cluster"
         ):
-            raise ValueError(
-                "concurrency is only supported with scope='cluster'."
-            )
+            raise ValueError("concurrency is only supported with scope='cluster'.")
         if self.concurrency == "reference" and self.reference_attribute is None:
             raise ValueError(
                 "concurrency='reference' requires reference_attribute to be set."
