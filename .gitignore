@@ -73,3 +73,6 @@ trash/
 docs/notebooks/results/
 docs/notebooks/clustering.json
 .cache/
+
+# uv resolves this on demand; do not track it
+uv.lock

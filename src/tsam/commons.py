@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 
@@ -124,3 +125,66 @@ def weighted_rms(
         w = pd.Series(weights).reindex(squared.index, fill_value=1.0)
         return float(((squared * w).sum() / w.sum()) ** 0.5)
     return float(squared.mean() ** 0.5)
+
+
+def bounded_water_fill(
+    values: np.ndarray,
+    weights: np.ndarray,
+    lower: float,
+    upper: float,
+    target_weighted_sum: float,
+    *,
+    rel_tolerance: float,
+    max_passes: int = 100,
+) -> tuple[np.ndarray, bool, int]:
+    """Adjust ``values`` within ``[lower, upper]`` to hit a weighted-sum target.
+
+    Solves a bounded water-fill: each pass moves mass proportional to every
+    element's remaining headroom (``upper - value``) when the weighted sum is
+    too low, or its depth above the floor (``value - lower``) when it is too
+    high. The weighted sum changes by exactly the residual (capped at the
+    feasible amount), so it moves monotonically toward the target and every
+    element stays inside ``[lower, upper]``. This preserves the integral without
+    flattening the distribution against either bound.
+
+    Parameters
+    ----------
+    values : np.ndarray
+        Starting values (any shape). Not mutated; a clipped copy is returned.
+    weights : np.ndarray
+        Per-element weights, broadcastable against ``values`` (e.g. one weight
+        per period, shape ``(n_periods, 1)``).
+    lower, upper : float
+        Inclusive bounds enforced on every element.
+    target_weighted_sum : float
+        Desired value of ``sum(weights * values)``.
+    rel_tolerance : float
+        Relative convergence tolerance; the absolute tolerance on the
+        weighted-sum residual is ``max(abs(target_weighted_sum), 1) *
+        rel_tolerance``.
+    max_passes : int
+        Safety cap on redistribution passes.
+
+    Returns
+    -------
+    tuple[np.ndarray, bool, int]
+        The adjusted array, whether the target was reached within tolerance
+        (``False`` if the passes were exhausted or no feasible room remained),
+        and the number of redistribution passes performed.
+    """
+    tolerance = max(abs(target_weighted_sum), 1.0) * rel_tolerance
+    adjusted = np.clip(np.array(values, dtype=float), lower, upper)
+    passes = 0
+    while passes < max_passes:
+        residual = target_weighted_sum - float(np.sum(weights * adjusted))
+        if abs(residual) <= tolerance:
+            return adjusted, True, passes
+        room = (upper - adjusted) if residual > 0 else (adjusted - lower)
+        capacity = float(np.sum(weights * room))
+        if capacity <= tolerance:
+            break
+        step = min(abs(residual), capacity)
+        adjusted = adjusted + np.sign(residual) * step * room / capacity
+        np.clip(adjusted, lower, upper, out=adjusted)
+        passes += 1
+    return adjusted, False, passes

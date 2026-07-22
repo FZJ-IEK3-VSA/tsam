@@ -102,6 +102,37 @@ class AccuracyMetrics:
 
 
 @dataclass
+class ConcurrencyMetrics:
+    """Cross-attribute concurrency-preservation metrics.
+
+    Measures how well the joint structure across attributes (which values
+    co-occur in time) is preserved, complementing the per-attribute error in
+    :class:`AccuracyMetrics`. Lower is better; both are ``NaN`` for
+    single-attribute data.
+
+    Attributes
+    ----------
+    correlation_error : float
+        Frobenius norm of the difference between the **Pearson** correlation
+        matrices of the original and reconstructed attributes.
+    rank_correlation_error : float
+        The same for the **Spearman** rank-correlation matrices (a copula proxy,
+        invariant to monotone marginal changes).
+    """
+
+    correlation_error: float
+    rank_correlation_error: float
+
+    def __repr__(self) -> str:
+        return (
+            f"ConcurrencyMetrics(\n"
+            f"  correlation_error={self.correlation_error:.4f},\n"
+            f"  rank_correlation_error={self.rank_correlation_error:.4f}\n"
+            f")"
+        )
+
+
+@dataclass
 class AggregationResult:
     """Result of time series aggregation.
 
@@ -214,6 +245,29 @@ class AggregationResult:
             weighted_rmse_duration=weighted_rms(
                 accuracy_df["RMSE_duration"], self._weights
             ),
+        )
+
+    @cached_property
+    def concurrency(self) -> ConcurrencyMetrics:
+        """Cross-attribute concurrency-preservation metrics.
+
+        Measures how well the joint structure (co-incidence in time) across
+        attributes is preserved, complementing the per-attribute error in
+        :attr:`accuracy`. See :class:`ConcurrencyMetrics` (``correlation_error`` /
+        ``rank_correlation_error``; lower is better, ``NaN`` for single-attribute
+        data). Computed lazily on first access.
+
+        See Also
+        --------
+        accuracy : Per-attribute (marginal) error metrics.
+        """
+        from tsam.pipeline.accuracy import compute_concurrency
+
+        assert self._norm_values is not None and self._normalized_predicted is not None
+        scores = compute_concurrency(self._norm_values, self._normalized_predicted)
+        return ConcurrencyMetrics(
+            correlation_error=float(scores["correlation_error"]),
+            rank_correlation_error=float(scores["rank_correlation_error"]),
         )
 
     @cached_property
@@ -345,6 +399,10 @@ class AggregationResult:
                 "weighted_rmse": self.accuracy.weighted_rmse,
                 "weighted_mae": self.accuracy.weighted_mae,
                 "weighted_rmse_duration": self.accuracy.weighted_rmse_duration,
+            },
+            "concurrency": {
+                "correlation_error": self.concurrency.correlation_error,
+                "rank_correlation_error": self.concurrency.rank_correlation_error,
             },
             "clustering_duration": self.clustering_duration,
         }
