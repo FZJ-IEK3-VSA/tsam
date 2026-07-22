@@ -63,7 +63,7 @@ class Distribution:
         this attribute is applied to all attributes, preserving their
         concurrency (co-incidence in time) with the reference attribute while
         each attribute still fits its own distribution. Only valid with
-        ``scope="cluster"``. Equivalent to ``concurrency="reference"``.
+        ``scope="local"``. Equivalent to ``concurrency="reference"``.
     concurrency : {"independent", "reference", "medoid", "consensus", \
 "assignment"}, optional
         Strategy used to derive the synthetic time axis. All strategies preserve
@@ -80,7 +80,7 @@ class Distribution:
         - ``"assignment"``: optimal single ordering minimising total deviation
           from the cluster mean profile across all attributes.
 
-        Only valid with ``scope="cluster"``. If None, resolves to ``"reference"``
+        Only valid with ``scope="local"``. If None, resolves to ``"reference"``
         when ``reference_attribute`` is given, otherwise ``"independent"``.
 
     Notes
@@ -88,7 +88,7 @@ class Distribution:
     When used as a segment representation (``SegmentConfig.representation``),
     each segment is a single value per attribute, which constrains two options:
     ``preserve_minmax`` only takes effect with ``scope="global"`` (a single
-    value cannot carry both min and max, so ``scope="cluster"`` keeps the
+    value cannot carry both min and max, so ``scope="local"`` keeps the
     integral-preserving mean), and ``concurrency`` / ``reference_attribute`` are
     not supported (there is no within-period time axis left to order — set them
     on the cluster representation, where ordering runs before segmentation).
@@ -103,22 +103,6 @@ class Distribution:
     ) = None
 
     def __post_init__(self) -> None:
-        if self.reference_attribute is not None and self.scope != "cluster":
-            raise ValueError(
-                "reference_attribute is only supported with scope='cluster'."
-            )
-        if (
-            self.concurrency is not None
-            and self.concurrency != "independent"
-            and self.scope != "cluster"
-        ):
-            raise ValueError("concurrency is only supported with scope='cluster'.")
-        if self.concurrency == "reference" and self.reference_attribute is None:
-            raise ValueError(
-                "concurrency='reference' requires reference_attribute to be set."
-            )
-
-    def __post_init__(self) -> None:
         if self.scope == "cluster":
             warnings.warn(
                 'Distribution scope="cluster" is deprecated; use scope="local" '
@@ -130,6 +114,20 @@ class Distribution:
             )
             # frozen dataclass: normalize the deprecated alias in place.
             object.__setattr__(self, "scope", "local")
+        if self.reference_attribute is not None and self.scope != "local":
+            raise ValueError(
+                "reference_attribute is only supported with scope='local'."
+            )
+        if (
+            self.concurrency is not None
+            and self.concurrency != "independent"
+            and self.scope != "local"
+        ):
+            raise ValueError("concurrency is only supported with scope='local'.")
+        if self.concurrency == "reference" and self.reference_attribute is None:
+            raise ValueError(
+                "concurrency='reference' requires reference_attribute to be set."
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
