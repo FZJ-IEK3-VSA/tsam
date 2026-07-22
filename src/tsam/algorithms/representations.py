@@ -67,7 +67,7 @@ def representations(
             candidates,
             cluster_order,
             period_wise,
-            n_timesteps_per_period,
+            n_timesteps_per_period,  # type: ignore[arg-type]
             represent_min_max=representation_method.preserve_minmax,
         )
         return cluster_centers, cluster_center_indices
@@ -104,7 +104,7 @@ def representations(
             candidates,
             cluster_order,
             distribution_period_wise,
-            n_timesteps_per_period,
+            n_timesteps_per_period,  # type: ignore[arg-type]
             represent_min_max=False,
         )
     elif representation_method == "distribution_minmax":
@@ -112,7 +112,7 @@ def representations(
             candidates,
             cluster_order,
             distribution_period_wise,
-            n_timesteps_per_period,
+            n_timesteps_per_period,  # type: ignore[arg-type]
             represent_min_max=True,
         )
     else:

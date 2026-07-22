@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from tsam.commons import bounded_water_fill
 from tsam.options import options
 
 
@@ -113,38 +114,35 @@ def rescale_representatives(
                 scale_ub * original_data[column].max() / original_data[column].mean()
             )
 
-        # Difference between predicted and original sum
+        # Shape-preserving warm start, then water-fill the residual within
+        # [0, scale_ub] (see bounded_water_fill).
+        target = sum_raw - sum_peak
+        weights_wo_peak = weighting_vec[idx_wo_peak]
+
+        if sum_clu_wo_peak > 0 and target > 0:
+            arr[idx_wo_peak, ci, :] *= target / sum_clu_wo_peak
+        np.nan_to_num(arr[:, ci, :], copy=False, nan=0.0)
+
+        rescaled, converged, iterations = bounded_water_fill(
+            arr[idx_wo_peak, ci, :],
+            weights_wo_peak[:, None],
+            0.0,
+            scale_ub,
+            target,
+            rel_tolerance=options.rescale_tolerance,
+            max_passes=options.rescale_max_iterations,
+        )
+        arr[idx_wo_peak, ci, :] = rescaled
+
+        sum_clu_wo_peak = np.sum(weights_wo_peak * rescaled.sum(axis=1))
         diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
-
-        iteration = 0
-        while (
-            diff > sum_raw * options.rescale_tolerance
-            and iteration < options.rescale_max_iterations
-        ):
-            # Rescale values (only non-extreme clusters)
-            arr[idx_wo_peak, ci, :] *= (sum_raw - sum_peak) / sum_clu_wo_peak
-
-            # Reset values higher than the upper scale or less than zero
-            arr[:, ci, :] = np.clip(arr[:, ci, :], 0, scale_ub)
-
-            # Handle NaN (replace with 0)
-            np.nan_to_num(arr[:, ci, :], copy=False, nan=0.0)
-
-            # Calc new sum and new diff to orig data
-            col_data = arr[:, ci, :]
-            sum_clu_wo_peak = np.sum(
-                weighting_vec[idx_wo_peak] * col_data[idx_wo_peak, :].sum(axis=1)
-            )
-            diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
-            iteration += 1
 
         # Calculate and store final deviation
         deviation_pct = (diff / sum_raw) * 100 if sum_raw != 0 else 0.0
-        converged = iteration < options.rescale_max_iterations
         rescale_deviations[column] = {
             "deviation_pct": deviation_pct,
             "converged": converged,
-            "iterations": iteration,
+            "iterations": iterations,
         }
 
         if not converged and deviation_pct > 0.01:

@@ -50,6 +50,51 @@ given timeseries needs a datetime index`").
 `temporal_resolution`, pass it explicitly (e.g. `temporal_resolution='15min'`)
 to be sure the timestep length matches your data instead of defaulting to 1h.
 
+### Integral and min/max preservation
+
+Two internal corrections that could push values outside the input envelope or
+shift the integral (per-attribute sum) were replaced by a bounded *water-fill*
+that redistributes values within the `[min, max]` envelope instead of flattening
+them against the cap. This is two independent changes with different scopes:
+
+1. **Min/max representation** (`distribution_minmax`, i.e.
+   `Distribution(preserve_minmax=True)`). By code path, this affects **only**
+   representations that preserve min/max — `mean`, `medoid`, `maxoid`,
+   `minmax_mean`, and plain `distribution` never execute this code. Changes:
+    - The integral is now preserved when pinning the per-cluster min/max
+      (previously it could drift by a few percent, especially without rescaling).
+    - Single-value segments (`distribution_minmax` with `n_segments`) keep the
+      segment **mean** rather than being pushed to the segment maximum, since one
+      value cannot carry both the minimum and the maximum.
+2. **Cluster-period rescaling.** Because `preserve_column_means` **defaults to
+   `True`**, this step runs in almost every aggregation, on the shared path for
+   **every** representation — it is not an opt-in corner case. It is identical to
+   the old behavior *unless* a representative value would have been clipped
+   against the `[0, scale_ub]` envelope; where that clipping occurred, values are
+   now redistributed instead of flattened, so the integral is better preserved.
+   So "I only use the defaults" does not by itself mean your results are
+   unchanged — it depends on whether any representative hit the envelope.
+
+**What changes:**
+
+- Results differ for `distribution_minmax` (new min/max algorithm) and for any
+  configuration where rescaling clipped values against the envelope. The largest
+  improvements are for `distribution_minmax` combined with segmentation.
+- The differences are usually small relative to the values but can reach ~20% at
+  an individual peak cell, and are **not** always accompanied by the
+  "maximal value … exceeds" warning.
+- On the packaged example datasets, the common `mean` / `medoid` / `kmeans`
+  paths are bit-identical to v3; the observed changes are confined to
+  `distribution_minmax`, `maxoid`/`kmaxoids`, and rescale-heavy configurations
+  (contiguous, extremes). Note this is an observation on the example data, not a
+  guarantee — the rescaling change above can in principle affect any
+  representation on other data.
+
+**Action required:** If you use `distribution_minmax`, `maxoid`/`kmaxoids`, or
+rely on exact aggregated values with rescaling enabled, regenerate any pinned
+references. Aggregate metrics (integral, min/max envelope) are preserved or
+improved.
+
 ### Removed deprecated APIs
 
 The v3 deprecation shims have been **removed** in v4:
