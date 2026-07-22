@@ -47,5 +47,7 @@ representation, and constrained agglomerative segmentation.
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 ::: tsam.algorithms.duration_representation
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
+::: tsam.algorithms.concurrency
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 ::: tsam.algorithms.segmentation
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }

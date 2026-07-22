@@ -25,6 +25,7 @@ def cluster_periods(
     representation_dict: dict | None,
     n_timesteps_per_period: int,
     representation_candidates: np.ndarray | None,
+    reference_attribute_idx: int | None = None,
 ) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
     """Group period profiles into clusters and pick a representative for each.
 
@@ -104,6 +105,7 @@ def cluster_periods(
         representation_dict=representation_dict,
         n_timesteps_per_period=n_timesteps_per_period,
         representation_candidates=representation_candidates,
+        reference_attribute_idx=reference_attribute_idx,
     )
     return centers, center_indices, order
 
@@ -115,6 +117,7 @@ def cluster_sorted_periods(
     cluster: ClusterConfig,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
+    reference_attribute_idx: int | None = None,
 ) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
     """Cluster periods by value distribution rather than temporal shape.
 
@@ -176,6 +179,7 @@ def cluster_sorted_periods(
         representation_method=cluster.get_representation(),
         representation_dict=representation_dict,
         n_timesteps_per_period=n_timesteps_per_period,
+        reference_attribute_idx=reference_attribute_idx,
     )
 
     # Pick medoid from unsorted candidates (already weighted).
@@ -200,6 +204,7 @@ def use_predefined_assignments(
     representation_method: str | Distribution | MinMaxMean | None,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
+    reference_attribute_idx: int | None = None,
 ) -> tuple[list[np.ndarray] | np.ndarray, list[int] | None, list | np.ndarray]:
     """Reuse stored cluster assignments instead of clustering from scratch.
 
@@ -245,5 +250,6 @@ def use_predefined_assignments(
             representation_method=representation_method,
             representation_dict=representation_dict,
             n_timesteps_per_period=n_timesteps_per_period,
+            reference_attribute_idx=reference_attribute_idx,
         )
         return centers, computed_indices, predef.cluster_order
