@@ -153,15 +153,26 @@ class ResultPlotAccessor:
             columns, available_columns, "cluster_representatives"
         )
 
-        # Reset index to get period/timestep as columns
+        # Reset index to get period/timestep as columns. The representatives
+        # index has 2 levels normally (period, timestep) but 3 with
+        # segmentation (period, segment step, segment duration). Name the
+        # first two levels and drop any extra segment-metadata levels so the
+        # column assignment matches the actual number of columns.
         df = typ[columns].reset_index()
-        df.columns = pd.Index(["Period", "Timestep", *columns])
+        n_index_levels = typ.index.nlevels
+        index_names = [
+            "Period",
+            "Timestep",
+            *[f"_extra_{i}" for i in range(n_index_levels - 2)],
+        ]
+        df.columns = pd.Index([*index_names, *columns])
 
         # Map period IDs to labels with their occurrence counts
         df["Period"] = df["Period"].map(lambda p: f"Period {p} (n={counts.get(p, 1)})")
 
         long_df = df.melt(
             id_vars=["Period", "Timestep"],
+            value_vars=columns,
             var_name="Column",
             value_name="Value",
         )

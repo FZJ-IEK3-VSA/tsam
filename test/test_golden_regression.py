@@ -117,8 +117,12 @@ class TestGoldenRegression:
 
         path = _golden_path(case)
         if not path.exists():
-            pytest.skip(
-                f"golden file missing: {path.relative_to(GOLDEN_DIR.parent.parent)}"
+            # Fail rather than skip: a missing baseline must not read as a pass,
+            # or a newly added case stays silently unverified forever.
+            pytest.fail(
+                f"golden file missing: {path.relative_to(GOLDEN_DIR.parent.parent)}. "
+                f"Regenerate with `pytest test/test_golden_regression.py "
+                f"--update-golden`."
             )
 
         data = get_data(case.dataset, max_timesteps=case.max_timesteps)
