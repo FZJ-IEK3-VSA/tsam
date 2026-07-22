@@ -9,7 +9,12 @@ import pytest
 
 import tsam
 from conftest import TESTDATA_CSV
-from tsam.plot import AttributeSpace, ResultPlotAccessor, _validate_columns
+from tsam.plot import (
+    AttributeSpace,
+    ResultPlotAccessor,
+    _validate_columns,
+    compare_partitions,
+)
 
 
 @pytest.fixture(scope="module")
@@ -399,3 +404,158 @@ class TestAttributeSpace:
         space = AttributeSpace("a", "b")
         with pytest.raises(ValueError, match="same shape"):
             space.add_path([0, 1, 2], [0, 1], name="p")
+
+
+# ---- feature_space ---------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def designed_days() -> pd.DataFrame:
+    """The 12 designed days used by the clustering tutorial.
+
+    Five sunny days are identical to each other and two cloudy pairs sit almost
+    on top of each other, which is exactly the overplotting the marker merging
+    has to survive.
+    """
+    return pd.read_csv(
+        TESTDATA_CSV.parent / "comparison_days.csv", index_col=0, parse_dates=True
+    )
+
+
+ARCHETYPES = [
+    "sunny",
+    "cloudy",
+    "high-load",
+    "sunny",
+    "cloudy",
+    "storm",
+    "cloudy",
+    "sunny",
+    "high-load",
+    "sunny",
+    "cloudy",
+    "sunny",
+]
+
+
+@pytest.fixture(scope="module")
+def designed_result(designed_days) -> tsam.AggregationResult:
+    return tsam.aggregate(
+        designed_days,
+        n_clusters=3,
+        period_duration="1D",
+        preserve_column_means=False,
+    )
+
+
+class TestFeatureSpace:
+    def test_returns_figure(self, designed_result):
+        assert isinstance(designed_result.plot.feature_space(), go.Figure)
+
+    def test_labels_become_marker_traces(self, designed_result):
+        fig = designed_result.plot.feature_space(labels=ARCHETYPES)
+        names = {trace.name for trace in fig.data}
+        assert {"sunny", "cloudy", "high-load", "storm"} <= names
+
+    def test_coincident_periods_merge_into_one_counted_marker(self, designed_result):
+        """The five sunny days share a cluster and a location: one marker, "x5"."""
+        fig = designed_result.plot.feature_space(labels=ARCHETYPES)
+        sunny = next(t for t in fig.data if t.name == "sunny")
+        assert len(sunny.x) == 1
+        assert sunny.text[0].endswith("5")
+
+    def test_merge_tolerance_zero_separates_merely_nearby_periods(
+        self, designed_result
+    ):
+        """Tolerance 0 merges only exact duplicates, not near-neighbours.
+
+        The five sunny days sit at two distinct spots (three exactly on one,
+        two on another), so dropping the tolerance must split them back into
+        two markers while still collapsing each exact duplicate group.
+        """
+        fig = designed_result.plot.feature_space(labels=ARCHETYPES, merge_tolerance=0.0)
+        sunny = next(t for t in fig.data if t.name == "sunny")
+        assert len(sunny.x) == 2
+        assert sorted(t[-1] for t in sunny.text) == ["2", "3"]
+
+    def test_axes_locked_to_equal_aspect(self, designed_result):
+        """Distance is the subject of the plot, so it must not be distorted."""
+        fig = designed_result.plot.feature_space()
+        assert fig.layout.yaxis.scaleanchor == "x"
+        assert fig.layout.yaxis.scaleratio == 1
+
+    def test_medoid_centers_are_marked_as_real_periods(self, designed_days):
+        """A medoid centre is an observed period; the legend must say so."""
+        medoid = tsam.aggregate(
+            designed_days,
+            n_clusters=3,
+            period_duration="1D",
+            cluster=tsam.ClusterConfig(method="kmedoids"),
+            preserve_column_means=False,
+        )
+        names = " ".join(t.name or "" for t in medoid.plot.feature_space().data)
+        assert "real period" in names
+
+    def test_mean_centers_are_marked_as_synthetic(self, designed_days):
+        kmeans = tsam.aggregate(
+            designed_days,
+            n_clusters=3,
+            period_duration="1D",
+            cluster=tsam.ClusterConfig(method="kmeans"),
+            preserve_column_means=False,
+        )
+        names = " ".join(t.name or "" for t in kmeans.plot.feature_space().data)
+        assert "(mean)" in names
+
+    def test_wrong_label_count_raises(self, designed_result):
+        with pytest.raises(ValueError, match="one label per period"):
+            designed_result.plot.feature_space(labels=["only", "two"])
+
+    def test_hiding_centers_and_assignments(self, designed_result):
+        bare = designed_result.plot.feature_space(
+            show_centers=False, show_assignments=False
+        )
+        full = designed_result.plot.feature_space()
+        assert len(bare.data) < len(full.data)
+
+
+# ---- compare_partitions ----------------------------------------------------
+
+
+class TestComparePartitions:
+    def test_returns_figure(self, designed_result):
+        fig = compare_partitions({"run": designed_result})
+        assert isinstance(fig, go.Figure)
+
+    def test_identical_groupings_look_identical_after_canonicalisation(self):
+        """Same partition, different ids — the whole point of canonical=True."""
+        fig = compare_partitions({"a": [2, 2, 0, 0], "b": [7, 7, 3, 3]})
+        rows = np.asarray(fig.data[0].z)
+        assert np.array_equal(rows[0], rows[1])
+
+    def test_raw_ids_survive_when_canonical_is_off(self):
+        fig = compare_partitions({"a": [2, 2, 0, 0]}, canonical=False)
+        assert list(np.asarray(fig.data[0].z)[0]) == [2, 2, 0, 0]
+
+    def test_accepts_results_and_raw_sequences_together(self, designed_result):
+        fig = compare_partitions(
+            {"result": designed_result, "manual": [0] * 12},
+            labels=ARCHETYPES,
+        )
+        assert np.asarray(fig.data[0].z).shape == (2, 12)
+
+    def test_labels_annotate_the_period_axis(self, designed_result):
+        fig = compare_partitions({"run": designed_result}, labels=ARCHETYPES)
+        assert any("storm" in tick for tick in fig.layout.xaxis.ticktext)
+
+    def test_empty_raises(self):
+        with pytest.raises(ValueError, match="at least one clustering"):
+            compare_partitions({})
+
+    def test_ragged_partitions_raise(self):
+        with pytest.raises(ValueError, match="same number of periods"):
+            compare_partitions({"a": [0, 1], "b": [0, 1, 2]})
+
+    def test_wrong_label_count_raises(self, designed_result):
+        with pytest.raises(ValueError, match="labels has"):
+            compare_partitions({"run": designed_result}, labels=["one"])

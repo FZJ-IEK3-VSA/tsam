@@ -10,19 +10,20 @@ you need and want a recipe, go to the [how-to guides](../how-to/index.md).
 handful of typical days, read the results a downstream model needs, and measure what the reduction
 cost you. Assumes nothing.
 
+**[Choosing a method](choosing_a_method.ipynb)** — the four levers `aggregate()` sets for you, what
+each one throws away, and how to read a configuration off what you are modelling. Read this second:
+it is the map of every decision, and the two tutorials below are the detailed tours of the first
+two levers.
+
 ## Going deeper
 
-**[Comparing clustering methods](comparing_clustering_methods.ipynb)** — give six clustering methods
-the same twelve days and the same budget, and watch them disagree. Explains *why* each method carves
-the data differently, and what that means for the typical periods your model sees.
+**[Comparing clustering methods](comparing_clustering_methods.ipynb)** — lever 1 in depth. Give six
+clustering methods the same twelve days and the same budget, and watch them disagree. Explains *why*
+each carves the data differently, and what each one costs to run.
 
-**[Comparing representations](comparing_representations.ipynb)** — the other axis. Put all six
+**[Comparing representations](comparing_representations.ipynb)** — lever 2 in depth. Put all six
 representations on the *same* cluster and read off what each keeps: a real day, the peak, or the
 average. No rule keeps all three, and the table shows which trade you are making.
-
-**[Choosing a method](choosing_a_method.ipynb)** — the four levers `aggregate()` sets for you, what
-each one throws away, and how to read a configuration off what you are modelling. Includes the three
-different ways to preserve a peak and why they are not interchangeable.
 
 ---
 
