@@ -70,6 +70,22 @@ class TestClusterRepresentatives:
         fig = result.plot.cluster_representatives(columns=[col])
         assert isinstance(fig, go.Figure)
 
+    def test_with_segmentation(self, result_segmented):
+        # Segmented results have a 3-level representatives index
+        # (period, segment step, segment duration); plotting must not crash.
+        fig = result_segmented.plot.cluster_representatives()
+        assert isinstance(fig, go.Figure)
+
+    def test_segmentation_trace_matches_data(self, result_segmented):
+        """Segmented representative trace contains the segment values."""
+        col = result_segmented.original.columns[0]
+        cluster_id = sorted(set(result_segmented.cluster_assignments))[0]
+        fig = result_segmented.plot.cluster_representatives(columns=[col])
+
+        expected = result_segmented.cluster_representatives.loc[cluster_id, col].values
+        trace = next(t for t in fig.data if f"Period {cluster_id} " in t.name)
+        np.testing.assert_array_almost_equal(np.asarray(trace.y, dtype=float), expected)
+
 
 # ---- cluster_members -------------------------------------------------------
 
