@@ -128,7 +128,7 @@ class ResultPlotAccessor:
         >>> result.plot.cluster_counts()
     """
 
-    def __init__(self, result: AggregationResult):
+    def __init__(self, result: AggregationResult) -> None:
         self._result = result
 
     def cluster_representatives(

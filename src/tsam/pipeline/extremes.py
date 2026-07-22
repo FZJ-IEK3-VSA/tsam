@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from tsam.config import ExtremeConfig
 
 
-def _append_col_with(column, append_with: str = " max."):
+def _append_col_with(column: str | tuple, append_with: str = " max.") -> str | tuple:
     """Append a string to the column name. For MultiIndexes, only last level is changed."""
     if isinstance(column, str):
         return column + append_with
@@ -23,7 +23,7 @@ def _append_col_with(column, append_with: str = " max."):
 
 def _detect_extreme(
     profiles_df: pd.DataFrame,
-    column,
+    column: str | tuple,
     series: pd.Series,
     suffix: str,
     extreme_period_no: list,

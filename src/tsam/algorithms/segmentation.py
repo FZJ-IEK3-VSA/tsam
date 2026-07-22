@@ -1,21 +1,28 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
 
 from tsam.algorithms.representations import representations
 
+if TYPE_CHECKING:
+    from tsam.config import Distribution, MinMaxMean
+
 
 def segmentation(
-    normalized_typical_periods,
-    n_segments,
-    n_timesteps_per_period,
-    representation_method=None,
-    representation_dict=None,
-    distribution_period_wise=True,
-    predef_segment_order=None,
-    predef_segment_durations=None,
-    predef_segment_centers=None,
-):
+    normalized_typical_periods: pd.DataFrame,
+    n_segments: int,
+    n_timesteps_per_period: int,
+    representation_method: str | Distribution | MinMaxMean | None = None,
+    representation_dict: dict[str, str] | None = None,
+    distribution_period_wise: bool = True,
+    predef_segment_order: list | None = None,
+    predef_segment_durations: list | None = None,
+    predef_segment_centers: list | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, list]:
     """Cluster adjacent time steps within typical periods to reduce resolution.
 
     Agglomerative clustering of adjacent time steps within a set of typical
@@ -126,6 +133,9 @@ def segmentation(
 
         # Check if using predefined segments for this period
         if predef_segment_order is not None:
+            # segment durations are required whenever a segment order is supplied
+            # (see the predef_segment_durations docstring and PredefParams).
+            assert predef_segment_durations is not None
             # Use predefined segment order
             cluster_order = np.asarray(predef_segment_order[period_i])
 
@@ -142,8 +152,12 @@ def segmentation(
             # Determine segment values
             if predef_segment_centers is not None:
                 # Use predefined centers directly
-                segment_center_indices = list(predef_segment_centers[period_i])
-                cluster_centers = segmentation_candidates[segment_center_indices]
+                segment_center_indices: list | None = list(
+                    predef_segment_centers[period_i]
+                )
+                cluster_centers: np.ndarray | list[np.ndarray] = (
+                    segmentation_candidates[segment_center_indices]
+                )
             else:
                 # Calculate representations from predefined order
                 cluster_centers, segment_center_indices = representations(
@@ -177,9 +191,10 @@ def segmentation(
                 label_map[temporal_order] = np.arange(n_segments)
                 cluster_order = label_map[cluster_order]
             # determine the indices where the segments change and the number of time steps in each segment
-            seg_no, indices, segment_no_occur = np.unique(
+            unique_result: tuple[np.ndarray, np.ndarray, np.ndarray] = np.unique(
                 cluster_order, return_index=True, return_counts=True
             )
+            seg_no, indices, segment_no_occur = unique_result
             cluster_order_unique = [cluster_order[index] for index in sorted(indices)]
             # determine the segments' values
             cluster_centers, segment_center_indices = representations(
