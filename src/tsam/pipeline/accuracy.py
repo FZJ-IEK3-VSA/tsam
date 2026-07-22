@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -136,3 +136,55 @@ def compute_accuracy(
         indicator_raw["MAE"][column] = mean_absolute_error(orig_ts, pred_ts)
 
     return pd.DataFrame(indicator_raw)
+
+
+def compute_concurrency(
+    normalized_original: pd.DataFrame,
+    normalized_predicted: pd.DataFrame,
+) -> pd.Series:
+    """Score how well cross-attribute concurrency (co-incidence) is preserved.
+
+    While `compute_accuracy` measures per-attribute error (including the
+    duration-curve / marginal-distribution fit), this measures the *between*
+    -attribute structure that the distribution representation can destroy: it
+    compares the cross-attribute correlation matrix of the reconstructed series
+    with that of the original. Lower is better.
+
+    Parameters
+    ----------
+    normalized_original
+        The original series in normalized units.
+    normalized_predicted
+        The reconstructed series in normalized units (from `reconstruct`).
+
+    Returns
+    -------
+    pd.Series
+        ``correlation_error`` — Frobenius norm of the difference between the
+        Pearson correlation matrices of the original and reconstructed
+        attributes; ``rank_correlation_error`` — the same for the Spearman
+        rank-correlation matrices (a copula proxy, invariant to monotone marginal
+        changes). Lower is better; both are ``NaN`` when fewer than two
+        attributes are present.
+
+    See Also
+    --------
+    compute_accuracy : Per-attribute (marginal) error metrics.
+    """
+    pred = normalized_predicted[normalized_original.columns]
+
+    if len(normalized_original.columns) < 2:
+        return pd.Series(
+            {"correlation_error": np.nan, "rank_correlation_error": np.nan}
+        )
+
+    def _frob(method: Literal["pearson", "spearman"]) -> float:
+        diff = normalized_original.corr(method=method) - pred.corr(method=method)
+        return float(np.sqrt(np.square(diff.values).sum()))
+
+    return pd.Series(
+        {
+            "correlation_error": _frob("pearson"),
+            "rank_correlation_error": _frob("spearman"),
+        }
+    )
