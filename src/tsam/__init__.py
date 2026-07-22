@@ -29,13 +29,15 @@ Examples:
     ... )
 """
 
+from types import ModuleType
+
 from tsam.api import aggregate, unstack_to_periods
 
 # Optional modules loaded on-demand to avoid importing heavy dependencies (e.g., plotly)
 _LAZY_MODULES = ("plot", "tuning")
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> ModuleType:
     """Lazy import handler for optional modules."""
     import importlib
 

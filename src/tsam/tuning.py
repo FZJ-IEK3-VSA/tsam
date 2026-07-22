@@ -402,7 +402,7 @@ class TuningResult:
     def __getitem__(self, index: int) -> AggregationResult:
         return self.all_results[index]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[AggregationResult]:
         return iter(self.all_results)
 
 

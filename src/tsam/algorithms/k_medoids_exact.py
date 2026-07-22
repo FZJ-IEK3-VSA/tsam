@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
@@ -10,6 +14,9 @@ np.complex_ = np.complex128  # type: ignore[attr-defined]
 import pyomo.environ as pyomo
 import pyomo.opt as opt
 from pyomo.contrib import appsi
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
@@ -25,12 +32,12 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
     def __init__(
         self,
-        n_clusters=8,
-        distance_metric="euclidean",
-        timelimit=100,
-        threads=7,
-        solver="highs",
-    ):
+        n_clusters: int = 8,
+        distance_metric: str | Callable = "euclidean",
+        timelimit: int = 100,
+        threads: int = 7,
+        solver: str = "highs",
+    ) -> None:
         self.n_clusters = n_clusters
 
         self.distance_metric = distance_metric
@@ -41,7 +48,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         self.threads = threads
 
-    def _check_init_args(self):
+    def _check_init_args(self) -> None:
         # Check n_clusters
         if (
             self.n_clusters is None
@@ -65,7 +72,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
                 + "was given."
             )
 
-    def fit(self, X, y=None):
+    def fit(self, X: np.ndarray, y: object = None) -> KMedoids:
         """Fit K-Medoids to the provided data.
 
         Args:
@@ -107,7 +114,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         return self
 
-    def _check_array(self, X):
+    def _check_array(self, X: np.ndarray) -> np.ndarray:
         X = check_array(X)
 
         # Check that the number of clusters is less than or equal to
@@ -122,7 +129,9 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         return X
 
-    def _k_medoids_exact(self, distances, n_clusters):
+    def _k_medoids_exact(
+        self, distances: np.ndarray, n_clusters: int
+    ) -> tuple[np.ndarray, np.ndarray, float]:
         """Solve the exact k-medoids problem.
 
         Args:
@@ -139,7 +148,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         return (r_y, r_x.T, r_obj)
 
 
-def _setup_k_medoids(distances, n_clusters):
+def _setup_k_medoids(distances: np.ndarray, n_clusters: int) -> pyomo.ConcreteModel:
     """Define the k-medoids model with pyomo.
 
     In the spatial aggregation community, it is referred to as Hess Model for
@@ -170,33 +179,35 @@ def _setup_k_medoids(distances, n_clusters):
 
     # get objective
     # Minimize the distance of every candidate to the cluster center
-    def objRule(M):
+    def objRule(M: pyomo.ConcreteModel) -> Any:
         return sum(sum(M.d[i, j] * M.z[i, j] for j in M.j) for i in M.i)
 
     M.obj = pyomo.Objective(rule=objRule)
 
     # s.t.
     # Assign all candidates to one clusters
-    def candToClusterRule(M, j):
+    def candToClusterRule(M: pyomo.ConcreteModel, j: int) -> Any:
         return sum(M.z[i, j] for i in M.i) == 1
 
     M.candToClusterCon = pyomo.Constraint(M.j, rule=candToClusterRule)
 
     # Predefine the number of clusters
-    def noClustersRule(M):
+    def noClustersRule(M: pyomo.ConcreteModel) -> Any:
         return sum(M.z[i, i] for i in M.i) == M.no_k
 
     M.noClustersCon = pyomo.Constraint(rule=noClustersRule)
 
     # Describe the choice of a candidate to a cluster
-    def clusterRelationRule(M, i, j):
+    def clusterRelationRule(M: pyomo.ConcreteModel, i: int, j: int) -> Any:
         return M.z[i, j] <= M.z[i, i]
 
     M.clusterRelationCon = pyomo.Constraint(M.i, M.j, rule=clusterRelationRule)
     return M
 
 
-def _solve_given_pyomo_model(M, solver="highs"):
+def _solve_given_pyomo_model(
+    M: pyomo.ConcreteModel, solver: str = "highs"
+) -> tuple[np.ndarray, np.ndarray, float]:
     """Solve a given pyomo clustering model and return the clusters.
 
     Args:
