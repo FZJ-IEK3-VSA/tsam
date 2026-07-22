@@ -86,10 +86,7 @@ def _golden_path(case: GoldenCase) -> str:
 def _save_golden(df: pd.DataFrame, case: GoldenCase) -> None:
     path = _golden_path(case)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Columns written alphabetically so goldens stay diff-stable across the
-    # v3->v4 column-order change (v4 preserves input order). Reverted post-release
-    # (see the stacked follow-up PR and issue #336).
-    df.round(8).sort_index(axis=1).to_csv(path)
+    df.round(8).to_csv(path)
 
 
 def _load_golden(case: GoldenCase) -> pd.DataFrame:
@@ -139,6 +136,5 @@ class TestGoldenRegression:
             golden,
             check_names=False,
             check_freq=False,
-            check_like=True,  # v4 preserves input column order; golden CSVs are alphabetical
             atol=1e-7,
         )
