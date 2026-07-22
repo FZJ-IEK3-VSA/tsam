@@ -101,6 +101,7 @@ def cluster_and_represent(
     distribution_period_wise: bool = True,
     n_timesteps_per_period: int | None = None,
     representation_candidates: np.ndarray | None = None,
+    reference_attribute_idx: int | None = None,
 ) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
     """Cluster ``candidates`` and compute the representative profile per cluster.
 
@@ -127,5 +128,6 @@ def cluster_and_represent(
         representation_dict=representation_dict,
         distribution_period_wise=distribution_period_wise,
         n_timesteps_per_period=n_timesteps_per_period,
+        reference_attribute_idx=reference_attribute_idx,
     )
     return cluster_centers, cluster_center_indices, cluster_order

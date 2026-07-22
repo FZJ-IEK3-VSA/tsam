@@ -192,6 +192,31 @@ def _build_representation_dict(
     return representation_dict
 
 
+def _resolve_reference_attribute_idx(
+    columns: list,
+    cluster_representation: str | Distribution | MinMaxMean | None,
+) -> int | None:
+    """Map a ``Distribution.reference_attribute`` name to its attribute index.
+
+    ``columns`` must be in the same order as the attribute blocks of the
+    clustering candidates (i.e. the representation dict order), so the returned
+    index lines up with the duration representation.
+    """
+    from tsam.config import Distribution
+
+    if (
+        isinstance(cluster_representation, Distribution)
+        and cluster_representation.reference_attribute is not None
+    ):
+        ref = cluster_representation.reference_attribute
+        if ref not in columns:
+            raise ValueError(
+                f"reference_attribute {ref!r} is not one of the data columns {columns}."
+            )
+        return columns.index(ref)
+    return None
+
+
 def prepare_data(
     data: pd.DataFrame,
     cfg: PipelineConfig,
@@ -307,6 +332,9 @@ def cluster_and_postprocess(
     cluster_representation = cluster.get_representation()
     candidates = prepared.candidates
     period_profiles = prepared.period_profiles
+    reference_attribute_idx = _resolve_reference_attribute_idx(
+        list(prepared.representation_dict), cluster_representation
+    )
 
     # Cluster
     clustering_duration = 0.0
@@ -320,6 +348,7 @@ def cluster_and_postprocess(
                 cluster_representation,
                 prepared.representation_dict,
                 cfg.n_timesteps_per_period,
+                reference_attribute_idx=reference_attribute_idx,
             )
         )
     else:
@@ -338,6 +367,7 @@ def cluster_and_postprocess(
                 prepared.representation_dict,
                 cfg.n_timesteps_per_period,
                 representation_candidates=rep_candidates,
+                reference_attribute_idx=reference_attribute_idx,
             )
         else:
             cluster_centers, cluster_center_indices, cluster_order = (
@@ -348,6 +378,7 @@ def cluster_and_postprocess(
                     cluster,
                     prepared.representation_dict,
                     cfg.n_timesteps_per_period,
+                    reference_attribute_idx=reference_attribute_idx,
                 )
             )
         clustering_duration = time.time() - t_start

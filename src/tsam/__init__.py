@@ -53,7 +53,12 @@ from tsam.config import (
     SegmentConfig,
 )
 from tsam.options import options
-from tsam.result import AccuracyMetrics, AggregationResult, ClusteringResult
+from tsam.result import (
+    AccuracyMetrics,
+    AggregationResult,
+    ClusteringResult,
+    ConcurrencyMetrics,
+)
 
 try:
     from tsam._version import __version__
@@ -65,6 +70,7 @@ __all__ = [
     "AggregationResult",
     "ClusterConfig",
     "ClusteringResult",
+    "ConcurrencyMetrics",
     "Distribution",
     "ExtremeConfig",
     "MinMaxMean",

@@ -49,10 +49,64 @@ class Distribution:
     preserve_minmax : bool, default False
         If True, also preserves min/max values per timestep
         (equivalent to old "distribution_minmax").
+    reference_attribute : str, optional
+        Name of a data column. If given, a single temporal ordering derived from
+        this attribute is applied to all attributes, preserving their
+        concurrency (co-incidence in time) with the reference attribute while
+        each attribute still fits its own distribution. Only valid with
+        ``scope="cluster"``. Equivalent to ``concurrency="reference"``.
+    concurrency : {"independent", "reference", "medoid", "consensus", \
+"assignment"}, optional
+        Strategy used to derive the synthetic time axis. All strategies preserve
+        every attribute's marginal distribution and differ only in how the
+        attributes' concurrency is preserved:
+
+        - ``"independent"`` (default): each attribute ordered by its own mean
+          profile — best marginal fit, concurrency across attributes lost.
+        - ``"reference"``: single ordering from ``reference_attribute``.
+        - ``"medoid"``: each attribute ordered by the cluster medoid's ranks,
+          reproducing a real period's joint co-occurrence.
+        - ``"consensus"``: single ordering from the first principal component of
+          all attributes' mean profiles.
+        - ``"assignment"``: optimal single ordering minimising total deviation
+          from the cluster mean profile across all attributes.
+
+        Only valid with ``scope="cluster"``. If None, resolves to ``"reference"``
+        when ``reference_attribute`` is given, otherwise ``"independent"``.
+
+    Notes
+    -----
+    When used as a segment representation (``SegmentConfig.representation``),
+    each segment is a single value per attribute, which constrains two options:
+    ``preserve_minmax`` only takes effect with ``scope="global"`` (a single
+    value cannot carry both min and max, so ``scope="cluster"`` keeps the
+    integral-preserving mean), and ``concurrency`` / ``reference_attribute`` are
+    not supported (there is no within-period time axis left to order — set them
+    on the cluster representation, where ordering runs before segmentation).
     """
 
     scope: Literal["cluster", "global"] = "cluster"
     preserve_minmax: bool = False
+    reference_attribute: str | None = None
+    concurrency: (
+        Literal["independent", "reference", "medoid", "consensus", "assignment"] | None
+    ) = None
+
+    def __post_init__(self) -> None:
+        if self.reference_attribute is not None and self.scope != "cluster":
+            raise ValueError(
+                "reference_attribute is only supported with scope='cluster'."
+            )
+        if (
+            self.concurrency is not None
+            and self.concurrency != "independent"
+            and self.scope != "cluster"
+        ):
+            raise ValueError("concurrency is only supported with scope='cluster'.")
+        if self.concurrency == "reference" and self.reference_attribute is None:
+            raise ValueError(
+                "concurrency='reference' requires reference_attribute to be set."
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -61,6 +115,10 @@ class Distribution:
             result["scope"] = self.scope
         if self.preserve_minmax:
             result["preserve_minmax"] = self.preserve_minmax
+        if self.reference_attribute is not None:
+            result["reference_attribute"] = self.reference_attribute
+        if self.concurrency is not None:
+            result["concurrency"] = self.concurrency
         return result
 
     @classmethod
@@ -69,6 +127,8 @@ class Distribution:
         return cls(
             scope=data.get("scope", "cluster"),
             preserve_minmax=data.get("preserve_minmax", False),
+            reference_attribute=data.get("reference_attribute"),
+            concurrency=data.get("concurrency"),
         )
 
 
@@ -313,7 +373,8 @@ class SegmentConfig:
         - "mean": Average value of timesteps in segment
         - "medoid": Actual timestep closest to segment mean
         - "distribution": Preserve distribution within segment
-        - ``Distribution(...)``: Distribution with additional options
+        - ``Distribution(...)``: Distribution with additional options; some
+          behave differently for single-value segments, see :class:`Distribution`
         - ``MinMaxMean(...)``: Per-column min/max/mean
     """
 

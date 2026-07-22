@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from tsam.algorithms.concurrency import compute_ordering
 from tsam.commons import bounded_water_fill
 from tsam.options import options
 
@@ -25,6 +26,8 @@ def duration_representation(
     distribution_period_wise: bool,
     n_timesteps_per_period: int,
     represent_min_max: bool = False,
+    concurrency_method: str | None = None,
+    reference_attribute_idx: int | None = None,
 ) -> list[np.ndarray]:
     """Represent each cluster by a duration curve fitted per attribute.
 
@@ -42,6 +45,15 @@ def duration_representation(
         n_timesteps_per_period: Time steps per period.
         represent_min_max: Whether to preserve each cluster attribute's
             minimum and maximum.
+        concurrency_method: Strategy used to lay each attribute's duration-curve
+            values onto the synthetic time axis, one of
+            :data:`~tsam.algorithms.concurrency.CONCURRENCY_METHODS`. All
+            strategies preserve every attribute's marginal distribution and
+            differ only in how cross-attribute concurrency is preserved. Only
+            supported with ``distribution_period_wise=True``. ``None`` uses
+            ``"independent"``.
+        reference_attribute_idx: Attribute index required by the ``"reference"``
+            concurrency strategy; ignored otherwise.
 
     Returns:
         The cluster centers as rows of time steps × attributes.
@@ -93,11 +105,14 @@ def duration_representation(
                     options.minmax_tolerance,
                 )
 
-            # Reorder each attribute's repr_values by its mean profile.
-            # Round means before argsort to ensure identical tie-breaking
-            # across platforms and numpy versions.
             means = np.round(cluster_data.mean(axis=1), 10)
-            order = means.argsort(axis=1, kind="stable")
+            order = compute_ordering(
+                cluster_data,
+                means,
+                repr_values,
+                concurrency_method,
+                reference_attribute_idx,
+            )
             rows = np.arange(n_attrs)[:, None]
             final_repr = np.empty_like(repr_values)
             final_repr[rows, order] = repr_values
@@ -107,6 +122,12 @@ def duration_representation(
         return cluster_centers
 
     else:
+        if concurrency_method is not None and concurrency_method != "independent":
+            raise ValueError(
+                "A concurrency-preserving duration representation "
+                f"(concurrency_method={concurrency_method!r}) is only supported "
+                "with distribution_period_wise=True (scope='cluster')."
+            )
         cluster_centers_list = []
         for a in candidates_df.columns.get_level_values(0).unique():
             mean_vals = []

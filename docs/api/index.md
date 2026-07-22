@@ -7,7 +7,7 @@ returns. The pipeline internals are here for completeness.
 | Topic | Contents |
 |-------|----------|
 | [Configuration](configuration.md) | `ClusterConfig`, `SegmentConfig`, `ExtremeConfig`, `Distribution`, `MinMaxMean` |
-| [Results](results.md) | `AggregationResult`, `AccuracyMetrics`, `ClusteringResult` |
+| [Results](results.md) | `AggregationResult`, `AccuracyMetrics`, `ConcurrencyMetrics`, `ClusteringResult` |
 | [Pipeline internals](pipeline.md) | `run_pipeline`, the four phases, and the stage functions |
 | [Tuning](tuning.md) | Hyperparameter sweeps over aggregation settings |
 | [Utilities](utilities.md) | Options, weights, plotting, low-level aggregation helpers |
