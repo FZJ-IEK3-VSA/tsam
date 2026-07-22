@@ -13,6 +13,8 @@ def aggregatePeriods(
     representationDict=None,
     distributionPeriodWise=True,
     timeStepsPerPeriod=None,
+    referenceAttributeIdx=None,
+    concurrencyMethod=None,
     n_extra_columns=0,
 ):
     """
@@ -67,6 +69,8 @@ def aggregatePeriods(
             representationDict=representationDict,
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
+            referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
 
     if clusterMethod == "k_means":
@@ -84,6 +88,8 @@ def aggregatePeriods(
             representationDict=representationDict,
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
+            referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
 
     if clusterMethod == "k_medoids":
@@ -100,6 +106,8 @@ def aggregatePeriods(
             representationDict=representationDict,
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
+            referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
 
     if clusterMethod == "k_maxoids":
@@ -116,6 +124,8 @@ def aggregatePeriods(
             representationDict=representationDict,
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
+            referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
 
     if clusterMethod == "hierarchical" or clusterMethod == "adjacent_periods":
@@ -145,6 +155,8 @@ def aggregatePeriods(
             representationDict=representationDict,
             distributionPeriodWise=distributionPeriodWise,
             timeStepsPerPeriod=timeStepsPerPeriod,
+            referenceAttributeIdx=referenceAttributeIdx,
+            concurrencyMethod=concurrencyMethod,
         )
 
     return clusterCenters, clusterCenterIndices, clusterOrder
