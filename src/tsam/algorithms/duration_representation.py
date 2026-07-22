@@ -1,4 +1,4 @@
-"""Orders a set of representation values to fit several candidate value sets"""
+"""Orders a set of representation values to fit several candidate value sets."""
 
 from __future__ import annotations
 

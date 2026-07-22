@@ -42,56 +42,52 @@ Solver = Literal["highs", "cbc", "gurobi", "cplex"]
 class Distribution:
     """Representation that preserves the value distribution (duration curve).
 
-    Parameters
-    ----------
-    scope : "local" or "global", default "local"
-        "local": preserve each group's own distribution separately. The group is
-        a cluster of periods for a cluster representation, or a segment of
-        timesteps for a segment representation.
-        "global": preserve only the distribution of the enclosing whole (the
-        full time series for a cluster representation, a single period for a
-        segment representation).
+    Args:
+        scope: "local" preserves each group's own distribution separately. The
+            group is a cluster of periods for a cluster representation, or a
+            segment of timesteps for a segment representation. "global"
+            preserves only the distribution of the enclosing whole (the full
+            time series for a cluster representation, a single period for a
+            segment representation). "cluster" is accepted as a deprecated alias
+            for "local" (the old name, which was misleading for segment
+            representations where the group is a segment, not a cluster).
+        preserve_minmax: If True, also preserves min/max values per timestep
+            (equivalent to old "distribution_minmax").
+        reference_attribute: Name of a data column. If given, a single temporal
+            ordering derived from this attribute is applied to all attributes,
+            preserving their concurrency (co-incidence in time) with the
+            reference attribute while each attribute still fits its own
+            distribution. Only valid with ``scope="local"``. Equivalent to
+            ``concurrency="reference"``.
+        concurrency: Strategy used to derive the synthetic time axis, one of
+            ``"independent"``, ``"reference"``, ``"medoid"``, ``"consensus"``,
+            ``"assignment"``. All strategies preserve every attribute's marginal
+            distribution and differ only in how the attributes' concurrency is
+            preserved:
 
-        ``"cluster"`` is accepted as a deprecated alias for ``"local"`` (the old
-        name, which was misleading for segment representations where the group is
-        a segment, not a cluster).
-    preserve_minmax : bool, default False
-        If True, also preserves min/max values per timestep
-        (equivalent to old "distribution_minmax").
-    reference_attribute : str, optional
-        Name of a data column. If given, a single temporal ordering derived from
-        this attribute is applied to all attributes, preserving their
-        concurrency (co-incidence in time) with the reference attribute while
-        each attribute still fits its own distribution. Only valid with
-        ``scope="local"``. Equivalent to ``concurrency="reference"``.
-    concurrency : {"independent", "reference", "medoid", "consensus", \
-"assignment"}, optional
-        Strategy used to derive the synthetic time axis. All strategies preserve
-        every attribute's marginal distribution and differ only in how the
-        attributes' concurrency is preserved:
+            - ``"independent"`` (default): each attribute ordered by its own mean
+              profile — best marginal fit, concurrency across attributes lost.
+            - ``"reference"``: single ordering from ``reference_attribute``.
+            - ``"medoid"``: each attribute ordered by the cluster medoid's ranks,
+              reproducing a real period's joint co-occurrence.
+            - ``"consensus"``: single ordering from the first principal component
+              of all attributes' mean profiles.
+            - ``"assignment"``: optimal single ordering minimising total
+              deviation from the cluster mean profile across all attributes.
 
-        - ``"independent"`` (default): each attribute ordered by its own mean
-          profile — best marginal fit, concurrency across attributes lost.
-        - ``"reference"``: single ordering from ``reference_attribute``.
-        - ``"medoid"``: each attribute ordered by the cluster medoid's ranks,
-          reproducing a real period's joint co-occurrence.
-        - ``"consensus"``: single ordering from the first principal component of
-          all attributes' mean profiles.
-        - ``"assignment"``: optimal single ordering minimising total deviation
-          from the cluster mean profile across all attributes.
+            Only valid with ``scope="local"``. If None, resolves to
+            ``"reference"`` when ``reference_attribute`` is given, otherwise
+            ``"independent"``.
 
-        Only valid with ``scope="local"``. If None, resolves to ``"reference"``
-        when ``reference_attribute`` is given, otherwise ``"independent"``.
-
-    Notes
-    -----
-    When used as a segment representation (``SegmentConfig.representation``),
-    each segment is a single value per attribute, which constrains two options:
-    ``preserve_minmax`` only takes effect with ``scope="global"`` (a single
-    value cannot carry both min and max, so ``scope="local"`` keeps the
-    integral-preserving mean), and ``concurrency`` / ``reference_attribute`` are
-    not supported (there is no within-period time axis left to order — set them
-    on the cluster representation, where ordering runs before segmentation).
+    Note:
+        When used as a segment representation (``SegmentConfig.representation``),
+        each segment is a single value per attribute, which constrains two
+        options: ``preserve_minmax`` only takes effect with ``scope="global"``
+        (a single value cannot carry both min and max, so ``scope="local"``
+        keeps the integral-preserving mean), and ``concurrency`` /
+        ``reference_attribute`` are not supported (there is no within-period time
+        axis left to order — set them on the cluster representation, where
+        ordering runs before segmentation).
     """
 
     # "cluster" is a deprecated alias for "local"; normalized in __post_init__.
@@ -159,12 +155,11 @@ class MinMaxMean:
 
     Columns not listed in max_columns or min_columns default to mean.
 
-    Parameters
-    ----------
-    max_columns : list[str]
-        Columns represented by their maximum value across cluster members.
-    min_columns : list[str]
-        Columns represented by their minimum value across cluster members.
+    Args:
+        max_columns: Columns represented by their maximum value across cluster
+            members.
+        min_columns: Columns represented by their minimum value across cluster
+            members.
     """
 
     max_columns: list[str] = field(default_factory=list)
@@ -215,59 +210,48 @@ def representation_from_dict(data: str | dict) -> Representation:
 class ClusterConfig:
     """Configuration for the clustering algorithm.
 
-    Parameters
-    ----------
-    method : str, default "hierarchical"
-        Clustering algorithm to use:
-        - "averaging": Sequential averaging of periods
-        - "kmeans": K-means clustering (fast, uses centroids)
-        - "kmedoids": K-medoids using MILP optimization (uses actual periods)
-        - "kmaxoids": K-maxoids (selects most dissimilar periods)
-        - "hierarchical": Agglomerative hierarchical clustering
-        - "contiguous": Hierarchical with temporal contiguity constraint
+    Args:
+        method: Clustering algorithm to use:
+            - "averaging": Sequential averaging of periods
+            - "kmeans": K-means clustering (fast, uses centroids)
+            - "kmedoids": K-medoids using MILP optimization (uses actual periods)
+            - "kmaxoids": K-maxoids (selects most dissimilar periods)
+            - "hierarchical": Agglomerative hierarchical clustering
+            - "contiguous": Hierarchical with temporal contiguity constraint
+        representation: How to represent cluster centers. Accepts either a
+            string shortcut or a typed representation object for additional
+            options.
 
-    representation : str, Distribution, or MinMaxMean, optional
-        How to represent cluster centers. Accepts either a string shortcut
-        or a typed representation object for additional options:
+            String shortcuts:
+            - "mean": Centroid (average of cluster members)
+            - "medoid": Actual period closest to centroid
+            - "maxoid": Actual period most dissimilar to others
+            - "distribution": Preserve value distribution (duration curve)
+            - "distribution_minmax": Distribution + preserve min/max values
+            - "minmax_mean": Combine min/max/mean per timestep
 
-        String shortcuts:
-        - "mean": Centroid (average of cluster members)
-        - "medoid": Actual period closest to centroid
-        - "maxoid": Actual period most dissimilar to others
-        - "distribution": Preserve value distribution (duration curve)
-        - "distribution_minmax": Distribution + preserve min/max values
-        - "minmax_mean": Combine min/max/mean per timestep
+            Typed objects (for additional options):
+            - ``Distribution(scope="local"|"global", preserve_minmax=False)``:
+              Preserve value distribution. ``scope`` controls whether each
+              cluster's distribution is preserved separately ("local") or
+              only the overall time series distribution ("global"). ``"cluster"``
+              is a deprecated alias for ``"local"``.
+            - ``MinMaxMean(max_columns=[...], min_columns=[...])``:
+              Combine min/max/mean per column. Columns not listed default to mean.
 
-        Typed objects (for additional options):
-        - ``Distribution(scope="local"|"global", preserve_minmax=False)``:
-          Preserve value distribution. ``scope`` controls whether each
-          cluster's distribution is preserved separately ("local") or
-          only the overall time series distribution ("global"). ``"cluster"``
-          is a deprecated alias for ``"local"``.
-        - ``MinMaxMean(max_columns=[...], min_columns=[...])``:
-          Combine min/max/mean per column. Columns not listed default to mean.
-
-        Default depends on method:
-        - "mean" for averaging, kmeans
-        - "medoid" for kmedoids, hierarchical, contiguous
-        - "maxoid" for kmaxoids
-
-    scale_by_column_means : bool, default False
-        Divide each column by its mean after MinMax normalization, so all
-        columns have equal mean before clustering.
-        Useful when columns have very different scales.
-
-    use_duration_curves : bool, default False
-        Sort values within each period before clustering.
-        Matches periods by their value distribution rather than timing.
-
-    include_period_sums : bool, default False
-        Include period totals as additional features for clustering.
-        Helps preserve total energy/load values.
-
-    solver : str, default "highs"
-        MILP solver for kmedoids method.
-        Options: "highs" (default, open source), "cbc", "gurobi", "cplex"
+            Default depends on method:
+            - "mean" for averaging, kmeans
+            - "medoid" for kmedoids, hierarchical, contiguous
+            - "maxoid" for kmaxoids
+        scale_by_column_means: Divide each column by its mean after MinMax
+            normalization, so all columns have equal mean before clustering.
+            Useful when columns have very different scales.
+        use_duration_curves: Sort values within each period before clustering.
+            Matches periods by their value distribution rather than timing.
+        include_period_sums: Include period totals as additional features for
+            clustering. Helps preserve total energy/load values.
+        solver: MILP solver for kmedoids method. Options: "highs" (open source),
+            "cbc", "gurobi", "cplex".
     """
 
     method: ClusterMethod
@@ -382,36 +366,30 @@ class SegmentConfig:
     Segmentation reduces the temporal resolution within each typical period,
     grouping consecutive timesteps into segments.
 
-    Parameters
-    ----------
-    n_segments : int
-        Number of segments per period.
-        Must be less than or equal to the number of timesteps per period.
-        Example: period_duration=24 with hourly data has 24 timesteps,
-        so n_segments could be 1-24.
+    Args:
+        n_segments: Number of segments per period. Must be less than or equal to
+            the number of timesteps per period. Example: period_duration=24 with
+            hourly data has 24 timesteps, so n_segments could be 1-24.
+        representation: How to represent each segment:
+            - "mean": Average value of timesteps in segment
+            - "medoid": Actual timestep closest to segment mean
+            - "distribution": Preserve distribution within segment
+            - ``Distribution(...)``: Distribution with additional options (see Note)
+            - ``MinMaxMean(...)``: Per-column min/max/mean
 
-    representation : str, Distribution, or MinMaxMean, default "mean"
-        How to represent each segment:
-        - "mean": Average value of timesteps in segment
-        - "medoid": Actual timestep closest to segment mean
-        - "distribution": Preserve distribution within segment
-        - ``Distribution(...)``: Distribution with additional options (see Notes)
-        - ``MinMaxMean(...)``: Per-column min/max/mean
+    Note:
+        A segment collapses each attribute to a **single value**, so the
+        ``Distribution`` options behave differently than for a cluster
+        representation:
 
-    Notes
-    -----
-    A segment collapses each attribute to a **single value**, so the
-    ``Distribution`` options behave differently than for a cluster
-    representation:
-
-    - ``scope="local"`` (the default) is equivalent to ``"mean"`` — each
-      segment's single value is the mean of its timesteps. Only
-      ``scope="global"`` produces a distinct result (it matches the whole
-      period's value distribution rather than each segment's mean).
-    - ``preserve_minmax`` only takes effect with ``scope="global"``; a single
-      value cannot carry both the min and the max, so with ``scope="local"`` it
-      is silently ignored and the integral-preserving mean is kept (a
-      ``UserWarning`` is emitted).
+        - ``scope="local"`` (the default) is equivalent to ``"mean"`` — each
+          segment's single value is the mean of its timesteps. Only
+          ``scope="global"`` produces a distinct result (it matches the whole
+          period's value distribution rather than each segment's mean).
+        - ``preserve_minmax`` only takes effect with ``scope="global"``; a
+          single value cannot carry both the min and the max, so with
+          ``scope="local"`` it is silently ignored and the integral-preserving
+          mean is kept (a ``UserWarning`` is emitted).
     """
 
     n_segments: int
@@ -461,30 +439,20 @@ class ExtremeConfig:
     Extreme periods contain critical peak values that must be preserved
     in the aggregated representation (e.g., peak demand for capacity sizing).
 
-    Parameters
-    ----------
-    method : str, default "append"
-        How to handle extreme periods:
-        - "append": Add extreme periods as additional cluster centers
-        - "replace": Replace the nearest cluster center with the extreme
-        - "new_cluster": Add as new cluster and reassign affected periods
-
-    max_value : list[str], optional
-        Column names where the maximum value should be preserved.
-        The entire period containing that single extreme value becomes an extreme period.
-        Example: ["electricity_demand"] to preserve peak demand hour.
-
-    min_value : list[str], optional
-        Column names where the minimum value should be preserved.
-        Example: ["temperature"] to preserve coldest hour.
-
-    max_period : list[str], optional
-        Column names where the period with maximum total should be preserved.
-        Example: ["solar_generation"] to preserve highest solar day.
-
-    min_period : list[str], optional
-        Column names where the period with minimum total should be preserved.
-        Example: ["wind_generation"] to preserve lowest wind day.
+    Args:
+        method: How to handle extreme periods:
+            - "append": Add extreme periods as additional cluster centers
+            - "replace": Replace the nearest cluster center with the extreme
+            - "new_cluster": Add as new cluster and reassign affected periods
+        max_value: Column names where the maximum value should be preserved. The
+            entire period containing that single extreme value becomes an extreme
+            period. Example: ["electricity_demand"] to preserve peak demand hour.
+        min_value: Column names where the minimum value should be preserved.
+            Example: ["temperature"] to preserve coldest hour.
+        max_period: Column names where the period with maximum total should be
+            preserved. Example: ["solar_generation"] to preserve highest solar day.
+        min_period: Column names where the period with minimum total should be
+            preserved. Example: ["wind_generation"] to preserve lowest wind day.
     """
 
     method: ExtremeMethod = "append"

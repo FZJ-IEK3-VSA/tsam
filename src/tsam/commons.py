@@ -39,11 +39,19 @@ def time_index_from_dict(
 def parse_duration_hours(value: int | float | str, param_name: str) -> float:
     """Parse a duration value to hours.
 
-    Accepts:
-    - int/float: interpreted as hours (e.g., 24 -> 24.0 hours)
-    - str: pandas Timedelta string (e.g., '24h', '1d', '15min')
+    Accepts an int/float, interpreted as hours (e.g. 24 -> 24.0 hours), or a
+    string in pandas Timedelta format (e.g. '24h', '1d', '15min').
 
-    Returns duration in hours as float.
+    Args:
+        value: Duration as a number of hours or a pandas Timedelta string.
+        param_name: Name of the parameter, used in error messages.
+
+    Returns:
+        The duration in hours.
+
+    Raises:
+        ValueError: If value is a string that cannot be parsed as a duration.
+        TypeError: If value is not an int, float, or string.
     """
     if isinstance(value, (int, float)):
         return float(value)
@@ -66,18 +74,13 @@ def weighted_mean(
 ) -> float:
     """Weighted arithmetic mean of per-column values.
 
-    Parameters
-    ----------
-    per_column : pd.Series
-        One value per column (e.g. per-column MAE).
-    weights : dict or None
-        Column name → weight. Missing columns default to 1.
-        ``None`` is equivalent to uniform weights.
+    Args:
+        per_column: One value per column (e.g. per-column MAE).
+        weights: Column name to weight mapping. Missing columns default to 1.
+            None is equivalent to uniform weights.
 
-    Returns
-    -------
-    float
-        ``sum(value_i * w_i) / sum(w_i)``
+    Returns:
+        ``sum(value_i * w_i) / sum(w_i)``.
     """
     if weights:
         w = pd.Series(weights).reindex(per_column.index, fill_value=1.0)
@@ -95,18 +98,13 @@ def weighted_rms(
     the RMSE you would obtain by pooling all (weighted) residuals into
     a single series.
 
-    Parameters
-    ----------
-    per_column : pd.Series
-        One RMSE value per column.
-    weights : dict or None
-        Column name → weight. Missing columns default to 1.
-        ``None`` is equivalent to uniform weights.
+    Args:
+        per_column: One RMSE value per column.
+        weights: Column name to weight mapping. Missing columns default to 1.
+            None is equivalent to uniform weights.
 
-    Returns
-    -------
-    float
-        ``sqrt(sum(value_i² * w_i) / sum(w_i))``
+    Returns:
+        ``sqrt(sum(value_i² * w_i) / sum(w_i))``.
     """
     squared = per_column**2
     if weights:
@@ -135,30 +133,23 @@ def bounded_water_fill(
     element stays inside ``[lower, upper]``. This preserves the integral without
     flattening the distribution against either bound.
 
-    Parameters
-    ----------
-    values : np.ndarray
-        Starting values (any shape). Not mutated; a clipped copy is returned.
-    weights : np.ndarray
-        Per-element weights, broadcastable against ``values`` (e.g. one weight
-        per period, shape ``(n_periods, 1)``).
-    lower, upper : float
-        Inclusive bounds enforced on every element.
-    target_weighted_sum : float
-        Desired value of ``sum(weights * values)``.
-    rel_tolerance : float
-        Relative convergence tolerance; the absolute tolerance on the
-        weighted-sum residual is ``max(abs(target_weighted_sum), 1) *
-        rel_tolerance``.
-    max_passes : int
-        Safety cap on redistribution passes.
+    Args:
+        values: Starting values (any shape). Not mutated; a clipped copy is
+            returned.
+        weights: Per-element weights, broadcastable against ``values`` (e.g. one
+            weight per period, shape ``(n_periods, 1)``).
+        lower: Inclusive lower bound enforced on every element.
+        upper: Inclusive upper bound enforced on every element.
+        target_weighted_sum: Desired value of ``sum(weights * values)``.
+        rel_tolerance: Relative convergence tolerance; the absolute tolerance on
+            the weighted-sum residual is
+            ``max(abs(target_weighted_sum), 1) * rel_tolerance``.
+        max_passes: Safety cap on redistribution passes.
 
-    Returns
-    -------
-    tuple[np.ndarray, bool, int]
-        The adjusted array, whether the target was reached within tolerance
-        (``False`` if the passes were exhausted or no feasible room remained),
-        and the number of redistribution passes performed.
+    Returns:
+        A tuple of the adjusted array, whether the target was reached within
+        tolerance (False if the passes were exhausted or no feasible room
+        remained), and the number of redistribution passes performed.
     """
     tolerance = max(abs(target_weighted_sum), 1.0) * rel_tolerance
     adjusted = np.clip(np.array(values, dtype=float), lower, upper)

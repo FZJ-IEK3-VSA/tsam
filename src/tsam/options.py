@@ -8,13 +8,12 @@ class Options:
 
     Access and modify via the module-level ``tsam.options`` instance.
 
-    Examples
-    --------
-    >>> import tsam
-    >>> tsam.options.rescale_max_iterations = 50
-    >>> tsam.options.rescale_tolerance = 1e-8
-    >>> tsam.options.min_weight = 1e-4
-    >>> tsam.options.reset()  # restore defaults
+    Examples:
+        >>> import tsam
+        >>> tsam.options.rescale_max_iterations = 50
+        >>> tsam.options.rescale_tolerance = 1e-8
+        >>> tsam.options.min_weight = 1e-4
+        >>> tsam.options.reset()  # restore defaults
     """
 
     def __init__(self) -> None:

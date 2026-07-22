@@ -41,35 +41,29 @@ def rescale_representatives(
     values are preserved. Columns in ``exclude_columns`` are also skipped —
     useful for binary 0/1 columns that should not be scaled.
 
-    Parameters
-    ----------
-    cluster_periods
-        Unweighted cluster representatives to rescale.
-    cluster_period_no_occur
-        Occurrence count per cluster (the rescaling weights).
-    extreme_cluster_idx
-        Indices of extreme clusters to leave untouched.
-    profiles_df
-        Normalized period profiles, source of the target column means.
-    original_data
-        Original input, defining the column order and totals to match.
-    normalize_column_means
-        Whether column-mean normalization was applied (sets the clip bound).
-    n_timesteps_per_period
-        Timesteps per period, used to reshape the representatives.
-    exclude_columns
-        Columns to skip during rescaling.
+    Args:
+        cluster_periods: Unweighted cluster representatives to rescale.
+        cluster_period_no_occur: Occurrence count per cluster (the rescaling
+            weights).
+        extreme_cluster_idx: Indices of extreme clusters to leave untouched.
+        profiles_df: Normalized period profiles, source of the target column
+            means.
+        original_data: Original input, defining the column order and totals to
+            match.
+        normalize_column_means: Whether column-mean normalization was applied
+            (sets the clip bound).
+        n_timesteps_per_period: Timesteps per period, used to reshape the
+            representatives.
+        exclude_columns: Columns to skip during rescaling.
 
-    Returns
-    -------
-    tuple[np.ndarray, dict]
-        ``(rescaled_periods, deviations_dict)`` — the corrected representatives
-        and per-column residual deviations after rescaling.
+    Returns:
+        A tuple ``(rescaled_periods, deviations_dict)`` — the corrected
+        representatives and per-column residual deviations after rescaling.
 
-    See Also
-    --------
-    cluster_periods : Produces the representatives rescaled here.
-    add_extreme_periods : Its extreme clusters are excluded from rescaling.
+    Note:
+        ``cluster_periods`` produces the representatives rescaled here, and the
+        extreme clusters from ``add_extreme_periods`` are excluded from
+        rescaling.
     """
     columns = list(original_data.columns)
 
