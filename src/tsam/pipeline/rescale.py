@@ -57,12 +57,13 @@ def rescale_representatives(
         exclude_columns: Columns to skip during rescaling.
 
     Returns:
-        ``(rescaled_periods, deviations_dict)`` — the corrected representatives
-        and per-column residual deviations after rescaling.
+        A tuple ``(rescaled_periods, deviations_dict)`` — the corrected
+        representatives and per-column residual deviations after rescaling.
 
     Note:
-        `cluster_periods` produces the representatives rescaled here, and the
-        extreme clusters from `add_extreme_periods` are excluded from rescaling.
+        ``cluster_periods`` produces the representatives rescaled here, and the
+        extreme clusters from ``add_extreme_periods`` are excluded from
+        rescaling.
     """
     columns = list(original_data.columns)
 
