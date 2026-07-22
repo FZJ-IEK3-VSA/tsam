@@ -130,7 +130,7 @@ def _aggregate(raw, concurrency, *, preserve_minmax=False, rescale=False, **rep_
             method="hierarchical",
             use_duration_curves=False,
             representation=Distribution(
-                scope="cluster",
+                scope="local",
                 preserve_minmax=preserve_minmax,
                 concurrency=concurrency,
                 **rep_kw,
@@ -192,8 +192,8 @@ def test_periodwise_minmax_preserves_integral_without_rescaling(concurrency):
 def test_concurrency_validation_errors():
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
-    # concurrency (non-independent) requires scope='cluster' — caught in config
-    with pytest.raises(ValueError, match="scope='cluster'"):
+    # concurrency (non-independent) requires scope='local' — caught in config
+    with pytest.raises(ValueError, match="scope='local'"):
         Distribution(scope="global", concurrency="medoid")
 
     # global scope reaches the algorithm guard for an explicit non-independent
@@ -212,7 +212,7 @@ def test_distribution_config_concurrency_roundtrip():
     assert dist_ref.to_dict()["reference_attribute"] == "Load"
     assert Distribution.from_dict(dist_ref.to_dict()).reference_attribute == "Load"
 
-    with pytest.raises(ValueError, match="scope='cluster'"):
+    with pytest.raises(ValueError, match="scope='local'"):
         Distribution(scope="global", concurrency="medoid")
 
     with pytest.raises(ValueError, match="requires reference_attribute"):

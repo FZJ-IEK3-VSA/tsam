@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Literal, get_args
 
@@ -43,9 +44,17 @@ class Distribution:
 
     Parameters
     ----------
-    scope : "cluster" or "global", default "cluster"
-        "cluster": preserve each cluster's distribution separately
-        "global": preserve the overall time series distribution
+    scope : "local" or "global", default "local"
+        "local": preserve each group's own distribution separately. The group is
+        a cluster of periods for a cluster representation, or a segment of
+        timesteps for a segment representation.
+        "global": preserve only the distribution of the enclosing whole (the
+        full time series for a cluster representation, a single period for a
+        segment representation).
+
+        ``"cluster"`` is accepted as a deprecated alias for ``"local"`` (the old
+        name, which was misleading for segment representations where the group is
+        a segment, not a cluster).
     preserve_minmax : bool, default False
         If True, also preserves min/max values per timestep
         (equivalent to old "distribution_minmax").
@@ -54,7 +63,7 @@ class Distribution:
         this attribute is applied to all attributes, preserving their
         concurrency (co-incidence in time) with the reference attribute while
         each attribute still fits its own distribution. Only valid with
-        ``scope="cluster"``. Equivalent to ``concurrency="reference"``.
+        ``scope="local"``. Equivalent to ``concurrency="reference"``.
     concurrency : {"independent", "reference", "medoid", "consensus", \
 "assignment"}, optional
         Strategy used to derive the synthetic time axis. All strategies preserve
@@ -71,7 +80,7 @@ class Distribution:
         - ``"assignment"``: optimal single ordering minimising total deviation
           from the cluster mean profile across all attributes.
 
-        Only valid with ``scope="cluster"``. If None, resolves to ``"reference"``
+        Only valid with ``scope="local"``. If None, resolves to ``"reference"``
         when ``reference_attribute`` is given, otherwise ``"independent"``.
 
     Notes
@@ -79,13 +88,14 @@ class Distribution:
     When used as a segment representation (``SegmentConfig.representation``),
     each segment is a single value per attribute, which constrains two options:
     ``preserve_minmax`` only takes effect with ``scope="global"`` (a single
-    value cannot carry both min and max, so ``scope="cluster"`` keeps the
+    value cannot carry both min and max, so ``scope="local"`` keeps the
     integral-preserving mean), and ``concurrency`` / ``reference_attribute`` are
     not supported (there is no within-period time axis left to order — set them
     on the cluster representation, where ordering runs before segmentation).
     """
 
-    scope: Literal["cluster", "global"] = "cluster"
+    # "cluster" is a deprecated alias for "local"; normalized in __post_init__.
+    scope: Literal["local", "global", "cluster"] = "local"
     preserve_minmax: bool = False
     reference_attribute: str | None = None
     concurrency: (
@@ -93,16 +103,27 @@ class Distribution:
     ) = None
 
     def __post_init__(self) -> None:
-        if self.reference_attribute is not None and self.scope != "cluster":
+        if self.scope == "cluster":
+            warnings.warn(
+                'Distribution scope="cluster" is deprecated; use scope="local" '
+                "instead (the two are equivalent). The name was renamed because "
+                '"cluster" is misleading for segment representations, where the '
+                "group being preserved is a segment, not a cluster.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            # frozen dataclass: normalize the deprecated alias in place.
+            object.__setattr__(self, "scope", "local")
+        if self.reference_attribute is not None and self.scope != "local":
             raise ValueError(
-                "reference_attribute is only supported with scope='cluster'."
+                "reference_attribute is only supported with scope='local'."
             )
         if (
             self.concurrency is not None
             and self.concurrency != "independent"
-            and self.scope != "cluster"
+            and self.scope != "local"
         ):
-            raise ValueError("concurrency is only supported with scope='cluster'.")
+            raise ValueError("concurrency is only supported with scope='local'.")
         if self.concurrency == "reference" and self.reference_attribute is None:
             raise ValueError(
                 "concurrency='reference' requires reference_attribute to be set."
@@ -111,7 +132,7 @@ class Distribution:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         result: dict[str, Any] = {"type": "distribution"}
-        if self.scope != "cluster":
+        if self.scope != "local":
             result["scope"] = self.scope
         if self.preserve_minmax:
             result["preserve_minmax"] = self.preserve_minmax
@@ -125,7 +146,7 @@ class Distribution:
     def from_dict(cls, data: dict) -> Distribution:
         """Create from dictionary (e.g., loaded from JSON)."""
         return cls(
-            scope=data.get("scope", "cluster"),
+            scope=data.get("scope", "local"),
             preserve_minmax=data.get("preserve_minmax", False),
             reference_attribute=data.get("reference_attribute"),
             concurrency=data.get("concurrency"),
@@ -218,10 +239,11 @@ class ClusterConfig:
         - "minmax_mean": Combine min/max/mean per timestep
 
         Typed objects (for additional options):
-        - ``Distribution(scope="cluster"|"global", preserve_minmax=False)``:
+        - ``Distribution(scope="local"|"global", preserve_minmax=False)``:
           Preserve value distribution. ``scope`` controls whether each
-          cluster's distribution is preserved separately ("cluster") or
-          the overall time series distribution ("global").
+          cluster's distribution is preserved separately ("local") or
+          only the overall time series distribution ("global"). ``"cluster"``
+          is a deprecated alias for ``"local"``.
         - ``MinMaxMean(max_columns=[...], min_columns=[...])``:
           Combine min/max/mean per column. Columns not listed default to mean.
 
@@ -373,9 +395,23 @@ class SegmentConfig:
         - "mean": Average value of timesteps in segment
         - "medoid": Actual timestep closest to segment mean
         - "distribution": Preserve distribution within segment
-        - ``Distribution(...)``: Distribution with additional options; some
-          behave differently for single-value segments, see :class:`Distribution`
+        - ``Distribution(...)``: Distribution with additional options (see Notes)
         - ``MinMaxMean(...)``: Per-column min/max/mean
+
+    Notes
+    -----
+    A segment collapses each attribute to a **single value**, so the
+    ``Distribution`` options behave differently than for a cluster
+    representation:
+
+    - ``scope="local"`` (the default) is equivalent to ``"mean"`` — each
+      segment's single value is the mean of its timesteps. Only
+      ``scope="global"`` produces a distinct result (it matches the whole
+      period's value distribution rather than each segment's mean).
+    - ``preserve_minmax`` only takes effect with ``scope="global"``; a single
+      value cannot carry both the min and the max, so with ``scope="local"`` it
+      is silently ignored and the integral-preserving mean is kept (a
+      ``UserWarning`` is emitted).
     """
 
     n_segments: int
@@ -386,6 +422,20 @@ class SegmentConfig:
             raise ValueError(f"n_segments must be positive, got {self.n_segments}")
         # Note: Upper bound validation (n_segments <= timesteps_per_period)
         # is performed in api.aggregate() when period_duration is known.
+        if (
+            isinstance(self.representation, Distribution)
+            and self.representation.preserve_minmax
+            and self.representation.scope == "local"
+        ):
+            warnings.warn(
+                'preserve_minmax has no effect on a scope="local" segment '
+                "representation: each segment collapses to a single value per "
+                "attribute, which cannot carry both the min and the max, so the "
+                'integral-preserving mean is kept. Use scope="global" to preserve '
+                "segment min/max.",
+                UserWarning,
+                stacklevel=2,
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
