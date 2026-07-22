@@ -101,9 +101,9 @@ def _orderingForCluster(
         # timesteps to minimise the total squared deviation from the cluster's
         # mean profile across all attributes simultaneously.
         # cost[r, t] = sum_attr (repr_values[attr, r] - means[attr, t])^2
-        cost = (
-            (repr_values[:, :, None] - means[:, None, :]) ** 2
-        ).sum(axis=0)  # (timesteps_rank, timesteps_time)
+        cost = ((repr_values[:, :, None] - means[:, None, :]) ** 2).sum(
+            axis=0
+        )  # (timesteps_rank, timesteps_time)
         rank_idx, time_idx = linear_sum_assignment(cost)
         shared_order = np.empty(timeStepsPerPeriod, dtype=int)
         shared_order[rank_idx] = time_idx
@@ -173,11 +173,16 @@ def _pinMinMaxPreserveSum(repr_values, lo, hi):
         if not active.any():
             break
         step = np.minimum(np.abs(resid), total)
-        scale = np.where(active, np.sign(resid) * step / np.where(active, total, 1.0), 0.0)
+        scale = np.where(
+            active, np.sign(resid) * step / np.where(active, total, 1.0), 0.0
+        )
         mid = mid + scale[:, None] * room
         np.clip(mid, lo_c, hi_c, out=mid)
 
-    if np.any(np.abs(target_mid - mid.sum(axis=1)) > np.maximum(np.abs(target_mid), 1.0) * 1e-6):
+    if np.any(
+        np.abs(target_mid - mid.sum(axis=1))
+        > np.maximum(np.abs(target_mid), 1.0) * 1e-6
+    ):
         warnings.warn(
             "Could not preserve both the cluster min/max and the integral for "
             "every attribute (the cluster is too small or its envelope too "

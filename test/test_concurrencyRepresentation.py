@@ -109,9 +109,7 @@ def test_medoid_method_reproduces_medoid_ordering():
     per-attribute ranks."""
     result = _run("medoid")
     # medoid = member minimising summed Euclidean distance to the others
-    dist = np.linalg.norm(
-        _CANDIDATES[:, None, :] - _CANDIDATES[None, :, :], axis=2
-    )
+    dist = np.linalg.norm(_CANDIDATES[:, None, :] - _CANDIDATES[None, :, :], axis=2)
     medoid = _CANDIDATES[np.argmin(dist.sum(axis=0))]
     for attr in range(2):
         block = slice(attr * _TS_PER_PERIOD, (attr + 1) * _TS_PER_PERIOD)
@@ -125,14 +123,14 @@ def test_medoid_improves_concurrency_over_independent():
     cross-attribute correlation structure better than independent ordering,
     while keeping the same marginal (duration-curve) error."""
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
-    common = dict(
-        noTypicalPeriods=8,
-        hoursPerPeriod=24,
-        sortValues=False,
-        clusterMethod="hierarchical",
-        representationMethod="distributionRepresentation",
-        rescaleClusterPeriods=False,
-    )
+    common = {
+        "noTypicalPeriods": 8,
+        "hoursPerPeriod": 24,
+        "sortValues": False,
+        "clusterMethod": "hierarchical",
+        "representationMethod": "distributionRepresentation",
+        "rescaleClusterPeriods": False,
+    }
 
     independent = tsam.TimeSeriesAggregation(
         raw, representationConcurrencyMethod="independent", **common

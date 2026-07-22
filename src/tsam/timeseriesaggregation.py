@@ -1062,9 +1062,7 @@ class TimeSeriesAggregation:
                 arr[idx_wo_peak, ci, :] = col_np
                 a += 1
 
-            sum_clu_wo_peak = np.sum(
-                weights_np * arr[idx_wo_peak, ci, :].sum(axis=1)
-            )
+            sum_clu_wo_peak = np.sum(weights_np * arr[idx_wo_peak, ci, :].sum(axis=1))
             diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
 
             # Calculate and store final deviation
