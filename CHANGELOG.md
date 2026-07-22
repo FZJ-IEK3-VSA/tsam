@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+## [3.4.2](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.4.1...v3.4.2) (2026-07-22)
+
+
+### Bug Fixes
+
+* **ci:** run mypy as a local hook against the project environment ([#363](https://github.com/FZJ-IEK3-VSA/tsam/issues/363)) ([46aed9b](https://github.com/FZJ-IEK3-VSA/tsam/commit/46aed9b3152e81f707ba368bfc27bdba72012243))
+* Conurrency and integral fix ([#373](https://github.com/FZJ-IEK3-VSA/tsam/issues/373)) ([09a736c](https://github.com/FZJ-IEK3-VSA/tsam/commit/09a736ca3e44c9b5a28f04c8bd151b95d5133b3b))
+* plot cluster_representatives for segmented results ([#340](https://github.com/FZJ-IEK3-VSA/tsam/issues/340)) ([#357](https://github.com/FZJ-IEK3-VSA/tsam/issues/357)) ([12cf9bf](https://github.com/FZJ-IEK3-VSA/tsam/commit/12cf9bf825be3580e2ef5a6f0664f85090cae1db))
+
 ## [3.4.1](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.4.0...v3.4.1) (2026-05-31)
 
 
