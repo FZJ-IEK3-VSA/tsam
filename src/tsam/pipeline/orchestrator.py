@@ -230,7 +230,7 @@ def prepare_data(
       every column to ``[0, 1]``.
     - **Unstack to periods**
       ([`unstack_to_periods`][tsam.pipeline.periods.unstack_to_periods]) —
-      reshape the flat series into a ``(period × timestep-feature)`` matrix.
+      reshape the flat series into a ``(period x timestep-feature)`` matrix.
     - **Apply weights** *(optional, the ``weights`` argument)* — bake a
       per-column weight vector into a copy of the candidates by a vectorized
       multiply, so weights influence clustering distance only. A weighted

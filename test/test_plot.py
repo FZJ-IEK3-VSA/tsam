@@ -9,7 +9,12 @@ import pytest
 
 import tsam
 from conftest import TESTDATA_CSV
-from tsam.plot import ResultPlotAccessor, _validate_columns
+from tsam.plot import (
+    AttributeSpace,
+    ResultPlotAccessor,
+    _validate_columns,
+    compare_partitions,
+)
 
 
 @pytest.fixture(scope="module")
@@ -166,6 +171,73 @@ class TestClusterMembers:
         assert len(rep_trace.y) == result_segmented.n_timesteps_per_period
 
 
+# ---- clusters_over_time ----------------------------------------------------
+
+
+class TestClustersOverTime:
+    def test_returns_figure(self, result):
+        fig = result.plot.clusters_over_time()
+        assert isinstance(fig, go.Figure)
+
+    def test_single_column(self, result):
+        col = result.original.columns[0]
+        fig = result.plot.clusters_over_time(columns=[col])
+        assert isinstance(fig, go.Figure)
+
+    def test_reconstructed_with_overlay(self, result):
+        col = result.original.columns[0]
+        fig = result.plot.clusters_over_time(
+            columns=[col], reconstructed=True, overlay_original=True
+        )
+        assert isinstance(fig, go.Figure)
+
+    def test_consistent_cluster_colors(self, result):
+        """Legend colours match the shared map used by the other cluster plots."""
+        from tsam.plot import _cluster_color_map
+
+        cmap = _cluster_color_map(result.cluster_assignments)
+        fig = result.plot.clusters_over_time(columns=[result.original.columns[0]])
+        legend_colors = {
+            tr.name: tr.marker.color
+            for tr in fig.data
+            if tr.name and tr.name.startswith("cluster ")
+        }
+        for cid, color in cmap.items():
+            assert legend_colors[f"cluster {cid}"] == color
+
+    def test_with_segmentation(self, result_segmented):
+        col = result_segmented.original.columns[0]
+        fig = result_segmented.plot.clusters_over_time(
+            columns=[col], reconstructed=True
+        )
+        assert isinstance(fig, go.Figure)
+
+    def test_one_shape_per_period_per_column(self, result):
+        """Each period is shaded once in every column subplot."""
+        cols = list(result.original.columns)
+        fig = result.plot.clusters_over_time(columns=cols)
+        n_periods = len(result.cluster_assignments)
+        assert len(fig.layout.shapes) == n_periods * len(cols)
+
+    def test_period_shading_is_not_quadratic(self, result):
+        """Regression guard: shapes are assigned in one batch, not per-period.
+
+        Adding each period rectangle with ``fig.add_vrect`` re-validates every
+        shape already on the figure, so a full year over several columns took
+        minutes. The batched assignment is ~5000x faster; this asserts the whole
+        call stays well under a second even for all columns at full resolution.
+        """
+        import time
+
+        cols = list(result.original.columns)
+        start = time.perf_counter()
+        result.plot.clusters_over_time(columns=cols)
+        elapsed = time.perf_counter() - start
+        # The old path took ~20 minutes here; a generous ceiling still catches a
+        # regression to per-shape validation without being flaky on a slow CI box.
+        assert elapsed < 15.0, f"clusters_over_time took {elapsed:.1f}s"
+
+
 # ---- cluster_counts --------------------------------------------------------
 
 
@@ -227,6 +299,35 @@ class TestCompare:
         with pytest.raises(ValueError, match="Unknown mode"):
             result.plot.compare(mode="invalid")
 
+    @pytest.mark.parametrize("mode", ["overlay", "side_by_side", "duration_curve"])
+    def test_time_slice(self, result, mode):
+        col = result.original.columns[0]
+        window = slice("2010-01-11", "2010-01-17")
+        full = result.plot.compare(columns=[col], mode=mode)
+        sliced = result.plot.compare(columns=[col], mode=mode, time_slice=window)
+        assert isinstance(sliced, go.Figure)
+        full_points = sum(len(t.x) for t in full.data if t.x is not None)
+        sliced_points = sum(len(t.x) for t in sliced.data if t.x is not None)
+        assert sliced_points < full_points
+
+    @pytest.mark.parametrize("mode", ["overlay", "side_by_side", "duration_curve"])
+    @pytest.mark.parametrize("color", ["column", "source"])
+    def test_color_dimension(self, result, mode, color):
+        fig = result.plot.compare(columns=["GHI", "Load"], mode=mode, color=color)
+        assert isinstance(fig, go.Figure)
+
+    def test_color_source_swaps_legend(self, result):
+        # color drives the legend group; "column" vs "source" must differ.
+        by_col = result.plot.compare(columns=["Load"], color="column")
+        by_src = result.plot.compare(columns=["Load"], color="source")
+        col_groups = {t.legendgroup for t in by_col.data}
+        src_groups = {t.legendgroup for t in by_src.data}
+        assert col_groups != src_groups
+
+    def test_invalid_color_raises(self, result):
+        with pytest.raises(ValueError, match="color must be"):
+            result.plot.compare(color="invalid")
+
 
 # ---- residuals -------------------------------------------------------------
 
@@ -256,3 +357,221 @@ class TestResiduals:
     def test_invalid_mode_raises(self, result):
         with pytest.raises(ValueError, match="Unknown mode"):
             result.plot.residuals(mode="invalid")
+
+
+# ---- AttributeSpace --------------------------------------------------------
+
+
+class TestAttributeSpace:
+    def test_returns_figure(self):
+        space = AttributeSpace("solar", "load")
+        space.add_path([0.0, 1.0, 0.5], [3.0, 4.0, 3.5], name="day 0")
+        assert isinstance(space.figure, go.Figure)
+
+    def test_axis_labels_use_units(self):
+        space = AttributeSpace("solar", "load", units={"solar": "W/m²"})
+        assert space.figure.layout.xaxis.title.text == "solar [W/m²]"
+        # an attribute without a unit is labelled bare
+        assert space.figure.layout.yaxis.title.text == "load"
+
+    def test_add_path_is_chainable(self):
+        space = AttributeSpace("a", "b")
+        returned = space.add_path([0, 1], [0, 1], name="one").add_path(
+            [1, 2], [1, 2], name="two"
+        )
+        assert returned is space
+
+    def test_arrows_add_a_hidden_trace(self):
+        """Each path is one visible trace, plus an arrowhead trace when arrows=True."""
+        with_arrows = AttributeSpace("a", "b")
+        with_arrows.add_path([0, 1, 2], [0, 1, 0], name="p", arrows=True)
+        without = AttributeSpace("a", "b")
+        without.add_path([0, 1, 2], [0, 1, 0], name="p", arrows=False)
+
+        assert len(with_arrows.figure.data) == 2
+        assert len(without.figure.data) == 1
+        arrow_trace = with_arrows.figure.data[1]
+        assert arrow_trace.marker.symbol == "arrow"
+        assert arrow_trace.showlegend is False
+        # the first point has no incoming segment, so it carries no arrowhead
+        assert arrow_trace.marker.size[0] == 0
+
+    def test_single_point_path_has_no_arrows(self):
+        space = AttributeSpace("a", "b")
+        space.add_path([0.0], [0.0], name="p", arrows=True)
+        assert len(space.figure.data) == 1
+
+    def test_symbols_cycle_so_paths_differ_without_colour(self):
+        space = AttributeSpace("a", "b")
+        for i in range(3):
+            space.add_path([0, 1], [i, i], name=f"p{i}", arrows=False)
+        symbols = [trace.marker.symbol for trace in space.figure.data]
+        assert len(set(symbols)) == 3
+
+    def test_explicit_symbol_and_colour_are_respected(self):
+        space = AttributeSpace("a", "b")
+        space.add_path(
+            [0, 1], [0, 1], name="p", symbol="square", color="#123456", arrows=False
+        )
+        assert space.figure.data[0].marker.symbol == "square"
+        assert space.figure.data[0].marker.color == "#123456"
+
+    def test_mismatched_lengths_raise(self):
+        space = AttributeSpace("a", "b")
+        with pytest.raises(ValueError, match="same shape"):
+            space.add_path([0, 1, 2], [0, 1], name="p")
+
+
+# ---- feature_space ---------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def designed_days() -> pd.DataFrame:
+    """The 12 designed days used by the clustering tutorial.
+
+    Five sunny days are identical to each other and two cloudy pairs sit almost
+    on top of each other, which is exactly the overplotting the marker merging
+    has to survive.
+    """
+    return pd.read_csv(
+        TESTDATA_CSV.parent / "comparison_days.csv", index_col=0, parse_dates=True
+    )
+
+
+ARCHETYPES = [
+    "sunny",
+    "cloudy",
+    "high-load",
+    "sunny",
+    "cloudy",
+    "storm",
+    "cloudy",
+    "sunny",
+    "high-load",
+    "sunny",
+    "cloudy",
+    "sunny",
+]
+
+
+@pytest.fixture(scope="module")
+def designed_result(designed_days) -> tsam.AggregationResult:
+    return tsam.aggregate(
+        designed_days,
+        n_clusters=3,
+        period_duration="1D",
+        preserve_column_means=False,
+    )
+
+
+class TestFeatureSpace:
+    def test_returns_figure(self, designed_result):
+        assert isinstance(designed_result.plot.feature_space(), go.Figure)
+
+    def test_labels_become_marker_traces(self, designed_result):
+        fig = designed_result.plot.feature_space(labels=ARCHETYPES)
+        names = {trace.name for trace in fig.data}
+        assert {"sunny", "cloudy", "high-load", "storm"} <= names
+
+    def test_coincident_periods_merge_into_one_counted_marker(self, designed_result):
+        """The five sunny days share a cluster and a location: one marker, "x5"."""
+        fig = designed_result.plot.feature_space(labels=ARCHETYPES)
+        sunny = next(t for t in fig.data if t.name == "sunny")
+        assert len(sunny.x) == 1
+        assert sunny.text[0].endswith("5")
+
+    def test_merge_tolerance_zero_separates_merely_nearby_periods(
+        self, designed_result
+    ):
+        """Tolerance 0 merges only exact duplicates, not near-neighbours.
+
+        The five sunny days sit at two distinct spots (three exactly on one,
+        two on another), so dropping the tolerance must split them back into
+        two markers while still collapsing each exact duplicate group.
+        """
+        fig = designed_result.plot.feature_space(labels=ARCHETYPES, merge_tolerance=0.0)
+        sunny = next(t for t in fig.data if t.name == "sunny")
+        assert len(sunny.x) == 2
+        assert sorted(t[-1] for t in sunny.text) == ["2", "3"]
+
+    def test_axes_locked_to_equal_aspect(self, designed_result):
+        """Distance is the subject of the plot, so it must not be distorted."""
+        fig = designed_result.plot.feature_space()
+        assert fig.layout.yaxis.scaleanchor == "x"
+        assert fig.layout.yaxis.scaleratio == 1
+
+    def test_medoid_centers_are_marked_as_real_periods(self, designed_days):
+        """A medoid centre is an observed period; the legend must say so."""
+        medoid = tsam.aggregate(
+            designed_days,
+            n_clusters=3,
+            period_duration="1D",
+            cluster=tsam.ClusterConfig(method="kmedoids"),
+            preserve_column_means=False,
+        )
+        names = " ".join(t.name or "" for t in medoid.plot.feature_space().data)
+        assert "real period" in names
+
+    def test_mean_centers_are_marked_as_synthetic(self, designed_days):
+        kmeans = tsam.aggregate(
+            designed_days,
+            n_clusters=3,
+            period_duration="1D",
+            cluster=tsam.ClusterConfig(method="kmeans"),
+            preserve_column_means=False,
+        )
+        names = " ".join(t.name or "" for t in kmeans.plot.feature_space().data)
+        assert "(mean)" in names
+
+    def test_wrong_label_count_raises(self, designed_result):
+        with pytest.raises(ValueError, match="one label per period"):
+            designed_result.plot.feature_space(labels=["only", "two"])
+
+    def test_hiding_centers_and_assignments(self, designed_result):
+        bare = designed_result.plot.feature_space(
+            show_centers=False, show_assignments=False
+        )
+        full = designed_result.plot.feature_space()
+        assert len(bare.data) < len(full.data)
+
+
+# ---- compare_partitions ----------------------------------------------------
+
+
+class TestComparePartitions:
+    def test_returns_figure(self, designed_result):
+        fig = compare_partitions({"run": designed_result})
+        assert isinstance(fig, go.Figure)
+
+    def test_identical_groupings_look_identical_after_canonicalisation(self):
+        """Same partition, different ids — the whole point of canonical=True."""
+        fig = compare_partitions({"a": [2, 2, 0, 0], "b": [7, 7, 3, 3]})
+        rows = np.asarray(fig.data[0].z)
+        assert np.array_equal(rows[0], rows[1])
+
+    def test_raw_ids_survive_when_canonical_is_off(self):
+        fig = compare_partitions({"a": [2, 2, 0, 0]}, canonical=False)
+        assert list(np.asarray(fig.data[0].z)[0]) == [2, 2, 0, 0]
+
+    def test_accepts_results_and_raw_sequences_together(self, designed_result):
+        fig = compare_partitions(
+            {"result": designed_result, "manual": [0] * 12},
+            labels=ARCHETYPES,
+        )
+        assert np.asarray(fig.data[0].z).shape == (2, 12)
+
+    def test_labels_annotate_the_period_axis(self, designed_result):
+        fig = compare_partitions({"run": designed_result}, labels=ARCHETYPES)
+        assert any("storm" in tick for tick in fig.layout.xaxis.ticktext)
+
+    def test_empty_raises(self):
+        with pytest.raises(ValueError, match="at least one clustering"):
+            compare_partitions({})
+
+    def test_ragged_partitions_raise(self):
+        with pytest.raises(ValueError, match="same number of periods"):
+            compare_partitions({"a": [0, 1], "b": [0, 1, 2]})
+
+    def test_wrong_label_count_raises(self, designed_result):
+        with pytest.raises(ValueError, match="labels has"):
+            compare_partitions({"run": designed_result}, labels=["one"])

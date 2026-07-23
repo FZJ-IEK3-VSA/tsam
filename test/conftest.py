@@ -8,8 +8,8 @@ import pytest
 TEST_DIR = Path(__file__).parent
 TEST_DATA_DIR = TEST_DIR / "data"
 
-# Path to examples directory (for testdata.csv which is shared with notebooks)
-EXAMPLES_DIR = TEST_DIR.parent / "docs" / "notebooks"
+# Path to the docs data directory (for testdata.csv which is shared with notebooks)
+EXAMPLES_DIR = TEST_DIR.parent / "docs" / "data"
 
 # Common test data paths
 TESTDATA_CSV = EXAMPLES_DIR / "testdata.csv"

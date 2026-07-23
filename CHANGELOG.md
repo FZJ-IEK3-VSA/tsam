@@ -176,7 +176,7 @@ compared to v2.3.9. Four distribution-related configurations (`hierarchical_dist
 `hierarchical_distribution_minmax`, `distribution_global`, `distribution_minmax_global`)
 produce slightly different results, but will be consistent across systems from now on. All statistical properties are preserved. The remaining
 23 configurations are bit-for-bit identical to v2.3.9. See the
-[migration guide](migration-guide.md) for details.
+[v2 to v3 migration guide](migration/v2-to-v3.md#result-consistency-and-reproducibility) for details.
 
 ### Known Limitations
 

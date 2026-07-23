@@ -34,8 +34,11 @@ classes: {
   # sibling to match the widest one).
   phase_title: { width: 384; height: 32; style: { fill: transparent; stroke: transparent; bold: true; font-size: 22 } }
   phase_body: { width: 384; height: 30; style: { fill: transparent; stroke: transparent; bold: false; font-size: 18 } }
+  # faint caption mapping a phase onto the review's feature-based-merging steps
+  # (Hoffmann et al. 2020, §3.2.2) — see context.md "Methodological positioning".
+  phase_tag: { width: 384; style: { fill: transparent; stroke: transparent; bold: false; italic: true; font-size: 14; font-color: "#5a6675" } }
   # individual option chips — fixed width so all three groups are equal width
-  opt: { width: 196; height: 40; style: { fill: "#f4f6f8"; stroke: "#aeb9c4"; bold: false; font-size: 18 } }
+  opt: { width: 150; height: 38; style: { fill: "#f4f6f8"; stroke: "#aeb9c4"; bold: false; font-size: 15 } }
   conn: { style: { stroke: "#8693a0" } }
 }
 
@@ -58,7 +61,7 @@ lcol: "Public API · user entry points" {
     title: "Config" { class: pub_title }
     body: "ClusterConfig · SegmentConfig · ExtremeConfig\nDistribution · MinMaxMean" { class: pub_body; height: 52 }
   }
-  gap0: "" { class: pad; width: 10; height: 40 }
+  gap0: "" { class: pad; width: 10; height: 20 }
   ts: "" {
     class: data
     grid-rows: 2
@@ -66,7 +69,7 @@ lcol: "Public API · user entry points" {
     title: "Time series in" { class: pub_title }
     body: "T timesteps × C columns" { class: pub_body }
   }
-  gapA: "" { class: pad; width: 10; height: 40 }
+  gapA: "" { class: pad; width: 10; height: 20 }
   api: "" {
     class: public
     grid-rows: 2
@@ -74,7 +77,7 @@ lcol: "Public API · user entry points" {
     title: "aggregate()" { class: pub_title }
     body: "the entry point" { class: pub_body }
   }
-  gapB: "" { class: pad; width: 10; height: 40 }
+  gapB: "" { class: pad; width: 10; height: 20 }
   res: "" {
     class: data
     grid-rows: 2
@@ -82,7 +85,7 @@ lcol: "Public API · user entry points" {
     title: "Clustered data out" { class: pub_title }
     body: "Typical periods (K) + weights\n(AggregationResult)" { class: pub_body; height: 52 }
   }
-  gapC: "" { class: pad; width: 10; height: 40 }
+  gapC: "" { class: pad; width: 10; height: 20 }
   tools: "" {
     class: tool
     grid-rows: 2
@@ -95,27 +98,27 @@ lcol: "Public API · user entry points" {
 }
 
 # ── Center: the four phases (bold title + stage names) ─────────────────────
-pipeline: "Internal pipeline · run_pipeline()" {
+pipeline: "pipeline/ · run_pipeline()" {
   class: side
   grid-columns: 1
-  grid-gap: 16
+  grid-gap: 26
 
   p1: "" {
     class: phase
-    grid-rows: 2
+    grid-rows: 3
     grid-gap: 2
     title: "Phase 1 · Prepare data" { class: phase_title }
     body: "normalize → unstack to periods\n(optional: weights, period sums)" { class: phase_body; height: 54 }
   }
-  gap1: "" { class: pad; width: 10; height: 87 }
+  gap1: "" { class: pad; width: 10; height: 42 }
   p2: "" {
     class: phase
-    grid-rows: 2
+    grid-rows: 3
     grid-gap: 2
     title: "Phase 2 · Cluster & post-process" { class: phase_title }
     body: "cluster → extremes → rescale → count" { class: phase_body }
   }
-  gap2: "" { class: pad; width: 10; height: 87 }
+  gap2: "" { class: pad; width: 10; height: 30 }
   p3: "" {
     class: phase
     grid-rows: 2
@@ -123,7 +126,7 @@ pipeline: "Internal pipeline · run_pipeline()" {
     title: "Phase 3 · Format & reconstruct" { class: phase_title }
     body: "format → segment → denormalize → reconstruct" { class: phase_body }
   }
-  gap3: "" { class: pad; width: 10; height: 87 }
+  gap3: "" { class: pad; width: 10; height: 58 }
   p4: "" {
     class: phase
     grid-rows: 2
@@ -137,27 +140,32 @@ pipeline: "Internal pipeline · run_pipeline()" {
   p3 -> p4: "FormattedOutput" { style.font-size: 18; style.font-color: "#3f4a55" }
 }
 
-# ── Right: backends. Clustering & segmentation both feed Representations ───
-rcol: "" {
+# ── Right: algorithms/ — config-agnostic kernels the stages dispatch to ────
+rcol: "algorithms/" {
   class: pad
+  style.font-size: 18
+  style.font-color: "#0f5c58"
+  style.bold: true
   grid-columns: 1
   grid-gap: 16
 
-  clu_back: "Clustering methods" {
+  clu_back: "clustering" {
     class: side
+    width: 360
     grid-columns: 2
     grid-gap: 6
     m1: "averaging" { class: opt }
     m2: "k-means" { class: opt }
     m3: "k-medoids" { class: opt }
     m4: "k-maxoids" { class: opt }
-    m5: "hierarchical (Ward)" { class: opt }
+    m5: "hierarchical" { class: opt }
     m6: "contiguous" { class: opt }
   }
 
-  gapR1: "" { class: pad; width: 10; height: 40 }
-  reps: "Representations" {
+  gapR1: "" { class: pad; width: 10; height: 24 }
+  reps: "representations" {
     class: side
+    width: 360
     grid-columns: 2
     grid-gap: 6
     r1: "mean" { class: opt }
@@ -165,20 +173,25 @@ rcol: "" {
     r3: "maxoid" { class: opt }
     r4: "minmax_mean" { class: opt }
     r5: "distribution" { class: opt }
-    r6: "distribution + minmax" { class: opt }
+    r6: "distribution\n+ minmax" { class: opt }
   }
 
-  gapR2: "" { class: pad; width: 10; height: 40 }
-  seg_back: "Segmentation" {
+  gapR2: "" { class: pad; width: 10; height: 24 }
+  seg_back: "segmentation" {
     class: side
+    width: 360
+    height: 152
     grid-columns: 1
-    s1: "n_segments merged by\nagglomerative clustering" { class: opt; height: 60; width: 250 }
+    s1: "adjacent steps merged into\nn_segments (agglomerative)" { class: opt; height: 70; width: 200 }
   }
 }
 
 # ── Edges ─────────────────────────────────────────────────────────────────
 lcol.api -> pipeline
-pipeline.p2 -> rcol.clu_back { class: conn }
-pipeline.p3 -> rcol.seg_back { class: conn }
+pipeline.p2 -> rcol.clu_back: "cluster_and_represent" { class: conn }
+pipeline.p3 -> rcol.seg_back: "segment_typical_periods" { class: conn }
 rcol.clu_back -> rcol.reps: "uses" { style: { stroke: "#4a5560"; stroke-width: 2 } }
 rcol.seg_back -> rcol.reps: "uses" { style: { stroke: "#4a5560"; stroke-width: 2 } }
+
+# transfer path: reuse a fitted clustering on new data (skips the clustering step)
+lcol.res -> pipeline.p2: "ClusteringResult\n.apply()" { style: { stroke-dash: 4; stroke: "#3f6fb0"; font-size: 15; font-color: "#3f6fb0" } }

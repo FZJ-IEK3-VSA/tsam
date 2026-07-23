@@ -2,8 +2,8 @@
 
 The mkdocs build is configured with ``execute: false`` so that mkdocs-jupyter
 only renders pre-executed notebooks. This script is the producer step: it
-discovers ``docs/notebooks/*.ipynb``, runs each in its own kernel via
-``nbclient``, and writes the executed notebook back in place.
+discovers ``docs/**/*.ipynb``, runs each in its own kernel via ``nbclient``,
+and writes the executed notebook back in place.
 
 Each notebook gets its own kernel subprocess, so a ThreadPoolExecutor is
 sufficient — the GIL is not the bottleneck. Notebooks run in their own
@@ -34,15 +34,14 @@ import nbformat
 from nbclient import NotebookClient
 from nbclient.exceptions import CellExecutionError
 
-# Plotly Python 6.x emits a <script type="module"> with an ESM import for its
-# default "notebook" renderer. mkdocs-material's instant navigation cannot
-# preserve those during in-page content swaps ("Cannot use import statement
-# outside a module"). Switching to the iframe renderer sidesteps the issue:
-# each figure renders inside an iframe loaded from the Plotly CDN, isolated
-# from the parent page's script context. Set via env var so notebooks pick it
-# up without needing per-notebook setup cells. Notebooks that set
-# pio.renderers.default themselves will of course override this.
-os.environ.setdefault("PLOTLY_RENDERER", "iframe_connected")
+# Render Plotly figures as inline <div>s via the "notebook_connected" renderer:
+# the figure flows with the page and auto-sizes, and Plotly.js is pulled once
+# from the CDN. This relies on the docs NOT using mkdocs-material's instant
+# navigation (navigation.instant is intentionally disabled in mkdocs.yml) —
+# under instant nav the renderer's <script> would not re-run on in-page swaps.
+# Set via env var so notebooks pick it up without per-notebook setup cells.
+# Notebooks that set pio.renderers.default themselves will override this.
+os.environ.setdefault("PLOTLY_RENDERER", "notebook_connected")
 
 
 @dataclass
@@ -77,8 +76,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--notebooks-dir",
         type=Path,
-        default=Path("docs/notebooks"),
-        help="Directory containing notebooks (default: docs/notebooks)",
+        default=Path("docs"),
+        help="Directory searched recursively for notebooks (default: docs)",
     )
     parser.add_argument(
         "--workers",
@@ -110,7 +109,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     notebooks = sorted(
-        p for p in args.notebooks_dir.glob("*.ipynb") if p.name not in args.exclude
+        p
+        for p in args.notebooks_dir.rglob("*.ipynb")
+        if p.name not in args.exclude and ".ipynb_checkpoints" not in p.parts
     )
     if not notebooks:
         print(f"No notebooks to execute in {args.notebooks_dir}", file=sys.stderr)

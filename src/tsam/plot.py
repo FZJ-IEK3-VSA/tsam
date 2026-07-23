@@ -11,6 +11,11 @@ Usage:
     >>> result.plot.cluster_members()  # All periods per cluster
     >>> result.plot.cluster_counts()
     >>> result.plot.accuracy()
+    >>> result.plot.feature_space()  # The space the clustering works in
+
+To ask whether two configurations grouped the periods the same way, compare
+their partitions side by side:
+    >>> tsam.plot.compare_partitions({"kmeans": a, "kmedoids": b})
 
 For exploring raw data before aggregation, use plotly directly with
 ``tsam.unstack_to_periods()`` to reshape data for heatmaps:
@@ -87,8 +92,14 @@ def _duration_curve_figure(
     results: dict[str, pd.DataFrame],
     columns: list[str],
     title: str | None = None,
+    color: str = "column",
 ) -> go.Figure:
-    """Create duration curve comparison figure (internal helper)."""
+    """Create duration curve comparison figure (internal helper).
+
+    ``color`` selects which dimension drives the line colour: ``"column"``
+    colours by column and dashes by series (e.g. original/reconstructed);
+    ``"source"`` swaps them.
+    """
     frames = []
     for name, data in results.items():
         for col in columns:
@@ -104,14 +115,337 @@ def _duration_curve_figure(
                 )
             )
     long_df = pd.concat(frames, ignore_index=True)
+    color_by, dash_by = (
+        ("Column", "Method") if color == "column" else ("Method", "Column")
+    )
     return px.line(
         long_df,
         x="Hour",
         y="Value",
-        color="Column",
-        line_dash="Method",
+        color=color_by,
+        line_dash=dash_by,
         title=title or "Duration Curve Comparison",
     )
+
+
+def _cluster_color_map(
+    cluster_ids: list[int] | np.ndarray,
+    palette: list[str] | None = None,
+) -> dict[int, str]:
+    """Map each cluster id to a stable colour from a qualitative palette.
+
+    The ids are sorted before colours are assigned, so a given cluster gets the
+    same colour in every plot (timeline, members, representatives,
+    reconstruction). That lets a cluster be traced from one figure to the next.
+    """
+    if palette is None:
+        palette = px.colors.qualitative.Plotly
+    ids = sorted({int(c) for c in cluster_ids})
+    return {cid: palette[i % len(palette)] for i, cid in enumerate(ids)}
+
+
+def _to_rgba(color: str, alpha: float) -> str:
+    """Convert a ``#rrggbb`` hex colour to an ``rgba(...)`` string."""
+    h = color.lstrip("#")
+    r, g, b = (int(h[i : i + 2], 16) for i in (0, 2, 4))
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+
+# Distinguishable at small sizes and without relying on colour alone.
+_PATH_SYMBOLS = (
+    "circle",
+    "square",
+    "diamond",
+    "triangle-up",
+    "x",
+    "star",
+    "hexagon",
+    "cross",
+)
+
+
+# Multiplication sign for the count badges on merged markers ("sunny 5" reads as
+# a name, "sunny <times>5" as a count). Written as an escape so it is not
+# confused with an ASCII "x" here or by a linter.
+_TIMES = "\u00d7"
+
+
+def _canonical_labels(labels) -> np.ndarray:
+    """Relabel clusters by order of first appearance.
+
+    Cluster ids are arbitrary: two methods can produce the *same* grouping and
+    still number it differently. Renumbering by first appearance makes
+    identical groupings look identical, which is what lets partitions be
+    compared across methods at a glance.
+    """
+    remap: dict[int, int] = {}
+    out = []
+    for value in labels:
+        remap.setdefault(int(value), len(remap))
+        out.append(remap[int(value)])
+    return np.array(out, dtype=int)
+
+
+def _period_matrix(result: AggregationResult) -> np.ndarray:
+    """One row per period: the normalised vector the clustering actually saw.
+
+    Clustering does not work on the raw series. Each period is flattened into a
+    single ``n_timesteps x n_attributes`` vector of normalised values, and it is
+    those vectors that get grouped. Rebuilding the matrix from the result —
+    rather than re-deriving it in user code — keeps the plot faithful to what
+    the algorithm was given.
+    """
+    norm = result._norm_values
+    if norm is None:
+        raise ValueError(
+            "This result carries no normalised values, so its feature space "
+            "cannot be reconstructed. Results restored from JSON do not keep "
+            "them; re-run aggregate() on the data to plot the feature space."
+        )
+    values = np.asarray(norm, dtype=float)
+    n_timesteps = result.n_timesteps_per_period
+    n_periods = values.shape[0] // n_timesteps
+    trimmed = values[: n_periods * n_timesteps]
+    return trimmed.reshape(n_periods, n_timesteps * values.shape[1])
+
+
+def _project_2d(matrix: np.ndarray) -> tuple[np.ndarray, float]:
+    """Project period vectors onto their first two principal components.
+
+    Returns the 2-D coordinates and the share of variance those two components
+    account for — the honesty check on the picture, since a low share means
+    the plotted distances are not the distances the algorithm used.
+    """
+    centered = matrix - matrix.mean(axis=0)
+    _u, singular, components = np.linalg.svd(centered, full_matrices=False)
+    coords = centered @ components[:2].T
+    if coords.shape[1] == 1:  # only one non-degenerate direction exists
+        coords = np.column_stack([coords[:, 0], np.zeros(len(coords))])
+    total = float((singular**2).sum())
+    explained = float((singular[:2] ** 2).sum() / total) if total > 0 else 1.0
+    return coords, explained
+
+
+def _collapse_nearby(
+    coords: np.ndarray,
+    keys: list[tuple],
+    tolerance: float,
+) -> dict[tuple, list[int]]:
+    """Group periods that share a key and land within ``tolerance`` of each other.
+
+    Repeated profiles — a designed example, or a real series with many alike
+    days — put several periods on the same pixel. Drawing them as one marker
+    carrying a count is the only way their labels stay legible. Merging is
+    greedy and only ever joins periods with an identical key, so a marker
+    never spans two clusters.
+    """
+    buckets: dict[tuple, list[list[int]]] = {}
+    for i in range(len(coords)):
+        candidates = buckets.setdefault(tuple(keys[i]), [])
+        for bucket in candidates:
+            center = coords[bucket].mean(axis=0)
+            if float(np.hypot(*(coords[i] - center))) <= tolerance:
+                bucket.append(i)
+                break
+        else:
+            candidates.append([i])
+
+    groups: dict[tuple, list[int]] = {}
+    for key, candidates in buckets.items():
+        for bucket in candidates:
+            center = coords[bucket].mean(axis=0)
+            groups[(float(center[0]), float(center[1]), *key)] = bucket
+    return groups
+
+
+def _fan_out(offsets: int, total: int, radius: float) -> tuple[float, float]:
+    """Spread markers that would otherwise sit exactly on top of each other."""
+    if total <= 1:
+        return 0.0, 0.0
+    angle = 2 * np.pi * offsets / total
+    return radius * float(np.cos(angle)), radius * float(np.sin(angle))
+
+
+class AttributeSpace:
+    """A plane spanned by two attributes, in which each period is drawn as a path.
+
+    A period is not a *point* in attribute space: it is a sequence of timesteps,
+    so in a plane spanned by two attributes it traces a **path** from its first
+    timestep to its last. Drawing periods this way makes the difference between
+    representation rules legible — a ``medoid`` re-traces one member's path
+    exactly, while a ``mean`` cuts a new path through the middle of the group
+    that no member ever followed.
+
+    Paths are added one at a time so that members and representatives can be
+    styled differently in the same figure.
+
+    Parameters
+    ----------
+    x_attr, y_attr : str
+        Names of the two attributes spanning the plane. Used for axis titles.
+    units : dict[str, str], optional
+        Maps attribute name to a unit string, e.g. ``{"solar": "W/m²"}``.
+        Attributes missing from the mapping are labelled without a unit.
+    title : str, optional
+        Figure title.
+    legend_title : str, default "period"
+        Heading for the legend.
+
+    Examples
+    --------
+    >>> space = AttributeSpace("solar", "load", units={"solar": "W/m²", "load": "MW"})
+    >>> space.add_path([0.1, 0.8, 0.6], [3.0, 4.5, 4.0], name="day 0")
+    >>> space.add_path([0.2, 0.4, 0.3], [3.2, 3.9, 3.6], name="mean", dash="dot")
+    >>> fig = space.figure
+    """
+
+    def __init__(
+        self,
+        x_attr: str,
+        y_attr: str,
+        *,
+        units: dict[str, str] | None = None,
+        title: str | None = None,
+        legend_title: str = "period",
+    ) -> None:
+        self.x_attr = x_attr
+        self.y_attr = y_attr
+        self.units = units or {}
+        self._n_paths = 0
+        self._fig = go.Figure()
+        self._fig.update_layout(
+            title=title,
+            xaxis_title=self._axis_label(x_attr),
+            yaxis_title=self._axis_label(y_attr),
+            legend_title=legend_title,
+        )
+
+    def _axis_label(self, attr: str) -> str:
+        unit = self.units.get(attr)
+        return f"{attr} [{unit}]" if unit else attr
+
+    def add_path(
+        self,
+        x,
+        y,
+        name: str,
+        *,
+        color: str | None = None,
+        symbol: str | None = None,
+        dash: str | None = None,
+        width: float = 2,
+        arrows: bool = True,
+        label_steps: bool = True,
+        step_labels: list[str] | None = None,
+        legendgroup: str | None = None,
+    ) -> AttributeSpace:
+        """Add one period to the plane as a path through its timesteps.
+
+        Parameters
+        ----------
+        x, y : array-like
+            The period's values for the two attributes, one entry per timestep,
+            in chronological order.
+        name : str
+            Legend entry for this path.
+        color : str, optional
+            Any plotly colour. Defaults to the next colour of the qualitative
+            palette, so successive paths are distinguishable without being
+            named.
+        symbol : str, optional
+            Marker symbol (``"circle"``, ``"square"``, ``"diamond"``, ``"x"``,
+            …). Defaults to the next symbol of an eight-symbol cycle, so paths
+            stay distinguishable in greyscale and for colour-blind readers.
+            Pass ``"circle"`` explicitly to opt out of the cycle.
+        dash : str, optional
+            Line dash style, e.g. ``"dot"``. Useful to separate derived profiles
+            (representatives) from real ones (members).
+        width : float, default 2
+            Line width.
+        arrows : bool, default True
+            Draw an arrowhead on each segment, pointing from one timestep to the
+            next, so the direction of travel through the period is unambiguous.
+        label_steps : bool, default True
+            Annotate each marker with its timestep label.
+        step_labels : list[str], optional
+            Text for each timestep. Defaults to ``t0, t1, …``.
+        legendgroup : str, optional
+            Group paths in the legend, so clicking toggles them together.
+
+        Returns
+        -------
+        AttributeSpace
+            ``self``, so calls can be chained.
+        """
+        x = np.asarray(x, dtype=float)
+        y = np.asarray(y, dtype=float)
+        if x.shape != y.shape:
+            raise ValueError(
+                f"x and y must have the same shape, got {x.shape} and {y.shape}."
+            )
+
+        if color is None:
+            palette = px.colors.qualitative.Plotly
+            color = palette[self._n_paths % len(palette)]
+        if symbol is None:
+            symbol = _PATH_SYMBOLS[self._n_paths % len(_PATH_SYMBOLS)]
+        if step_labels is None:
+            step_labels = [f"t{i}" for i in range(len(x))]
+
+        self._fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=y,
+                name=name,
+                legendgroup=legendgroup or name,
+                mode="lines+markers+text" if label_steps else "lines+markers",
+                text=step_labels if label_steps else None,
+                textposition="top center",
+                textfont={"size": 9, "color": color},
+                marker={"size": 9, "color": color, "symbol": symbol},
+                line={"color": color, "width": width, "dash": dash},
+                hovertemplate=(
+                    f"{name}<br>%{{text}}<br>"
+                    f"{self.x_attr} = %{{x:.3f}}<br>{self.y_attr} = %{{y:.3f}}"
+                    "<extra></extra>"
+                ),
+                customdata=step_labels,
+            )
+        )
+
+        if arrows and len(x) > 1:
+            # A second, legend-less trace carrying only arrowheads. `angleref`
+            # rotates each marker to the incoming segment, so the first point —
+            # which has no incoming segment — is given size 0 instead.
+            self._fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=y,
+                    mode="markers",
+                    marker={
+                        "symbol": "arrow",
+                        "size": [0] + [11] * (len(x) - 1),
+                        "angleref": "previous",
+                        "color": color,
+                        "standoff": 5,
+                    },
+                    legendgroup=legendgroup or name,
+                    showlegend=False,
+                    hoverinfo="skip",
+                )
+            )
+
+        self._n_paths += 1
+        return self
+
+    @property
+    def figure(self) -> go.Figure:
+        """The assembled plotly figure."""
+        return self._fig
+
+    def show(self, **kwargs) -> None:
+        """Display the figure."""
+        self._fig.show(**kwargs)
 
 
 class ResultPlotAccessor:
@@ -126,6 +460,7 @@ class ResultPlotAccessor:
         >>> result.plot.cluster_representatives()
         >>> result.plot.cluster_members()
         >>> result.plot.cluster_counts()
+        >>> result.plot.feature_space()
     """
 
     def __init__(self, result: AggregationResult) -> None:
@@ -134,6 +469,7 @@ class ResultPlotAccessor:
     def cluster_representatives(
         self,
         columns: list[str] | None = None,
+        units: dict[str, str] | None = None,
         title: str = "Cluster Representatives",
     ) -> go.Figure:
         """Plot all cluster representatives (typical periods).
@@ -168,7 +504,8 @@ class ResultPlotAccessor:
         df.columns = pd.Index([*index_names, *columns])
 
         # Map period IDs to labels with their occurrence counts
-        df["Period"] = df["Period"].map(lambda p: f"Period {p} (n={counts.get(p, 1)})")
+        period_label = {p: f"Period {p} (n={counts.get(p, 1)})" for p in counts}
+        df["Period"] = df["Period"].map(lambda p: period_label.get(p, f"Period {p}"))
 
         long_df = df.melt(
             id_vars=["Period", "Timestep"],
@@ -177,14 +514,25 @@ class ResultPlotAccessor:
             value_name="Value",
         )
 
+        # Shared colour map so cluster colours match the other cluster plots.
+        cmap = _cluster_color_map(list(counts.keys()))
+        color_discrete_map = {
+            period_label[p]: color for p, color in cmap.items() if p in period_label
+        }
+
         fig = px.line(
             long_df,
             x="Timestep",
             y="Value",
             color="Period",
+            color_discrete_map=color_discrete_map,
             facet_col="Column" if len(columns) > 1 else None,
             title=title,
         )
+
+        fig.update_xaxes(title_text="timestep")
+        if units and len(columns) == 1 and columns[0] in units:
+            fig.update_yaxes(title_text=f"{columns[0]} [{units[columns[0]]}]")
 
         return fig
 
@@ -193,6 +541,7 @@ class ResultPlotAccessor:
         columns: list[str] | None = None,
         clusters: list[int] | None = None,
         slider: Literal["cluster", "column"] = "cluster",
+        units: dict[str, str] | None = None,
         title: str | None = None,
     ) -> go.Figure:
         """Plot all original periods grouped by cluster with representative highlighted.
@@ -299,8 +648,9 @@ class ResultPlotAccessor:
 
         n_facets = len(facet_labels)
         traces_per_facet = 2  # one bundled member trace + one representative
-        MEMBER = {"color": "rgba(99, 110, 250, 0.3)"}
-        REP = {"color": "#EF553B", "width": 3}
+        # Per-cluster colours, shared with the other cluster plots so a cluster
+        # keeps the same colour across figures.
+        cmap = _cluster_color_map(cluster_ids)
 
         # Precompute NaN-separated x-arrays (one per unique member count).
         # Each member's timesteps are separated by a NaN to break the line.
@@ -330,15 +680,19 @@ class ResultPlotAccessor:
                 else:
                     cid, col = cluster_ids[facet_idx], cast("str", anim_key)
 
+                color = cmap[int(cid)]
                 n_m = len(members_by_cluster[cid])
                 out.append(
                     go.Scatter(
                         x=_member_x[n_m],
                         y=_member_y(cid, col),
                         mode="lines",
-                        line=MEMBER,
-                        name="Member",
-                        legendgroup="Member",
+                        # Members: the cluster colour, faded and thin, so they
+                        # read as "all belong to this cluster" without competing
+                        # with the representative.
+                        line={"color": _to_rgba(color, 0.25), "width": 1},
+                        name="Members",
+                        legendgroup="Members",
                         showlegend=first_member,
                     )
                 )
@@ -349,7 +703,9 @@ class ResultPlotAccessor:
                         x=timesteps,
                         y=_rep_values(cid, col),
                         mode="lines",
-                        line=REP,
+                        # Representative: the same cluster colour, solid and bold,
+                        # highlighted as the one profile that stands in for them all.
+                        line={"color": color, "width": 4},
                         name="Representative",
                         legendgroup="Representative",
                         showlegend=first_rep,
@@ -434,6 +790,409 @@ class ResultPlotAccessor:
                     if key.startswith("yaxis"):
                         fig.layout[key].range = val["range"]
 
+        # Axis titles (x is always the timestep within a period; y is the
+        # column, with units when provided).
+        def _ylabel(c: str) -> str:
+            return f"{c} [{units[c]}]" if units and c in units else c
+
+        fig.update_xaxes(title_text="timestep")
+        if n_facets > 1:
+            if _slider == "cluster":
+                for i, c in enumerate(columns):
+                    fig.update_yaxes(title_text=_ylabel(c), row=1, col=i + 1)
+            else:
+                fig.update_yaxes(title_text="value")
+        else:
+            fig.update_yaxes(
+                title_text=_ylabel(columns[0]) if _slider == "cluster" else "value"
+            )
+
+        return fig
+
+    def clusters_over_time(
+        self,
+        columns: list[str] | None = None,
+        *,
+        reconstructed: bool = False,
+        overlay_original: bool = False,
+        mark_periods: bool = True,
+        units: dict[str, str] | None = None,
+        title: str | None = None,
+    ) -> go.Figure:
+        """Plot the series over time with each period shaded by its cluster.
+
+        Each period (e.g. day) on the time axis is shaded with the colour of the
+        cluster it was assigned to, so you can see which typical period stands in
+        for each stretch of time — and whether a cluster spans several
+        consecutive periods. Cluster colours match :meth:`cluster_members` and
+        :meth:`cluster_representatives`, so a cluster can be traced across plots.
+
+        Parameters
+        ----------
+        columns : list[str], optional
+            Columns to plot, one stacked subplot each. Defaults to all columns.
+        reconstructed : bool, default False
+            Plot the reconstructed series instead of the original.
+        overlay_original : bool, default False
+            Draw the original series as a dotted line on top. Combined with
+            ``reconstructed=True`` this shows where the reconstruction differs.
+        mark_periods : bool, default True
+            Outline each period and add period boundary ticks to the x axis, so
+            period boundaries and runs of consecutive same-cluster periods are
+            easy to see.
+        units : dict[str, str], optional
+            Map of column name to unit (e.g. ``{"Load": "MW"}``), used to label
+            the y axes as ``column [unit]``.
+        title : str, optional
+            Plot title.
+
+        Returns
+        -------
+        go.Figure
+
+        Examples
+        --------
+        >>> result.plot.clusters_over_time(columns=["Load"])
+        >>> result.plot.clusters_over_time(
+        ...     columns=["Load"], reconstructed=True, overlay_original=True
+        ... )
+        """
+        from plotly.subplots import make_subplots
+
+        result = self._result
+        columns = _validate_columns(
+            columns, list(result.original.columns), "original data"
+        )
+        frame = result.reconstructed if reconstructed else result.original
+        original = result.original
+        assignments = result.cluster_assignments
+        cmap = _cluster_color_map(assignments)
+
+        times = frame.index
+        n_periods = len(assignments)
+        steps_per_period = result.n_timesteps_per_period
+        step = (times[1] - times[0]) if len(times) > 1 else 1
+        period_bounds = [times[p * steps_per_period] for p in range(n_periods)]
+        period_bounds.append(times[-1] + step)
+
+        n = len(columns)
+        fig = make_subplots(
+            rows=n,
+            cols=1,
+            shared_xaxes=True,
+            subplot_titles=columns if n > 1 else None,
+        )
+
+        shapes: list[dict] = []
+        for row, col in enumerate(columns, start=1):
+            if overlay_original:
+                fig.add_trace(
+                    go.Scatter(
+                        x=original.index,
+                        y=original[col],
+                        mode="lines",
+                        line={"color": "#222", "width": 1.0, "dash": "dash"},
+                        name="original",
+                        legendgroup="original",
+                        showlegend=row == 1,
+                    ),
+                    row=row,
+                    col=1,
+                )
+            series_name = "reconstructed" if reconstructed else col
+            fig.add_trace(
+                go.Scatter(
+                    x=times,
+                    y=frame[col],
+                    mode="lines",
+                    line={"color": "#444", "width": 1.2},
+                    name=series_name,
+                    legendgroup=series_name,
+                    showlegend=(row == 1) if reconstructed else True,
+                ),
+                row=row,
+                col=1,
+            )
+            # Collected rather than added one at a time: every `add_vrect` call
+            # re-validates the shapes already on the figure, so shading a year of
+            # days column by column is quadratic (minutes, not milliseconds).
+            # These are exactly the shapes add_vrect would emit for this subplot.
+            axis = "" if row == 1 else str(row)
+            shapes.extend(
+                {
+                    "type": "rect",
+                    "xref": f"x{axis}",
+                    "yref": f"y{axis} domain",
+                    "x0": period_bounds[period],
+                    "x1": period_bounds[period + 1],
+                    "y0": 0,
+                    "y1": 1,
+                    "fillcolor": cmap[int(cluster)],
+                    "opacity": 0.18,
+                    "layer": "below",
+                    "line": {
+                        "width": 0.5 if mark_periods else 0,
+                        "color": "rgba(0, 0, 0, 0.18)",
+                    },
+                }
+                for period, cluster in enumerate(assignments)
+            )
+
+        fig.update_layout(shapes=shapes)
+
+        # One legend entry per cluster (colours shared across all cluster plots).
+        for cid, color in cmap.items():
+            fig.add_trace(
+                go.Scatter(
+                    x=[None],
+                    y=[None],
+                    mode="markers",
+                    marker={"color": color, "size": 10, "symbol": "square"},
+                    name=f"cluster {cid}",
+                ),
+                row=1,
+                col=1,
+            )
+
+        if mark_periods:
+            fig.update_xaxes(
+                minor={"tickvals": period_bounds, "ticklen": 6, "tickcolor": "grey"}
+            )
+        fig.update_xaxes(title_text="time", row=n, col=1)
+        for row, col in enumerate(columns, start=1):
+            label = f"{col} [{units[col]}]" if units and col in units else col
+            fig.update_yaxes(title_text=label, row=row, col=1)
+        fig.update_layout(
+            title=title
+            or (
+                "Reconstructed series by cluster"
+                if reconstructed
+                else "Series by cluster"
+            ),
+            legend_title="cluster",
+        )
+        return fig
+
+    def feature_space(
+        self,
+        *,
+        labels: list[str] | None = None,
+        show_centers: bool = True,
+        show_assignments: bool = True,
+        merge_tolerance: float = 0.04,
+        title: str | None = None,
+    ) -> go.Figure:
+        """Plot the space the clustering works in — one point per period.
+
+        A clustering method never sees day-shapes. It sees each period as a
+        single point in an ``n_timesteps x n_attributes`` space and applies a
+        rule for covering those points with ``k`` centres. This plot is that
+        space, projected to two dimensions with PCA, and it is where the
+        difference between methods becomes geometric rather than anecdotal.
+
+        Two details keep it readable. Periods landing on the same point are
+        drawn as **one marker carrying a count** — repeated profiles otherwise
+        stack their labels into an unreadable smudge. And the axes are locked
+        to **equal aspect**, because a plot whose subject is distance must not
+        distort it.
+
+        Parameters
+        ----------
+        labels : list[str], optional
+            One descriptive name per period, e.g. an archetype such as
+            ``"sunny"``. Sets the marker fill colour and the printed label, so
+            you can see how a known grouping relates to the one found. Without
+            it markers are filled by cluster.
+        show_centers : bool, default True
+            Draw each cluster's centre. A ringed marker means the centre is a
+            **real period** (k-medoids, k-maxoids, medoid-based hierarchical);
+            a star means it is a **computed mean** that no period matches.
+        show_assignments : bool, default True
+            Draw a line from every period to the centre it was assigned to.
+        merge_tolerance : float, default 0.04
+            How close two periods must be, as a fraction of the plot's widest
+            axis, before they are drawn as one counted marker. Only periods in
+            the same cluster (and with the same label) are ever merged. Set to
+            ``0`` to merge only periods that coincide *exactly* — identical
+            profiles still share one marker, since two markers cannot occupy
+            one pixel legibly.
+        title : str, optional
+            Figure title. Defaults to a title naming the explained variance.
+
+        Returns
+        -------
+        go.Figure
+
+        Raises
+        ------
+        ValueError
+            If ``labels`` has a different length than the number of periods,
+            or the result carries no normalised values (e.g. restored
+            from JSON).
+
+        Examples
+        --------
+        >>> result = tsam.aggregate(df, n_clusters=3, period_duration="1D")
+        >>> result.plot.feature_space()  # doctest: +SKIP
+        >>> archetypes = ["sunny", "cloudy", "storm", ...]
+        >>> result.plot.feature_space(labels=archetypes)  # doctest: +SKIP
+        """
+        matrix = _period_matrix(self._result)
+        coords, explained = _project_2d(matrix)
+        assignments = self._result.cluster_assignments
+        n_periods = len(coords)
+
+        if labels is not None and len(labels) != n_periods:
+            raise ValueError(
+                f"labels has {len(labels)} entries but there are {n_periods} "
+                f"periods. Pass one label per period."
+            )
+
+        cluster_ids = sorted({int(c) for c in assignments})
+        qualitative = px.colors.qualitative.Plotly
+        cluster_color = {
+            cid: qualitative[i % len(qualitative)] for i, cid in enumerate(cluster_ids)
+        }
+        if labels is not None:
+            categories = list(dict.fromkeys(labels))
+            bold = px.colors.qualitative.Bold
+            fill_color = {
+                name: bold[i % len(bold)] for i, name in enumerate(categories)
+            }
+        else:
+            categories = [f"cluster {cid}" for cid in cluster_ids]
+            fill_color = {f"cluster {cid}": cluster_color[cid] for cid in cluster_ids}
+
+        def category_of(period: int) -> str:
+            if labels is not None:
+                return labels[period]
+            return f"cluster {int(assignments[period])}"
+
+        keys = [(int(assignments[i]), category_of(i)) for i in range(n_periods)]
+        span = float(max(np.ptp(coords[:, 0]), np.ptp(coords[:, 1]), 1e-9))
+        groups = _collapse_nearby(coords, keys, merge_tolerance * span)
+
+        # Markers that would still overlap after merging (same location,
+        # different cluster) get fanned onto a small circle so both stay visible.
+        radius = 0.025 * span
+        by_location: dict[tuple[float, float], list[tuple]] = {}
+        for key in groups:
+            by_location.setdefault((key[0], key[1]), []).append(key)
+
+        drawn: dict[tuple, tuple[float, float, list[int]]] = {}
+        for location, keys_here in by_location.items():
+            for offset, key in enumerate(keys_here):
+                dx, dy = _fan_out(offset, len(keys_here), radius)
+                drawn[key] = (location[0] + dx, location[1] + dy, groups[key])
+
+        fig = go.Figure()
+
+        # Centres first, so period markers sit on top of the assignment lines.
+        center_indices = self._result.clustering.cluster_centers
+        center_xy: dict[int, tuple[float, float]] = {}
+        real_center: dict[int, bool] = {}
+        for cid in cluster_ids:
+            members = np.flatnonzero(assignments == cid)
+            point = (
+                coords[members].mean(axis=0) if len(members) else coords.mean(axis=0)
+            )
+            center_xy[cid] = (float(point[0]), float(point[1]))
+            real_center[cid] = False
+        if center_indices is not None:
+            for period_idx in center_indices:
+                idx = int(period_idx)
+                if 0 <= idx < n_periods:
+                    cid = int(assignments[idx])
+                    center_xy[cid] = (float(coords[idx, 0]), float(coords[idx, 1]))
+                    real_center[cid] = True
+
+        if show_assignments:
+            for key, (x, y, _periods) in drawn.items():
+                cid = int(key[2])
+                cx, cy = center_xy[cid]
+                fig.add_trace(
+                    go.Scatter(
+                        x=[x, cx],
+                        y=[y, cy],
+                        mode="lines",
+                        line={"color": cluster_color[cid], "width": 1.5},
+                        opacity=0.75,
+                        hoverinfo="skip",
+                        showlegend=False,
+                    )
+                )
+
+        for category in categories:
+            xs, ys, texts, hovers, rings, sizes = [], [], [], [], [], []
+            for key, (x, y, periods) in drawn.items():
+                if key[3] != category:
+                    continue
+                cid = int(key[2])
+                count = len(periods)
+                xs.append(x)
+                ys.append(y)
+                texts.append(f"{category} {_TIMES}{count}" if count > 1 else category)
+                hovers.append(
+                    f"{category}<br>cluster {cid}<br>"
+                    f"period{'s' if count > 1 else ''} "
+                    f"{', '.join(str(m) for m in periods)}"
+                )
+                rings.append(cluster_color[cid])
+                sizes.append(min(13 + 4 * (count - 1), 34))
+            if not xs:
+                continue
+            fig.add_trace(
+                go.Scatter(
+                    x=xs,
+                    y=ys,
+                    mode="markers+text",
+                    text=texts,
+                    textposition="top center",
+                    hovertext=hovers,
+                    hoverinfo="text",
+                    marker={
+                        "size": sizes,
+                        "color": fill_color[category],
+                        "line": {"color": rings, "width": 3},
+                    },
+                    name=category,
+                    legendgroup=category,
+                )
+            )
+
+        if show_centers:
+            for cid in cluster_ids:
+                cx, cy = center_xy[cid]
+                is_real = real_center[cid]
+                fig.add_trace(
+                    go.Scatter(
+                        x=[cx],
+                        y=[cy],
+                        mode="markers",
+                        marker={
+                            "symbol": "circle-open" if is_real else "star",
+                            "size": 24 if is_real else 17,
+                            "color": cluster_color[cid],
+                            "line": {"color": cluster_color[cid], "width": 3},
+                        },
+                        name=f"centre {cid}"
+                        + (" (real period)" if is_real else " (mean)"),
+                        hoverinfo="name",
+                        legendgroup="centres",
+                        legendgrouptitle_text="cluster centres",
+                    )
+                )
+
+        fig.update_layout(
+            title=title
+            or f"Periods in feature space (2-D PCA, {explained:.0%} of variance)",
+            xaxis_title="PC 1",
+            yaxis_title="PC 2",
+            legend_title_text="period" if labels is not None else "cluster",
+            height=520,
+        )
+        # Distance is the subject of this plot, so it must not be distorted.
+        fig.update_yaxes(scaleanchor="x", scaleratio=1)
         return fig
 
     def cluster_counts(self, title: str = "Cluster Counts") -> go.Figure:
@@ -572,6 +1331,9 @@ class ResultPlotAccessor:
         columns: list[str] | None = None,
         mode: str = "overlay",
         title: str | None = None,
+        time_slice: slice | None = None,
+        color: str = "column",
+        units: dict[str, str] | None = None,
     ) -> go.Figure:
         """Compare original vs reconstructed time series.
 
@@ -583,6 +1345,22 @@ class ResultPlotAccessor:
                 - "side_by_side": Separate subplots
                 - "duration_curve": Compare sorted values
             title: Plot title.
+            time_slice: Restrict the comparison to a window of the time axis, e.g.
+                ``slice("2010-01-11", "2010-01-17")``. Useful for zooming into a
+                few periods so fine detail (such as segment step functions) is
+                visible. Applies to all modes; for ``"duration_curve"`` the curve
+                is computed over the sliced window.
+            color: Which dimension drives the line colour, ``"column"`` or
+                ``"source"`` (default ``"column"``).
+
+                - ``"column"``: colour by column; the source (original vs.
+                  reconstructed) is the secondary encoding — dash in ``"overlay"``
+                  and ``"duration_curve"``, facet row in ``"side_by_side"``.
+                - ``"source"``: colour by source, with the column as the secondary
+                  encoding instead. Clearer when comparing a single column, where
+                  the original/reconstructed split is the thing you want to see.
+
+                Applies to all modes.
 
         Returns:
             A Plotly figure comparing original and reconstructed series.
@@ -594,17 +1372,27 @@ class ResultPlotAccessor:
             >>> result.plot.compare()  # Compare all columns
             >>> result.plot.compare(columns=["Load"])  # Compare specific column
             >>> result.plot.compare(mode="duration_curve")
+            >>> result.plot.compare(columns=["Load"], time_slice=slice("2010-01-11", "2010-01-17"))
+            >>> result.plot.compare(columns=["Load"], color="source")
         """
+        if color not in ("column", "source"):
+            raise ValueError(f"color must be 'column' or 'source', got {color!r}")
+
         orig = self._result.original
         recon = self._result.reconstructed
+
+        if time_slice is not None:
+            orig = orig.loc[time_slice]
+            recon = recon.loc[time_slice]
 
         columns = _validate_columns(columns, list(orig.columns), "original data")
 
         if mode == "duration_curve":
-            return _duration_curve_figure(
+            fig = _duration_curve_figure(
                 {"Original": orig, "Reconstructed": recon},
                 columns=columns,
                 title=title,
+                color=color,
             )
 
         elif mode in ("overlay", "side_by_side"):
@@ -622,33 +1410,39 @@ class ResultPlotAccessor:
                 value_name="Value",
             )
 
+            # color="column": colour by Column, with Source as the secondary
+            # encoding. color="source": swap them.
+            color_by, other = (
+                ("Column", "Source") if color == "column" else ("Source", "Column")
+            )
             if mode == "overlay":
-                # Color by Column, dash by Source (Original/Reconstructed)
                 fig = px.line(
                     long_df,
                     x="Time",
                     y="Value",
-                    color="Column",
-                    line_dash="Source",
+                    color=color_by,
+                    line_dash=other,
                     title=title or "Original vs Reconstructed",
                 )
-            else:  # side_by_side
+            else:  # side_by_side — facet by the non-colour dimension
                 fig = px.line(
                     long_df,
                     x="Time",
                     y="Value",
-                    color="Column",
-                    facet_row="Source",
+                    color=color_by,
+                    facet_row=other,
                     title=title or "Original vs Reconstructed",
                 )
                 fig.update_layout(height=600)
-
-            return fig
 
         else:
             raise ValueError(
                 f"Unknown mode: {mode}. Use 'overlay', 'side_by_side', or 'duration_curve'."
             )
+
+        if units and len(columns) == 1 and columns[0] in units:
+            fig.update_yaxes(title_text=f"{columns[0]} [{units[columns[0]]}]")
+        return fig
 
     def residuals(
         self,
@@ -753,3 +1547,140 @@ class ResultPlotAccessor:
             raise ValueError(
                 f"Unknown mode: {mode}. Use 'time_series', 'histogram', 'by_period', or 'by_timestep'."
             )
+
+
+def compare_partitions(
+    partitions: dict,
+    *,
+    labels: list[str] | None = None,
+    canonical: bool = True,
+    title: str | None = None,
+    show_ids: bool = True,
+) -> go.Figure:
+    """Compare which periods several clusterings group together.
+
+    Answers one question exactly: *do these configurations put the same
+    periods in the same group?* Each row is a clustering, each column an
+    original period, and the colour is the group that period landed in. Rows
+    that look alike agree; rows that look different disagree, and you can read
+    off precisely which periods moved.
+
+    Unlike a feature-space scatter this involves no projection, so nothing is
+    approximated — but it shows membership only, not distance.
+
+    Parameters
+    ----------
+    partitions : dict
+        Maps a name to either an :class:`~tsam.result.AggregationResult` or a
+        raw sequence of cluster ids, one per period. Rows appear in insertion
+        order.
+    labels : list[str], optional
+        One descriptive name per period, e.g. an archetype. Printed under the
+        period index so you can see what each column *is*.
+    canonical : bool, default True
+        Renumber each row's clusters by order of first appearance. Cluster ids
+        are arbitrary, so without this two identical groupings can look
+        different purely because they numbered their groups differently.
+        Turn it off to see the ids a result actually carries.
+    title : str, optional
+        Figure title.
+    show_ids : bool, default True
+        Print the cluster id inside each cell.
+
+    Returns
+    -------
+    go.Figure
+
+    Raises
+    ------
+    ValueError
+        If ``partitions`` is empty, the rows differ in length, or ``labels``
+        does not match the number of periods.
+
+    Examples
+    --------
+    >>> runs = {m: tsam.aggregate(df, n_clusters=3, cluster=ClusterConfig(method=m))
+    ...         for m in ["kmeans", "kmedoids", "averaging"]}
+    >>> tsam.plot.compare_partitions(runs)  # doctest: +SKIP
+    """
+    if not partitions:
+        raise ValueError("partitions is empty — pass at least one clustering.")
+
+    names = list(partitions)
+    rows = []
+    for name in names:
+        entry = partitions[name]
+        assignments = getattr(entry, "cluster_assignments", entry)
+        values = np.asarray(list(assignments), dtype=int)
+        rows.append(_canonical_labels(values) if canonical else values)
+
+    widths = {len(row) for row in rows}
+    if len(widths) > 1:
+        raise ValueError(
+            f"All partitions must cover the same number of periods, got {sorted(widths)}."
+        )
+    n_periods = widths.pop()
+
+    if labels is not None and len(labels) != n_periods:
+        raise ValueError(
+            f"labels has {len(labels)} entries but there are {n_periods} periods."
+        )
+
+    matrix = np.vstack(rows)
+    n_groups = int(matrix.max()) + 1
+
+    # A discrete scale: cluster ids are categories, so neighbouring ids must not
+    # read as "nearly the same" the way a continuous ramp would imply.
+    qualitative = px.colors.qualitative.Plotly
+    colorscale = []
+    for i in range(n_groups):
+        color = qualitative[i % len(qualitative)]
+        colorscale.append([i / n_groups, color])
+        colorscale.append([(i + 1) / n_groups, color])
+
+    if labels is not None:
+        tick_text = [f"{i}<br>{labels[i]}" for i in range(n_periods)]
+    else:
+        tick_text = [str(i) for i in range(n_periods)]
+
+    hover = [
+        [
+            f"{names[r]}<br>period {c}"
+            + (f" ({labels[c]})" if labels is not None else "")
+            + f"<br>cluster {matrix[r, c]}"
+            for c in range(n_periods)
+        ]
+        for r in range(len(names))
+    ]
+
+    fig = go.Figure(
+        go.Heatmap(
+            z=matrix,
+            x=list(range(n_periods)),
+            y=names,
+            colorscale=colorscale,
+            zmin=-0.5,
+            zmax=n_groups - 0.5,
+            showscale=False,
+            xgap=2,
+            ygap=4,
+            hoverinfo="text",
+            text=hover,
+            texttemplate="%{z}" if show_ids else None,
+            textfont={"size": 11, "color": "white"},
+        )
+    )
+    fig.update_layout(
+        title=title or "Which periods each method groups together",
+        xaxis_title="original period",
+        yaxis_title="",
+        height=110 + 42 * len(names),
+    )
+    fig.update_xaxes(
+        tickmode="array",
+        tickvals=list(range(n_periods)),
+        ticktext=tick_text,
+        showgrid=False,
+    )
+    fig.update_yaxes(autorange="reversed", showgrid=False)
+    return fig

@@ -55,7 +55,8 @@ requires-python = ">=3.10,<3.15"
 [project.optional-dependencies]
 # Most deps below are mirrored in environment.yml and updated via conda-forge
 # by Renovate (see .github/renovate.json). PyPI-only entries — pytest-benchmark,
-# mkdocstrings[python], pandas-stubs, notebook — stay on the pep621 manager.
+# mkdocstrings[python], pandas-stubs, notebook, nbclient, nbformat — stay on the
+# pep621 manager.
 # When adding a dep that should be dual-channel, mirror it in environment.yml
 # and update .github/renovate.json.
 develop = [
@@ -67,10 +68,12 @@ develop = [
   "mkdocs>=1.6,<=1.6.1",
   "mkdocs-material>=9.5,<=9.7.6",
   "mkdocstrings-python>=0.27,<=2.0.5",
-  "mkdocs-jupyter>=0.25,<=0.26.1",         # 0.26.0 has packaging bug (mkdocs-jupyter#269)
+  "mkdocs-jupyter>=0.25,<=0.26.1",      # 0.26.0 has packaging bug (mkdocs-jupyter#269)
   "mkdocs-gen-files>=0.5,<=0.6.1",
   "mkdocs-literate-nav>=0.6,<=0.6.3",
   "nbval<=0.11.0",
+  "nbclient<=0.11.0",                   # imported directly by scripts/execute_notebooks.py
+  "nbformat<=5.10.4",                   # (arrived transitively via notebook until now)
   "ruff<=0.15.21",
   "mypy<=2.1.0",
   "pandas-stubs<=3.0.3.260530",

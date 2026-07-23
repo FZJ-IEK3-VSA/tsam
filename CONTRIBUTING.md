@@ -175,7 +175,7 @@ already-populated outputs.
 Two steps:
 
 ```bash
-# 1. Pre-execute every notebook in docs/notebooks/ (parallel)
+# 1. Pre-execute every notebook under docs/ (parallel)
 python scripts/execute_notebooks.py
 
 # 2. Serve the docs locally
