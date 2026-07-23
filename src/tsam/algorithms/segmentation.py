@@ -59,16 +59,16 @@ def segmentation(
         segment_center_indices_list)`` where:
 
         - ``segmented_typical`` is a MultiIndex DataFrame similar to
-          ``normalized_typical_periods`` but with segments instead of time steps.
-          Moreover, two additional index levels define the length of each segment
-          and the time step index at which each segment starts.
-        - ``predicted_segmented`` is a MultiIndex DataFrame with the same shape as
-          ``normalized_typical_periods``, but with overwritten values derived from
-          segmentation used for prediction of the original periods and accuracy
-          indicators.
-        - ``segment_center_indices_list`` is a list of segment center indices per
-          typical period. Each entry is a list of indices indicating which
-          timestep is the representative for each segment.
+            ``normalized_typical_periods`` but with segments instead of time
+            steps. Moreover, two additional index levels define the length of
+            each segment and the time step index at which each segment starts.
+        - ``predicted_segmented`` is a MultiIndex DataFrame with the same shape
+            as ``normalized_typical_periods``, but with overwritten values
+            derived from segmentation used for prediction of the original
+            periods and accuracy indicators.
+        - ``segment_center_indices_list`` is a list of segment center indices
+            per typical period. Each entry is a list of indices indicating which
+            timestep is the representative for each segment.
     """
     # Initialize lists for predicted and segmented DataFrame
     segmented_list = []
