@@ -115,7 +115,7 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
             for _ in range(n_passes):
                 for j in range(n):
                     x = X[j]
-                    d = np.sum((M - M[i]) ** 2, axis=1)
+                    D = np.sum((M - x) ** 2, axis=1)
                     nearest = np.argmin(D)  # type: ignore[assignment]
                     d = np.sum((M - M[nearest]) ** 2, axis=1)
 
