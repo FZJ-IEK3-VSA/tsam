@@ -1,6 +1,6 @@
 # Background
 
-This section contains conceptual and design material about tsam — the *why* and *how* behind its mathematics, structure, and major decisions. 
+This section contains conceptual and design material about tsam — the *why* and *how* behind its mathematics, structure, and major decisions.
 
 | Section | Contents |
 |---------|----------|

@@ -68,7 +68,7 @@ def execute_one(path: Path, timeout: int) -> Result:
     except CellExecutionError as exc:
         first_line = str(exc).splitlines()[0] if str(exc) else "CellExecutionError"
         return Result(path, time.perf_counter() - start, first_line)
-    except Exception as exc:  # noqa: BLE001 — surface anything as a failure
+    except Exception as exc:
         return Result(path, time.perf_counter() - start, f"{type(exc).__name__}: {exc}")
 
 
