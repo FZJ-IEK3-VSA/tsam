@@ -140,12 +140,20 @@ def duration_representation(
             # sort all values of the original time series
             sorted_attr = np.sort(attr_values.ravel(), kind="stable")
             # take mean of sections of the original duration curve according to
-            # the cluster and its weight the respective section is assigned to
-            representation_values = []
-            counter = 0
-            for j in sorted_weights:
-                representation_values.append(sorted_attr[counter : counter + j].mean())
-                counter += j
+            # the cluster and its weight the respective section is assigned to.
+            # reduceat needs strictly increasing offsets: a zero-size section
+            # would not crash but silently corrupt its slot. Sizes are cluster
+            # occurrence counts (>= 1 by construction), so this only fires if
+            # an upstream refactor lets an empty cluster through.
+            if np.any(sorted_weights <= 0):
+                raise ValueError(
+                    "Internal error: empty cluster reached the duration "
+                    "representation (zero-size duration-curve section)."
+                )
+            section_starts = np.concatenate(([0], np.cumsum(sorted_weights[:-1])))
+            representation_values = (
+                np.add.reduceat(sorted_attr, section_starts) / sorted_weights
+            )
             # respect max and min of the attributes
             if represent_min_max:
                 representation_values = _represent_min_max(
@@ -232,12 +240,12 @@ def _pin_min_max_preserve_sum(
 
 
 def _represent_min_max(
-    representation_values: list[float],
+    representation_values: np.ndarray,
     sorted_attr: np.ndarray,
     sorted_weights: np.ndarray,
     max_passes: int,
     rel_tolerance: float,
-) -> list[float]:
+) -> np.ndarray:
     """Preserve an attribute's min and max in the duration-curve representation.
 
     Pins the first and last duration-curve values to the original attribute
