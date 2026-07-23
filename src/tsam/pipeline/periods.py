@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import copy
 import warnings
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -65,7 +65,7 @@ def unstack_to_periods(
         `add_period_sum_features` optionally appends per-period column sums as
         extra clustering features.
     """
-    unstacked = normalized_ts.copy()
+    padded = normalized_ts
 
     n_missing = -len(normalized_ts) % n_timesteps_per_period
     if n_missing:
@@ -77,34 +77,39 @@ def unstack_to_periods(
             "accordingly and the padding is dropped again on reconstruction.",
             stacklevel=2,
         )
-        unstacked = pd.concat([unstacked, unstacked.head(n_missing)])
+        padded = pd.concat([normalized_ts, normalized_ts.head(n_missing)])
 
-    # Create period and step index
-    period_index = []
-    step_index = []
-    for ii in range(len(unstacked)):
-        period_index.append(int(ii / n_timesteps_per_period))
-        step_index.append(
-            ii - int(ii / n_timesteps_per_period) * n_timesteps_per_period
+    time_index = padded.index.copy(deep=True)
+    n_periods = len(padded) // n_timesteps_per_period
+    n_columns = len(normalized_ts.columns)
+
+    dtypes = padded.dtypes.unique()
+    if len(dtypes) == 1 and isinstance(dtypes[0], np.dtype):
+        # Regular grid with one plain dtype: the unstack is a numpy reshape.
+        # The index and columns come from pandas unstacking a single period,
+        # so the labels are what `unstack` would produce, by construction.
+        values = (
+            padded.to_numpy()
+            .reshape(n_periods, n_timesteps_per_period, n_columns)
+            .transpose(0, 2, 1)
+            .reshape(n_periods, n_columns * n_timesteps_per_period)
         )
-
-    # Save old index
-    time_index = copy.deepcopy(unstacked.index)
-
-    # Create new double index and unstack
-    unstacked.index = pd.MultiIndex.from_arrays(
-        [step_index, period_index], names=["TimeStep", "PeriodNum"]
-    )
-    unstacked = unstacked.unstack(level="TimeStep")  # type: ignore[assignment]
+        one_period = _unstack_with_pandas(
+            padded.iloc[:n_timesteps_per_period], n_timesteps_per_period
+        )
+        unstacked = pd.DataFrame(
+            values,
+            index=pd.Index(np.arange(n_periods), name="PeriodNum"),
+            columns=one_period.columns,
+        )
+    else:
+        unstacked = _unstack_with_pandas(padded, n_timesteps_per_period)
 
     # Check for NaN
     if unstacked.isnull().values.any():
         raise ValueError(
             "Pre processed data includes NaN. Please check the time_series input data."
         )
-
-    n_periods = len(unstacked)
-    n_columns = len(normalized_ts.columns)
 
     return PeriodProfiles(
         column_index=unstacked.columns,  # type: ignore[arg-type]
@@ -114,6 +119,20 @@ def unstack_to_periods(
         n_columns=n_columns,
         n_periods=n_periods,
     )
+
+
+def _unstack_with_pandas(
+    padded: pd.DataFrame,
+    n_timesteps_per_period: int,
+) -> pd.DataFrame:
+    """Unstack via pandas, preserving per-column dtypes (mixed-dtype fallback)."""
+    unstacked = padded.copy()
+    period_index = [ii // n_timesteps_per_period for ii in range(len(unstacked))]
+    step_index = [ii % n_timesteps_per_period for ii in range(len(unstacked))]
+    unstacked.index = pd.MultiIndex.from_arrays(
+        [step_index, period_index], names=["TimeStep", "PeriodNum"]
+    )
+    return cast("pd.DataFrame", unstacked.unstack(level="TimeStep"))
 
 
 def add_period_sum_features(

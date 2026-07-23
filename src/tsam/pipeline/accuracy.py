@@ -55,20 +55,20 @@ def reconstruct(
     """
     # Unstack once, then use vectorized indexing to select periods by cluster order
     typical_unstacked = typical_periods.unstack()
-    reconstructed = typical_unstacked.loc[list(cluster_order)].values
+    reconstructed = typical_unstacked.loc[list(cluster_order)].to_numpy()
 
-    # Back in matrix form
-    clustered_data_df = pd.DataFrame(
-        reconstructed,
-        columns=period_profiles.column_index,
-        index=period_profiles.profiles_dataframe.index,
+    # Rows are period vectors in (column, timestep) layout, so stacking back to
+    # the flat time series is a plain numpy reshape; trim to original length.
+    n_columns = period_profiles.n_columns
+    n_timesteps = period_profiles.n_timesteps_per_period
+    flat = (
+        reconstructed.reshape(len(cluster_order), n_columns, n_timesteps)
+        .transpose(0, 2, 1)
+        .reshape(-1, n_columns)
     )
-    clustered_data_df = clustered_data_df.stack(future_stack=True, level="TimeStep")  # type: ignore[assignment]
 
-    # Trim to original data length
-    original_len = len(original_data)
     normalized_predicted = pd.DataFrame(
-        clustered_data_df.values[:original_len],
+        flat[: len(original_data)],
         index=original_data.index,
         columns=original_data.columns,
     )
