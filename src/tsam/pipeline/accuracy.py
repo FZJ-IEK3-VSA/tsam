@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -126,7 +126,7 @@ def compute_accuracy(
         )
         indicator_raw["MAE"][column] = mean_absolute_error(orig_ts, pred_ts)
 
-    return pd.DataFrame(indicator_raw)
+    return cast("pd.DataFrame", pd.DataFrame(indicator_raw))
 
 
 def compute_concurrency(
@@ -165,17 +165,21 @@ def compute_concurrency(
     pred = normalized_predicted[normalized_original.columns]
 
     if len(normalized_original.columns) < 2:
-        return pd.Series(
-            {"correlation_error": np.nan, "rank_correlation_error": np.nan}
+        return cast(
+            "pd.Series",
+            pd.Series({"correlation_error": np.nan, "rank_correlation_error": np.nan}),
         )
 
     def _frob(method: Literal["pearson", "spearman"]) -> float:
         diff = normalized_original.corr(method=method) - pred.corr(method=method)
         return float(np.sqrt(np.square(diff.values).sum()))
 
-    return pd.Series(
-        {
-            "correlation_error": _frob("pearson"),
-            "rank_correlation_error": _frob("spearman"),
-        }
+    return cast(
+        "pd.Series",
+        pd.Series(
+            {
+                "correlation_error": _frob("pearson"),
+                "rank_correlation_error": _frob("spearman"),
+            }
+        ),
     )

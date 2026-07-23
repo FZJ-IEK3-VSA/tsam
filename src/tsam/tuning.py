@@ -13,7 +13,7 @@ from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import numpy as np
 import pandas as pd
@@ -304,7 +304,7 @@ class TuningResult:
         df = pd.DataFrame(self.history)
         if "timesteps" not in df.columns and len(df) > 0:
             df["timesteps"] = df["n_clusters"] * df["n_segments"]
-        return df
+        return cast("pd.DataFrame", df)
 
     def find_by_timesteps(self, target: int) -> AggregationResult:
         """Find the result closest to a target timestep count."""
