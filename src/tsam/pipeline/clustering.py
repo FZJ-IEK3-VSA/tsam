@@ -39,7 +39,8 @@ def cluster_periods(
     representatives are computed from those columns instead of *candidates* —
     used when period-sum features were appended for clustering distance only.
 
-    **Clustering methods** ([`ClusterConfig.method`][tsam.config.ClusterConfig]):
+    **Clustering methods** — how candidate periods are grouped
+    ([`ClusterConfig.method`][tsam.config.ClusterConfig]):
 
     | Method | Description |
     |---|---|
@@ -50,9 +51,8 @@ def cluster_periods(
     | `"averaging"` | Simple period averaging (1 cluster = mean of all). |
     | `"contiguous"` | Adjacent periods only (preserves temporal order). |
 
-    **Representation methods**
-    ([`ClusterConfig.representation`][tsam.config.ClusterConfig]) — how each
-    cluster's representative period is built:
+    **Representation methods** — how each cluster's representative period is built
+    ([`ClusterConfig.representation`][tsam.config.ClusterConfig]):
 
     | Representation | Description |
     |---|---|
@@ -65,35 +65,33 @@ def cluster_periods(
     | `Distribution(...)` | Fine-grained control over distribution representation. |
     | `MinMaxMean(...)` | Fine-grained control over which columns get min/max treatment. |
 
-    Parameters
-    ----------
-    candidates
-        Candidate period matrix (possibly weighted / augmented).
-    n_clusters
-        Number of clusters (typical periods) to form.
-    cluster
-        Clustering configuration: ``method``, ``representation``, ``solver``.
-    representation_dict
-        Per-column representation overrides (e.g. for ``minmax_mean``).
-    n_timesteps_per_period
-        Timesteps per period, needed by distribution-style representations.
-    representation_candidates
-        Alternative columns to compute representatives from (when period-sum
-        features were appended to ``candidates`` for distance only).
+    Args:
+        candidates: Candidate period matrix (possibly weighted / augmented).
+        n_clusters: Number of clusters (typical periods) to form.
+        cluster: Clustering configuration: ``method``, ``representation``,
+            ``solver``.
+        representation_dict: Per-column representation overrides (e.g. for
+            ``minmax_mean``).
+        n_timesteps_per_period: Timesteps per period, needed by
+            distribution-style representations.
+        representation_candidates: Alternative columns to compute representatives
+            from (when period-sum features were appended to ``candidates`` for
+            distance only).
+        reference_attribute_idx: Attribute (column) index used by the
+            ``"reference"`` concurrency strategy of the distribution
+            representations; ignored by all other representations.
 
-    Returns
-    -------
-    tuple[list[np.ndarray], list[int] | None, np.ndarray]
+    Returns:
         ``(cluster_centers, cluster_center_indices, cluster_order)`` —
         representatives, the medoid period indices (if applicable), and the
         per-period cluster assignment.
 
-    See Also
-    --------
-    cluster_sorted_periods : Duration-curve variant clustering on sorted values.
-    use_predefined_assignments : Reuse stored assignments instead of clustering.
-    add_extreme_periods : Inject extreme-value periods after clustering.
-    rescale_representatives : Correct column means of the representatives.
+    Note:
+        Related stages: `cluster_sorted_periods` (duration-curve variant on
+        sorted values), `use_predefined_assignments` (reuse stored assignments
+        instead of clustering), `add_extreme_periods` (inject extreme-value
+        periods after clustering), and `rescale_representatives` (correct the
+        column means of the representatives).
     """
     centers, center_indices, order = cluster_and_represent(
         candidates,
@@ -136,29 +134,23 @@ def cluster_sorted_periods(
     See `cluster_periods` for the available clustering methods and
     representations.
 
-    Parameters
-    ----------
-    candidates
-        Candidate period matrix (possibly weighted).
-    n_columns
-        Number of original columns, needed to reshape per-column before sorting.
-    n_clusters
-        Number of clusters to form.
-    cluster
-        Clustering configuration.
-    representation_dict
-        Per-column representation overrides.
-    n_timesteps_per_period
-        Timesteps per period.
+    Args:
+        candidates: Candidate period matrix (possibly weighted).
+        n_columns: Number of original columns, needed to reshape per-column
+            before sorting.
+        n_clusters: Number of clusters to form.
+        cluster: Clustering configuration.
+        representation_dict: Per-column representation overrides.
+        n_timesteps_per_period: Timesteps per period.
+        reference_attribute_idx: Attribute (column) index used by the
+            ``"reference"`` concurrency strategy of the distribution
+            representations; ignored by all other representations.
 
-    Returns
-    -------
-    tuple[list[np.ndarray], list[int] | None, np.ndarray]
+    Returns:
         ``(cluster_centers, cluster_center_indices, cluster_order)``.
 
-    See Also
-    --------
-    cluster_periods : Standard clustering on the temporal profile.
+    Note:
+        `cluster_periods` performs standard clustering on the temporal profile.
     """
 
     # Sort each period's timesteps descending for all columns.
@@ -214,27 +206,22 @@ def use_predefined_assignments(
     medoid periods (if center indices were saved) or recomputed from the new
     candidates under the same assignment.
 
-    Parameters
-    ----------
-    candidates
-        Candidate period matrix for the new data.
-    predef
-        Predefined assignments (``cluster_order`` and optional center indices).
-    representation_method
-        Representation to apply when recomputing centers.
-    representation_dict
-        Per-column representation overrides.
-    n_timesteps_per_period
-        Timesteps per period.
+    Args:
+        candidates: Candidate period matrix for the new data.
+        predef: Predefined assignments (``cluster_order`` and optional center
+            indices).
+        representation_method: Representation to apply when recomputing centers.
+        representation_dict: Per-column representation overrides.
+        n_timesteps_per_period: Timesteps per period.
+        reference_attribute_idx: Attribute (column) index used by the
+            ``"reference"`` concurrency strategy of the distribution
+            representations; ignored by all other representations.
 
-    Returns
-    -------
-    tuple
+    Returns:
         ``(cluster_centers, cluster_center_indices, cluster_order)``.
 
-    See Also
-    --------
-    cluster_periods : The from-scratch clustering this path replaces.
+    Note:
+        `cluster_periods` is the from-scratch clustering this path replaces.
     """
     if predef.cluster_center_indices is not None:
         return (

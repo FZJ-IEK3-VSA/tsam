@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
@@ -11,35 +15,29 @@ import pyomo.environ as pyomo
 import pyomo.opt as opt
 from pyomo.contrib import appsi
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
-    """
-    k-medoids class.
+    """k-medoids class.
 
-    :param n_clusters:  How many medoids. Must be positive. optional, default: 8
-    :type n_clusters: integer
-
-    :param distance_metric: What distance metric to use. optional, default: 'euclidean'
-    :type distance_metric: string
-
-    :param timelimit: Specify the time limit of the solver. optional, default:  100
-    :type timelimit: integer
-
-    :param threads: Threads to use by the optimization solver. optional, default: 7
-    :type threads: integer
-
-    :param solver: Specifies the solver. optional, default: 'highs'
-    :type solver: string
+    Args:
+        n_clusters: How many medoids. Must be positive.
+        distance_metric: What distance metric to use.
+        timelimit: The time limit of the solver.
+        threads: Threads to use by the optimization solver.
+        solver: The solver to use.
     """
 
     def __init__(
         self,
-        n_clusters=8,
-        distance_metric="euclidean",
-        timelimit=100,
-        threads=7,
-        solver="highs",
-    ):
+        n_clusters: int = 8,
+        distance_metric: str | Callable = "euclidean",
+        timelimit: int = 100,
+        threads: int = 7,
+        solver: str = "highs",
+    ) -> None:
         self.n_clusters = n_clusters
 
         self.distance_metric = distance_metric
@@ -50,7 +48,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         self.threads = threads
 
-    def _check_init_args(self):
+    def _check_init_args(self) -> None:
         # Check n_clusters
         if (
             self.n_clusters is None
@@ -74,13 +72,15 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
                 + "was given."
             )
 
-    def fit(self, X, y=None):
+    def fit(self, X: np.ndarray, y: object = None) -> KMedoids:
         """Fit K-Medoids to the provided data.
 
-        :param X: shape=(n_samples, n_features)
-        :type X: array-like or sparse matrix
+        Args:
+            X: Data of shape (n_samples, n_features).
+            y: Ignored; present for scikit-learn API compatibility.
 
-        :returns: self
+        Returns:
+            self.
         """
 
         self._check_init_args()
@@ -114,7 +114,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         return self
 
-    def _check_array(self, X):
+    def _check_array(self, X: np.ndarray) -> np.ndarray:
         X = check_array(X)
 
         # Check that the number of clusters is less than or equal to
@@ -129,14 +129,27 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         return X
 
-    def _k_medoids_exact(self, distances, n_clusters):
-        """
-        Parameters
-        ----------
-        distances : int, required
-            Pairwise distances between each row.
-        n_clusters : int, required
-            Number of clusters.
+    def _k_medoids_exact(
+        self, distances: np.ndarray, n_clusters: int
+    ) -> tuple[np.ndarray, np.ndarray, float]:
+        """Solve the exact k-medoids problem.
+
+        Args:
+            distances: Pairwise distances between each row.
+            n_clusters: Number of clusters.
+
+        Returns:
+            A tuple ``(medoids, assignments, objective)``:
+
+            - ``medoids``: binary selection vector of length ``n_samples``;
+              ``medoids[i] == 1`` iff period ``i`` is chosen as a medoid
+              (cluster center).
+            - ``assignments``: binary assignment matrix of shape
+              ``(n_samples, n_samples)``; entry ``[i, j]`` is 1 iff candidate
+              ``j`` is assigned to medoid ``i``, so ``assignments.argmax(axis=0)``
+              yields each candidate's medoid index.
+            - ``objective``: the optimal objective value, i.e. the summed
+              distance of all candidates to their assigned medoid.
         """
 
         # Create pyomo model
@@ -148,11 +161,14 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         return (r_y, r_x.T, r_obj)
 
 
-def _setup_k_medoids(distances, n_clusters):
+def _setup_k_medoids(distances: np.ndarray, n_clusters: int) -> pyomo.ConcreteModel:
     """Define the k-medoids model with pyomo.
-    In the spatial aggregation community, it is referred to as Hess Model for political districting
-    with an additional constraint of cluster-sizes/populations.
-    (W Hess, JB Weaver, HJ Siegfeldt, JN Whelan, and PA Zitlau. Nonpartisan political redistricting by computer. Operations Research, 13(6):998–1006, 1965.)
+
+    In the spatial aggregation community, it is referred to as Hess Model for
+    political districting with an additional constraint of
+    cluster-sizes/populations. (W Hess, JB Weaver, HJ Siegfeldt, JN Whelan, and
+    PA Zitlau. Nonpartisan political redistricting by computer. Operations
+    Research, 13(6):998-1006, 1965.)
     """
     # Create model
     M = pyomo.ConcreteModel()
@@ -176,44 +192,44 @@ def _setup_k_medoids(distances, n_clusters):
 
     # get objective
     # Minimize the distance of every candidate to the cluster center
-    def objRule(M):
+    def objRule(M: pyomo.ConcreteModel) -> Any:
         return sum(sum(M.d[i, j] * M.z[i, j] for j in M.j) for i in M.i)
 
     M.obj = pyomo.Objective(rule=objRule)
 
     # s.t.
     # Assign all candidates to one clusters
-    def candToClusterRule(M, j):
+    def candToClusterRule(M: pyomo.ConcreteModel, j: int) -> Any:
         return sum(M.z[i, j] for i in M.i) == 1
 
     M.candToClusterCon = pyomo.Constraint(M.j, rule=candToClusterRule)
 
     # Predefine the number of clusters
-    def noClustersRule(M):
+    def noClustersRule(M: pyomo.ConcreteModel) -> Any:
         return sum(M.z[i, i] for i in M.i) == M.no_k
 
     M.noClustersCon = pyomo.Constraint(rule=noClustersRule)
 
     # Describe the choice of a candidate to a cluster
-    def clusterRelationRule(M, i, j):
+    def clusterRelationRule(M: pyomo.ConcreteModel, i: int, j: int) -> Any:
         return M.z[i, j] <= M.z[i, i]
 
     M.clusterRelationCon = pyomo.Constraint(M.i, M.j, rule=clusterRelationRule)
     return M
 
 
-def _solve_given_pyomo_model(M, solver="highs"):
-    """Solves a given pyomo model clustering model an returns the clusters
+def _solve_given_pyomo_model(
+    M: pyomo.ConcreteModel, solver: str = "highs"
+) -> tuple[np.ndarray, np.ndarray, float]:
+    """Solve a given pyomo clustering model and return the clusters.
 
     Args:
-        M (pyomo.ConcreteModel): Concrete model instance that gets solved.
-        solver (str, optional): solver, defines the solver for the pyomo model. Defaults to "highs".
-
-    Raises:
-        ValueError: [description]
+        M: Concrete model instance that gets solved.
+        solver: Defines the solver for the pyomo model.
 
     Returns:
-        [type]: [description]
+        A tuple ``(r_x, r_y, r_obj)`` of the assignment matrix, the medoid
+        selection vector, and the objective value.
     """
     # create optimization problem
     if solver == "highs":

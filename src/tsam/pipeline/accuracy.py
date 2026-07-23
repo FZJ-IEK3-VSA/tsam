@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -33,29 +33,25 @@ def reconstruct(
     ``numerical_tolerance`` triggers a warning. That can happen with
     distribution representations or aggressive rescaling.
 
-    Parameters
-    ----------
-    typical_periods
-        The representative periods (normalized, optionally segmented).
-    cluster_order
-        Per-period cluster assignment mapping originals to representatives.
-    period_profiles
-        Profile metadata used to reshape back to the original layout.
-    norm_data
-        Normalization state, for converting back to original units.
-    original_data
-        Original input, defining the output length, index, and columns.
+    Args:
+        typical_periods: The representative periods (normalized, optionally
+            segmented).
+        cluster_order: Per-period cluster assignment mapping originals to
+            representatives.
+        period_profiles: Profile metadata used to reshape back to the original
+            layout.
+        norm_data: Normalization state, for converting back to original units.
+        original_data: Original input, defining the output length, index, and
+            columns.
 
-    Returns
-    -------
-    tuple[pd.DataFrame, pd.DataFrame]
+    Returns:
         ``(denormalized_predicted, normalized_predicted)`` — the reconstructed
         series in original units and in normalized units.
 
-    See Also
-    --------
-    compute_accuracy : Scores the normalized reconstruction against the input.
-    denormalize : Used internally to return values to original units.
+    Note:
+        See `compute_accuracy`, which scores the normalized reconstruction
+        against the input, and `denormalize`, used internally to return values
+        to original units.
     """
     # Unstack once, then use vectorized indexing to select periods by cluster order
     typical_unstacked = typical_periods.unstack()
@@ -100,21 +96,16 @@ def compute_accuracy(
     | MAE | Mean absolute error. |
     | RMSE (duration) | RMSE on sorted (duration-curve) values — measures distribution fit. |
 
-    Parameters
-    ----------
-    normalized_original
-        The original series in normalized units.
-    normalized_predicted
-        The reconstructed series in normalized units (from `reconstruct`).
+    Args:
+        normalized_original: The original series in normalized units.
+        normalized_predicted: The reconstructed series in normalized units
+            (from `reconstruct`).
 
-    Returns
-    -------
-    pd.DataFrame
+    Returns:
         One row per column with ``RMSE``, ``RMSE_duration`` and ``MAE``.
 
-    See Also
-    --------
-    reconstruct : Produces the predicted series scored here.
+    Note:
+        `reconstruct` produces the predicted series scored here.
     """
     indicator_raw: dict[str, dict] = {
         "RMSE": {},
@@ -135,7 +126,7 @@ def compute_accuracy(
         )
         indicator_raw["MAE"][column] = mean_absolute_error(orig_ts, pred_ts)
 
-    return pd.DataFrame(indicator_raw)
+    return cast("pd.DataFrame", pd.DataFrame(indicator_raw))
 
 
 def compute_concurrency(
@@ -174,17 +165,21 @@ def compute_concurrency(
     pred = normalized_predicted[normalized_original.columns]
 
     if len(normalized_original.columns) < 2:
-        return pd.Series(
-            {"correlation_error": np.nan, "rank_correlation_error": np.nan}
+        return cast(
+            "pd.Series",
+            pd.Series({"correlation_error": np.nan, "rank_correlation_error": np.nan}),
         )
 
     def _frob(method: Literal["pearson", "spearman"]) -> float:
         diff = normalized_original.corr(method=method) - pred.corr(method=method)
         return float(np.sqrt(np.square(diff.values).sum()))
 
-    return pd.Series(
-        {
-            "correlation_error": _frob("pearson"),
-            "rank_correlation_error": _frob("spearman"),
-        }
+    return cast(
+        "pd.Series",
+        pd.Series(
+            {
+                "correlation_error": _frob("pearson"),
+                "rank_correlation_error": _frob("spearman"),
+            }
+        ),
     )

@@ -150,8 +150,16 @@ Use `!` after the prefix (e.g. `feat!:`) for breaking changes.
 
 - Follow [PEP 8](https://peps.python.org/pep-0008/) guidelines (enforced by Ruff)
 - Use meaningful variable and function names
-- Add docstrings to public functions and classes
 - Keep functions focused and reasonably sized
+
+### Docstrings
+
+- [Google style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
+  ([napoleon example](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html))
+- No types in docstrings — rely on type annotations (also for return types)
+- No defaults in docstrings when the value is visible in the signature
+- `Args:` for classes the user instantiates (e.g. config classes);
+  `Attributes:` for classes that carry results/stats (e.g. `AggregationResult`)
 
 ## Documentation
 

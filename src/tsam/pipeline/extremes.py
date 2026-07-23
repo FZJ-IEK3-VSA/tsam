@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from tsam.config import ExtremeConfig
 
 
-def _append_col_with(column, append_with: str = " max."):
+def _append_col_with(column: str | tuple, append_with: str = " max.") -> str | tuple:
     """Append a string to the column name. For MultiIndexes, only last level is changed."""
     if isinstance(column, str):
         return column + append_with
@@ -23,7 +23,7 @@ def _append_col_with(column, append_with: str = " max."):
 
 def _detect_extreme(
     profiles_df: pd.DataFrame,
-    column,
+    column: str | tuple,
     series: pd.Series,
     suffix: str,
     extreme_period_no: list,
@@ -80,28 +80,22 @@ def add_extreme_periods(
     | `"new_cluster"` | Like append, but also reassign nearby periods to the new cluster. |
     | `"replace"` | Overwrite the relevant column values in the nearest existing center. |
 
-    Parameters
-    ----------
-    profiles_df
-        Period profiles (weighted if weights are active), searched for extremes.
-    cluster_centers
-        Representatives produced by clustering, to be extended.
-    cluster_order
-        Per-period cluster assignment, updated in place for the chosen method.
-    extremes
-        Which extremes to preserve and how to integrate them.
+    Args:
+        profiles_df: Period profiles (weighted if weights are active), searched
+            for extremes.
+        cluster_centers: Representatives produced by clustering, to be extended.
+        cluster_order: Per-period cluster assignment, updated in place for the
+            chosen method.
+        extremes: Which extremes to preserve and how to integrate them.
 
-    Returns
-    -------
-    tuple
+    Returns:
         ``(new_cluster_centers, new_cluster_order, extreme_cluster_idx,
         extreme_periods_info)`` — the updated center list and assignment, the
         indices of the newly added extreme clusters, and metadata for transfer.
 
-    See Also
-    --------
-    cluster_periods : Produces the clusters this stage augments.
-    rescale_representatives : Skips extreme clusters when correcting means.
+    Note:
+        `cluster_periods` produces the clusters this stage augments, and
+        `rescale_representatives` skips extreme clusters when correcting means.
     """
     columns = profiles_df.columns.get_level_values(0).unique().tolist()
     extreme_periods: dict = {}

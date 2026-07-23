@@ -42,28 +42,21 @@ def segment_typical_periods(
     DataFrames come back: a segmented one (for denormalization) and a predicted
     one (for reconstruction).
 
-    Parameters
-    ----------
-    normalized_typical_periods
-        The formatted typical periods to segment (weighted by the caller).
-    n_timesteps_per_period
-        Timesteps per period before segmentation.
-    segments
-        Segmentation configuration: ``n_segments`` and ``representation``.
-    representation_dict
-        Per-column representation overrides.
-    predef
-        Predefined segment structure, supplied on the transfer path.
+    Args:
+        normalized_typical_periods: The formatted typical periods to segment
+            (weighted by the caller).
+        n_timesteps_per_period: Timesteps per period before segmentation.
+        segments: Segmentation configuration: ``n_segments`` and
+            ``representation``.
+        representation_dict: Per-column representation overrides.
+        predef: Predefined segment structure, supplied on the transfer path.
 
-    Returns
-    -------
-    tuple
+    Returns:
         ``(segmented_df, predicted_segmented_df, segment_center_indices)``.
 
-    See Also
-    --------
-    reconstruct : Expands the segmented periods back to a full series.
-    denormalize : Converts the segmented periods to original units.
+    Note:
+        `reconstruct` expands the segmented periods back to a full series, and
+        `denormalize` converts the segmented periods to original units.
     """
     return segmentation(  # type: ignore[no-any-return]
         normalized_typical_periods,
