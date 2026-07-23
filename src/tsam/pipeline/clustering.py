@@ -39,7 +39,8 @@ def cluster_periods(
     representatives are computed from those columns instead of *candidates* —
     used when period-sum features were appended for clustering distance only.
 
-    **Clustering methods** ([`ClusterConfig.method`][tsam.config.ClusterConfig]):
+    **Clustering methods** — how candidate periods are grouped
+    ([`ClusterConfig.method`][tsam.config.ClusterConfig]):
 
     | Method | Description |
     |---|---|
@@ -50,9 +51,8 @@ def cluster_periods(
     | `"averaging"` | Simple period averaging (1 cluster = mean of all). |
     | `"contiguous"` | Adjacent periods only (preserves temporal order). |
 
-    **Representation methods**
-    ([`ClusterConfig.representation`][tsam.config.ClusterConfig]) — how each
-    cluster's representative period is built:
+    **Representation methods** — how each cluster's representative period is built
+    ([`ClusterConfig.representation`][tsam.config.ClusterConfig]):
 
     | Representation | Description |
     |---|---|
@@ -77,6 +77,9 @@ def cluster_periods(
         representation_candidates: Alternative columns to compute representatives
             from (when period-sum features were appended to ``candidates`` for
             distance only).
+        reference_attribute_idx: Attribute (column) index used by the
+            ``"reference"`` concurrency strategy of the distribution
+            representations; ignored by all other representations.
 
     Returns:
         ``(cluster_centers, cluster_center_indices, cluster_order)`` —
@@ -139,6 +142,9 @@ def cluster_sorted_periods(
         cluster: Clustering configuration.
         representation_dict: Per-column representation overrides.
         n_timesteps_per_period: Timesteps per period.
+        reference_attribute_idx: Attribute (column) index used by the
+            ``"reference"`` concurrency strategy of the distribution
+            representations; ignored by all other representations.
 
     Returns:
         ``(cluster_centers, cluster_center_indices, cluster_order)``.
@@ -207,6 +213,9 @@ def use_predefined_assignments(
         representation_method: Representation to apply when recomputing centers.
         representation_dict: Per-column representation overrides.
         n_timesteps_per_period: Timesteps per period.
+        reference_attribute_idx: Attribute (column) index used by the
+            ``"reference"`` concurrency strategy of the distribution
+            representations; ignored by all other representations.
 
     Returns:
         ``(cluster_centers, cluster_center_indices, cluster_order)``.

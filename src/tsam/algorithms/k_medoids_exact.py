@@ -137,6 +137,19 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         Args:
             distances: Pairwise distances between each row.
             n_clusters: Number of clusters.
+
+        Returns:
+            A tuple ``(medoids, assignments, objective)``:
+
+            - ``medoids``: binary selection vector of length ``n_samples``;
+              ``medoids[i] == 1`` iff period ``i`` is chosen as a medoid
+              (cluster center).
+            - ``assignments``: binary assignment matrix of shape
+              ``(n_samples, n_samples)``; entry ``[i, j]`` is 1 iff candidate
+              ``j`` is assigned to medoid ``i``, so ``assignments.argmax(axis=0)``
+              yields each candidate's medoid index.
+            - ``objective``: the optimal objective value, i.e. the summed
+              distance of all candidates to their assigned medoid.
         """
 
         # Create pyomo model

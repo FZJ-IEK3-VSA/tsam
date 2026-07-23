@@ -19,7 +19,9 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
     Args:
         n_clusters: How many maxoids. Must be positive.
-        distance_metric: What distance metric to use.
+        distance_metric: What distance metric to use. It can be either a
+            self-defined callable or a string supported by scikit-learn,
+            such as ``"euclidean"``.
     """
 
     def __init__(

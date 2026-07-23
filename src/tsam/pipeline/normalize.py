@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
@@ -117,4 +119,4 @@ def denormalize(
         index=result.index,
     )
 
-    return unnormalized
+    return cast("pd.DataFrame", unnormalized)

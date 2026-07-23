@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import time
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -132,7 +132,7 @@ def _apply_weights_df(
     for col, w in weights.items():
         if col in out.columns:
             out[col] *= w
-    return pd.DataFrame(out)
+    return cast("pd.DataFrame", pd.DataFrame(out))
 
 
 def _remove_weights_df(
@@ -145,7 +145,7 @@ def _remove_weights_df(
     for col, w in weights.items():
         if col in out.columns:
             out[col] /= w
-    return pd.DataFrame(out)
+    return cast("pd.DataFrame", pd.DataFrame(out))
 
 
 def _build_weight_vector(
