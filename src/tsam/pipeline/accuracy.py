@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 from tsam.pipeline.normalize import denormalize
 
@@ -107,26 +106,20 @@ def compute_accuracy(
     Note:
         `reconstruct` produces the predicted series scored here.
     """
-    indicator_raw: dict[str, dict] = {
-        "RMSE": {},
-        "RMSE_duration": {},
-        "MAE": {},
-    }
+    orig = normalized_original.to_numpy()
+    pred = normalized_predicted.to_numpy()
 
-    for column in normalized_original.columns:
-        orig_ts = normalized_original[column]
-        pred_ts = normalized_predicted[column]
+    diff = orig - pred
+    duration_diff = np.sort(orig, axis=0) - np.sort(pred, axis=0)
 
-        indicator_raw["RMSE"][column] = np.sqrt(mean_squared_error(orig_ts, pred_ts))
-        indicator_raw["RMSE_duration"][column] = np.sqrt(
-            mean_squared_error(
-                orig_ts.sort_values(ascending=False).reset_index(drop=True),
-                pred_ts.sort_values(ascending=False).reset_index(drop=True),
-            )
-        )
-        indicator_raw["MAE"][column] = mean_absolute_error(orig_ts, pred_ts)
-
-    return cast("pd.DataFrame", pd.DataFrame(indicator_raw))
+    return pd.DataFrame(
+        {
+            "RMSE": np.sqrt((diff**2).mean(axis=0)),
+            "RMSE_duration": np.sqrt((duration_diff**2).mean(axis=0)),
+            "MAE": np.abs(diff).mean(axis=0),
+        },
+        index=normalized_original.columns,
+    )
 
 
 def compute_concurrency(
