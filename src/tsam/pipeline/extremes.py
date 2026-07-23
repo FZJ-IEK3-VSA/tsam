@@ -156,28 +156,33 @@ def add_extreme_periods(
             new_cluster_centers.append(extreme.profile)
             extreme.new_cluster_no = i + len(cluster_centers)
 
-        # A period holds at most one extreme, so this is a 1:1 lookup.
-        extreme_by_step = {extreme.step_no: extreme for extreme in extreme_periods}
+        if extreme_periods:
+            extreme_step_nos = {extreme.step_no for extreme in extreme_periods}
 
-        for i, c_period in enumerate(new_cluster_order):
             # A period that is itself an extreme joins its own new cluster.
-            own_extreme = extreme_by_step.get(i)
-            if own_extreme is not None:
-                new_cluster_order[i] = own_extreme.new_cluster_no
-                continue
-
-            period_profile = profiles_df.iloc[i].values
-            # Find the closest extreme period (deterministic: first match with smallest distance)
-            best_extreme = None
-            best_dist = sum((period_profile - cluster_centers[c_period]) ** 2)
             for extreme in extreme_periods:
-                extreme_dist = sum((period_profile - extreme.profile) ** 2)
-                if extreme_dist < best_dist:
-                    best_dist = extreme_dist
-                    best_extreme = extreme
+                new_cluster_order[extreme.step_no] = extreme.new_cluster_no
 
-            if best_extreme is not None:
-                new_cluster_order[i] = best_extreme.new_cluster_no
+            # Every other period joins the closest extreme cluster, provided
+            # that cluster is closer than the center clustering assigned it.
+            profiles = profiles_df.to_numpy()
+            own_centers = np.asarray(cluster_centers)[np.asarray(cluster_order)]
+            own_dists = ((profiles - own_centers) ** 2).sum(axis=1)
+
+            extreme_profiles = np.asarray(
+                [extreme.profile for extreme in extreme_periods]
+            )
+            extreme_dists = ((profiles[:, None, :] - extreme_profiles) ** 2).sum(axis=2)
+            # argmin keeps the first extreme on ties, matching a strict-improvement
+            # scan over extreme_periods in order.
+            closest = extreme_dists.argmin(axis=1)
+            closest_dists = extreme_dists[np.arange(len(profiles)), closest]
+
+            for period_no in np.nonzero(closest_dists < own_dists)[0]:
+                if int(period_no) not in extreme_step_nos:
+                    new_cluster_order[int(period_no)] = extreme_periods[
+                        closest[period_no]
+                    ].new_cluster_no
 
     elif extremes.method == "replace":
         new_cluster_centers = list(cluster_centers)
