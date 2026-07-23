@@ -3,32 +3,33 @@
 A Python package for aggregating time series data using clustering algorithms.
 Designed for reducing computational load in energy system optimization models.
 
-Quick Start
------------
->>> import pandas as pd
->>> import tsam
->>>
->>> # Load your time series data
->>> df = pd.read_csv("data.csv", index_col=0, parse_dates=True)
->>>
->>> # Aggregate to 8 typical days
->>> result = tsam.aggregate(df, n_clusters=8)
->>>
->>> # Access results
->>> cluster_representatives = result.cluster_representatives
->>> print(f"RMSE: {result.accuracy.rmse.mean():.4f}")
+Examples:
+    >>> import pandas as pd
+    >>> import tsam
+    >>>
+    >>> # Load your time series data
+    >>> df = pd.read_csv("data.csv", index_col=0, parse_dates=True)
+    >>>
+    >>> # Aggregate to 8 typical days
+    >>> result = tsam.aggregate(df, n_clusters=8)
+    >>>
+    >>> # Access results
+    >>> cluster_representatives = result.cluster_representatives
+    >>> print(f"RMSE: {result.accuracy.rmse.mean():.4f}")
 
-For more control, use configuration objects:
+    For more control, use configuration objects:
 
->>> from tsam import aggregate, ClusterConfig, SegmentConfig
->>>
->>> result = aggregate(
-...     df,
-...     n_clusters=8,
-...     cluster=ClusterConfig(method="hierarchical", representation="distribution"),
-...     segments=SegmentConfig(n_segments=12),
-... )
+    >>> from tsam import aggregate, ClusterConfig, SegmentConfig
+    >>>
+    >>> result = aggregate(
+    ...     df,
+    ...     n_clusters=8,
+    ...     cluster=ClusterConfig(method="hierarchical", representation="distribution"),
+    ...     segments=SegmentConfig(n_segments=12),
+    ... )
 """
+
+from types import ModuleType
 
 from tsam.api import aggregate, unstack_to_periods
 
@@ -36,7 +37,7 @@ from tsam.api import aggregate, unstack_to_periods
 _LAZY_MODULES = ("plot", "tuning")
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> ModuleType:
     """Lazy import handler for optional modules."""
     import importlib
 
@@ -53,7 +54,12 @@ from tsam.config import (
     SegmentConfig,
 )
 from tsam.options import options
-from tsam.result import AccuracyMetrics, AggregationResult, ClusteringResult
+from tsam.result import (
+    AccuracyMetrics,
+    AggregationResult,
+    ClusteringResult,
+    ConcurrencyMetrics,
+)
 
 try:
     from tsam._version import __version__
@@ -65,6 +71,7 @@ __all__ = [
     "AggregationResult",
     "ClusterConfig",
     "ClusteringResult",
+    "ConcurrencyMetrics",
     "Distribution",
     "ExtremeConfig",
     "MinMaxMean",

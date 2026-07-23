@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from tsam.commons import bounded_water_fill
 from tsam.options import options
 
 
@@ -40,35 +41,29 @@ def rescale_representatives(
     values are preserved. Columns in ``exclude_columns`` are also skipped —
     useful for binary 0/1 columns that should not be scaled.
 
-    Parameters
-    ----------
-    cluster_periods
-        Unweighted cluster representatives to rescale.
-    cluster_period_no_occur
-        Occurrence count per cluster (the rescaling weights).
-    extreme_cluster_idx
-        Indices of extreme clusters to leave untouched.
-    profiles_df
-        Normalized period profiles, source of the target column means.
-    original_data
-        Original input, defining the column order and totals to match.
-    normalize_column_means
-        Whether column-mean normalization was applied (sets the clip bound).
-    n_timesteps_per_period
-        Timesteps per period, used to reshape the representatives.
-    exclude_columns
-        Columns to skip during rescaling.
+    Args:
+        cluster_periods: Unweighted cluster representatives to rescale.
+        cluster_period_no_occur: Occurrence count per cluster (the rescaling
+            weights).
+        extreme_cluster_idx: Indices of extreme clusters to leave untouched.
+        profiles_df: Normalized period profiles, source of the target column
+            means.
+        original_data: Original input, defining the column order and totals to
+            match.
+        normalize_column_means: Whether column-mean normalization was applied
+            (sets the clip bound).
+        n_timesteps_per_period: Timesteps per period, used to reshape the
+            representatives.
+        exclude_columns: Columns to skip during rescaling.
 
-    Returns
-    -------
-    tuple[np.ndarray, dict]
-        ``(rescaled_periods, deviations_dict)`` — the corrected representatives
-        and per-column residual deviations after rescaling.
+    Returns:
+        A tuple ``(rescaled_periods, deviations_dict)`` — the corrected
+        representatives and per-column residual deviations after rescaling.
 
-    See Also
-    --------
-    cluster_periods : Produces the representatives rescaled here.
-    add_extreme_periods : Its extreme clusters are excluded from rescaling.
+    Note:
+        ``cluster_periods`` produces the representatives rescaled here, and the
+        extreme clusters from ``add_extreme_periods`` are excluded from
+        rescaling.
     """
     columns = list(original_data.columns)
 
@@ -113,38 +108,35 @@ def rescale_representatives(
                 scale_ub * original_data[column].max() / original_data[column].mean()
             )
 
-        # Difference between predicted and original sum
+        # Shape-preserving warm start, then water-fill the residual within
+        # [0, scale_ub] (see bounded_water_fill).
+        target = sum_raw - sum_peak
+        weights_wo_peak = weighting_vec[idx_wo_peak]
+
+        if sum_clu_wo_peak > 0 and target > 0:
+            arr[idx_wo_peak, ci, :] *= target / sum_clu_wo_peak
+        np.nan_to_num(arr[:, ci, :], copy=False, nan=0.0)
+
+        rescaled, converged, iterations = bounded_water_fill(
+            arr[idx_wo_peak, ci, :],
+            weights_wo_peak[:, None],
+            0.0,
+            scale_ub,
+            target,
+            rel_tolerance=options.rescale_tolerance,
+            max_passes=options.rescale_max_iterations,
+        )
+        arr[idx_wo_peak, ci, :] = rescaled
+
+        sum_clu_wo_peak = np.sum(weights_wo_peak * rescaled.sum(axis=1))
         diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
-
-        iteration = 0
-        while (
-            diff > sum_raw * options.rescale_tolerance
-            and iteration < options.rescale_max_iterations
-        ):
-            # Rescale values (only non-extreme clusters)
-            arr[idx_wo_peak, ci, :] *= (sum_raw - sum_peak) / sum_clu_wo_peak
-
-            # Reset values higher than the upper scale or less than zero
-            arr[:, ci, :] = np.clip(arr[:, ci, :], 0, scale_ub)
-
-            # Handle NaN (replace with 0)
-            np.nan_to_num(arr[:, ci, :], copy=False, nan=0.0)
-
-            # Calc new sum and new diff to orig data
-            col_data = arr[:, ci, :]
-            sum_clu_wo_peak = np.sum(
-                weighting_vec[idx_wo_peak] * col_data[idx_wo_peak, :].sum(axis=1)
-            )
-            diff = abs(sum_raw - (sum_clu_wo_peak + sum_peak))
-            iteration += 1
 
         # Calculate and store final deviation
         deviation_pct = (diff / sum_raw) * 100 if sum_raw != 0 else 0.0
-        converged = iteration < options.rescale_max_iterations
         rescale_deviations[column] = {
             "deviation_pct": deviation_pct,
             "converged": converged,
-            "iterations": iteration,
+            "iterations": iterations,
         }
 
         if not converged and deviation_pct > 0.01:

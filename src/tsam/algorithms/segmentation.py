@@ -1,60 +1,74 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
 
 from tsam.algorithms.representations import representations
 
+if TYPE_CHECKING:
+    from tsam.config import Distribution, MinMaxMean
+
 
 def segmentation(
-    normalized_typical_periods,
-    n_segments,
-    n_timesteps_per_period,
-    representation_method=None,
-    representation_dict=None,
-    distribution_period_wise=True,
-    predef_segment_order=None,
-    predef_segment_durations=None,
-    predef_segment_centers=None,
-):
-    """
-    Agglomerative clustering of adjacent time steps within a set of typical periods in order to further reduce the
-    temporal resolution within typical periods and to further reduce complexity of input data.
+    normalized_typical_periods: pd.DataFrame,
+    n_segments: int,
+    n_timesteps_per_period: int,
+    representation_method: str | Distribution | MinMaxMean | None = None,
+    representation_dict: dict[str, str] | None = None,
+    distribution_period_wise: bool = True,
+    predef_segment_order: list | None = None,
+    predef_segment_durations: list | None = None,
+    predef_segment_centers: list | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, list]:
+    """Cluster adjacent time steps within typical periods to reduce resolution.
 
-    :param normalized_typical_periods: MultiIndex DataFrame containing the typical periods as first index, the time steps
-        within the periods as second index and the attributes as columns.
-    :type normalized_typical_periods: pandas DataFrame
+    Agglomerative clustering of adjacent time steps within a set of typical
+    periods in order to further reduce the temporal resolution within typical
+    periods and to further reduce complexity of input data.
 
-    :param n_segments: Number of segments in which the typical periods should be subdivided - equivalent to the number of
-        inner-period clusters.
-    :type n_segments: integer
+    Args:
+        normalized_typical_periods: MultiIndex DataFrame containing the typical
+            periods as first index, the time steps within the periods as second
+            index and the attributes as columns.
+        n_segments: Number of segments in which the typical periods should be
+            subdivided - equivalent to the number of inner-period clusters.
+        n_timesteps_per_period: Number of time steps per period.
+        representation_method: Representation to apply when computing segment
+            values; ``None`` falls back to the default ("mean").
+        representation_dict: Per-column method overrides for the min/max/mean
+            representation.
+        distribution_period_wise: For the distribution representation, preserve
+            the per-cluster duration curve (``True``) or the global one
+            (``False``).
+        predef_segment_order: Predefined segment assignments per timestep, per
+            typical period. If provided, skips clustering and uses these
+            assignments directly. List of lists/arrays, one per typical period.
+        predef_segment_durations: Predefined durations per segment, per typical
+            period. Required if ``predef_segment_order`` is provided. List of
+            lists/arrays, one per typical period.
+        predef_segment_centers: Predefined center indices per segment, per
+            typical period. If provided with ``predef_segment_order``, uses these
+            as segment centers instead of calculating representations. List of
+            lists/arrays, one per typical period.
 
-    :param n_timesteps_per_period: Number of time steps per period
-    :type n_timesteps_per_period: integer
+    Returns:
+        A tuple ``(segmented_typical, predicted_segmented,
+        segment_center_indices_list)`` where:
 
-    :param predef_segment_order: Predefined segment assignments per timestep, per typical period.
-        If provided, skips clustering and uses these assignments directly.
-        List of lists/arrays, one per typical period.
-    :type predef_segment_order: list or None
-
-    :param predef_segment_durations: Predefined durations per segment, per typical period.
-        Required if predef_segment_order is provided.
-        List of lists/arrays, one per typical period.
-    :type predef_segment_durations: list or None
-
-    :param predef_segment_centers: Predefined center indices per segment, per typical period.
-        If provided with predef_segment_order, uses these as segment centers
-        instead of calculating representations.
-        List of lists/arrays, one per typical period.
-    :type predef_segment_centers: list or None
-
-    :returns:     - **segmented_typical** (pandas DataFrame) --  MultiIndex DataFrame similar to
-                    normalized_typical_periods but with segments instead of time steps. Moreover, two additional index
-                    levels define the length of each segment and the time step index at which each segment starts.
-                  - **predicted_segmented** (pandas DataFrame) -- MultiIndex DataFrame with the same
-                    shape of normalized_typical_periods, but with overwritten values derived from segmentation used for
-                    prediction of the original periods and accuracy indicators.
-                  - **segment_center_indices_list** (list) -- List of segment center indices per typical period.
-                    Each entry is a list of indices indicating which timestep is the representative for each segment.
+        - ``segmented_typical`` is a MultiIndex DataFrame similar to
+          ``normalized_typical_periods`` but with segments instead of time steps.
+          Moreover, two additional index levels define the length of each segment
+          and the time step index at which each segment starts.
+        - ``predicted_segmented`` is a MultiIndex DataFrame with the same shape as
+          ``normalized_typical_periods``, but with overwritten values derived from
+          segmentation used for prediction of the original periods and accuracy
+          indicators.
+        - ``segment_center_indices_list`` is a list of segment center indices per
+          typical period. Each entry is a list of indices indicating which
+          timestep is the representative for each segment.
     """
     # Initialize lists for predicted and segmented DataFrame
     segmented_list = []
@@ -119,6 +133,9 @@ def segmentation(
 
         # Check if using predefined segments for this period
         if predef_segment_order is not None:
+            # segment durations are required whenever a segment order is supplied
+            # (see the predef_segment_durations docstring and PredefParams).
+            assert predef_segment_durations is not None
             # Use predefined segment order
             cluster_order = np.asarray(predef_segment_order[period_i])
 
@@ -135,8 +152,12 @@ def segmentation(
             # Determine segment values
             if predef_segment_centers is not None:
                 # Use predefined centers directly
-                segment_center_indices = list(predef_segment_centers[period_i])
-                cluster_centers = segmentation_candidates[segment_center_indices]
+                segment_center_indices: list | None = list(
+                    predef_segment_centers[period_i]
+                )
+                cluster_centers: np.ndarray | list[np.ndarray] = (
+                    segmentation_candidates[segment_center_indices]
+                )
             else:
                 # Calculate representations from predefined order
                 cluster_centers, segment_center_indices = representations(
@@ -170,9 +191,10 @@ def segmentation(
                 label_map[temporal_order] = np.arange(n_segments)
                 cluster_order = label_map[cluster_order]
             # determine the indices where the segments change and the number of time steps in each segment
-            seg_no, indices, segment_no_occur = np.unique(
+            unique_result: tuple[np.ndarray, np.ndarray, np.ndarray] = np.unique(
                 cluster_order, return_index=True, return_counts=True
             )
+            seg_no, indices, segment_no_occur = unique_result
             cluster_order_unique = [cluster_order[index] for index in sorted(indices)]
             # determine the segments' values
             cluster_centers, segment_center_indices = representations(

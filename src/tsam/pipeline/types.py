@@ -21,7 +21,23 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class PipelineConfig:
-    """All non-data parameters for a pipeline run."""
+    """All non-data parameters for a pipeline run.
+
+    Attributes:
+        n_clusters: Number of clusters (typical periods) to form.
+        n_timesteps_per_period: Timesteps in one period.
+        cluster: Clustering configuration.
+        weights: Per-column weights applied to the clustering distance.
+        extremes: Extreme-period configuration, if any.
+        segments: Segmentation configuration, if any.
+        rescale_cluster_periods: Whether to rescale representatives to match
+            the original column means.
+        rescale_exclude_columns: Columns to skip during rescaling.
+        round_decimals: Number of decimals to round outputs to, if set.
+        numerical_tolerance: Tolerance for the output bounds check.
+        temporal_resolution: Time resolution of one timestep, if provided.
+        predef: Predefined assignments for the transfer path, if any.
+    """
 
     n_clusters: int
     n_timesteps_per_period: int
@@ -39,7 +55,16 @@ class PipelineConfig:
 
 @dataclass(frozen=True)
 class PredefParams:
-    """Predefined assignments for transfer/apply (skip clustering)."""
+    """Predefined assignments for transfer/apply (skip clustering).
+
+    Attributes:
+        cluster_order: Per-period cluster assignment to reuse.
+        cluster_center_indices: Stored medoid period indices, if saved.
+        extreme_cluster_idx: Indices of the extreme clusters, if any.
+        segment_order: Stored segment order for the transfer path.
+        segment_durations: Stored segment durations for the transfer path.
+        segment_centers: Stored segment centers for the transfer path.
+    """
 
     cluster_order: list | np.ndarray
     cluster_center_indices: list[int] | np.ndarray | None = None
@@ -51,21 +76,37 @@ class PredefParams:
 
 @dataclass(frozen=True)
 class NormalizedData:
-    """Carries everything needed for denormalization."""
+    """Carries everything needed for denormalization.
 
-    values: pd.DataFrame  # normalized (unweighted) time series
-    scaler: MinMaxScaler  # fitted on original, reusable for inverse_transform
-    normalized_mean: pd.Series  # mean before scale_by_column_means division
-    scale_by_column_means: bool  # whether scale_by_column_means was applied
+    Attributes:
+        values: Normalized (unweighted) time series.
+        scaler: Fitted on the original data, reusable for inverse_transform.
+        normalized_mean: Mean before the scale_by_column_means division.
+        scale_by_column_means: Whether scale_by_column_means was applied.
+    """
+
+    values: pd.DataFrame
+    scaler: MinMaxScaler
+    normalized_mean: pd.Series
+    scale_by_column_means: bool
 
 
 @dataclass(frozen=True)
 class PeriodProfiles:
-    """The 'candidates' matrix + metadata for reconstruction."""
+    """The 'candidates' matrix plus metadata for reconstruction.
 
-    column_index: pd.MultiIndex  # unstacked column structure
-    time_index: pd.Index  # datetime index (possibly extended)
-    profiles_dataframe: pd.DataFrame  # unstacked DataFrame
+    Attributes:
+        column_index: Unstacked column structure.
+        time_index: Datetime index (possibly extended).
+        profiles_dataframe: Unstacked DataFrame.
+        n_timesteps_per_period: Timesteps in one period.
+        n_columns: Number of original columns.
+        n_periods: Number of periods.
+    """
+
+    column_index: pd.MultiIndex
+    time_index: pd.Index
+    profiles_dataframe: pd.DataFrame
     n_timesteps_per_period: int
     n_columns: int
     n_periods: int
@@ -73,7 +114,19 @@ class PeriodProfiles:
 
 @dataclass(frozen=True)
 class PreparedData:
-    """Output of the prepare-data phase (`prepare_data`)."""
+    """Output of the prepare-data phase (`prepare_data`).
+
+    Attributes:
+        norm_data: Normalization state for later denormalization.
+        period_profiles: The unstacked period profiles and metadata.
+        candidates: Candidate period matrix (possibly weighted / augmented).
+        representation_dict: Per-column representation overrides.
+        n_feature_cols: Number of feature columns.
+        original_column_order: Column order of the original input.
+        original_data: Original input data (for rescale, bounds, reconstruct).
+        weight_vector: Per-column weights baked into the candidates, if any.
+        weighted_profiles_df: Weighted period profiles, if weights are active.
+    """
 
     norm_data: NormalizedData
     period_profiles: PeriodProfiles
@@ -81,16 +134,25 @@ class PreparedData:
     representation_dict: dict[str, str]
     n_feature_cols: int
     original_column_order: list[str]
-    original_data: (
-        pd.DataFrame
-    )  # original input data (for rescale, bounds, reconstruct)
+    original_data: pd.DataFrame
     weight_vector: np.ndarray | None = None
     weighted_profiles_df: pd.DataFrame | None = None
 
 
 @dataclass(frozen=True)
 class ClusteringOutput:
-    """Output of the cluster & post-process phase (`cluster_and_postprocess`)."""
+    """Output of the cluster and post-process phase (`cluster_and_postprocess`).
+
+    Attributes:
+        cluster_periods_list: The cluster representatives.
+        cluster_order: Per-period cluster assignment.
+        cluster_counts: Occurrence count per cluster.
+        cluster_center_indices: Medoid period indices, if applicable.
+        extreme_cluster_idx: Indices of the extreme clusters.
+        extreme_periods_info: Metadata about the extreme periods (for transfer).
+        clustering_duration: Wall-clock time spent clustering.
+        rescale_deviations: Per-column residual deviations after rescaling.
+    """
 
     cluster_periods_list: list[np.ndarray]
     cluster_order: np.ndarray
@@ -104,7 +166,15 @@ class ClusteringOutput:
 
 @dataclass(frozen=True)
 class FormattedOutput:
-    """Output of the format & reconstruct phase (`format_and_reconstruct`)."""
+    """Output of the format and reconstruct phase (`format_and_reconstruct`).
+
+    Attributes:
+        typical_periods: The formatted typical periods.
+        reconstructed_data: Full-length reconstruction in original units.
+        normalized_predicted: Full-length reconstruction in normalized units.
+        segmented_df: Segmented typical periods, if segmentation ran.
+        segment_center_indices: Segment center indices, if segmentation ran.
+    """
 
     typical_periods: pd.DataFrame
     reconstructed_data: pd.DataFrame
@@ -119,16 +189,28 @@ class PipelineResult:
 
     The single handoff from the pipeline to `tsam.api` / `tsam.config`, wrapped
     there as the user-facing `AggregationResult`.
+
+    Attributes:
+        typical_periods: Denormalized, MultiIndex (cluster, timestep).
+        cluster_counts: Occurrence count per cluster.
+        n_timesteps_per_period: Timesteps in one period.
+        time_index: Datetime index of the original series.
+        original_data: Original input data.
+        clustering_duration: Wall-clock time spent clustering.
+        rescale_deviations: Per-column residual deviations after rescaling.
+        segmented_df: Segmented normalized typical periods, if segmentation ran.
+        reconstructed_data: Full-length reconstruction in original units.
+        clustering_result: The reusable clustering assignments for transfer.
     """
 
-    typical_periods: pd.DataFrame  # denormalized, MultiIndex (cluster, timestep)
+    typical_periods: pd.DataFrame
     cluster_counts: dict[int, float]
     n_timesteps_per_period: int
     time_index: pd.Index
     original_data: pd.DataFrame
     clustering_duration: float
     rescale_deviations: dict[str, dict]
-    segmented_df: pd.DataFrame | None  # segmentedNormalizedTypicalPeriods
+    segmented_df: pd.DataFrame | None
     reconstructed_data: pd.DataFrame
     _norm_values: pd.DataFrame
     _normalized_predicted: pd.DataFrame
@@ -136,6 +218,7 @@ class PipelineResult:
 
     @cached_property
     def accuracy_indicators(self) -> pd.DataFrame:
+        """Reconstruction accuracy metrics per column, computed on first access."""
         from tsam.pipeline.accuracy import compute_accuracy
 
         return compute_accuracy(self._norm_values, self._normalized_predicted)

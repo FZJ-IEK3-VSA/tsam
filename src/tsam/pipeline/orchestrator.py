@@ -192,6 +192,31 @@ def _build_representation_dict(
     return representation_dict
 
 
+def _resolve_reference_attribute_idx(
+    columns: list,
+    cluster_representation: str | Distribution | MinMaxMean | None,
+) -> int | None:
+    """Map a ``Distribution.reference_attribute`` name to its attribute index.
+
+    ``columns`` must be in the same order as the attribute blocks of the
+    clustering candidates (i.e. the representation dict order), so the returned
+    index lines up with the duration representation.
+    """
+    from tsam.config import Distribution
+
+    if (
+        isinstance(cluster_representation, Distribution)
+        and cluster_representation.reference_attribute is not None
+    ):
+        ref = cluster_representation.reference_attribute
+        if ref not in columns:
+            raise ValueError(
+                f"reference_attribute {ref!r} is not one of the data columns {columns}."
+            )
+        return columns.index(ref)
+    return None
+
+
 def prepare_data(
     data: pd.DataFrame,
     cfg: PipelineConfig,
@@ -214,9 +239,8 @@ def prepare_data(
       [`add_period_sum_features`][tsam.pipeline.periods.add_period_sum_features])*
       — append per-period column sums as extra distance-only features.
 
-    See Also
-    --------
-    cluster_and_postprocess : The phase that consumes these candidates.
+    Note:
+        The candidates produced here are consumed by ``cluster_and_postprocess``.
     """
     cluster = cfg.cluster
     cluster_representation = cluster.get_representation()
@@ -298,15 +322,17 @@ def cluster_and_postprocess(
       — scale non-extreme centers so their occurrence-weighted means match the
       original totals.
 
-    See Also
-    --------
-    prepare_data : The phase that produces the candidates clustered here.
-    format_and_reconstruct : The phase that consumes these representatives.
+    Note:
+        The candidates clustered here come from ``prepare_data``; the resulting
+        representatives are consumed by ``format_and_reconstruct``.
     """
     cluster = cfg.cluster
     cluster_representation = cluster.get_representation()
     candidates = prepared.candidates
     period_profiles = prepared.period_profiles
+    reference_attribute_idx = _resolve_reference_attribute_idx(
+        list(prepared.representation_dict), cluster_representation
+    )
 
     # Cluster
     clustering_duration = 0.0
@@ -320,6 +346,7 @@ def cluster_and_postprocess(
                 cluster_representation,
                 prepared.representation_dict,
                 cfg.n_timesteps_per_period,
+                reference_attribute_idx=reference_attribute_idx,
             )
         )
     else:
@@ -338,6 +365,7 @@ def cluster_and_postprocess(
                 prepared.representation_dict,
                 cfg.n_timesteps_per_period,
                 representation_candidates=rep_candidates,
+                reference_attribute_idx=reference_attribute_idx,
             )
         else:
             cluster_centers, cluster_center_indices, cluster_order = (
@@ -348,6 +376,7 @@ def cluster_and_postprocess(
                     cluster,
                     prepared.representation_dict,
                     cfg.n_timesteps_per_period,
+                    reference_attribute_idx=reference_attribute_idx,
                 )
             )
         clustering_duration = time.time() - t_start
@@ -458,10 +487,9 @@ def format_and_reconstruct(
       bounds check warns about out-of-range values, expand the typical periods
       back to a full-length series; accuracy is computed lazily on the result.
 
-    See Also
-    --------
-    cluster_and_postprocess : The phase that produces the representatives.
-    assemble_result : The phase that packs these outputs into the result.
+    Note:
+        The representatives come from ``cluster_and_postprocess``; the outputs
+        are packed into the result by ``assemble_result``.
     """
     norm_data = prepared.norm_data
     period_profiles = prepared.period_profiles
@@ -550,9 +578,8 @@ def assemble_result(
     to `tsam.api`, which wraps it as the user-facing
     [`AggregationResult`][tsam.result.AggregationResult].
 
-    See Also
-    --------
-    format_and_reconstruct : The phase that produces the outputs packed here.
+    Note:
+        The outputs packed here are produced by ``format_and_reconstruct``.
     """
     from tsam.result import ClusteringResult as _ClusteringResult
 
@@ -621,17 +648,12 @@ def run_pipeline(
     Replaces the v3 ``create_typical_periods()`` + ``predict_original_data()`` +
     ``accuracy_indicators()`` trio.
 
-    Parameters
-    ----------
-    data
-        Input time series with a datetime index, one column per attribute.
-    cfg
-        Fully resolved `PipelineConfig` (clustering, extremes, segmentation,
-        rescaling, and predefined-assignment settings).
+    Args:
+        data: Input time series with a datetime index, one column per attribute.
+        cfg: Fully resolved `PipelineConfig` (clustering, extremes, segmentation,
+            rescaling, and predefined-assignment settings).
 
-    Returns
-    -------
-    PipelineResult
+    Returns:
         The internal result handed to `tsam.api` for wrapping as an
         `AggregationResult`.
     """

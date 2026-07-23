@@ -123,7 +123,41 @@ def test_distributionMinMaxRepresentation():
         predictedPeriods.min(),
     )
 
-    assert np.isclose(raw.mean(), predictedPeriods.mean(), atol=1e-4).all()
+    # distribution + preserve_minmax now enforces the per-cluster envelope
+    # strictly, so the mean can drift slightly in clusters where the old code
+    # would have produced values above the local max. The trade buys a hard
+    # guarantee that the aggregated series never exceeds the input envelope.
+    assert np.isclose(raw.mean(), predictedPeriods.mean(), rtol=5e-3).all()
+
+
+@pytest.mark.filterwarnings("ignore:The cluster is too small:UserWarning")
+def test_distributionMinMaxRepresentation_with_rescale():
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+
+    aggregation = aggregate(
+        raw,
+        n_clusters=24,
+        period_duration=24,
+        segments=SegmentConfig(
+            n_segments=8,
+            representation=Distribution(scope="global", preserve_minmax=True),
+        ),
+        cluster=ClusterConfig(
+            method="hierarchical",
+            use_duration_curves=False,
+            representation=Distribution(scope="global", preserve_minmax=True),
+        ),
+        preserve_column_means=True,  # rescaling enabled
+    )
+
+    predictedPeriods = aggregation.reconstructed
+
+    # The aggregated series must never exceed the input envelope, even with
+    # rescaling active, and the integral is preserved.
+    assert (predictedPeriods.max() <= raw.max() + 1e-10).all()
+    assert (predictedPeriods.min() >= raw.min() - 1e-10).all()
+
+    assert np.isclose(raw.sum(), predictedPeriods.sum(), rtol=5e-3).all()
 
 
 def test_distributionRepresentation_keeps_mean():

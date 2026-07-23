@@ -22,23 +22,16 @@ def validate_weights(
     - min_weight clamping (warns and clamps near-zero weights)
     - Returns None if all weights are effectively 1.0
 
-    Parameters
-    ----------
-    columns : pd.Index
-        Column names from the input data.
-    weights : dict or None
-        Per-column weights. Columns not listed default to 1.0.
+    Args:
+        columns: Column names from the input data.
+        weights: Per-column weights. Columns not listed default to 1.0.
 
-    Returns
-    -------
-    dict or None
+    Returns:
         Validated weights dict, or None if no weighting is needed
         (all weights are 1.0 or input is None/empty).
 
-    Raises
-    ------
-    ValueError
-        If any weight key is not present in *columns*.
+    Raises:
+        ValueError: If any weight key is not present in ``columns``.
     """
     if not weights:
         return None

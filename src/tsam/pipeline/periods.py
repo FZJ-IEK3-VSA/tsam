@@ -35,27 +35,21 @@ def unstack_to_periods(
     last period is padded by repeating the first rows so the reshape succeeds;
     the padded period's weight is corrected later during post-processing.
 
-    Parameters
-    ----------
-    normalized_ts
-        Normalized flat time series (output of `normalize`).
-    n_timesteps_per_period
-        Timesteps in one period, e.g. ``24`` for daily periods of hourly data.
+    Args:
+        normalized_ts: Normalized flat time series (output of `normalize`).
+        n_timesteps_per_period: Timesteps in one period, e.g. ``24`` for daily
+            periods of hourly data.
 
-    Returns
-    -------
-    PeriodProfiles
+    Returns:
         The candidate matrix plus the column ``MultiIndex`` and original time
         index needed to reshape and reconstruct later.
 
-    Raises
-    ------
-    ValueError
-        If the reshaped data contains NaN (indicates malformed input).
+    Raises:
+        ValueError: If the reshaped data contains NaN (indicates malformed
+            input).
 
-    See Also
-    --------
-    add_period_sum_features : Optionally append per-period column sums as
+    Note:
+        `add_period_sum_features` optionally appends per-period column sums as
         extra clustering features.
     """
     unstacked = normalized_ts.copy()
@@ -124,22 +118,18 @@ def add_period_sum_features(
     columns. When per-column weights are active they are already baked into
     ``candidates``, so the sums are appended to the weighted candidates.
 
-    Parameters
-    ----------
-    profiles_df
-        The unstacked period profiles (used to compute per-period sums).
-    candidates
-        Current candidate matrix (possibly already weighted) to augment.
+    Args:
+        profiles_df: The unstacked period profiles (used to compute per-period
+            sums).
+        candidates: Current candidate matrix (possibly already weighted) to
+            augment.
 
-    Returns
-    -------
-    tuple[np.ndarray, int]
+    Returns:
         ``(augmented_candidates, n_extra_features)`` — the second value is the
         number of appended columns, kept so the trim step can remove them.
 
-    See Also
-    --------
-    cluster_periods : Consumes the (possibly augmented) candidate matrix.
+    Note:
+        `cluster_periods` consumes the (possibly augmented) candidate matrix.
     """
     evaluation_values = (
         profiles_df.stack(future_stack=True, level=0).sum(axis=1).unstack(level=1)  # type: ignore[arg-type]

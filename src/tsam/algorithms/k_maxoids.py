@@ -1,4 +1,8 @@
-"""Exact K-maxoids clustering"""
+"""Exact K-maxoids clustering."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import numpy.random as rnd
@@ -6,28 +10,28 @@ from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
-    """
-    k-maxoids class.
+    """k-maxoids class.
 
-    :param n_clusters:  How many maxoids. Must be positive. optional, default: 8
-    :type n_clusters: integer
-
-    :param distance_metric: What distance metric to use. optional, default: 'euclidean'
-    :type distance_metric: string
+    Args:
+        n_clusters: How many maxoids. Must be positive.
+        distance_metric: What distance metric to use.
     """
 
     def __init__(
         self,
-        n_clusters=8,
-        distance_metric="euclidean",
-    ):
+        n_clusters: int = 8,
+        distance_metric: str | Callable = "euclidean",
+    ) -> None:
         self.n_clusters = n_clusters
 
         self.distance_metric = distance_metric
 
-    def _check_init_args(self):
+    def _check_init_args(self) -> None:
         # Check n_clusters
         if (
             self.n_clusters is None
@@ -51,13 +55,15 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
                 + "was given."
             )
 
-    def fit(self, X, y=None):
+    def fit(self, X: np.ndarray, y: object = None) -> KMaxoids:
         """Fit K-Maxoids to the provided data.
 
-        :param X: shape=(n_samples, n_features)
-        :type X: array-like or sparse matrix
+        Args:
+            X: Data of shape (n_samples, n_features).
+            y: Ignored; present for scikit-learn API compatibility.
 
-        :returns: self
+        Returns:
+            self.
         """
 
         self._check_init_args()
@@ -74,7 +80,7 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         return self
 
-    def _check_array(self, X):
+    def _check_array(self, X: np.ndarray) -> np.ndarray:
         X = check_array(X)
 
         # Check that the number of clusters is less than or equal to
@@ -89,7 +95,14 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         return X
 
-    def k_maxoids(self, X, k, n_passes=5, do_logarithmic=False, n_init=100):
+    def k_maxoids(
+        self,
+        X: np.ndarray,
+        k: int,
+        n_passes: int = 5,
+        do_logarithmic: bool = False,
+        n_init: int = 100,
+    ) -> tuple[list[np.ndarray], np.ndarray]:
         x_old = X
         n, _m = X.shape
         inertia_best = None
@@ -103,7 +116,7 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
                 for j in range(n):
                     x = X[j]
                     D = np.sum((M - x) ** 2, axis=1)
-                    i = np.argmin(D)
+                    i = np.argmin(D)  # type: ignore[assignment]
                     d = np.sum((M - M[i]) ** 2, axis=1)
 
                     if do_logarithmic:
