@@ -124,18 +124,28 @@ def maxoid_representation(
 ) -> tuple[list[np.ndarray], list[int]]:
     """Represent each cluster group by its maxoid (Euclidean distance).
 
-    Selects, for each cluster in ``cluster_order``, the candidate farthest from
-    the points of the other clusters.
+    Selects, for each cluster in ``cluster_order``, the member with the greatest
+    summed Euclidean distance to the **whole dataset** — i.e. the most globally
+    extreme period of the cluster.
+
+    Note:
+        The scope is intentionally asymmetric to
+        :func:`medoid_representation`. The medoid minimises distance *within its
+        own cluster* (most central member), whereas the maxoid maximises
+        distance to *all* periods, so it captures a globally extreme period
+        rather than merely the one most peripheral to its own cluster. This
+        also deviates from Sifa et al. (2015), who define the maxoid via the
+        sum of *squared* Euclidean distances; here plain (non-squared) distances
+        are used.
     """
-    # set cluster member that is farthest away from the points of the other clusters as maxoid
     cluster_centers = []
     cluster_center_indices = []
     for cluster_num in np.unique(cluster_order):
         indices = np.where(cluster_order == cluster_num)
-        inner_dist_matrix = euclidean_distances(candidates, candidates[indices])
-        min_dist_idx = np.argmax(inner_dist_matrix.sum(axis=0))
-        cluster_centers.append(candidates[indices][min_dist_idx])
-        cluster_center_indices.append(indices[0][min_dist_idx])
+        dist_to_dataset = euclidean_distances(candidates, candidates[indices])
+        max_dist_idx = np.argmax(dist_to_dataset.sum(axis=0))
+        cluster_centers.append(candidates[indices][max_dist_idx])
+        cluster_center_indices.append(indices[0][max_dist_idx])
 
     return cluster_centers, cluster_center_indices
 
