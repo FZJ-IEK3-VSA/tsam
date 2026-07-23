@@ -97,6 +97,42 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         return X
 
+    @staticmethod
+    def _run_passes(X: np.ndarray, M: np.ndarray, n_passes: int) -> None:
+        """Run the sequential maxoid-replacement passes, updating ``M`` in place.
+
+        Same loop and per-sample decision as the naive implementation, but the
+        three decision inputs (nearest maxoid, sample value, maxoid value) are
+        read from arrays that only need recomputing when a replacement modifies
+        ``M`` — a rare event. The recomputation uses the same
+        ``np.sum((A - b) ** 2, axis=1)`` reduction as the naive per-sample
+        code, so the decisions are bit-identical.
+        """
+        n = X.shape[0]
+        rows = np.arange(n)
+        D_all = np.stack([np.sum((X - m) ** 2, axis=1) for m in M], axis=1)
+        d_med = np.stack([np.sum((M - m) ** 2, axis=1) for m in M], axis=1)
+        np.fill_diagonal(d_med, 0.0)
+
+        def refresh() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+            nearest = np.argmin(D_all, axis=1)
+            zeroed = D_all.copy()
+            zeroed[rows, nearest] = 0.0
+            return nearest, zeroed.sum(axis=1), d_med.sum(axis=1)
+
+        nearest_all, valx_all, valm_all = refresh()
+        for _ in range(n_passes):
+            for j in range(n):
+                nearest = nearest_all[j]
+                if valx_all[j] > valm_all[nearest]:
+                    M[nearest] = X[j]
+                    D_all[:, nearest] = np.sum((X - X[j]) ** 2, axis=1)
+                    d = np.sum((M - X[j]) ** 2, axis=1)
+                    d[nearest] = 0.0
+                    d_med[nearest, :] = d
+                    d_med[:, nearest] = d
+                    nearest_all, valx_all, valm_all = refresh()
+
     def k_maxoids(
         self,
         X: np.ndarray,
@@ -114,26 +150,23 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
             X = X[inds]
             M = np.copy(X[:k])
-            for _ in range(n_passes):
-                for j in range(n):
-                    x = X[j]
-                    D = np.sum((M - x) ** 2, axis=1)
-                    nearest = np.argmin(D)  # type: ignore[assignment]
-                    d = np.sum((M - M[nearest]) ** 2, axis=1)
+            if not do_logarithmic:
+                self._run_passes(X, M, n_passes)
+            else:
+                for _ in range(n_passes):
+                    for j in range(n):
+                        x = X[j]
+                        D = np.sum((M - x) ** 2, axis=1)
+                        nearest = np.argmin(D)  # type: ignore[assignment]
+                        d = np.sum((M - M[nearest]) ** 2, axis=1)
 
-                    if do_logarithmic:
                         D[nearest] = 1.0
                         d[nearest] = 1.0
                         valx = np.prod(D)
                         valm = np.prod(d)
-                    else:
-                        D[nearest] = 0.0
-                        d[nearest] = 0.0
-                        valx = np.sum(D)
-                        valm = np.sum(d)
 
-                    if valx > valm:
-                        M[nearest] = x
+                        if valx > valm:
+                            M[nearest] = x
 
             d_temp = self.distance_func(x_old, Y=list(M))
             inertia_temp = np.sum(np.min(d_temp, axis=1))
