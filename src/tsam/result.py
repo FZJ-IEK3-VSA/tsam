@@ -83,7 +83,7 @@ class AccuracyMetrics:
         )
         if not self.rescale_deviations.empty:
             df["deviation_pct"] = self.rescale_deviations["deviation_pct"]
-        return df
+        return cast("pd.DataFrame", df)
 
     def __repr__(self) -> str:
         rescale_info = ""
@@ -213,15 +213,15 @@ class AggregationResult:
         padded_length = self.clustering.n_original_periods * self.n_timesteps_per_period
         time_index = self.clustering.time_index
         if time_index is None:
-            return pd.RangeIndex(stop=padded_length)
+            return cast("pd.Index", pd.RangeIndex(stop=padded_length))
         if len(time_index) == padded_length:
-            return time_index
+            return cast("pd.Index", time_index)
         # Input length wasn't a multiple of n_timesteps_per_period; extend to the
         # padded length the pipeline produced internally.
         freq = pd.infer_freq(time_index)
         if freq is not None:
             return pd.date_range(time_index[0], periods=padded_length, freq=freq)
-        return pd.RangeIndex(stop=padded_length)
+        return cast("pd.Index", pd.RangeIndex(stop=padded_length))
 
     @cached_property
     def accuracy(self) -> AccuracyMetrics:
@@ -494,7 +494,7 @@ class AggregationResult:
                 )
             result_df["segment_idx"] = segment_indices
 
-        return result_df
+        return cast("pd.DataFrame", result_df)
 
     @cached_property
     def plot(self) -> ResultPlotAccessor:
@@ -633,7 +633,7 @@ def _expand_segments_to_timesteps(
         idx = pd.MultiIndex.from_arrays([[cluster] * n_timesteps, range(n_timesteps)])
         parts.append(pd.DataFrame(values, index=idx, columns=data.columns))
 
-    return pd.concat(parts)
+    return cast("pd.DataFrame", pd.concat(parts))
 
 
 def _expand_periods(
@@ -954,7 +954,7 @@ class ClusteringResult:
                 i in center_set for i in range(len(self.cluster_assignments))
             ]
 
-        return df
+        return cast("pd.DataFrame", df)
 
     def segment_dataframe(self) -> pd.DataFrame | None:
         """Get segment structure as a readable DataFrame.
@@ -973,10 +973,13 @@ class ClusteringResult:
         n_clusters = len(self.segment_durations)
         n_segments = len(self.segment_durations[0])
 
-        return pd.DataFrame(
-            list(self.segment_durations),
-            index=pd.RangeIndex(n_clusters, name="cluster"),
-            columns=pd.RangeIndex(n_segments, name="segment"),
+        return cast(
+            "pd.DataFrame",
+            pd.DataFrame(
+                list(self.segment_durations),
+                index=pd.RangeIndex(n_clusters, name="cluster"),
+                columns=pd.RangeIndex(n_segments, name="segment"),
+            ),
         )
 
     def to_dict(self) -> dict[str, Any]:

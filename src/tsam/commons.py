@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -33,7 +33,7 @@ def time_index_from_dict(
     """Deserialize a DatetimeIndex from either compact or list format."""
     if isinstance(raw, dict):
         return pd.date_range(raw["start"], periods=raw["periods"], freq=raw["freq"])
-    return pd.DatetimeIndex(raw)
+    return cast("pd.DatetimeIndex", pd.DatetimeIndex(raw))
 
 
 def parse_duration_hours(value: int | float | str, param_name: str) -> float:
@@ -58,7 +58,7 @@ def parse_duration_hours(value: int | float | str, param_name: str) -> float:
     if isinstance(value, str):
         try:
             td = pd.Timedelta(value)
-            return td.total_seconds() / 3600
+            return float(td.total_seconds() / 3600)
         except ValueError as e:
             raise ValueError(
                 f"{param_name}: invalid duration string '{value}': {e}"

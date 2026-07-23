@@ -108,31 +108,31 @@ class KMaxoids(BaseEstimator, ClusterMixin, TransformerMixin):
         n, _m = X.shape
         inertia_best = None
 
-        for i in range(n_init):
+        for _ in range(n_init):
             inds = rnd.permutation(np.arange(n))
 
             X = X[inds]
             M = np.copy(X[:k])
-            for t in range(n_passes):
+            for _ in range(n_passes):
                 for j in range(n):
                     x = X[j]
                     D = np.sum((M - x) ** 2, axis=1)
-                    i = np.argmin(D)  # type: ignore[assignment]
-                    d = np.sum((M - M[i]) ** 2, axis=1)
+                    nearest = np.argmin(D)  # type: ignore[assignment]
+                    d = np.sum((M - M[nearest]) ** 2, axis=1)
 
                     if do_logarithmic:
-                        D[i] = 1.0
-                        d[i] = 1.0
+                        D[nearest] = 1.0
+                        d[nearest] = 1.0
                         valx = np.prod(D)
                         valm = np.prod(d)
                     else:
-                        D[i] = 0.0
-                        d[i] = 0.0
+                        D[nearest] = 0.0
+                        d[nearest] = 0.0
                         valx = np.sum(D)
                         valm = np.sum(d)
 
                     if valx > valm:
-                        M[i] = x
+                        M[nearest] = x
 
             d_temp = self.distance_func(x_old, Y=list(M))
             inertia_temp = np.sum(np.min(d_temp, axis=1))
