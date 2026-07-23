@@ -115,7 +115,6 @@ def cluster_periods(
         candidates,
         n_clusters=n_clusters,
         n_iter=_N_ITER,
-        solver=cluster.solver,
         cluster_method=cluster.method,
         representation_method=cluster.get_representation(),
         representation_dict=representation_dict,
@@ -204,7 +203,6 @@ def cluster_sorted_periods(
         n_clusters,
         cluster.method,
         n_iter=_N_ITER_SORTED,
-        solver=cluster.solver,
     )
 
     cluster_centers = []
@@ -270,7 +268,7 @@ def use_predefined_assignments(
         centers, computed_indices = representations(
             candidates,
             predef.cluster_order,  # type: ignore[arg-type]
-            default=DEFAULT_REPRESENTATION[cluster.method],
+            default=DEFAULT_REPRESENTATION[cluster.method_name],
             representation_method=cluster.get_representation(),
             representation_dict=representation_dict,
             n_timesteps_per_period=n_timesteps_per_period,
