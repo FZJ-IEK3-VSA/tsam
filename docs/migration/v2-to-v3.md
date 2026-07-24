@@ -475,7 +475,7 @@ pandas loops with vectorized numpy operations.
     The stable sort breaks ties by position rather than arbitrarily, and
     rounding absorbs ~1e-16 floating-point noise that previously created
     artificial ordering among effectively-equal means. This changes the
-    assignment of representative values to time steps, but preserves all
+    assignment of representative values to timesteps, but preserves all
     statistical properties (same distribution, same min/max, same weighted
     mean).
 

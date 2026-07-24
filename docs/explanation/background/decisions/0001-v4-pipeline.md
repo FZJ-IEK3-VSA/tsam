@@ -14,7 +14,7 @@ The rewrite aimed to address three problems. First, improve understandability fo
 
 ## Decision
 
-The aggregation flow is implemented as a sequence of **pure functions** organised under [`src/tsam/pipeline/`](https://github.com/FZJ-IEK3-VSA/tsam/tree/develop/src/tsam/pipeline), orchestrated by `run_pipeline()` in `pipeline/__init__.py`. Configuration is passed in as immutable dataclasses (`PipelineConfig` composed of `ClusterConfig`, `ExtremeConfig`, `SegmentConfig`). The user-facing entry point is `tsam.aggregate()` in [`src/tsam/api.py`](https://github.com/FZJ-IEK3-VSA/tsam/blob/develop/src/tsam/api.py), which builds the config, calls the pipeline, and wraps the output as an `AggregationResult`.
+The aggregation flow is implemented as a sequence of **pure functions** organized under [`src/tsam/pipeline/`](https://github.com/FZJ-IEK3-VSA/tsam/tree/develop/src/tsam/pipeline), orchestrated by `run_pipeline()` in `pipeline/__init__.py`. Configuration is passed in as immutable dataclasses (`PipelineConfig` composed of `ClusterConfig`, `ExtremeConfig`, `SegmentConfig`). The user-facing entry point is `tsam.aggregate()` in [`src/tsam/api.py`](https://github.com/FZJ-IEK3-VSA/tsam/blob/develop/src/tsam/api.py), which builds the config, calls the pipeline, and wraps the output as an `AggregationResult`.
 
 ## Consequences
 
