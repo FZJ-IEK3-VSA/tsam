@@ -29,7 +29,7 @@ Everything below is a variation on this.
 
 ## Make it smaller
 
-**[Segmentation](segmentation.ipynb)** — keep fewer time steps *within* each period by merging
+**[Segmentation](segmentation.ipynb)** — keep fewer timesteps *within* each period by merging
 adjacent steps into variable-length segments.
 
 **[How small can you go?](tuning.ipynb)** — the accuracy-vs-size trade-off across both levers, and

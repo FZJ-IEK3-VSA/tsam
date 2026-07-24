@@ -20,7 +20,7 @@ aggregation methods generally, see
 | $s$ | timestep in the original, flat series (before periods are formed) |
 | $p = 1 \dots N_p$ | **period** — one candidate row of the period matrix $D$ |
 | $k = 1 \dots N_k$ | **cluster** — $N_k$ = `n_clusters` |
-| $i, j$ | period indices used as *candidate centre* and *assigned period* |
+| $i, j$ | period indices used as *candidate center* and *assigned period* |
 
 ### Values
 
@@ -32,11 +32,11 @@ aggregation methods generally, see
 | $x_p$ | period $p$ as one row-vector of $D$ — a point in $N_a \cdot N_t$ dimensions |
 | $\mathbb{C}_k$ | **cluster $k$**: the set of periods assigned to group $k$ |
 | $\lvert\mathbb{C}_k\rvert$ | **occurrences** of cluster $k$ — how many periods it stands for |
-| $c_k$, $c_{k,a,t}$ | the **centre** (representative) of cluster $k$ |
+| $c_k$, $c_{k,a,t}$ | the **center** (representative) of cluster $k$ |
 | $c^*_{k,a,t}$ | representative after **rescaling** |
 | $c'^*_{k,a,t}$ | representative after **denormalization** — back in physical units |
 | $d_{i,j}$ | distance between periods $i$ and $j$ |
-| $z_{i,j}$ | k-medoids binary: 1 if period $j$ is assigned to centre $i$ |
+| $z_{i,j}$ | k-medoids binary: 1 if period $j$ is assigned to center $i$ |
 | $J$ | total within-cluster distance — the clustering objective |
 
 ## Preprocessing
@@ -56,27 +56,27 @@ timesteps, not columns.
 
 ## Clustering
 
-Distance between a period and a centre, over every $(a, t)$ coordinate:
+Distance between a period and a center, over every $(a, t)$ coordinate:
 
 $$
 \text{dist}(x_p, c_k) = \sqrt{\sum_{a=1}^{N_a} \sum_{t=1}^{N_t} (x_{p,a,t} - c_{k,a,t})^2}
 $$
 
-The objective both k-means and k-medoids minimize — every period measured against the centre
+The objective both k-means and k-medoids minimize — every period measured against the center
 of the cluster it lands in:
 
 $$
 J = \sum_{k=1}^{N_k} \sum_{p \in \mathbb{C}_k} \text{dist}(x_p, c_k)^2
 $$
 
-k-means (Lloyd's algorithm) reaches a *local* optimum by repeatedly moving each centre to the
+k-means (Lloyd's algorithm) reaches a *local* optimum by repeatedly moving each center to the
 mean of its members:
 
 $$
 c_k = \frac{1}{\lvert\mathbb{C}_k\rvert} \sum_{p \in \mathbb{C}_k} x_p
 $$
 
-k-medoids minimizes the *same* $J$ exactly, restricting centres to real periods, which makes
+k-medoids minimizes the *same* $J$ exactly, restricting centers to real periods, which makes
 it a $p$-median MILP over the distance matrix alone:
 
 $$
@@ -106,7 +106,7 @@ $$
 The numerator is the original total; the denominator is what the occurrence-weighted
 representatives sum to before correction. If they already match, the factor is 1.
 
-*Derived in:* [Rescaling and denormalisation](../explanation/how-aggregation-works/05_rescaling.ipynb)
+*Derived in:* [Rescaling and denormalization](../explanation/how-aggregation-works/05_rescaling.ipynb)
 
 ## Denormalization
 
@@ -117,7 +117,7 @@ c'^*_{k,a,t} = c^*_{k,a,t} \left( \max x'_a - \min x'_a \right) + \min x'_a
 \qquad \forall \qquad a
 $$
 
-*Derived in:* [Rescaling and denormalisation](../explanation/how-aggregation-works/05_rescaling.ipynb)
+*Derived in:* [Rescaling and denormalization](../explanation/how-aggregation-works/05_rescaling.ipynb)
 
 ## Output
 

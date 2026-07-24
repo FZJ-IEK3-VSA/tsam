@@ -127,7 +127,7 @@ configuration. Passing `weights=` to `ClusterConfig` now raises `TypeError`.
   whose distribution is preserved is a segment, not a cluster; `"local"` is
   stage-neutral (each group's own distribution) versus `"global"` (the enclosing
   whole's). The old value still works — it is normalized to `"local"` and emits a
-  `FutureWarning` — and is behaviourally identical.
+  `FutureWarning` — and is behaviorally identical.
 
 ## Internal changes (no action required)
 

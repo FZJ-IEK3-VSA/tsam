@@ -17,13 +17,13 @@
 **Time series aggregation for large optimization models — and any other time series.**
 
 ETHOS.TSAM compresses long, high-resolution time series into a small set of
-**typical periods** (e.g. 8 representative days standing in for a whole year) and,
-optionally, into **coarser time steps** within each period. The result keeps the
+**typical periods** (e.g. 8 typical days standing in for a whole year) and,
+optionally, into **coarser timesteps** within each period. The result keeps the
 statistical character of the original data while drastically cutting the number of
-time steps a downstream model has to solve.
+timesteps a downstream model has to solve.
 
 It was built to shrink the temporal complexity of energy system optimization
-models, but it works on any time series — weather, prices, load, behaviour, or all
+models, but it works on any time series — weather, prices, load, behavior, or all
 of them at once.
 
 ```python
@@ -65,7 +65,7 @@ you came for:
   [how small you can go](how-to/tuning.ipynb).
 - **Representations that preserve what matters.** Beyond means and medoids, keep
   the [value distribution](how-to/representations.ipynb) (duration
-  curve), per-time-step min/max, or force **extreme periods** so peaks survive
+  curve), per-timestep min/max, or force **extreme periods** so peaks survive
   aggregation.
 - **Built-in evaluation and plotting.** Every result carries accuracy metrics and
   an interactive `.plot` accessor (Plotly) — see the

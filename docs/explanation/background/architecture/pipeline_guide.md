@@ -21,7 +21,7 @@ output types live in the API reference —
 
 The diagram below traces the user-facing data flow on the left — a **time series**
 and a **`Config`** go into [`aggregate()`][tsam.aggregate], which returns the
-**clustered data** — through the four-phase `run_pipeline()` down the centre, with
+**clustered data** — through the four-phase `run_pipeline()` down the center, with
 the milestone dataclass passed between phases. The right column lists the
 clustering, representation, and segmentation options that Phases 2 and 3 draw on.
 
