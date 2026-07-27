@@ -196,24 +196,56 @@ body[data-md-color-scheme="slate"] .jupyter-wrapper {
  * The two percentages are in the ratio of the logos' natural widths at equal
  * height (TSAM 467.71x151.2 -> 3.09:1; JSA 568.23x81.38 -> 6.98:1), so
  * `height: auto` resolves each from its own aspect ratio and both land at
- * ~66px tall. Equal *widths* would squash the JSA lockup. Together they take
- * 95.3% of the row, leaving room for the `&nbsp;&nbsp;` separator.
+ * ~71px tall. Equal *widths* would squash the JSA lockup.
+ *
+ * The row is a FLEX container, not a line of inline images. Percentages alone
+ * were not enough: as inline content the two logos plus the `&nbsp;&nbsp;`
+ * separator and the newlines between the tags were laid out as a line box, and
+ * the JSA lockup still dropped onto its own line. A flex row does not wrap
+ * (`flex-wrap` defaults to `nowrap`), ignores the whitespace-only text nodes
+ * between the tags entirely, and sizes each item from an explicit `flex-basis`
+ * — so the two logos sit side by side at every viewport width by construction
+ * rather than by arithmetic. `gap` replaces the `&nbsp;&nbsp;` separator.
+ *
+ * Basis 28.5% + 64.3% + 4% gap = 96.8%, and 28.5/3.09 == 64.3/6.98, so both
+ * logos resolve to the same height. The dark-mode twin of each logo is
+ * `display: none` (Material's `#only-light` / `#only-dark` suffix), so it is
+ * not a flex item and consumes no gap.
  *
  * The `.md-typeset` prefix is required to beat Material's ".md-typeset img"
  * rule (specificity 0,1,1), which otherwise forces `height: auto` and wins
  * over a bare class selector. */
 .landing-logos {
+  display: flex;
+  align-items: center;
+  gap: 4%;
   margin-bottom: 1rem;
 }
 
-.md-typeset .hero-logo--tsam {
-  width: 29.5%;
+.md-typeset .hero-logo {
   height: auto;
 }
 
-.md-typeset .hero-logo--jsa {
-  width: 65.8%;
-  height: auto;
+/* `min-width: 0` is required on every item: a flex item defaults to
+   `min-width: auto`, which floors it at its min-content size — for a replaced
+   element that is the image's intrinsic width (TSAM 467.71px, JSA 568.23px,
+   1036px together). That floor beats `flex-basis` and the row overflows the
+   content column. */
+.landing-logos > .hero-logo--tsam {
+  flex: 0 0 28.5%;
+  min-width: 0;
+}
+
+/* The <a> is the flex item; the lockup inside fills it. `line-height: 0` keeps
+   the link box from adding a text line's worth of height below the image. */
+.landing-logos > .hero-logo-link {
+  flex: 0 0 64.3%;
+  min-width: 0;
+  line-height: 0;
+}
+
+.landing-logos > .hero-logo-link > .hero-logo--jsa {
+  width: 100%;
 }
 
 /* -- Notebook styling — nbsphinx / linopy aesthetic ---------------------

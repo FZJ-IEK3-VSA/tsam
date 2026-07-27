@@ -1,8 +1,7 @@
 <p class="landing-logos">
   <img src="assets/tsam-logo-light.svg#only-light" alt="ETHOS.TSAM" class="hero-logo hero-logo--tsam">
   <img src="assets/tsam-logo-dark.svg#only-dark" alt="ETHOS.TSAM" class="hero-logo hero-logo--tsam">
-  &nbsp;&nbsp;
-  <a href="https://www.fz-juelich.de/en/ice/ice-2">
+  <a href="https://www.fz-juelich.de/en/ice/ice-2" class="hero-logo-link">
     <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg#only-light" alt="Jülich Systems Analysis" class="hero-logo hero-logo--jsa">
     <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header-dark.svg#only-dark" alt="Jülich Systems Analysis" class="hero-logo hero-logo--jsa">
   </a>
