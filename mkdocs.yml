@@ -1,5 +1,10 @@
 site_name: ETHOS.TSAM
-site_url: https://tsam.readthedocs.io/
+# Read the Docs serves each version under /en/<version>/, so the bare domain is
+# one path segment short: it makes every <link rel="canonical"> a 404 and breaks
+# the root-absolute asset paths MkDocs bakes into 404.html. RTD passes the real
+# per-version URL in READTHEDOCS_CANONICAL_URL; fall back to the default version
+# for local builds.
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, "https://tsam.readthedocs.io/en/latest/"]
 repo_url: https://github.com/FZJ-IEK3-VSA/tsam
 repo_name: FZJ-IEK3-VSA/tsam
 edit_uri: edit/develop/docs/
@@ -182,6 +187,7 @@ exclude_docs: |
 hooks:
   - docs/hooks/strip_duplicate_mathjax.py
   - docs/hooks/notebook_asset_paths.py
+  - docs/hooks/notebook_toc_anchors.py
 
 extra:
   generator: false

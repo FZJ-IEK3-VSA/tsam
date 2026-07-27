@@ -253,22 +253,22 @@ aggregation = tsam_legacy.TimeSeriesAggregation(
 typical_periods = aggregation.createTypicalPeriods()
 ```
 
-## [2.3.9](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v2.3.9)
+## [2.3.9](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v.2.3.9)
 
 * Improved time series aggregation speed with segmentation (issue #96)
 * Fixed issue #99
 
-## [2.3.8](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v2.3.8)
+## [2.3.8](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v.2.3.8)
 
 * Enhanced time series aggregation speed with segmentation (issue #96)
 
-## [2.3.7](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v2.3.7)
+## [2.3.7](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v.2.3.7)
 
 * Added Python 3.13 support
 * Updated GitHub Actions workflow (ubuntu-20.04 to ubuntu-22.04)
 * Resolved invalid escape sequence error (issue #90)
 
-## [2.3.6](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v2.3.6)
+## [2.3.6](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v.2.3.6)
 
 * Migrated from `setup.py` to `pyproject.toml`
 * Changed project layout from flat to source structure
@@ -337,7 +337,7 @@ typical_periods = aggregation.createTypicalPeriods()
 * Significantly increased test coverage
 * Separation between clustering and representation (e.g., for Ward's hierarchical clustering, the representation by medoids or centroids can now be freely chosen)
 
-## [1.1.0](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v1.1.0)
+## 1.1.0
 
 * Segmentation (clustering of adjacent time steps) according to Pineda et al. (2018)
 * k-MILP: Extension of MILP-based k-medoids clustering for automatic identification of extreme periods according to Zatti et al. (2019)
