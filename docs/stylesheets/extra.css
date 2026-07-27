@@ -187,34 +187,54 @@ body[data-md-color-scheme="slate"] .jupyter-wrapper {
 
 /* -- Landing page logo row (TSAM + JSA side by side) ---------------------
  *
- * Size these by height, not width. The JSA header is a 7.13:1 banner while
- * the TSAM logo is 3.09:1, so equal widths render the JSA lockup ~3.7x
- * shorter and shrink its two lines of institute text past legibility. The
- * README sizes both with height="80px" for the same reason.
- * `object-fit: contain` guards the narrow-viewport case, where `max-width`
- * wins over the intrinsic ratio. */
+ * Sized in PERCENT of the content column rather than in pixels. Two reasons:
+ *
+ * 1. The row used to be sized by height (TSAM 90px, JSA 56px), which came to
+ *    278px + 391px + 2rem = 709px — wider than Material's ~696px content
+ *    column (61rem grid, less two 12.1rem sidebars and padding, at html
+ *    font-size 125%). With `flex-wrap: wrap` the JSA header dropped onto its
+ *    own line instead of sitting beside the TSAM logo.
+ * 2. Every ETHOS docs site uses the same Material grid and sidebars, so a
+ *    given percentage is the same rendered width on all of them. This is what
+ *    keeps the ICE-2 header the same size across TSAM, GeoKit, GLAES and FINE
+ *    — keep `.jsa-logo img` at the same width as `.hero-logo--jsa` in those
+ *    repos' extra.css.
+ *
+ * The two percentages are in the ratio of the logos' natural widths at equal
+ * height (TSAM 467.71x151.2 -> 3.09:1; JSA 568.23x81.38 -> 6.98:1), so
+ * `height: auto` resolves each from its own aspect ratio and both land at
+ * ~66px tall. This is the point the old comment was making — equal *widths*
+ * would squash the JSA lockup — and proportional widths satisfy it.
+ * Together they take 95.3% of the row, leaving room for the 1rem gap.
+ *
+ * The percentages sit on the wrapper divs, not the images: each div is the flex
+ * item, and a percentage width on the image would resolve against that div
+ * (which is itself content-sized) rather than against the row. The images then
+ * fill their item at width: 100%. Only one of the light/dark TSAM wrappers is
+ * ever `display: block`, so only one occupies a flex track. */
 .landing-logos {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 2rem;
-  flex-wrap: wrap;
+  gap: 1rem;
+  flex-wrap: nowrap;
   margin-bottom: 1rem;
 }
 
-.landing-logos .tsam-logo-light img,
-.landing-logos .tsam-logo-dark img {
-  height: 90px;
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
+.landing-logos .tsam-logo-light,
+.landing-logos .tsam-logo-dark {
+  flex: 0 0 29.5%;
+  min-width: 0;
 }
 
-.landing-logos .jsa-logo img {
-  height: 56px;
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
+.landing-logos .jsa-logo {
+  flex: 0 0 65.8%;
+  min-width: 0;
+}
+
+.landing-logos img {
+  width: 100%;
+  height: auto;
 }
 
 /* Invert JSA header in dark mode so it remains visible */
@@ -599,19 +619,23 @@ body[data-md-color-scheme="slate"] .jupyter-wrapper {
   flex-shrink: 0;
 }
 
-/* Height-based for the same reason as the landing row; the JSA lockup needs
-   to run taller than the Helmholtz wordmark, whose glyphs stay legible small.
-   Scoped through the parent so these outrank Material's `.md-typeset img`
-   (specificity 0-1-1), which forces `height: auto` and would otherwise win
-   silently — the Helmholtz SVG has no intrinsic size, so it collapses to
-   0x0 and vanishes when its height is not honoured. */
+/* Height-based here (unlike the landing row): the footer is a fixed-height
+   band rather than a column-width row, and the JSA lockup needs to run taller
+   than the Helmholtz wordmark, whose glyphs stay legible small. Scoped through
+   the parent so these outrank Material's `.md-typeset img` (specificity 0-1-1),
+   which forces `height: auto` and would otherwise win silently — the Helmholtz
+   SVG has no intrinsic size, so it collapses to 0x0 and vanishes when its
+   height is not honoured.
+
+   60px / 33px matches GeoKit and GLAES; keep the three in step so the ICE-2
+   logo is the same size in every ETHOS footer. */
 .footer-institutional__logos .footer-logo--jsa {
-  height: 44px;
+  height: 60px;
   width: auto;
 }
 
 .footer-institutional__logos .footer-logo--helmholtz {
-  height: 24px;
+  height: 33px;
   width: auto;
 }
 

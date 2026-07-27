@@ -1,0 +1,46 @@
+{#-
+  Overrides Material's partials/copyright.html — the block rendered inside
+  .md-footer-meta__inner — to carry the FZJ / Helmholtz institutional branding.
+
+  This leaf partial is overridden in preference to partials/footer.html: the
+  footer shell (the previous/next pagination and the partials/social.html
+  include) then stays owned by Material, so it keeps up with theme releases.
+  Overriding footer.html instead means copying that shell verbatim and freezing
+  it at whatever version it was copied from, and silently dropping the social
+  include for any project that later sets extra.social.
+
+  config.copyright is still honoured if a project sets it. The upstream "Made
+  with Material for MkDocs" line is intentionally not carried over; mkdocs.yml
+  sets extra.generator: false regardless.
+-#}
+{% if config.copyright %}
+  <div class="md-copyright">
+    <div class="md-copyright__highlight">
+      {{ config.copyright }}
+    </div>
+  </div>
+{% endif %}
+<div class="footer-institutional">
+  <div class="footer-institutional__logos">
+    <a href="https://www.fz-juelich.de/en/ice/ice-2" title="Jülich Systems Analysis (ICE-2)">
+      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg" alt="Jülich Systems Analysis" class="footer-logo footer-logo--jsa">
+    </a>
+    <a href="https://www.helmholtz.de/en/" title="Helmholtz Association">
+      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-White-RGB.svg" alt="Helmholtz Association" class="footer-logo footer-logo--helmholtz">
+    </a>
+  </div>
+  <div class="footer-institutional__text">
+    <p>
+      Developed at the
+      <a href="https://www.fz-juelich.de/en/ice/ice-2">Institute of Climate and Energy Systems – Jülich Systems Analysis (ICE-2)</a>,
+      <a href="https://www.fz-juelich.de/en">Forschungszentrum Jülich</a>,
+      a member of the <a href="https://www.helmholtz.de/en/">Helmholtz Association</a>.
+    </p>
+    <p>
+      <a href="https://github.com/FZJ-IEK3-VSA/tsam">GitHub</a> ·
+      <a href="https://github.com/FZJ-IEK3-VSA/tsam/blob/master/LICENSE.txt">MIT License</a> ·
+      <a href="https://www.fz-juelich.de/de/impressum">Imprint</a> ·
+      <a href="https://www.fz-juelich.de/de/datenschutz">Privacy Policy</a>
+    </p>
+  </div>
+</div>

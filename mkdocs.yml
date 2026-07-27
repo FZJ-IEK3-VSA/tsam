@@ -1,5 +1,5 @@
-site_name: ETHOS.TSAM Documentation
-site_url: https://fzj-iek3-vsa.github.io/tsam/
+site_name: ETHOS.TSAM
+site_url: https://tsam.readthedocs.io/
 repo_url: https://github.com/FZJ-IEK3-VSA/tsam
 repo_name: FZJ-IEK3-VSA/tsam
 edit_uri: edit/develop/docs/
@@ -171,10 +171,12 @@ markdown_extensions:
       permalink: true
       toc_depth: 3
 
-# Tooling that lives under docs/ but is not a documentation page.
+# Tooling that lives under docs/ but is not a documentation page. overrides/ is
+# Material theme template source (see theme.custom_dir), likewise not content.
 exclude_docs: |
   scripts/
   hooks/
+  overrides/
 
 # Build hooks (loaded as modules; not affected by exclude_docs above).
 hooks:
