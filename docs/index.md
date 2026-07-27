@@ -1,16 +1,12 @@
-<div class="landing-logos">
-  <div class="tsam-logo-light">
-    <img src="assets/tsam-logo-light.svg" alt="ETHOS.TSAM">
-  </div>
-  <div class="tsam-logo-dark">
-    <img src="assets/tsam-logo-dark.svg" alt="ETHOS.TSAM">
-  </div>
-  <div class="jsa-logo">
-    <a href="https://www.fz-juelich.de/en/iek/iek-3">
-      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg" alt="Jülich System Analysis">
-    </a>
-  </div>
-</div>
+<p class="landing-logos">
+  <img src="assets/tsam-logo-light.svg#only-light" alt="ETHOS.TSAM" class="hero-logo hero-logo--tsam">
+  <img src="assets/tsam-logo-dark.svg#only-dark" alt="ETHOS.TSAM" class="hero-logo hero-logo--tsam">
+  &nbsp;&nbsp;
+  <a href="https://www.fz-juelich.de/en/ice/ice-2">
+    <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg#only-light" alt="Jülich Systems Analysis" class="hero-logo hero-logo--jsa">
+    <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header-dark.svg#only-dark" alt="Jülich Systems Analysis" class="hero-logo hero-logo--jsa">
+  </a>
+</p>
 
 # ETHOS.TSAM
 

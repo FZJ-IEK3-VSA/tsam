@@ -1,23 +1,42 @@
-[![Version](https://img.shields.io/pypi/v/tsam.svg)](https://pypi.python.org/pypi/tsam) [![Conda Version](https://img.shields.io/conda/vn/conda-forge/tsam.svg)](https://anaconda.org/conda-forge/tsam) [![Documentation Status](https://readthedocs.org/projects/tsam/badge/?version=latest)](https://tsam.readthedocs.io/en/latest/) [![PyPI - License](https://img.shields.io/pypi/l/tsam)]((https://github.com/FZJ-IEK3-VSA/tsam/blob/master/LICENSE.txt)) [![codecov](https://codecov.io/gh/FZJ-IEK3-VSA/tsam/branch/develop/graph/badge.svg)](https://codecov.io/gh/FZJ-IEK3-VSA/tsam)
+<!-- markdownlint-disable line-length no-inline-html -->
 
-<p align="left">
-  <a href="https://tsam.readthedocs.io/en/latest/">
+<!-- logo:header:start -->
+<p align="center">
+  <a href="https://tsam.readthedocs.io/">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/tsam-logo-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="docs/assets/tsam-logo-light.svg">
-      <img src="docs/assets/tsam-logo-light.svg" alt="ETHOS.TSAM Logo" height="80px">
+      <source media="(prefers-color-scheme: dark)" srcset="./docs/assets/tsam-logo-dark.svg">
+      <img src="./docs/assets/tsam-logo-light.svg" alt="ETHOS.TSAM logo" height="80">
     </picture>
   </a>
-  <a href="https://www.fz-juelich.de/en/ice/ice-2"><img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg" alt="Jülich System Analysis Header" height="80px"></a>
+  &nbsp;&nbsp;
+  <a href="https://www.fz-juelich.de/en/ice/ice-2">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header-dark.svg">
+      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg" alt="Jülich Systems Analysis" height="80">
+    </picture>
+  </a>
 </p>
+<!-- logo:header:end -->
 
 # ETHOS.TSAM - Time Series Aggregation Module
+
+**Time series aggregation for large optimization models — and any other time series.**
+
+[![PyPI version](https://img.shields.io/pypi/v/tsam.svg)](https://pypi.python.org/pypi/tsam)
+[![conda-forge version](https://img.shields.io/conda/vn/conda-forge/tsam.svg)](https://anaconda.org/conda-forge/tsam)
+[![Tests](https://github.com/FZJ-IEK3-VSA/tsam/actions/workflows/ci-develop.yaml/badge.svg)](https://github.com/FZJ-IEK3-VSA/tsam/actions/workflows/ci-develop.yaml)
+[![Coverage](https://codecov.io/gh/FZJ-IEK3-VSA/tsam/branch/develop/graph/badge.svg)](https://codecov.io/gh/FZJ-IEK3-VSA/tsam)
+[![Documentation](https://readthedocs.org/projects/tsam/badge/?version=latest)](https://tsam.readthedocs.io/en/latest/)
+[![License](https://img.shields.io/pypi/l/tsam)](https://github.com/FZJ-IEK3-VSA/tsam/blob/develop/LICENSE.txt)
+
+<!-- readme-only:start -->
+📖 **Read the full documentation at [tsam.readthedocs.io](https://tsam.readthedocs.io/).**
+<!-- readme-only:end -->
+
 ETHOS.TSAM is a python package which uses different machine learning algorithms for the aggregation of time series. The data aggregation can be performed in two freely combinable dimensions: By representing the time series by a user-defined number of typical periods or by decreasing the temporal resolution.
 ETHOS.TSAM was originally designed for reducing the computational load for large-scale energy system optimization models by aggregating their input data, but is applicable for all types of time series, e.g., weather data, load data, both simultaneously or other arbitrary groups of time series.
 
 ETHOS.TSAM is part of the [Energy Transformation PatHway Optimization Suite (ETHOS) at ICE-2](https://www.fz-juelich.de/de/ice/ice-2/leistungen/model-services). It is tightly integrated into [ETHOS.FINE](https://github.com/FZJ-IEK3-VSA/FINE) to reduce the temporal complexity of energy system models.
-
-The documentation of the ETHOS.TSAM code can be found [**here**](https://tsam.readthedocs.io/).
 
 ## Features
 * flexible handling of multidimensional time-series via the pandas module
@@ -54,14 +73,15 @@ git clone https://github.com/FZJ-IEK3-VSA/tsam.git
 cd tsam
 ```
 
-# Using uv (recommended)
+#### Using uv (recommended)
+
 ```bash
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e ".[develop]"
 ```
 
-# Using conda-forge
+#### Using conda-forge
 
 ```bash
 conda env create -n tsam_env --file=environment.yml
@@ -69,7 +89,8 @@ conda activate tsam_env
 pip install -e . --no-deps
 ```
 
-# Set up pre-commit hooks
+#### Set up pre-commit hooks
+
 ```bash
 pre-commit install
 ```
@@ -81,7 +102,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 [HiGHS](https://github.com/ERGO-Code/HiGHS) is installed by default. For better performance on large problems, commercial solvers (Gurobi, CPLEX) are recommended if you have a license
 
 
-## Examples
+## Getting Started
 
 ### Basic workflow
 
@@ -143,20 +164,32 @@ The documentation is built around runnable notebooks:
 
 The example time series are based on a department [publication](https://www.mdpi.com/1996-1073/10/3/361) and the [test reference years of the DWD](https://www.dwd.de/DE/leistungen/testreferenzjahre/testreferenzjahre.html).
 
-## License
 
-[MIT License](LICENSE.txt)
-
-
-## Citing and further reading
+## Citation
 
 If you want to use ETHOS.TSAM in a published work, **please kindly cite**:
 * Hoffmann et al. (2022):\
 [**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342)
 
+
+## Further reading
+
 The full list of publications behind ETHOS.TSAM and the aggregation methods it implements —
 with open-access links — is kept in one place in the documentation:
 [**Further reading**](https://tsam.readthedocs.io/en/latest/explanation/further-reading/).
+
+
+## Contributions and Support
+All contributions are welcome:
+- If you have a question, want to report a bug, or have a feature request, please open an [Issue](https://github.com/FZJ-IEK3-VSA/tsam/issues/new). We will then take care of the issue as soon as possible.
+- If you want to contribute with additional features or code improvements, open a [Pull request](https://github.com/FZJ-IEK3-VSA/tsam/pulls).
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
+
+
+## License
+
+[MIT License](LICENSE.txt)
 
 
 ## About Us
@@ -169,14 +202,17 @@ Our work focuses on independent, interdisciplinary research in energy, bioeconom
 Please respect our [code of conduct](https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/CODE_CONDUCT.md).
 
 
-## Acknowledgement
+## Acknowledgments
 
 This work is supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050 – A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/) and the program ["Energy System Design"](https://www.esd.kit.edu/index.php) and within the [BMWi/BMWk](https://www.bmwk.de/Navigation/DE/Home/home.html) funded project [**METIS**](https://www.fz-juelich.de/de/ice/ice-2/projekte/metis).
 
-<a href="https://www.helmholtz.de/en/">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-White-RGB.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg">
-    <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg" alt="Helmholtz Logo" width="200px" style="float:right">
-  </picture>
-</a>
+<p align="left">
+  <!-- logo:helmholtz:start -->
+  <a href="https://www.helmholtz.de/en/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-White-RGB.svg">
+      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg" alt="Helmholtz Association" width="200">
+    </picture>
+  </a>
+  <!-- logo:helmholtz:end -->
+</p>
