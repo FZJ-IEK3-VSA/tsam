@@ -382,9 +382,6 @@ def cluster_and_postprocess(
                     period_profiles.n_columns,
                     cfg.n_clusters,
                     cluster,
-                    prepared.representation_dict,
-                    cfg.n_timesteps_per_period,
-                    reference_attribute_idx=reference_attribute_idx,
                 )
             )
         clustering_duration = time.time() - t_start
