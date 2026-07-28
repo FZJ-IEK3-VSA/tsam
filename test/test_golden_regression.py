@@ -58,13 +58,6 @@ _V4_REGRESSIONS: dict[str, str] = {
         "profiles_dataframe and appends them to weighted candidates, so column "
         "weights no longer reach the period-sum features."
     ),
-    "duration_curves_period_sums/testdata": (
-        "include_period_sums + use_duration_curves: v3's _clusterSortedPeriods "
-        "sorted normalizedPeriodlyProfiles (un-augmented); v4's "
-        "cluster_sorted_periods reshapes the *augmented* candidates with "
-        "n_timesteps = n_total // n_columns, which is off by one block and "
-        "sorts across column boundaries."
-    ),
     "segmentation_minmax_mean/testdata": (
         "SegmentConfig(representation=MinMaxMean(...)): v3 overrode "
         "representationDict from the segment representation; v4 only ever "

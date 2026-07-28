@@ -398,8 +398,12 @@ def cluster_candidates(
         else:
             cluster_centers, cluster_center_indices, cluster_order = (
                 cluster_sorted_periods(
-                    candidates,
+                    # Never the augmented matrix: this path reshapes its input
+                    # per column, and the period-sum block is not made of
+                    # timesteps, so including it shifts every column's block.
+                    rep_candidates if rep_candidates is not None else candidates,
                     period_profiles.n_columns,
+                    cfg.n_timesteps_per_period,
                     cfg.n_clusters,
                     cluster,
                 )
