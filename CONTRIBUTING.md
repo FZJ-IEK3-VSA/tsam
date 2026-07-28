@@ -163,7 +163,7 @@ Use `!` after the prefix (e.g. `feat!:`) for breaking changes.
 
 ## Documentation
 
-Documentation is built using [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfun.github.io/mkdocs-material/) and hosted on [Read the Docs](https://tsam.readthedocs.io/).
+Documentation is built using [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) and hosted on [Read the Docs](https://tsam.readthedocs.io/).
 
 ### Building Documentation Locally
 

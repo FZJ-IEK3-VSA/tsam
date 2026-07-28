@@ -986,9 +986,20 @@ class ResultPlotAccessor:
 
         A clustering method never sees day-shapes. It sees each period as a
         single point in an ``n_timesteps x n_attributes`` space and applies a
-        rule for covering those points with ``k`` centres. This plot is that
-        space, projected to two dimensions with PCA, and it is where the
-        difference between methods becomes geometric rather than anecdotal.
+        rule for covering those points with ``k`` centers. This plot is that
+        space, and it is where the difference between methods becomes
+        geometric rather than anecdotal.
+
+        That space has too many dimensions to draw, so it is flattened to two
+        with **principal component analysis (PCA)**: PCA finds the two
+        directions along which the periods differ most and plots each period's
+        position along them. Those two directions are the axes — the *first*
+        and *second principal component*, ``PC 1`` and ``PC 2``. They are
+        mixtures of all timesteps and attributes, so they carry no physical
+        unit and no single meaning; only the *relative positions* of the
+        periods do. The default title reports how much of the original
+        variation the flattening kept — when that share is low, the distances
+        on screen are not the distances the algorithm used.
 
         Two details keep it readable. Periods landing on the same point are
         drawn as **one marker carrying a count** — repeated profiles otherwise
@@ -1004,11 +1015,11 @@ class ResultPlotAccessor:
             you can see how a known grouping relates to the one found. Without
             it markers are filled by cluster.
         show_centers : bool, default True
-            Draw each cluster's centre. A ringed marker means the centre is a
+            Draw each cluster's center. A ringed marker means the center is a
             **real period** (k-medoids, k-maxoids, medoid-based hierarchical);
             a star means it is a **computed mean** that no period matches.
         show_assignments : bool, default True
-            Draw a line from every period to the centre it was assigned to.
+            Draw a line from every period to the center it was assigned to.
         merge_tolerance : float, default 0.04
             How close two periods must be, as a fraction of the plot's widest
             axis, before they are drawn as one counted marker. Only periods in
@@ -1087,7 +1098,7 @@ class ResultPlotAccessor:
 
         fig = go.Figure()
 
-        # Centres first, so period markers sit on top of the assignment lines.
+        # Centers first, so period markers sit on top of the assignment lines.
         center_indices = self._result.clustering.cluster_centers
         center_xy: dict[int, tuple[float, float]] = {}
         real_center: dict[int, bool] = {}
@@ -1175,19 +1186,22 @@ class ResultPlotAccessor:
                             "color": cluster_color[cid],
                             "line": {"color": cluster_color[cid], "width": 3},
                         },
-                        name=f"centre {cid}"
+                        name=f"center {cid}"
                         + (" (real period)" if is_real else " (mean)"),
                         hoverinfo="name",
-                        legendgroup="centres",
-                        legendgrouptitle_text="cluster centres",
+                        legendgroup="centers",
+                        legendgrouptitle_text="cluster centers",
                     )
                 )
 
         fig.update_layout(
             title=title
-            or f"Periods in feature space (2-D PCA, {explained:.0%} of variance)",
-            xaxis_title="PC 1",
-            yaxis_title="PC 2",
+            or (
+                "Periods in feature space "
+                f"(flattened to 2-D, keeping {explained:.0%} of the variation)"
+            ),
+            xaxis_title="main direction in which periods differ (PC 1)",
+            yaxis_title="second direction in which periods differ (PC 2)",
             legend_title_text="period" if labels is not None else "cluster",
             height=520,
         )

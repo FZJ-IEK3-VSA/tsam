@@ -1,5 +1,10 @@
-site_name: ETHOS.TSAM Documentation
-site_url: https://fzj-iek3-vsa.github.io/tsam/
+site_name: ETHOS.TSAM
+# Read the Docs serves each version under /en/<version>/, so the bare domain is
+# one path segment short: it makes every <link rel="canonical"> a 404 and breaks
+# the root-absolute asset paths MkDocs bakes into 404.html. RTD passes the real
+# per-version URL in READTHEDOCS_CANONICAL_URL; fall back to the default version
+# for local builds.
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, "https://tsam.readthedocs.io/en/latest/"]
 repo_url: https://github.com/FZJ-IEK3-VSA/tsam
 repo_name: FZJ-IEK3-VSA/tsam
 edit_uri: edit/develop/docs/
@@ -171,15 +176,18 @@ markdown_extensions:
       permalink: true
       toc_depth: 3
 
-# Tooling that lives under docs/ but is not a documentation page.
+# Tooling that lives under docs/ but is not a documentation page. overrides/ is
+# Material theme template source (see theme.custom_dir), likewise not content.
 exclude_docs: |
   scripts/
   hooks/
+  overrides/
 
 # Build hooks (loaded as modules; not affected by exclude_docs above).
 hooks:
   - docs/hooks/strip_duplicate_mathjax.py
   - docs/hooks/notebook_asset_paths.py
+  - docs/hooks/notebook_toc_anchors.py
 
 extra:
   generator: false
