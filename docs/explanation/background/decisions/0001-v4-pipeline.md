@@ -22,6 +22,6 @@ The aggregation flow is implemented as a sequence of **pure functions** organize
 
 **Easier to test.** Stages can be exercised in isolation by constructing the input dataclass directly. Failures point at the specific stage rather than at a single thousand-line method.
 
-**Public surface is narrower and typed.** Users interact with `tsam.aggregate()`, `ClusterConfig`/`SegmentConfig`/`ExtremeConfig` for inputs, and `AggregationResult` for outputs. Internal types (`PipelineConfig`, `PreparedData`, `ClusteringOutput`, etc.) are not exported.
+**Public surface is narrower and typed.** Users interact with `tsam.aggregate()`, `ClusterConfig`/`SegmentConfig`/`ExtremeConfig` for inputs, and `AggregationResult` for outputs. Internal types (`PipelineConfig`, `PreparedData`, `ClusterAssignment`, etc.) are not exported.
 
 **The legacy API has been removed.** In v3 the legacy `TimeSeriesAggregation.create_typical_periods()` was kept importable and functional, emitting a `LegacyAPIWarning` to flag it as deprecated. v4 completes that deprecation by removing the class-based API entirely; `tsam.aggregate()` is the single entry point. The [v2 to v3 migration guide](../../../migration/v2-to-v3.md) maps every old parameter to its replacement.

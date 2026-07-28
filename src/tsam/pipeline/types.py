@@ -183,52 +183,66 @@ class PreparedData:
 
 
 @dataclass(frozen=True)
-class ClusteringOutput:
-    """Output of the cluster and post-process phase (`cluster_and_postprocess`).
+class ClusterAssignment:
+    """Output of the clustering phase (`cluster_candidates`).
+
+    The raw grouping, before any of the optional adjustments. The
+    representatives are still in weighted space, since the extreme detection
+    that follows has to run there.
 
     Attributes:
-        cluster_periods_list: The cluster representatives.
+        cluster_periods_list: The cluster representatives, still weighted.
         cluster_order: Per-period cluster assignment.
+        cluster_center_indices: Medoid period indices, if applicable.
+        clustering_duration: Wall-clock time spent clustering.
+    """
+
+    cluster_periods_list: list[np.ndarray]
+    cluster_order: np.ndarray
+    cluster_center_indices: list[int] | None
+    clustering_duration: float
+
+
+@dataclass(frozen=True)
+class RefinedRepresentatives:
+    """Output of the refine phase (`refine_representatives`).
+
+    The final set of typical periods, still normalized: everything that can
+    change *which* periods are represented, or *what* they contain, has already
+    happened. What follows only expresses them in the user's units.
+
+    Attributes:
+        normalized_typical_periods: Representatives as a ``(PeriodNum,
+            TimeStep)`` MultiIndex frame, unweighted and still normalized.
+        cluster_order: Per-period cluster assignment, including any extremes.
         cluster_counts: Occurrence count per cluster.
         cluster_center_indices: Medoid period indices, if applicable.
         extreme_cluster_idx: Indices of the extreme clusters.
         extreme_periods: The preserved extreme periods (for transfer).
-        clustering_duration: Wall-clock time spent clustering.
         rescale_deviations: Per-column residual deviations after rescaling.
+        segmented_df: Segmented typical periods, if segmentation ran.
+        predicted_segmented_df: Segment profiles expanded back to full period
+            length, if segmentation ran.
+        segment_center_indices: Segment center indices, if segmentation ran.
+        clustering_duration: Wall-clock time spent clustering.
     """
 
-    cluster_periods_list: list[np.ndarray]
+    normalized_typical_periods: pd.DataFrame
     cluster_order: np.ndarray
     cluster_counts: dict[int, float]
     cluster_center_indices: list[int] | None
     extreme_cluster_idx: list[int]
     extreme_periods: list[ExtremePeriod]
-    clustering_duration: float
     rescale_deviations: dict[str, dict]
-
-
-@dataclass(frozen=True)
-class FormattedOutput:
-    """Output of the format and reconstruct phase (`format_and_reconstruct`).
-
-    Attributes:
-        typical_periods: The formatted typical periods.
-        reconstructed_data: Full-length reconstruction in original units.
-        normalized_predicted: Full-length reconstruction in normalized units.
-        segmented_df: Segmented typical periods, if segmentation ran.
-        segment_center_indices: Segment center indices, if segmentation ran.
-    """
-
-    typical_periods: pd.DataFrame
-    reconstructed_data: pd.DataFrame
-    normalized_predicted: pd.DataFrame
     segmented_df: pd.DataFrame | None
+    predicted_segmented_df: pd.DataFrame | None
     segment_center_indices: list | None
+    clustering_duration: float
 
 
 @dataclass(frozen=True)
 class PipelineResult:
-    """Output of the assemble phase (`assemble_result`).
+    """Output of the final phase (`build_result`).
 
     The single handoff from the pipeline to `tsam.api` / `tsam.config`, wrapped
     there as the user-facing `AggregationResult`.

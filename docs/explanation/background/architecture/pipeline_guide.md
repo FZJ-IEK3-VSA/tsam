@@ -4,9 +4,13 @@ When you call [`tsam.aggregate()`][tsam.aggregate] it builds a configuration and
 hands off to `run_pipeline()`, which runs the aggregation in **four phases**:
 
 1. **Prepare data** — normalize the input and reshape it into clustering candidates.
-2. **Cluster & post-process** — group the periods, add extremes, count, rescale.
-3. **Format & reconstruct** — shape the outputs, denormalize, rebuild the series.
-4. **Assemble** — pack everything into the result object.
+2. **Cluster** — group the periods and pick a representative for each.
+3. **Refine** — the optional adjustments: extremes, rescaling, segmentation.
+4. **Build the result** — denormalize, rebuild the series, pack the result object.
+
+Phases 2 and 3 are split along what is mandatory and what is not: phase 2 is
+the one step every aggregation takes, and everything a caller can switch on or
+off sits in phase 3.
 
 This page is the stable conceptual map of that flow. Each phase below names the
 *stage functions* it runs and links to their full reference — the precise
@@ -29,12 +33,12 @@ clustering, representation, and segmentation options that Phases 2 and 3 draw on
 
 !!! note "Relation to Hoffmann et al. (2020)"
 
-    Phases 1–2 implement the three *feature-based merging* steps from the
+    Phases 1–3 implement the three *feature-based merging* steps from the
     time-series-aggregation review by
     [Hoffmann et al. (2020)](https://www.mdpi.com/1996-1073/13/3/641):
     **Preprocessing and Normalization** (Phase 1), **Algorithms, Distance Metrics,
-    Representation** (Phase 2 clustering), and **Rescaling** (Phase 2 step 4a).
-    Phases 3–4 then reconstruct and package the result. See
+    Representation** (Phase 2), and **Rescaling** (Phase 3 step 4b).
+    Phase 4 then reconstructs and packages the result. See
     [Methodological positioning](context.md#methodological-positioning) for how tsam
     sits in the review's overall taxonomy.
 
@@ -83,58 +87,62 @@ Turns the raw input into the candidate matrix the clustering stage consumes
 **Milestone →** [`PreparedData`][tsam.pipeline.types.PreparedData] — normalized
 data, period profiles, the candidate matrix, and the weight vector.
 
-## Phase 2 — Cluster & post-process
+## Phase 2 — Cluster
 
-Groups the periods, finalizes representatives, and computes how many original
-periods each one stands for (steps 3–4, plus optional `3a` / `4a`). Orchestrated
-by [`cluster_and_postprocess`][tsam.pipeline.orchestrator.cluster_and_postprocess].
+Groups the periods and picks a representative for each (step 3). This is the
+one phase every aggregation runs in full — nothing in it is optional.
+Orchestrated by
+[`cluster_candidates`][tsam.pipeline.orchestrator.cluster_candidates].
 
 3. **Cluster centers** — group periods and pick a representative for each. →
    [`cluster_periods`][tsam.pipeline.clustering.cluster_periods] (the
    [duration-curve][tsam.pipeline.clustering.cluster_sorted_periods] and
    [transfer][tsam.pipeline.clustering.use_predefined_assignments] variants
-   handle `use_duration_curves` and `ClusteringResult.apply()`).
-- **3a · Add extremes** *(optional, [`ExtremeConfig`][tsam.config.ExtremeConfig])*
+   handle `use_duration_curves` and `ClusteringResult.apply()`). Any period-sum
+   features are trimmed back off the representatives afterwards, which stay in
+   weighted space for the extreme detection that follows.
+
+**Milestone →** [`ClusterAssignment`][tsam.pipeline.types.ClusterAssignment] —
+representatives, cluster order, and center indices.
+
+## Phase 3 — Refine
+
+Applies everything that can still change *which* periods are represented or
+*what* they contain (step 4, plus optional `4a` / `4b` / `4c`). Every stage here
+is switchable; with no extremes, no rescaling and no segmentation the phase only
+unweights and counts. Orchestrated by
+[`refine_representatives`][tsam.pipeline.orchestrator.refine_representatives].
+
+- **4a · Add extremes** *(optional, [`ExtremeConfig`][tsam.config.ExtremeConfig])*
   — inject extreme-value periods so peaks and troughs survive. →
   [`add_extreme_periods`][tsam.pipeline.extremes.add_extreme_periods]
-4. **Trim · unweight · count** — strip the period-sum features, divide weights
-   back out, count cluster occurrences, and correct the padded last period's
-   weight.
-- **4a · Rescale** *(optional, `preserve_column_means`)* — scale non-extreme
+4. **Unweight · count** — divide the weights back out, count cluster
+   occurrences, and correct the padded last period's weight.
+- **4b · Rescale** *(optional, `preserve_column_means`)* — scale non-extreme
   centers so their occurrence-weighted means match the original totals. →
   [`rescale_representatives`][tsam.pipeline.rescale.rescale_representatives]
-
-**Milestone →** [`ClusteringOutput`][tsam.pipeline.types.ClusteringOutput] —
-representatives, cluster order, occurrence counts, and extreme/rescale metadata.
-
-## Phase 3 — Format & reconstruct
-
-Shapes the representatives into user-facing DataFrames, returns them to
-original units, and rebuilds the full series with accuracy metrics
-(steps 5–7, plus optional `5a`). Orchestrated by
-[`format_and_reconstruct`][tsam.pipeline.orchestrator.format_and_reconstruct].
-
-5. **Format representatives** — reshape the flat center vectors into a
-   `(PeriodNum, TimeStep)` MultiIndex DataFrame.
-- **5a · Segment** *(optional, [`SegmentConfig`][tsam.config.SegmentConfig])* —
+- **4c · Segment** *(optional, [`SegmentConfig`][tsam.config.SegmentConfig])* —
   merge adjacent timesteps within each period into fewer segments. →
   [`segment_typical_periods`][tsam.pipeline.segmentation.segment_typical_periods]
-6. **Denormalize** — convert the representatives back to the user's units. →
+
+**Milestone →**
+[`RefinedRepresentatives`][tsam.pipeline.types.RefinedRepresentatives] — the
+final typical periods, still normalized, plus occurrence counts and the
+extreme/rescale/segmentation metadata.
+
+## Phase 4 — Build the result
+
+Expresses the refined representatives in the user's units and packs them up
+(steps 5–7). Nothing here changes the aggregation any more. Orchestrated by
+[`build_result`][tsam.pipeline.orchestrator.build_result].
+
+5. **Denormalize** — convert the representatives back to the user's units. →
    [`denormalize`][tsam.pipeline.normalize.denormalize]
-7. **Reconstruct + accuracy** — expand the typical periods back to a
+6. **Reconstruct + accuracy** — expand the typical periods back to a
    full-length series and score it. →
    [`reconstruct`][tsam.pipeline.accuracy.reconstruct],
    [`compute_accuracy`][tsam.pipeline.accuracy.compute_accuracy]
-
-**Milestone →** [`FormattedOutput`][tsam.pipeline.types.FormattedOutput] —
-denormalized typical periods, the reconstructed series, and optional
-segmentation.
-
-## Phase 4 — Assemble
-
-Orchestrated by [`assemble_result`][tsam.pipeline.orchestrator.assemble_result].
-
-8. **Assemble** — build the serializable, transferable
+7. **Assemble** — build the serializable, transferable
    [`ClusteringResult`][tsam.result.ClusteringResult] and pack it with the
    typical periods, counts, reconstruction, and metadata into the result that
    [`tsam.aggregate()`][tsam.aggregate] returns as an

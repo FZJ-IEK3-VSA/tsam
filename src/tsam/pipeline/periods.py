@@ -39,7 +39,7 @@ def unstack_to_periods(
     front in `tsam.aggregate`; the series length itself is never constrained.
     The short last period is filled up by repeating rows from the head of the
     series so the reshape succeeds, and the padding is accounted for
-    afterwards: ``cluster_and_postprocess`` reduces the last cluster's
+    afterwards: ``refine_representatives`` reduces the last cluster's
     occurrence count by the fraction of the period that is padding, and
     reconstruction trims the series back to its original length. The padded
     values therefore reach the clustering distance but never the output.

@@ -115,29 +115,29 @@ pipeline: "pipeline/ · run_pipeline()" {
     class: phase
     grid-rows: 3
     grid-gap: 2
-    title: "Phase 2 · Cluster & post-process" { class: phase_title }
-    body: "cluster → extremes → rescale → count" { class: phase_body }
+    title: "Phase 2 · Cluster" { class: phase_title }
+    body: "cluster → pick representatives" { class: phase_body }
   }
   gap2: "" { class: pad; width: 10; height: 30 }
   p3: "" {
     class: phase
     grid-rows: 2
     grid-gap: 2
-    title: "Phase 3 · Format & reconstruct" { class: phase_title }
-    body: "format → segment → denormalize → reconstruct" { class: phase_body }
+    title: "Phase 3 · Refine (all optional)" { class: phase_title }
+    body: "extremes → unweight, count → rescale → segment" { class: phase_body }
   }
   gap3: "" { class: pad; width: 10; height: 58 }
   p4: "" {
     class: phase
     grid-rows: 2
     grid-gap: 2
-    title: "Phase 4 · Assemble" { class: phase_title }
-    body: "build ClusteringResult + PipelineResult" { class: phase_body }
+    title: "Phase 4 · Build the result" { class: phase_title }
+    body: "denormalize → reconstruct → build ClusteringResult" { class: phase_body }
   }
 
   p1 -> p2: "PreparedData" { style.font-size: 18; style.font-color: "#3f4a55" }
-  p2 -> p3: "ClusteringOutput" { style.font-size: 18; style.font-color: "#3f4a55" }
-  p3 -> p4: "FormattedOutput" { style.font-size: 18; style.font-color: "#3f4a55" }
+  p2 -> p3: "ClusterAssignment" { style.font-size: 18; style.font-color: "#3f4a55" }
+  p3 -> p4: "RefinedRepresentatives" { style.font-size: 18; style.font-color: "#3f4a55" }
 }
 
 # ── Right: algorithms/ — config-agnostic kernels the stages dispatch to ────

@@ -1,10 +1,14 @@
 """Pipeline orchestrator — the four-phase aggregation flow.
 
 `run_pipeline` threads the data through four phases, each a function with an
-explicit input and output: `prepare_data`, `cluster_and_postprocess`,
-`format_and_reconstruct`, `assemble_result`. The individual stages they call
-live in the sibling modules (normalize, periods, clustering, extremes, rescale,
+explicit input and output: `prepare_data`, `cluster_candidates`,
+`refine_representatives`, `build_result`. The individual stages they call live
+in the sibling modules (normalize, periods, clustering, extremes, rescale,
 segmentation, accuracy).
+
+The phases are drawn along what a caller can switch off: preparing and
+clustering always happen, every optional adjustment lives in
+`refine_representatives`, and `build_result` only expresses the outcome.
 """
 
 from __future__ import annotations
@@ -30,23 +34,23 @@ from tsam.pipeline.periods import add_period_sum_features, unstack_to_periods
 from tsam.pipeline.rescale import rescale_representatives
 from tsam.pipeline.segmentation import segment_typical_periods
 from tsam.pipeline.types import (
-    ClusteringOutput,
+    ClusterAssignment,
     ExtremePeriod,
-    FormattedOutput,
     PipelineConfig,
     PipelineResult,
     PredefParams,  # noqa: F401 (re-exported)
     PreparedData,
+    RefinedRepresentatives,
 )
 
 # Only the orchestration entry points are public API of this module. Setting
 # __all__ keeps the imported stage functions (normalize, cluster_periods, …)
 # from being re-documented here — they have their own API-reference pages.
 __all__ = [
-    "assemble_result",
-    "cluster_and_postprocess",
-    "format_and_reconstruct",
+    "build_result",
+    "cluster_candidates",
     "prepare_data",
+    "refine_representatives",
     "run_pipeline",
 ]
 
@@ -268,7 +272,7 @@ def prepare_data(
       — append per-period column sums as extra distance-only features.
 
     Note:
-        The candidates produced here are consumed by ``cluster_and_postprocess``.
+        The candidates produced here are consumed by ``cluster_candidates``.
     """
     cluster = cfg.cluster
     cluster_representation = cluster.get_representation()
@@ -322,37 +326,33 @@ def prepare_data(
     )
 
 
-def cluster_and_postprocess(
+def cluster_candidates(
     prepared: PreparedData,
     cfg: PipelineConfig,
-    data_length: int,
-) -> ClusteringOutput:
-    """Phase 2 — Cluster & post-process: group periods and finalize centers.
+) -> ClusterAssignment:
+    """Phase 2 — Cluster: group the candidate periods.
 
-    Returns a [`ClusteringOutput`][tsam.pipeline.types.ClusteringOutput] with
-    the final representatives, the per-period assignment, and the occurrence
-    counts. In order:
+    Returns a [`ClusterAssignment`][tsam.pipeline.types.ClusterAssignment]:
+    which cluster each period belongs to, and one representative per cluster.
+    This phase does nothing optional — it is the one step every aggregation
+    takes. One of three paths runs:
 
-    - **Cluster** ([`cluster_periods`][tsam.pipeline.clustering.cluster_periods],
-      or [`cluster_sorted_periods`][tsam.pipeline.clustering.cluster_sorted_periods]
-      for duration curves, or
-      [`use_predefined_assignments`][tsam.pipeline.clustering.use_predefined_assignments]
-      on the transfer path) — group periods and pick a representative for each.
-    - **Add extremes** *(optional,
-      [`add_extreme_periods`][tsam.pipeline.extremes.add_extreme_periods])* —
-      inject extreme-value periods so peaks/troughs survive.
-    - **Trim · unweight · count** — strip the period-sum features, divide
-      weights back out of every representative (so downstream stages see
-      unweighted data), count how many original periods fall in each cluster,
-      and correct the padded last period's weight.
-    - **Rescale** *(optional,
-      [`rescale_representatives`][tsam.pipeline.rescale.rescale_representatives])*
-      — scale non-extreme centers so their occurrence-weighted means match the
-      original totals.
+    - [`cluster_periods`][tsam.pipeline.clustering.cluster_periods] — the
+      default: group by temporal shape and apply the configured representation.
+    - [`cluster_sorted_periods`][tsam.pipeline.clustering.cluster_sorted_periods]
+      — when ``ClusterConfig.use_duration_curves`` is set: group by value
+      distribution instead.
+    - [`use_predefined_assignments`][tsam.pipeline.clustering.use_predefined_assignments]
+      — the transfer path, replaying a stored clustering on new data.
+
+    Any period-sum features appended for the clustering distance are trimmed
+    off the representatives afterwards. The representatives stay in weighted
+    space: extreme detection in the next phase needs them that way, and it
+    unweights everything in one go once the set of representatives is final.
 
     Note:
-        The candidates clustered here come from ``prepare_data``; the resulting
-        representatives are consumed by ``format_and_reconstruct``.
+        The candidates come from ``prepare_data``; the representatives are
+        adjusted by ``refine_representatives``.
     """
     cluster = cfg.cluster
     cluster_representation = cluster.get_representation()
@@ -362,9 +362,9 @@ def cluster_and_postprocess(
         prepared.attribute_columns, cluster_representation
     )
 
-    # Cluster
+    # Cluster. Only the transfer path leaves the duration at zero — it does no
+    # clustering to time.
     clustering_duration = 0.0
-    cluster_center_indices: list[int] | None = None
 
     if cfg.predef is not None:
         cluster_centers, cluster_center_indices, cluster_order = (
@@ -414,6 +414,55 @@ def cluster_and_postprocess(
         center[: prepared.n_feature_cols] for center in cluster_centers
     ]
 
+    return ClusterAssignment(
+        cluster_periods_list=cluster_periods_list,
+        cluster_order=cluster_order,
+        cluster_center_indices=cluster_center_indices,
+        clustering_duration=clustering_duration,
+    )
+
+
+def refine_representatives(
+    prepared: PreparedData,
+    assignment: ClusterAssignment,
+    cfg: PipelineConfig,
+    data_length: int,
+) -> RefinedRepresentatives:
+    """Phase 3 — Refine: apply the optional adjustments to the representatives.
+
+    Returns a
+    [`RefinedRepresentatives`][tsam.pipeline.types.RefinedRepresentatives] —
+    the final typical periods, still normalized. Every stage that can change
+    *which* periods are represented or *what* they contain lives here, and each
+    one is optional; with no extremes, no rescaling and no segmentation this
+    phase only unweights and counts. In order:
+
+    - **Add extremes** *(optional,
+      [`add_extreme_periods`][tsam.pipeline.extremes.add_extreme_periods])* —
+      inject extreme-value periods so peaks/troughs survive the averaging.
+      Runs before unweighting, in the weighted space the previous phase left
+      the representatives in.
+    - **Unweight · count** — divide the weights back out of every
+      representative, count how many original periods each cluster stands for,
+      and reduce the last count if the final period was padded.
+    - **Rescale** *(optional,
+      [`rescale_representatives`][tsam.pipeline.rescale.rescale_representatives])*
+      — scale non-extreme centers so their occurrence-weighted means match the
+      original totals.
+    - **Segment** *(optional,
+      [`segment_typical_periods`][tsam.pipeline.segmentation.segment_typical_periods])*
+      — merge adjacent timesteps within each period into fewer segments. Runs
+      in weighted space again, so that high-weight columns have more say in
+      where the segment boundaries fall; the weights come back out afterwards.
+
+    Note:
+        The representatives come from ``cluster_candidates``; ``build_result``
+        turns the refined set into the user-facing result.
+    """
+    period_profiles = prepared.period_profiles
+    cluster_periods_list = assignment.cluster_periods_list
+    cluster_order = assignment.cluster_order
+
     # Add extreme periods if configured
     # Extremes run in weighted space (matching develop): weighted profiles
     # determine which period is extreme, and extracted profiles carry weights.
@@ -429,7 +478,7 @@ def cluster_and_postprocess(
         )
         (
             cluster_periods_list,
-            cluster_order,
+            extended_order,
             extreme_cluster_idx,
             extreme_periods,
         ) = add_extreme_periods(
@@ -438,7 +487,7 @@ def cluster_and_postprocess(
             cluster_order,
             cfg.extremes,
         )
-        cluster_order = np.asarray(cluster_order)
+        cluster_order = np.asarray(extended_order)
     else:
         if cfg.predef is not None and cfg.predef.extreme_cluster_idx is not None:
             extreme_cluster_idx = list(cfg.predef.extreme_cluster_idx)
@@ -477,51 +526,9 @@ def cluster_and_postprocess(
             / cfg.n_timesteps_per_period
         )
 
-    return ClusteringOutput(
-        cluster_periods_list=cluster_periods_list,
-        cluster_order=cluster_order,
-        cluster_counts=cluster_counts,
-        cluster_center_indices=cluster_center_indices,
-        extreme_cluster_idx=extreme_cluster_idx,
-        extreme_periods=extreme_periods,
-        clustering_duration=clustering_duration,
-        rescale_deviations=rescale_deviations,
-    )
-
-
-def format_and_reconstruct(
-    prepared: PreparedData,
-    clustered: ClusteringOutput,
-    cfg: PipelineConfig,
-) -> FormattedOutput:
-    """Phase 3 — Format & reconstruct: shape outputs and measure accuracy.
-
-    Returns a [`FormattedOutput`][tsam.pipeline.types.FormattedOutput]. In order:
-
-    - **Format representatives** — reshape the flat center vectors into a
-      ``(PeriodNum, TimeStep)`` MultiIndex DataFrame.
-    - **Segment** *(optional,
-      [`segment_typical_periods`][tsam.pipeline.segmentation.segment_typical_periods])*
-      — merge adjacent timesteps within each period into fewer segments. Runs
-      in weighted space; weights are removed from the outputs afterwards.
-    - **Denormalize** ([`denormalize`][tsam.pipeline.normalize.denormalize]) —
-      convert the representatives back to the user's original units.
-    - **Reconstruct + accuracy**
-      ([`reconstruct`][tsam.pipeline.accuracy.reconstruct],
-      [`compute_accuracy`][tsam.pipeline.accuracy.compute_accuracy]) — after a
-      bounds check warns about out-of-range values, expand the typical periods
-      back to a full-length series; accuracy is computed lazily on the result.
-
-    Note:
-        The representatives come from ``cluster_and_postprocess``; the outputs
-        are packed into the result by ``assemble_result``.
-    """
-    norm_data = prepared.norm_data
-    period_profiles = prepared.period_profiles
-
     # Format representatives to MultiIndex DataFrame
     normalized_typical_periods = _representatives_to_dataframe(
-        clustered.cluster_periods_list, period_profiles.column_index
+        cluster_periods_list, period_profiles.column_index
     )
 
     # Segmentation if configured
@@ -546,12 +553,61 @@ def format_and_reconstruct(
         )
         segmented_df = _remove_weights_df(segmented_df, weights)
         predicted_segmented_df = _remove_weights_df(predicted_segmented_df, weights)
-        segmented_normalized = segmented_df.reset_index(level=3, drop=True)
-        denorm_source = segmented_normalized
-        reconstruct_source = predicted_segmented_df
+
+    return RefinedRepresentatives(
+        normalized_typical_periods=normalized_typical_periods,
+        cluster_order=cluster_order,
+        cluster_counts=cluster_counts,
+        cluster_center_indices=assignment.cluster_center_indices,
+        extreme_cluster_idx=extreme_cluster_idx,
+        extreme_periods=extreme_periods,
+        rescale_deviations=rescale_deviations,
+        segmented_df=segmented_df,
+        predicted_segmented_df=predicted_segmented_df,
+        segment_center_indices=segment_center_indices,
+        clustering_duration=assignment.clustering_duration,
+    )
+
+
+def build_result(
+    prepared: PreparedData,
+    refined: RefinedRepresentatives,
+    cfg: PipelineConfig,
+) -> PipelineResult:
+    """Phase 4 — Build the result: express the representatives and pack them up.
+
+    Returns the [`PipelineResult`][tsam.pipeline.types.PipelineResult], the
+    single handoff to `tsam.api`, which wraps it as the user-facing
+    [`AggregationResult`][tsam.result.AggregationResult]. Nothing here changes
+    the aggregation any more; it only expresses the refined representatives and
+    packages them. In order:
+
+    - **Denormalize** ([`denormalize`][tsam.pipeline.normalize.denormalize]) —
+      convert the representatives back to the user's original units.
+    - **Reconstruct + accuracy**
+      ([`reconstruct`][tsam.pipeline.accuracy.reconstruct],
+      [`compute_accuracy`][tsam.pipeline.accuracy.compute_accuracy]) — after a
+      bounds check warns about out-of-range values, expand the typical periods
+      back to a full-length series; accuracy is computed lazily on the result.
+    - **Assemble** — build the serializable, transferable
+      [`ClusteringResult`][tsam.result.ClusteringResult] from the cluster order,
+      center indices, extremes and segmentation, and pack it together with the
+      typical periods, counts, reconstructed series and metadata.
+
+    Note:
+        The representatives come from ``refine_representatives``.
+    """
+    from tsam.result import ClusteringResult as _ClusteringResult
+
+    norm_data = prepared.norm_data
+    period_profiles = prepared.period_profiles
+
+    if refined.segmented_df is not None and refined.predicted_segmented_df is not None:
+        denorm_source = refined.segmented_df.reset_index(level=3, drop=True)
+        reconstruct_source = refined.predicted_segmented_df
     else:
-        denorm_source = normalized_typical_periods
-        reconstruct_source = normalized_typical_periods
+        denorm_source = refined.normalized_typical_periods
+        reconstruct_source = refined.normalized_typical_periods
 
     # Denormalize -> typical_periods
     typical_periods = denormalize(denorm_source, norm_data)
@@ -566,7 +622,7 @@ def format_and_reconstruct(
     # Reconstruct + compute accuracy
     reconstructed_data, normalized_predicted = reconstruct(
         reconstruct_source,
-        clustered.cluster_order,
+        refined.cluster_order,
         period_profiles,
         norm_data,
         prepared.original_data,
@@ -578,36 +634,6 @@ def format_and_reconstruct(
     typical_periods = typical_periods[prepared.original_column_order]
     reconstructed_data = reconstructed_data[prepared.original_column_order]
 
-    return FormattedOutput(
-        typical_periods=typical_periods,
-        reconstructed_data=reconstructed_data,
-        normalized_predicted=normalized_predicted,
-        segmented_df=segmented_df,
-        segment_center_indices=segment_center_indices,
-    )
-
-
-def assemble_result(
-    prepared: PreparedData,
-    clustered: ClusteringOutput,
-    formatted: FormattedOutput,
-    cfg: PipelineConfig,
-) -> PipelineResult:
-    """Phase 4 — Assemble: pack everything into the pipeline result.
-
-    Builds a serializable, transferable
-    [`ClusteringResult`][tsam.result.ClusteringResult] from the cluster order,
-    center indices, extremes, and segmentation, then packs it with the typical
-    periods, counts, reconstructed series, and metadata into a
-    [`PipelineResult`][tsam.pipeline.types.PipelineResult] — the single handoff
-    to `tsam.api`, which wraps it as the user-facing
-    [`AggregationResult`][tsam.result.AggregationResult].
-
-    Note:
-        The outputs packed here are produced by ``format_and_reconstruct``.
-    """
-    from tsam.result import ClusteringResult as _ClusteringResult
-
     original_data_out = prepared.original_data[prepared.original_column_order]
 
     input_time_index = (
@@ -617,12 +643,12 @@ def assemble_result(
     )
 
     clustering_result = _ClusteringResult.from_pipeline(
-        cluster_center_indices=clustered.cluster_center_indices,
-        extreme_periods=clustered.extreme_periods,
+        cluster_center_indices=refined.cluster_center_indices,
+        extreme_periods=refined.extreme_periods,
         extremes_config=cfg.extremes,
-        cluster_order=clustered.cluster_order,
-        segmented_df=formatted.segmented_df,
-        segment_center_indices=formatted.segment_center_indices,
+        cluster_order=refined.cluster_order,
+        segmented_df=refined.segmented_df,
+        segment_center_indices=refined.segment_center_indices,
         n_timesteps_per_period=cfg.n_timesteps_per_period,
         temporal_resolution=cfg.temporal_resolution,
         original_data=original_data_out,
@@ -630,23 +656,23 @@ def assemble_result(
         segment_config=cfg.segments,
         rescale_cluster_periods=cfg.rescale_cluster_periods,
         rescale_exclude_columns=cfg.rescale_exclude_columns or [],
-        extreme_cluster_idx=clustered.extreme_cluster_idx,
+        extreme_cluster_idx=refined.extreme_cluster_idx,
         weights=cfg.weights,
         time_index=input_time_index,
     )
 
     return PipelineResult(
-        typical_periods=formatted.typical_periods,
-        cluster_counts=clustered.cluster_counts,
+        typical_periods=typical_periods,
+        cluster_counts=refined.cluster_counts,
         n_timesteps_per_period=cfg.n_timesteps_per_period,
         time_index=prepared.period_profiles.time_index,
         original_data=original_data_out,
-        clustering_duration=clustered.clustering_duration,
-        rescale_deviations=clustered.rescale_deviations,
-        segmented_df=formatted.segmented_df,
-        reconstructed_data=formatted.reconstructed_data,
+        clustering_duration=refined.clustering_duration,
+        rescale_deviations=refined.rescale_deviations,
+        segmented_df=refined.segmented_df,
+        reconstructed_data=reconstructed_data,
         _norm_values=prepared.norm_data.values,
-        _normalized_predicted=formatted.normalized_predicted,
+        _normalized_predicted=normalized_predicted,
         clustering_result=clustering_result,
     )
 
@@ -663,12 +689,16 @@ def run_pipeline(
 
     1. [`prepare_data`][tsam.pipeline.orchestrator.prepare_data] — normalize,
        unstack, weight, augment.
-    2. [`cluster_and_postprocess`][tsam.pipeline.orchestrator.cluster_and_postprocess]
-       — cluster, add extremes, count, rescale.
-    3. [`format_and_reconstruct`][tsam.pipeline.orchestrator.format_and_reconstruct]
-       — format, segment, denormalize, reconstruct.
-    4. [`assemble_result`][tsam.pipeline.orchestrator.assemble_result] — build
-       the `ClusteringResult` and `PipelineResult`.
+    2. [`cluster_candidates`][tsam.pipeline.orchestrator.cluster_candidates] —
+       group the periods and pick a representative for each.
+    3. [`refine_representatives`][tsam.pipeline.orchestrator.refine_representatives]
+       — the optional adjustments: extremes, rescaling, segmentation.
+    4. [`build_result`][tsam.pipeline.orchestrator.build_result] — denormalize,
+       reconstruct, and pack the `ClusteringResult` and `PipelineResult`.
+
+    Phases 2 and 3 are split along what is mandatory and what is not: phase 2
+    is the one step every aggregation takes, phase 4 only expresses what phase
+    3 settled on. Everything a caller can switch on or off sits in phase 3.
 
     Replaces the v3 ``create_typical_periods()`` + ``predict_original_data()`` +
     ``accuracy_indicators()`` trio.
@@ -684,21 +714,13 @@ def run_pipeline(
     """
     prepared = prepare_data(data, cfg)
 
-    clustered = cluster_and_postprocess(
+    assignment = cluster_candidates(prepared, cfg)
+
+    refined = refine_representatives(
         prepared,
+        assignment,
         cfg,
         data_length=len(data),
     )
 
-    formatted = format_and_reconstruct(
-        prepared,
-        clustered,
-        cfg,
-    )
-
-    return assemble_result(
-        prepared,
-        clustered,
-        formatted,
-        cfg,
-    )
+    return build_result(prepared, refined, cfg)
