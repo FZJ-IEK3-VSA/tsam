@@ -351,7 +351,7 @@ def cluster_and_postprocess(
             use_predefined_assignments(
                 candidates,
                 cfg.predef,
-                cluster_representation,
+                cluster,
                 prepared.representation_dict,
                 cfg.n_timesteps_per_period,
                 reference_attribute_idx=reference_attribute_idx,

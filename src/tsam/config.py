@@ -25,6 +25,20 @@ RepresentationMethod = Literal[
     "minmax_mean",
 ]
 
+# Representation each clustering method falls back to when
+# ``ClusterConfig.representation`` is not set: mean-based methods are
+# represented by the cluster mean, medoid-based methods by the medoid, and
+# kmaxoids by the maxoid. This is the single source of these defaults — resolve
+# them through ``ClusterConfig.get_representation`` rather than repeating them.
+DEFAULT_REPRESENTATION: dict[ClusterMethod, RepresentationMethod] = {
+    "averaging": "mean",
+    "kmeans": "mean",
+    "kmedoids": "medoid",
+    "kmaxoids": "maxoid",
+    "hierarchical": "medoid",
+    "contiguous": "medoid",
+}
+
 ExtremeMethod = Literal[
     "append",
     "replace",
@@ -312,20 +326,10 @@ class ClusterConfig:
         return f"ClusterConfig({parts})"
 
     def get_representation(self) -> Representation:
-        """Get the representation, using default if not specified."""
+        """Get the representation, using the method's default if not specified."""
         if self.representation is not None:
             return self.representation
-
-        # Default representation based on clustering method
-        defaults: dict[ClusterMethod, RepresentationMethod] = {
-            "averaging": "mean",
-            "kmeans": "mean",
-            "kmedoids": "medoid",
-            "kmaxoids": "maxoid",
-            "hierarchical": "medoid",
-            "contiguous": "medoid",
-        }
-        return defaults.get(self.method, "mean")
+        return DEFAULT_REPRESENTATION.get(self.method, "mean")
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""

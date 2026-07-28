@@ -12,9 +12,10 @@ import numpy as np
 
 from tsam.algorithms.clustering import cluster_and_represent
 from tsam.algorithms.representations import representations
+from tsam.config import DEFAULT_REPRESENTATION
 
 if TYPE_CHECKING:
-    from tsam.config import ClusterConfig, Distribution, MinMaxMean
+    from tsam.config import ClusterConfig
     from tsam.pipeline.types import PredefParams
 
 
@@ -193,7 +194,7 @@ def cluster_sorted_periods(
 def use_predefined_assignments(
     candidates: np.ndarray,
     predef: PredefParams,
-    representation_method: str | Distribution | MinMaxMean | None,
+    cluster: ClusterConfig,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
     reference_attribute_idx: int | None = None,
@@ -210,7 +211,8 @@ def use_predefined_assignments(
         candidates: Candidate period matrix for the new data.
         predef: Predefined assignments (``cluster_order`` and optional center
             indices).
-        representation_method: Representation to apply when recomputing centers.
+        cluster: Clustering configuration; supplies the representation applied
+            when recomputing centers.
         representation_dict: Per-column representation overrides.
         n_timesteps_per_period: Timesteps per period.
         reference_attribute_idx: Attribute (column) index used by the
@@ -233,8 +235,8 @@ def use_predefined_assignments(
         centers, computed_indices = representations(
             candidates,
             predef.cluster_order,  # type: ignore[arg-type]
-            default="medoid",
-            representation_method=representation_method,
+            default=DEFAULT_REPRESENTATION[cluster.method],
+            representation_method=cluster.get_representation(),
             representation_dict=representation_dict,
             n_timesteps_per_period=n_timesteps_per_period,
             reference_attribute_idx=reference_attribute_idx,

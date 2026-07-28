@@ -1,25 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
 from tsam.algorithms.representations import representations
+from tsam.config import DEFAULT_REPRESENTATION
 
 if TYPE_CHECKING:
-    from tsam.config import Distribution, MinMaxMean
-
-# Default representation method per clustering method. Mean-based methods are
-# represented by the cluster mean, medoid-based methods by the medoid, and
-# kmaxoids by the maxoid. Overridable via ``representation_method``.
-_DEFAULT_REPRESENTATION = {
-    "averaging": "mean",
-    "kmeans": "mean",
-    "kmedoids": "medoid",
-    "kmaxoids": "maxoid",
-    "hierarchical": "medoid",
-    "contiguous": "medoid",
-}
+    from tsam.config import ClusterMethod, Distribution, MinMaxMean
 
 
 def assign_clusters(
@@ -124,7 +113,8 @@ def cluster_and_represent(
     cluster_centers, cluster_center_indices = representations(
         rep_candidates,
         cluster_order,
-        default=_DEFAULT_REPRESENTATION[cluster_method],
+        # assign_clusters has already rejected any unknown cluster_method.
+        default=DEFAULT_REPRESENTATION[cast("ClusterMethod", cluster_method)],
         representation_method=representation_method,
         representation_dict=representation_dict,
         distribution_period_wise=distribution_period_wise,
