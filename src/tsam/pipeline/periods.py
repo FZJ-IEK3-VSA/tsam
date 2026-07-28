@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -31,9 +32,17 @@ def unstack_to_periods(
     period_2_ (a1_t25,.....a1_t48, a2_t25,...,a2_t48, a3_t25,...,a3_t48)
     ...
 
-    If the series length is not an integer multiple of the period length, the
-    last period is padded by repeating the first rows so the reshape succeeds;
-    the padded period's weight is corrected later during post-processing.
+    **Partial last period.** A series whose length is not an integer multiple
+    of the period length is accepted on purpose — a caller may hold three and a
+    half days of hourly data and still want daily periods. Only the check that
+    ``period_duration`` divides evenly into ``temporal_resolution`` happens up
+    front in `tsam.aggregate`; the series length itself is never constrained.
+    The short last period is filled up by repeating rows from the head of the
+    series so the reshape succeeds, and the padding is accounted for
+    afterwards: ``cluster_and_postprocess`` reduces the last cluster's
+    occurrence count by the fraction of the period that is padding, and
+    reconstruction trims the series back to its original length. The padded
+    values therefore reach the clustering distance but never the output.
 
     Args:
         normalized_ts: Normalized flat time series (output of `normalize`).
@@ -48,21 +57,27 @@ def unstack_to_periods(
         ValueError: If the reshaped data contains NaN (indicates malformed
             input).
 
+    Warns:
+        UserWarning: If the series does not fill a whole number of periods and
+            the last period had to be padded.
+
     Note:
         `add_period_sum_features` optionally appends per-period column sums as
         extra clustering features.
     """
     unstacked = normalized_ts.copy()
 
-    # Extend to integer multiple of period length
-    if len(normalized_ts) % n_timesteps_per_period == 0:
-        pass
-    else:
-        attached_timesteps = (
-            n_timesteps_per_period - len(normalized_ts) % n_timesteps_per_period
+    n_missing = -len(normalized_ts) % n_timesteps_per_period
+    if n_missing:
+        warnings.warn(
+            f"The time series covers {len(normalized_ts)} time steps, which is "
+            f"not a whole number of {n_timesteps_per_period}-step periods. The "
+            f"last period is filled up with the first {n_missing} time steps of "
+            "the series so it can be clustered; its occurrence count is reduced "
+            "accordingly and the padding is dropped again on reconstruction.",
+            stacklevel=2,
         )
-        rep_data = unstacked.head(attached_timesteps)
-        unstacked = pd.concat([unstacked, rep_data])
+        unstacked = pd.concat([unstacked, unstacked.head(n_missing)])
 
     # Create period and step index
     period_index = []
