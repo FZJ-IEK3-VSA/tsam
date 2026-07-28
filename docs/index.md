@@ -13,29 +13,11 @@
 
 ETHOS.TSAM compresses long, high-resolution time series into a small set of
 **typical periods** (e.g. 8 typical days standing in for a whole year) and,
-optionally, into **coarser timesteps** within each period. The result keeps the
-statistical character of the original data while drastically cutting the number of
-timesteps a downstream model has to solve.
+optionally, into **coarser timesteps** within each period. The result preserves key statistical characteristics and recurring patterns of the original data as closely as possible, while substantially reducing the number of time steps.
 
-It was built to shrink the temporal complexity of energy system optimization
+It is designed to shrink the temporal complexity of energy system optimization
 models, but it works on any time series — weather, prices, load, behavior, or all
 of them at once.
-
-```python
-import pandas as pd
-import tsam
-
-data = pd.read_csv("timeseries.csv", index_col=0, parse_dates=True)
-
-result = tsam.aggregate(data, n_clusters=8, period_duration="1D")
-
-result.cluster_representatives   # the 8 typical days
-result.accuracy.rmse             # how well they match the original
-result.plot.cluster_representatives()   # ...and a plot of them
-```
-[Install ETHOS.TSAM](installation.md){ .md-button .md-button--primary }
-[Create your first aggregation](tutorials/quickstart.ipynb){ .md-button }
-[Glossary](reference/glossary.md){ .md-button }
 
 ## How this documentation is organized
 
@@ -47,7 +29,7 @@ you came for:
 | **[Tutorials](tutorials/quickstart.ipynb)** | Learn tsam by working through a complete example. |
 | **[How-to guides](how-to/index.md)** | Get one specific task done. |
 | **[Explanation](explanation/how-aggregation-works/00_overview.ipynb)** | Understand the algorithms, the architecture, and the decisions behind them. |
-| **[Reference](reference/api/index.md)** | Look up the API, the notation, and implementation details. |
+| **[Reference](reference/api/index.md)** | Look up the API, the notation, Glossary and implementation details. |
 
 ## Main features
 
