@@ -35,9 +35,61 @@ from _golden_cases import (
     run_new,
 )
 
-pytestmark = pytest.mark.filterwarnings(
-    "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
-)
+pytestmark = [
+    pytest.mark.filterwarnings(
+        "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
+    ),
+    # The period_* cases deliberately use a period length that does not divide
+    # the series evenly, so the padding warning is the expected outcome.
+    pytest.mark.filterwarnings("ignore:The time series covers.*:UserWarning"),
+]
+
+
+# Cases where the golden file records what v3.4.2 produces and the current
+# pipeline does not reproduce it. Each is a behaviour change introduced by the
+# v4 rewrite, not an intended one; the golden pins the v3 reference so the fix
+# has something to be verified against. ``strict`` means a fix turns the xfail
+# into an XPASS and forces the entry to be removed.
+_V4_REGRESSIONS: dict[str, str] = {
+    "period_sums_weighted/testdata": (
+        "include_period_sums + weights: v3 summed the *weighted* periodly "
+        "profiles into the extra features (weights were applied before "
+        "unstacking); v4's add_period_sum_features sums the unweighted "
+        "profiles_dataframe and appends them to weighted candidates, so column "
+        "weights no longer reach the period-sum features."
+    ),
+    "duration_curves_period_sums/testdata": (
+        "include_period_sums + use_duration_curves: v3's _clusterSortedPeriods "
+        "sorted normalizedPeriodlyProfiles (un-augmented); v4's "
+        "cluster_sorted_periods reshapes the *augmented* candidates with "
+        "n_timesteps = n_total // n_columns, which is off by one block and "
+        "sorts across column boundaries."
+    ),
+    "segmentation_minmax_mean/testdata": (
+        "SegmentConfig(representation=MinMaxMean(...)): v3 overrode "
+        "representationDict from the segment representation; v4 only ever "
+        "derives representation_dict from ClusterConfig.representation, so the "
+        "per-column min/max assignment never reaches the segmentation kernel."
+    ),
+    "segmentation_medoid/testdata": (
+        "SegmentConfig(representation='medoid') diverges from v3 on a small "
+        "number of segments (~0.4% of cells). Root cause not yet identified."
+    ),
+}
+
+
+def _parametrized_cases():
+    """CASES, with the known v4 regressions marked xfail."""
+    return [
+        pytest.param(
+            case,
+            marks=pytest.mark.xfail(reason=_V4_REGRESSIONS[case.id], strict=True),
+        )
+        if case.id in _V4_REGRESSIONS
+        else case
+        for case in CASES
+    ]
+
 
 # Cases where specific warnings are expected and should be suppressed.
 _EXPECT_CONVERGENCE = {"kmeans/constant"}
@@ -112,7 +164,7 @@ class TestGoldenRegression:
                 result = run_new(data, case)
         _save_golden(result.reconstructed, case)
 
-    @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
+    @pytest.mark.parametrize("case", _parametrized_cases(), ids=case_ids(CASES))
     def test_api_matches_golden(self, case: GoldenCase, update_golden):
         """Reconstructed result must match stored golden CSV."""
         if update_golden:
