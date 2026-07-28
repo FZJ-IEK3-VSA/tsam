@@ -51,12 +51,6 @@ pytestmark = [
 # has something to be verified against. ``strict`` means a fix turns the xfail
 # into an XPASS and forces the entry to be removed.
 _V4_REGRESSIONS: dict[str, str] = {
-    "segmentation_minmax_mean/testdata": (
-        "SegmentConfig(representation=MinMaxMean(...)): v3 overrode "
-        "representationDict from the segment representation; v4 only ever "
-        "derives representation_dict from ClusterConfig.representation, so the "
-        "per-column min/max assignment never reaches the segmentation kernel."
-    ),
     "segmentation_medoid/testdata": (
         "SegmentConfig(representation='medoid') diverges from v3 on a small "
         "number of segments (~0.4% of cells). Root cause not yet identified."

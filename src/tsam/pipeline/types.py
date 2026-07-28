@@ -151,12 +151,18 @@ class PreparedData:
         norm_data: Normalization state for later denormalization.
         period_profiles: The unstacked period profiles and metadata.
         candidates: Candidate period matrix (possibly weighted / augmented).
-        representation_dict: Per-column representation overrides.
+        representation_dict: Per-column representation overrides for the
+            **cluster** representation.
         n_feature_cols: Number of feature columns.
         original_column_order: Column order of the original input.
         original_data: Original input data (for rescale, bounds, reconstruct).
         weight_vector: Per-column weights baked into the candidates, if any.
         weighted_profiles_df: Weighted period profiles, if weights are active.
+        segment_representation_dict: Per-column representation overrides for the
+            **segment** representation. Separate from `representation_dict`
+            because the two stages are configured independently —
+            `ClusterConfig.representation` and `SegmentConfig.representation`
+            may each be a `MinMaxMean` naming different columns.
     """
 
     norm_data: NormalizedData
@@ -168,6 +174,7 @@ class PreparedData:
     original_data: pd.DataFrame
     weight_vector: np.ndarray | None = None
     weighted_profiles_df: pd.DataFrame | None = None
+    segment_representation_dict: dict[str, str] | None = None
 
     @property
     def attribute_columns(self) -> list[str]:

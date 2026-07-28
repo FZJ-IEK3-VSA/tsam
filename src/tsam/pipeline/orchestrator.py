@@ -279,6 +279,13 @@ def prepare_data(
     representation_dict = _build_representation_dict(
         data.columns, cluster_representation
     )
+    # Segmentation is configured independently of clustering, so it gets its
+    # own dict rather than borrowing the cluster stage's.
+    segment_representation_dict = (
+        _build_representation_dict(data.columns, cfg.segments.representation)
+        if cfg.segments is not None
+        else None
+    )
     original_column_order = list(data.columns)
     original_data = data.copy()
 
@@ -330,6 +337,7 @@ def prepare_data(
         original_data=original_data,
         weight_vector=weight_vector,
         weighted_profiles_df=weighted_profiles_df,
+        segment_representation_dict=segment_representation_dict,
     )
 
 
@@ -558,7 +566,7 @@ def refine_representatives(
                 segmentation_input,
                 cfg.n_timesteps_per_period,
                 cfg.segments,
-                prepared.representation_dict,
+                prepared.segment_representation_dict,
                 cfg.predef,
             )
         )
