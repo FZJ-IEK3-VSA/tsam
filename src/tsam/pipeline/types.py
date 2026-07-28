@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     import numpy as np
@@ -17,6 +17,37 @@ if TYPE_CHECKING:
         SegmentConfig,
     )
     from tsam.result import ClusteringResult
+
+
+ExtremeKind = Literal["max", "min", "mean_max", "mean_min"]
+
+
+@dataclass
+class ExtremePeriod:
+    """An original period kept intact because of an extreme value it holds.
+
+    Produced by `add_extreme_periods`, one per extreme that survives the
+    redundancy check. Mutable, because which cluster the period ends up in is
+    only settled once the integration method has run.
+
+    Attributes:
+        column: Data column whose extreme this period holds.
+        kind: Which extreme it is — the column's single highest (``"max"``) or
+            lowest (``"min"``) value, or its highest (``"mean_max"``) or lowest
+            (``"mean_min"``) period average.
+        step_no: Index of the period in the period-profile matrix.
+        profile: The period's profile, in the same (weighted) space as the
+            cluster centers it joins.
+        new_cluster_no: Cluster created for this period by the
+            ``"new_cluster"`` method; ``None`` for the other methods, which do
+            not create one.
+    """
+
+    column: str | tuple
+    kind: ExtremeKind
+    step_no: int
+    profile: np.ndarray
+    new_cluster_no: int | None = None
 
 
 @dataclass(frozen=True)
@@ -149,7 +180,7 @@ class ClusteringOutput:
         cluster_counts: Occurrence count per cluster.
         cluster_center_indices: Medoid period indices, if applicable.
         extreme_cluster_idx: Indices of the extreme clusters.
-        extreme_periods_info: Metadata about the extreme periods (for transfer).
+        extreme_periods: The preserved extreme periods (for transfer).
         clustering_duration: Wall-clock time spent clustering.
         rescale_deviations: Per-column residual deviations after rescaling.
     """
@@ -159,7 +190,7 @@ class ClusteringOutput:
     cluster_counts: dict[int, float]
     cluster_center_indices: list[int] | None
     extreme_cluster_idx: list[int]
-    extreme_periods_info: dict[str, dict]
+    extreme_periods: list[ExtremePeriod]
     clustering_duration: float
     rescale_deviations: dict[str, dict]
 

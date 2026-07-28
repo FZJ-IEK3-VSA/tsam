@@ -4,45 +4,50 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+
+from tsam.pipeline.types import ExtremePeriod
+
 if TYPE_CHECKING:
-    import numpy as np
     import pandas as pd
 
     from tsam.config import ExtremeConfig
-
-
-def _append_col_with(column: str | tuple, append_with: str = " max.") -> str | tuple:
-    """Append a string to the column name. For MultiIndexes, only last level is changed."""
-    if isinstance(column, str):
-        return column + append_with
-    elif isinstance(column, tuple):
-        col = list(column)
-        col[-1] = col[-1] + append_with
-        return tuple(col)
+    from tsam.pipeline.types import ExtremeKind
 
 
 def _detect_extreme(
     profiles_df: pd.DataFrame,
     column: str | tuple,
-    series: pd.Series,
-    suffix: str,
-    extreme_period_no: list,
-    cc_list: list,
-    extreme_periods: dict,
+    kind: ExtremeKind,
+    step_no: int,
+    center_profiles: list,
+    extreme_periods: list[ExtremePeriod],
 ) -> None:
-    """Detect a single extreme period and add it to extreme_periods if unique."""
-    step_no = series  # already reduced to a scalar index
-    if (
-        step_no not in extreme_period_no
-        and profiles_df.loc[step_no, :].values.tolist() not in cc_list
-    ):
-        key = _append_col_with(column, suffix)
-        extreme_periods[key] = {
-            "step_no": step_no,
-            "profile": profiles_df.loc[step_no, :].values,
-            "column": column,
-        }
-        extreme_period_no.append(step_no)
+    """Record one already-located extreme period, unless it is redundant.
+
+    The caller has reduced a column to the single period that holds its
+    extreme; this appends that period to *extreme_periods*. It is skipped in
+    two cases: the period was already claimed as the extreme of another column,
+    or its profile is identical to a cluster center that clustering produced
+    anyway — in both cases keeping it would duplicate a typical period rather
+    than preserve new information.
+
+    Args:
+        profiles_df: Period profiles the extreme profile is taken from.
+        column: Column whose extreme this period is.
+        kind: Which extreme of that column the period holds.
+        step_no: Row index in *profiles_df* of the extreme period.
+        center_profiles: Cluster centers as plain lists, for the duplicate
+            check.
+        extreme_periods: Extremes accepted so far; appended to in place.
+    """
+    profile = np.asarray(profiles_df.loc[step_no, :].values)
+    already_taken = any(extreme.step_no == step_no for extreme in extreme_periods)
+    if already_taken or profile.tolist() in center_profiles:
+        return
+    extreme_periods.append(
+        ExtremePeriod(column=column, kind=kind, step_no=step_no, profile=profile)
+    )
 
 
 def add_extreme_periods(
@@ -50,7 +55,7 @@ def add_extreme_periods(
     cluster_centers: list,
     cluster_order: list | np.ndarray,
     extremes: ExtremeConfig,
-) -> tuple[list, list | np.ndarray, list[int], dict]:
+) -> tuple[list, list | np.ndarray, list[int], list[ExtremePeriod]]:
     """Ensure periods with extreme values survive into the typical-period set.
 
     Optional stage, configured by `ExtremeConfig`. Clustering tends to average
@@ -90,29 +95,30 @@ def add_extreme_periods(
 
     Returns:
         ``(new_cluster_centers, new_cluster_order, extreme_cluster_idx,
-        extreme_periods_info)`` — the updated center list and assignment, the
-        indices of the newly added extreme clusters, and metadata for transfer.
+        extreme_periods)`` — the updated center list and assignment, the indices
+        of the newly added extreme clusters, and one
+        [`ExtremePeriod`][tsam.pipeline.types.ExtremePeriod] per preserved
+        period, in the order they were added as clusters.
 
     Note:
         `cluster_periods` produces the clusters this stage augments, and
         `rescale_representatives` skips extreme clusters when correcting means.
     """
     columns = profiles_df.columns.get_level_values(0).unique().tolist()
-    extreme_periods: dict = {}
-    extreme_period_no: list = []
+    extreme_periods: list[ExtremePeriod] = []
 
-    cc_list = [center.tolist() for center in cluster_centers]
+    center_profiles = [center.tolist() for center in cluster_centers]
 
     # Detect extreme periods for each column
-    # (lists_of_column_names_to_consider, extreme_variant, column_suffix)
-    _CHECKS: list[tuple[list[str], str, str]] = [
-        (extremes.max_value, "max", " max."),
-        (extremes.min_value, "min", " min."),
-        (extremes.max_period, "mean_max", " daily max."),
-        (extremes.min_period, "mean_min", " daily min."),
+    # (lists_of_column_names_to_consider, extreme_variant)
+    _CHECKS: list[tuple[list[str], ExtremeKind]] = [
+        (extremes.max_value, "max"),
+        (extremes.min_value, "min"),
+        (extremes.max_period, "mean_max"),
+        (extremes.min_period, "mean_min"),
     ]
     for column in columns:
-        for config_list, kind, suffix in _CHECKS:
+        for config_list, kind in _CHECKS:
             if column not in config_list:
                 continue
             if kind == "max":
@@ -126,86 +132,60 @@ def add_extreme_periods(
             _detect_extreme(
                 profiles_df,
                 column,
+                kind,
                 step_no,
-                suffix,
-                extreme_period_no,
-                cc_list,
+                center_profiles,
                 extreme_periods,
             )
-
-    # Get current related clusters of extreme periods
-    for period_type in extreme_periods:
-        extreme_periods[period_type]["cluster_no"] = cluster_order[
-            extreme_periods[period_type]["step_no"]
-        ]
 
     new_cluster_centers: list = []
     new_cluster_order = list(cluster_order)
     extreme_cluster_idx: list[int] = []
 
     if extremes.method == "append":
-        for cluster_center in cluster_centers:
-            new_cluster_centers.append(cluster_center)
-        for i, period_type in enumerate(extreme_periods):
+        new_cluster_centers = list(cluster_centers)
+        for i, extreme in enumerate(extreme_periods):
             extreme_cluster_idx.append(len(new_cluster_centers))
-            new_cluster_centers.append(extreme_periods[period_type]["profile"])
-            new_cluster_order[extreme_periods[period_type]["step_no"]] = i + len(
-                cluster_centers
-            )
+            new_cluster_centers.append(extreme.profile)
+            new_cluster_order[extreme.step_no] = i + len(cluster_centers)
 
     elif extremes.method == "new_cluster":
-        for cluster_center in cluster_centers:
-            new_cluster_centers.append(cluster_center)
-        for i, period_type in enumerate(extreme_periods):
+        new_cluster_centers = list(cluster_centers)
+        for i, extreme in enumerate(extreme_periods):
             extreme_cluster_idx.append(len(new_cluster_centers))
-            new_cluster_centers.append(extreme_periods[period_type]["profile"])
-            extreme_periods[period_type]["new_cluster_no"] = i + len(cluster_centers)
+            new_cluster_centers.append(extreme.profile)
+            extreme.new_cluster_no = i + len(cluster_centers)
 
-        # Build set of extreme period step numbers for quick lookup
-        extreme_step_nos = {extreme_periods[pt]["step_no"] for pt in extreme_periods}
+        # A period holds at most one extreme, so this is a 1:1 lookup.
+        extreme_by_step = {extreme.step_no: extreme for extreme in extreme_periods}
 
         for i, c_period in enumerate(new_cluster_order):
-            # Skip periods that are themselves an extreme period for a different type
-            if i in extreme_step_nos:
-                # Only reassign if this period IS the extreme for exactly one type
-                own_types = [
-                    pt for pt in extreme_periods if extreme_periods[pt]["step_no"] == i
-                ]
-                if len(own_types) == 1:
-                    new_cluster_order[i] = extreme_periods[own_types[0]][
-                        "new_cluster_no"
-                    ]
+            # A period that is itself an extreme joins its own new cluster.
+            own_extreme = extreme_by_step.get(i)
+            if own_extreme is not None:
+                new_cluster_order[i] = own_extreme.new_cluster_no
                 continue
 
-            cluster_dist = sum(
-                (profiles_df.iloc[i].values - cluster_centers[c_period]) ** 2
-            )
+            period_profile = profiles_df.iloc[i].values
             # Find the closest extreme period (deterministic: first match with smallest distance)
             best_extreme = None
-            best_dist = cluster_dist
-            for extrem_period_type in extreme_periods:
-                extperiod_dist = sum(
-                    (
-                        profiles_df.iloc[i].values
-                        - extreme_periods[extrem_period_type]["profile"]
-                    )
-                    ** 2
-                )
-                if extperiod_dist < best_dist:
-                    best_dist = extperiod_dist
-                    best_extreme = extrem_period_type
+            best_dist = sum((period_profile - cluster_centers[c_period]) ** 2)
+            for extreme in extreme_periods:
+                extreme_dist = sum((period_profile - extreme.profile) ** 2)
+                if extreme_dist < best_dist:
+                    best_dist = extreme_dist
+                    best_extreme = extreme
 
             if best_extreme is not None:
-                new_cluster_order[i] = extreme_periods[best_extreme]["new_cluster_no"]
+                new_cluster_order[i] = best_extreme.new_cluster_no
 
     elif extremes.method == "replace":
         new_cluster_centers = list(cluster_centers)
-        for period_type in extreme_periods:
-            index = profiles_df.columns.get_loc(extreme_periods[period_type]["column"])
-            new_cluster_centers[extreme_periods[period_type]["cluster_no"]][index] = (
-                extreme_periods[period_type]["profile"][index]
-            )
-            if extreme_periods[period_type]["cluster_no"] not in extreme_cluster_idx:
-                extreme_cluster_idx.append(extreme_periods[period_type]["cluster_no"])
+        for extreme in extreme_periods:
+            index = profiles_df.columns.get_loc(extreme.column)
+            cluster_no = int(cluster_order[extreme.step_no])
+            new_cluster_centers[cluster_no][index] = extreme.profile[index]
+            if cluster_no not in extreme_cluster_idx:
+                extreme_cluster_idx.append(cluster_no)
 
     return new_cluster_centers, new_cluster_order, extreme_cluster_idx, extreme_periods

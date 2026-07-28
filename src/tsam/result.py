@@ -27,6 +27,7 @@ from tsam.config import (
 
 if TYPE_CHECKING:
     from tsam.config import Representation
+    from tsam.pipeline.types import ExtremePeriod
     from tsam.plot import ResultPlotAccessor
 
 
@@ -772,7 +773,7 @@ class ClusteringResult:
         cls,
         *,
         cluster_center_indices: list | None,
-        extreme_periods_info: dict,
+        extreme_periods: list[ExtremePeriod],
         extremes_config: ExtremeConfig | None,
         cluster_order: list | np.ndarray,
         segmented_df: pd.DataFrame | None,
@@ -795,14 +796,12 @@ class ClusteringResult:
             center_indices = [int(x) for x in cluster_center_indices]
 
             if (
-                extreme_periods_info
+                extreme_periods
                 and extremes_config is not None
                 and extremes_config.method in ("new_cluster", "append")
             ):
-                for period_type in extreme_periods_info:
-                    center_indices.append(
-                        int(extreme_periods_info[period_type]["step_no"])
-                    )
+                for extreme in extreme_periods:
+                    center_indices.append(int(extreme.step_no))
 
             cluster_centers = tuple(center_indices)
 

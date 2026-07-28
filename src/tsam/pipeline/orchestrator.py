@@ -30,6 +30,7 @@ from tsam.pipeline.rescale import rescale_representatives
 from tsam.pipeline.segmentation import segment_typical_periods
 from tsam.pipeline.types import (
     ClusteringOutput,
+    ExtremePeriod,
     FormattedOutput,
     PipelineConfig,
     PipelineResult,
@@ -393,7 +394,7 @@ def cluster_and_postprocess(
     # Extremes run in weighted space (matching develop): weighted profiles
     # determine which period is extreme, and extracted profiles carry weights.
     # Unweighting happens after, so all centers are treated uniformly.
-    extreme_periods_info: dict[str, dict] = {}
+    extreme_periods: list[ExtremePeriod] = []
     extreme_cluster_idx: list[int] = []
 
     if cfg.extremes is not None:
@@ -406,7 +407,7 @@ def cluster_and_postprocess(
             cluster_periods_list,
             cluster_order,
             extreme_cluster_idx,
-            extreme_periods_info,
+            extreme_periods,
         ) = add_extreme_periods(
             profiles_for_extremes,
             cluster_periods_list,
@@ -458,7 +459,7 @@ def cluster_and_postprocess(
         cluster_counts=cluster_counts,
         cluster_center_indices=cluster_center_indices,
         extreme_cluster_idx=extreme_cluster_idx,
-        extreme_periods_info=extreme_periods_info,
+        extreme_periods=extreme_periods,
         clustering_duration=clustering_duration,
         rescale_deviations=rescale_deviations,
     )
@@ -593,7 +594,7 @@ def assemble_result(
 
     clustering_result = _ClusteringResult.from_pipeline(
         cluster_center_indices=clustered.cluster_center_indices,
-        extreme_periods_info=clustered.extreme_periods_info,
+        extreme_periods=clustered.extreme_periods,
         extremes_config=cfg.extremes,
         cluster_order=clustered.cluster_order,
         segmented_df=formatted.segmented_df,
