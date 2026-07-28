@@ -307,10 +307,17 @@ def prepare_data(
     # Add period sum features if requested
     # Period sums are extra columns appended for clustering distance only;
     # they must NOT reach representations() which expects original columns.
+    # They are summed from the *weighted* profiles so that a column's sum
+    # feature carries the same weight as its timestep features — summing the
+    # unweighted profiles would make a column's period sum count for relatively
+    # less the higher its weight.
     n_feature_cols = candidates.shape[1]
     if cluster.include_period_sums:
         candidates = add_period_sum_features(
-            period_profiles.profiles_dataframe, candidates
+            weighted_profiles_df
+            if weighted_profiles_df is not None
+            else period_profiles.profiles_dataframe,
+            candidates,
         )
 
     return PreparedData(

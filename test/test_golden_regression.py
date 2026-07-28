@@ -51,13 +51,6 @@ pytestmark = [
 # has something to be verified against. ``strict`` means a fix turns the xfail
 # into an XPASS and forces the entry to be removed.
 _V4_REGRESSIONS: dict[str, str] = {
-    "period_sums_weighted/testdata": (
-        "include_period_sums + weights: v3 summed the *weighted* periodly "
-        "profiles into the extra features (weights were applied before "
-        "unstacking); v4's add_period_sum_features sums the unweighted "
-        "profiles_dataframe and appends them to weighted candidates, so column "
-        "weights no longer reach the period-sum features."
-    ),
     "segmentation_minmax_mean/testdata": (
         "SegmentConfig(representation=MinMaxMean(...)): v3 overrode "
         "representationDict from the segment representation; v4 only ever "
