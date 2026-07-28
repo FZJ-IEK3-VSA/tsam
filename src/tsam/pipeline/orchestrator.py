@@ -339,7 +339,7 @@ def cluster_and_postprocess(
     candidates = prepared.candidates
     period_profiles = prepared.period_profiles
     reference_attribute_idx = _resolve_reference_attribute_idx(
-        list(prepared.representation_dict), cluster_representation
+        prepared.attribute_columns, cluster_representation
     )
 
     # Cluster

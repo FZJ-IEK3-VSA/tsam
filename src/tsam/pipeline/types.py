@@ -169,6 +169,18 @@ class PreparedData:
     weight_vector: np.ndarray | None = None
     weighted_profiles_df: pd.DataFrame | None = None
 
+    @property
+    def attribute_columns(self) -> list[str]:
+        """Column names in the order of the candidates' attribute blocks.
+
+        Each candidate row holds one contiguous block of timesteps per column,
+        in this order, so stages that address attributes positionally use this
+        list to map a column name onto its block.
+        """
+        return list(
+            self.period_profiles.profiles_dataframe.columns.get_level_values(0).unique()
+        )
+
 
 @dataclass(frozen=True)
 class ClusteringOutput:
