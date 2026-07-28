@@ -104,6 +104,7 @@ def add_extreme_periods(
     cc_list = [center.tolist() for center in cluster_centers]
 
     # Detect extreme periods for each column
+    # (lists_of_column_names_to_consider, extreme_variant, column_suffix)
     _CHECKS: list[tuple[list[str], str, str]] = [
         (extremes.max_value, "max", " max."),
         (extremes.min_value, "min", " min."),

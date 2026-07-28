@@ -114,7 +114,8 @@ def cluster_and_represent(
         candidates, n_clusters, cluster_method, n_iter=n_iter, solver=solver
     )
 
-    # Representatives may be drawn from a separate candidate set (e.g. unweighted).
+    # Representatives may be drawn from a separate candidate set
+    # (e.g. unweighted or with included period sums).
     rep_candidates = (
         representation_candidates
         if representation_candidates is not None
