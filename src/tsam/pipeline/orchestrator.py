@@ -277,7 +277,7 @@ def prepare_data(
     # they must NOT reach representations() which expects original columns.
     n_feature_cols = candidates.shape[1]
     if cluster.include_period_sums:
-        candidates, _n_extra = add_period_sum_features(
+        candidates = add_period_sum_features(
             period_profiles.profiles_dataframe, candidates
         )
 

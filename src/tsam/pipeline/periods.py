@@ -104,13 +104,16 @@ def unstack_to_periods(
 def add_period_sum_features(
     profiles_df: pd.DataFrame,
     candidates: np.ndarray,
-) -> tuple[np.ndarray, int]:
+) -> np.ndarray:
     """Append each period's per-column sum as extra clustering features.
 
-    Optional stage, enabled by ``ClusterConfig.include_period_sums``. The
-    per-column sum of each period is appended as extra columns so that periods
-    with similar totals are pulled together, not just periods with similar
-    shapes.
+    Optional stage, enabled by ``ClusterConfig.include_period_sums``. For every
+    period and every column the **normalized** values of all timesteps in that
+    period are summed, and those sums are appended as one extra column per
+    original data column. Periods with similar totals are thereby pulled
+    together, not just periods with similar shapes. The sums are of normalized
+    values because ``profiles_df`` holds the already normalized series — the
+    magnitudes are comparable across columns, not in the user's original units.
 
     These extra columns influence **only** which periods get grouped — they are
     stripped from the cluster centers during post-processing (the trim step) so
@@ -119,24 +122,19 @@ def add_period_sum_features(
     ``candidates``, so the sums are appended to the weighted candidates.
 
     Args:
-        profiles_df: The unstacked period profiles (used to compute per-period
-            sums).
+        profiles_df: The unstacked, normalized period profiles (used to compute
+            the per-period sums).
         candidates: Current candidate matrix (possibly already weighted) to
             augment.
 
     Returns:
-        ``(augmented_candidates, n_extra_features)`` — the second value is the
-        number of appended columns, kept so the trim step can remove them.
+        The candidate matrix with one appended sum column per original data
+        column.
 
     Note:
         `cluster_periods` consumes the (possibly augmented) candidate matrix.
     """
-    evaluation_values = (
+    period_sums = (
         profiles_df.stack(future_stack=True, level=0).sum(axis=1).unstack(level=1)  # type: ignore[arg-type]
     )
-    n_extra = len(evaluation_values.columns)
-    augmented = np.concatenate(
-        (candidates, evaluation_values.values),
-        axis=1,
-    )
-    return augmented, n_extra
+    return np.concatenate((candidates, period_sums.values), axis=1)
