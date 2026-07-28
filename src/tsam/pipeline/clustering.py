@@ -18,6 +18,12 @@ if TYPE_CHECKING:
     from tsam.config import ClusterConfig
     from tsam.pipeline.types import PredefParams
 
+# Restarts granted to non-deterministic clustering methods (k-means). The
+# duration-curve path uses fewer, since it clusters sorted profiles whose
+# distances are far better behaved.
+_N_ITER = 100
+_N_ITER_SORTED = 30
+
 
 def cluster_periods(
     candidates: np.ndarray,
@@ -88,6 +94,16 @@ def cluster_periods(
         per-period cluster assignment.
 
     Note:
+        The body is a call into
+        [`cluster_and_represent`][tsam.algorithms.clustering.cluster_and_represent],
+        which knows nothing about `ClusterConfig`. This function is where the
+        configuration is turned into that kernel's arguments and where the
+        pipeline's iteration budget is set, so the algorithm layer stays free of
+        config types and the orchestrator stays free of kernel arguments. It is
+        also the stage the pipeline documentation points at, alongside its two
+        siblings.
+
+    Note:
         Related stages: `cluster_sorted_periods` (duration-curve variant on
         sorted values), `use_predefined_assignments` (reuse stored assignments
         instead of clustering), `add_extreme_periods` (inject extreme-value
@@ -97,7 +113,7 @@ def cluster_periods(
     centers, center_indices, order = cluster_and_represent(
         candidates,
         n_clusters=n_clusters,
-        n_iter=100,
+        n_iter=_N_ITER,
         solver=cluster.solver,
         cluster_method=cluster.method,
         representation_method=cluster.get_representation(),
@@ -165,7 +181,7 @@ def cluster_sorted_periods(
         sorted_values,
         n_clusters,
         cluster.method,
-        n_iter=30,
+        n_iter=_N_ITER_SORTED,
         solver=cluster.solver,
     )
 
