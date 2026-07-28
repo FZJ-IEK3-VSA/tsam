@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from conftest import TESTDATA_CSV
-from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
+from tsam import ClusterConfig, ExtremeConfig, MinMaxMean, SegmentConfig, aggregate
 
 # NOTE: The legacy ``TimeSeriesAggregation`` constructor performed runtime
 # type-checks on a number of scalar/boolean keyword arguments (e.g.
@@ -95,6 +95,31 @@ def test_assert_raises():
         match="Pre processed data includes NaN",
     ):
         aggregate(rawNan, n_clusters=8)
+
+
+def test_minmax_mean_rejects_column_listed_as_both():
+    """A column cannot keep its minimum and its maximum at the same time."""
+    with pytest.raises(ValueError, match="both max_columns and min_columns"):
+        MinMaxMean(max_columns=["Load", "T"], min_columns=["T"])
+
+
+def test_minmax_mean_rejects_unknown_column():
+    """A misspelled column name is reported instead of silently doing nothing."""
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    with pytest.raises(ValueError, match="not in the data"):
+        aggregate(
+            raw,
+            n_clusters=8,
+            cluster=ClusterConfig(
+                representation=MinMaxMean(max_columns=["erroneousAttribute"])
+            ),
+        )
+
+
+def test_representation_with_duration_curves_warns():
+    """The duration-curve path ignores the configured representation."""
+    with pytest.warns(UserWarning, match="no effect together with"):
+        ClusterConfig(representation="distribution", use_duration_curves=True)
 
 
 if __name__ == "__main__":

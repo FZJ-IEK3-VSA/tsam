@@ -174,15 +174,35 @@ def _build_representation_dict(
     columns: pd.Index,
     cluster_representation: str | Distribution | MinMaxMean | None,
 ) -> dict[str, str]:
-    """Build the representation dict (mean/min/max per column) from config."""
+    """Build the representation dict (mean/min/max per column) from config.
+
+    Columns the configuration does not mention keep their ``"mean"`` default.
+    A `MinMaxMean` cannot list the same column as both min and max — that is
+    rejected when the configuration is built — so the two loops below can never
+    disagree about a column.
+
+    Raises:
+        ValueError: If the configuration names a column that is not in the data.
+    """
     representation_dict: dict[str, str] = dict.fromkeys(columns, "mean")
     if isinstance(cluster_representation, MinMaxMean):
+        unknown = [
+            col
+            for col in (
+                *cluster_representation.max_columns,
+                *cluster_representation.min_columns,
+            )
+            if col not in representation_dict
+        ]
+        if unknown:
+            raise ValueError(
+                f"MinMaxMean names columns {unknown} that are not in the data "
+                f"{list(columns)}."
+            )
         for col in cluster_representation.max_columns:
-            if col in representation_dict:
-                representation_dict[col] = "max"
+            representation_dict[col] = "max"
         for col in cluster_representation.min_columns:
-            if col in representation_dict:
-                representation_dict[col] = "min"
+            representation_dict[col] = "min"
     return representation_dict
 
 
