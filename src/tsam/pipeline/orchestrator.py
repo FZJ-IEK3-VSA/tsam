@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import time
 import warnings
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
 
+from tsam.config import Distribution, MinMaxMean
 from tsam.options import options
 from tsam.pipeline.accuracy import reconstruct
 from tsam.pipeline.clustering import (
@@ -37,12 +38,6 @@ from tsam.pipeline.types import (
     PredefParams,  # noqa: F401 (re-exported)
     PreparedData,
 )
-
-if TYPE_CHECKING:
-    from tsam.config import (
-        Distribution,
-        MinMaxMean,
-    )
 
 # Only the orchestration entry points are public API of this module. Setting
 # __all__ keeps the imported stage functions (normalize, cluster_periods, …)
@@ -180,8 +175,6 @@ def _build_representation_dict(
     cluster_representation: str | Distribution | MinMaxMean | None,
 ) -> dict[str, str]:
     """Build the representation dict (mean/min/max per column) from config."""
-    from tsam.config import MinMaxMean
-
     representation_dict: dict[str, str] = dict.fromkeys(columns, "mean")
     if isinstance(cluster_representation, MinMaxMean):
         for col in cluster_representation.max_columns:
@@ -197,25 +190,39 @@ def _resolve_reference_attribute_idx(
     columns: list,
     cluster_representation: str | Distribution | MinMaxMean | None,
 ) -> int | None:
-    """Map a ``Distribution.reference_attribute`` name to its attribute index.
+    """Translate ``Distribution.reference_attribute`` into a block index.
 
-    ``columns`` must be in the same order as the attribute blocks of the
-    clustering candidates (i.e. the representation dict order), so the returned
-    index lines up with the duration representation.
+    A candidate row is laid out as one contiguous block of timesteps per
+    attribute, and the duration representation addresses those blocks by
+    position. The reference attribute is configured by name, so it has to be
+    turned into the position of its block; doing it here keeps that layout
+    detail out of the algorithm layer.
+
+    Args:
+        columns: Column names in the order of the candidates' attribute blocks.
+        cluster_representation: The resolved representation. Only a
+            `Distribution` can name a reference attribute.
+
+    Returns:
+        The position of the reference attribute's block, or ``None`` if there
+        is no reference attribute to translate.
+
+    Raises:
+        ValueError: If the named reference attribute is not a data column.
     """
-    from tsam.config import Distribution
+    if not isinstance(cluster_representation, Distribution):
+        return None
 
-    if (
-        isinstance(cluster_representation, Distribution)
-        and cluster_representation.reference_attribute is not None
-    ):
-        ref = cluster_representation.reference_attribute
-        if ref not in columns:
-            raise ValueError(
-                f"reference_attribute {ref!r} is not one of the data columns {columns}."
-            )
-        return columns.index(ref)
-    return None
+    reference = cluster_representation.reference_attribute
+    if reference is None:
+        return None
+
+    if reference not in columns:
+        raise ValueError(
+            f"reference_attribute {reference!r} is not one of the data columns "
+            f"{columns}."
+        )
+    return columns.index(reference)
 
 
 def prepare_data(
