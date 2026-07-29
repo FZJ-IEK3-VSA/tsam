@@ -155,18 +155,6 @@ were close enough to flip; one golden regression case changed as a result.
 **Action required:** none, unless you pinned a value that happened to fall on a
 tie. If you did, it was not reproducible across machines to begin with.
 
-## Duration-curve clustering (`use_duration_curves`)
-
-`ClusteringResult.cluster_centers` now identifies the periods the returned
-centers were actually taken from. Previously the indices came from a different
-criterion than the centers — and were `None` entirely for representations that
-are computed rather than selected — so replaying a stored clustering could
-produce different typical periods than the original run.
-
-**Action required:** none for a fresh aggregation; the typical periods are
-unchanged. Transfers of a duration-curve clustering now reproduce the original
-run, where before they silently did not.
-
 ## Transferring a clustering (`ClusteringResult.apply()`)
 
 - **`ClusterConfig` is replayed in full.** `apply()` rebuilt a minimal
@@ -178,6 +166,14 @@ run, where before they silently did not.
   to match how the pipeline counts, so a clustering built from a series that
   does not fill whole periods can be applied at all. Previously it raised
   regardless of the data given to it, including its own input.
+- **`cluster_centers` is correct for `use_duration_curves`.** The stored
+  indices identify the periods the centers were actually taken from. v3 took
+  them from a different criterion than the centers, and left them `None`
+  altogether for representations that are computed rather than selected, so
+  replaying a duration-curve clustering could reproduce different typical
+  periods than the original run. The aggregation itself is unaffected — a
+  fresh `aggregate()` returns exactly what v3 returned; only the recorded
+  indices, and therefore the transfer, change.
 - **Inexact transfers warn.** `apply()` and `to_json()` now warn for both
   configurations that cannot be replayed exactly: `extremes="replace"`, and
   `extremes="append"`/`"new_cluster"` combined with a representation that is
