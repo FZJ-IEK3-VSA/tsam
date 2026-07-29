@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -31,9 +32,17 @@ def unstack_to_periods(
     period_2_ (a1_t25,.....a1_t48, a2_t25,...,a2_t48, a3_t25,...,a3_t48)
     ...
 
-    If the series length is not an integer multiple of the period length, the
-    last period is padded by repeating the first rows so the reshape succeeds;
-    the padded period's weight is corrected later during post-processing.
+    **Partial last period.** A series whose length is not an integer multiple
+    of the period length is accepted on purpose — a caller may hold three and a
+    half days of hourly data and still want daily periods. Only the check that
+    ``period_duration`` divides evenly into ``temporal_resolution`` happens up
+    front in `tsam.aggregate`; the series length itself is never constrained.
+    The short last period is filled up by repeating rows from the head of the
+    series so the reshape succeeds, and the padding is accounted for
+    afterwards: ``refine_representatives`` reduces the last cluster's
+    occurrence count by the fraction of the period that is padding, and
+    reconstruction trims the series back to its original length. The padded
+    values therefore reach the clustering distance but never the output.
 
     Args:
         normalized_ts: Normalized flat time series (output of `normalize`).
@@ -48,21 +57,27 @@ def unstack_to_periods(
         ValueError: If the reshaped data contains NaN (indicates malformed
             input).
 
+    Warns:
+        UserWarning: If the series does not fill a whole number of periods and
+            the last period had to be padded.
+
     Note:
         `add_period_sum_features` optionally appends per-period column sums as
         extra clustering features.
     """
     unstacked = normalized_ts.copy()
 
-    # Extend to integer multiple of period length
-    if len(normalized_ts) % n_timesteps_per_period == 0:
-        pass
-    else:
-        attached_timesteps = (
-            n_timesteps_per_period - len(normalized_ts) % n_timesteps_per_period
+    n_missing = -len(normalized_ts) % n_timesteps_per_period
+    if n_missing:
+        warnings.warn(
+            f"The time series covers {len(normalized_ts)} time steps, which is "
+            f"not a whole number of {n_timesteps_per_period}-step periods. The "
+            f"last period is filled up with the first {n_missing} time steps of "
+            "the series so it can be clustered; its occurrence count is reduced "
+            "accordingly and the padding is dropped again on reconstruction.",
+            stacklevel=2,
         )
-        rep_data = unstacked.head(attached_timesteps)
-        unstacked = pd.concat([unstacked, rep_data])
+        unstacked = pd.concat([unstacked, unstacked.head(n_missing)])
 
     # Create period and step index
     period_index = []
@@ -104,13 +119,16 @@ def unstack_to_periods(
 def add_period_sum_features(
     profiles_df: pd.DataFrame,
     candidates: np.ndarray,
-) -> tuple[np.ndarray, int]:
+) -> np.ndarray:
     """Append each period's per-column sum as extra clustering features.
 
-    Optional stage, enabled by ``ClusterConfig.include_period_sums``. The
-    per-column sum of each period is appended as extra columns so that periods
-    with similar totals are pulled together, not just periods with similar
-    shapes.
+    Optional stage, enabled by ``ClusterConfig.include_period_sums``. For every
+    period and every column the **normalized** values of all timesteps in that
+    period are summed, and those sums are appended as one extra column per
+    original data column. Periods with similar totals are thereby pulled
+    together, not just periods with similar shapes. The sums are of normalized
+    values because ``profiles_df`` holds the already normalized series — the
+    magnitudes are comparable across columns, not in the user's original units.
 
     These extra columns influence **only** which periods get grouped — they are
     stripped from the cluster centers during post-processing (the trim step) so
@@ -119,24 +137,19 @@ def add_period_sum_features(
     ``candidates``, so the sums are appended to the weighted candidates.
 
     Args:
-        profiles_df: The unstacked period profiles (used to compute per-period
-            sums).
+        profiles_df: The unstacked, normalized period profiles (used to compute
+            the per-period sums).
         candidates: Current candidate matrix (possibly already weighted) to
             augment.
 
     Returns:
-        ``(augmented_candidates, n_extra_features)`` — the second value is the
-        number of appended columns, kept so the trim step can remove them.
+        The candidate matrix with one appended sum column per original data
+        column.
 
     Note:
         `cluster_periods` consumes the (possibly augmented) candidate matrix.
     """
-    evaluation_values = (
+    period_sums = (
         profiles_df.stack(future_stack=True, level=0).sum(axis=1).unstack(level=1)  # type: ignore[arg-type]
     )
-    n_extra = len(evaluation_values.columns)
-    augmented = np.concatenate(
-        (candidates, evaluation_values.values),
-        axis=1,
-    )
-    return augmented, n_extra
+    return np.concatenate((candidates, period_sums.values), axis=1)

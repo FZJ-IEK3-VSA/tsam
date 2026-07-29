@@ -1,5 +1,7 @@
 """Tests for disaggregate functionality."""
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -272,6 +274,17 @@ class TestDisaggregateEdgeCases:
         expanded = result.disaggregate(result.cluster_representatives)
         assert len(expanded) == len(short)
         pd.testing.assert_index_equal(expanded.index, short.index)
+
+    def test_padded_last_period_warns(self, sample_data):
+        """Padding the last period is reported rather than done silently."""
+        with pytest.warns(UserWarning, match="not a whole number"):
+            aggregate(sample_data.iloc[:100], n_clusters=3)
+
+    def test_whole_number_of_periods_does_not_warn(self, sample_data):
+        """A series that fills whole periods is never padded."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            aggregate(sample_data.iloc[:96], n_clusters=3)
 
     def test_single_cluster(self, sample_data):
         """Degenerate case: n_clusters=1."""

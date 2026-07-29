@@ -25,6 +25,20 @@ RepresentationMethod = Literal[
     "minmax_mean",
 ]
 
+# Representation each clustering method falls back to when
+# ``ClusterConfig.representation`` is not set: mean-based methods are
+# represented by the cluster mean, medoid-based methods by the medoid, and
+# kmaxoids by the maxoid. This is the single source of these defaults — resolve
+# them through ``ClusterConfig.get_representation`` rather than repeating them.
+DEFAULT_REPRESENTATION: dict[ClusterMethod, RepresentationMethod] = {
+    "averaging": "mean",
+    "kmeans": "mean",
+    "kmedoids": "medoid",
+    "kmaxoids": "maxoid",
+    "hierarchical": "medoid",
+    "contiguous": "medoid",
+}
+
 ExtremeMethod = Literal[
     "append",
     "replace",
@@ -165,6 +179,16 @@ class MinMaxMean:
     max_columns: list[str] = field(default_factory=list)
     min_columns: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        both = [col for col in self.max_columns if col in self.min_columns]
+        if both:
+            raise ValueError(
+                f"Columns {both} are listed in both max_columns and min_columns. "
+                "A column is represented by one value per timestep, so it cannot "
+                "keep its maximum and its minimum at the same time — list it in "
+                "one of the two."
+            )
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         result: dict[str, Any] = {"type": "minmax_mean"}
@@ -286,6 +310,18 @@ class ClusterConfig:
         object.__setattr__(self, "include_period_sums", include_period_sums)
         object.__setattr__(self, "solver", solver)
 
+        if representation is not None and use_duration_curves:
+            warnings.warn(
+                f"representation={representation!r} has no effect together with "
+                "use_duration_curves=True. Periods clustered by their duration "
+                "curve are always represented by the real period closest to the "
+                "cluster's duration-curve centroid, since a synthesized "
+                "representative would carry a temporal shape that no period in "
+                "the cluster ever had. Drop one of the two settings.",
+                UserWarning,
+                stacklevel=2,
+            )
+
     def __setattr__(self, name: str, value: object) -> None:
         raise AttributeError("ClusterConfig is immutable")
 
@@ -312,20 +348,10 @@ class ClusterConfig:
         return f"ClusterConfig({parts})"
 
     def get_representation(self) -> Representation:
-        """Get the representation, using default if not specified."""
+        """Get the representation, using the method's default if not specified."""
         if self.representation is not None:
             return self.representation
-
-        # Default representation based on clustering method
-        defaults: dict[ClusterMethod, RepresentationMethod] = {
-            "averaging": "mean",
-            "kmeans": "mean",
-            "kmedoids": "medoid",
-            "kmaxoids": "maxoid",
-            "hierarchical": "medoid",
-            "contiguous": "medoid",
-        }
-        return defaults.get(self.method, "mean")
+        return DEFAULT_REPRESENTATION.get(self.method, "mean")
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""

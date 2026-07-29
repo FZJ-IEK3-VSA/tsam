@@ -34,8 +34,8 @@ classes: {
   # sibling to match the widest one).
   phase_title: { width: 384; height: 32; style: { fill: transparent; stroke: transparent; bold: true; font-size: 22 } }
   phase_body: { width: 384; height: 30; style: { fill: transparent; stroke: transparent; bold: false; font-size: 18 } }
-  # faint caption mapping a phase onto the review's feature-based-merging steps
-  # (Hoffmann et al. 2020, §3.2.2) — see context.md "Methodological positioning".
+  # faint caption row under a phase body — carries the key for the [ … ] marks
+  # that flag the stages which run only when the caller configures them.
   phase_tag: { width: 384; style: { fill: transparent; stroke: transparent; bold: false; italic: true; font-size: 14; font-color: "#5a6675" } }
   # individual option chips — fixed width so all three groups are equal width
   opt: { width: 150; height: 38; style: { fill: "#f4f6f8"; stroke: "#aeb9c4"; bold: false; font-size: 15 } }
@@ -108,36 +108,37 @@ pipeline: "pipeline/ · run_pipeline()" {
     grid-rows: 3
     grid-gap: 2
     title: "Phase 1 · Prepare data" { class: phase_title }
-    body: "normalize → unstack to periods\n(optional: weights, period sums)" { class: phase_body; height: 54 }
+    body: "normalize → unstack to periods →\n[weights] → [period sums]" { class: phase_body; height: 54 }
+    tag: "[…] = runs only when configured" { class: phase_tag; height: 24 }
   }
-  gap1: "" { class: pad; width: 10; height: 42 }
+  gap1: "" { class: pad; width: 10; height: 20 }
   p2: "" {
     class: phase
     grid-rows: 3
     grid-gap: 2
-    title: "Phase 2 · Cluster & post-process" { class: phase_title }
-    body: "cluster → extremes → rescale → count" { class: phase_body }
+    title: "Phase 2 · Cluster" { class: phase_title }
+    body: "cluster → pick representatives" { class: phase_body }
   }
-  gap2: "" { class: pad; width: 10; height: 30 }
+  gap2: "" { class: pad; width: 10; height: 20 }
   p3: "" {
     class: phase
     grid-rows: 2
     grid-gap: 2
-    title: "Phase 3 · Format & reconstruct" { class: phase_title }
-    body: "format → segment → denormalize → reconstruct" { class: phase_body }
+    title: "Phase 3 · Refine" { class: phase_title }
+    body: "[extremes] → [unweight], count →\n[rescale] → [segment]" { class: phase_body; height: 54 }
   }
-  gap3: "" { class: pad; width: 10; height: 58 }
+  gap3: "" { class: pad; width: 10; height: 20 }
   p4: "" {
     class: phase
     grid-rows: 2
     grid-gap: 2
-    title: "Phase 4 · Assemble" { class: phase_title }
-    body: "build ClusteringResult + PipelineResult" { class: phase_body }
+    title: "Phase 4 · Build the result" { class: phase_title }
+    body: "denormalize → reconstruct →\nbuild ClusteringResult" { class: phase_body; height: 54 }
   }
 
   p1 -> p2: "PreparedData" { style.font-size: 18; style.font-color: "#3f4a55" }
-  p2 -> p3: "ClusteringOutput" { style.font-size: 18; style.font-color: "#3f4a55" }
-  p3 -> p4: "FormattedOutput" { style.font-size: 18; style.font-color: "#3f4a55" }
+  p2 -> p3: "ClusterAssignment" { style.font-size: 18; style.font-color: "#3f4a55" }
+  p3 -> p4: "RefinedRepresentatives" { style.font-size: 18; style.font-color: "#3f4a55" }
 }
 
 # ── Right: algorithms/ — config-agnostic kernels the stages dispatch to ────

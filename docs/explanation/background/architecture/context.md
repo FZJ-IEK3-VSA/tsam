@@ -22,6 +22,6 @@ Within feature-based clustering, the review's three steps (§3.2.2) map directly
 |--------------------------------|---------------|
 | 3.2.2.1 Preprocessing and Normalization | Phase 1 — normalize, then unstack into periods |
 | 3.2.2.2 Algorithms, Distance Metrics, Representation | Phase 2 — cluster centers (method · distance · representation) |
-| 3.2.2.3 Rescaling | Phase 2 — optional `preserve_column_means` |
+| 3.2.2.3 Rescaling | Phase 3 — optional `preserve_column_means` |
 
 For the equations behind each step, see [Notation and equations](../../../reference/notation.md); for the full data flow, the [Pipeline Guide](pipeline_guide.md).

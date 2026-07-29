@@ -10,12 +10,19 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from tsam.algorithms.clustering import cluster_and_represent
+from tsam.algorithms.clustering import assign_clusters, cluster_and_represent
 from tsam.algorithms.representations import representations
+from tsam.config import DEFAULT_REPRESENTATION
 
 if TYPE_CHECKING:
-    from tsam.config import ClusterConfig, Distribution, MinMaxMean
+    from tsam.config import ClusterConfig
     from tsam.pipeline.types import PredefParams
+
+# Restarts granted to non-deterministic clustering methods (k-means). The
+# duration-curve path uses fewer, since it clusters sorted profiles whose
+# distances are far better behaved.
+_N_ITER = 100
+_N_ITER_SORTED = 30
 
 
 def cluster_periods(
@@ -87,6 +94,16 @@ def cluster_periods(
         per-period cluster assignment.
 
     Note:
+        The body is a call into
+        [`cluster_and_represent`][tsam.algorithms.clustering.cluster_and_represent],
+        which knows nothing about `ClusterConfig`. This function is where the
+        configuration is turned into that kernel's arguments and where the
+        pipeline's iteration budget is set, so the algorithm layer stays free of
+        config types and the orchestrator stays free of kernel arguments. It is
+        also the stage the pipeline documentation points at, alongside its two
+        siblings.
+
+    Note:
         Related stages: `cluster_sorted_periods` (duration-curve variant on
         sorted values), `use_predefined_assignments` (reuse stored assignments
         instead of clustering), `add_extreme_periods` (inject extreme-value
@@ -96,7 +113,7 @@ def cluster_periods(
     centers, center_indices, order = cluster_and_represent(
         candidates,
         n_clusters=n_clusters,
-        n_iter=100,
+        n_iter=_N_ITER,
         solver=cluster.solver,
         cluster_method=cluster.method,
         representation_method=cluster.get_representation(),
@@ -113,10 +130,7 @@ def cluster_sorted_periods(
     n_columns: int,
     n_clusters: int,
     cluster: ClusterConfig,
-    representation_dict: dict | None,
-    n_timesteps_per_period: int,
-    reference_attribute_idx: int | None = None,
-) -> tuple[list[np.ndarray], list[int] | None, np.ndarray]:
+) -> tuple[list[np.ndarray], list[int], np.ndarray]:
     """Cluster periods by value distribution rather than temporal shape.
 
     Used when ``ClusterConfig.use_duration_curves=True``. Each period's values
@@ -127,27 +141,28 @@ def cluster_sorted_periods(
 
     Candidates are already weighted (if weights exist); the descending sort and
     the clustering distance therefore respect column weights, matching v3
-    behaviour. The medoid representative is picked from the **unsorted**
-    (weighted) candidates so the typical period keeps a realistic temporal
-    shape.
+    behaviour.
 
-    See `cluster_periods` for the available clustering methods and
-    representations.
+    **``ClusterConfig.representation`` does not apply on this path.** Every
+    cluster is represented by a real, *unsorted* period: the member closest to
+    its cluster's centroid in sorted (duration-curve) space. A synthesized
+    representative — a mean, or a re-sorted distribution profile — would carry
+    a temporal shape that no period in the cluster ever had, which is precisely
+    what the sorting was meant to abstract away. See `cluster_periods` for the
+    path where the configured representation is honoured.
 
     Args:
         candidates: Candidate period matrix (possibly weighted).
         n_columns: Number of original columns, needed to reshape per-column
             before sorting.
         n_clusters: Number of clusters to form.
-        cluster: Clustering configuration.
-        representation_dict: Per-column representation overrides.
-        n_timesteps_per_period: Timesteps per period.
-        reference_attribute_idx: Attribute (column) index used by the
-            ``"reference"`` concurrency strategy of the distribution
-            representations; ignored by all other representations.
+        cluster: Clustering configuration; only ``method`` and ``solver`` are
+            used here, for the reason given above.
 
     Returns:
-        ``(cluster_centers, cluster_center_indices, cluster_order)``.
+        ``(cluster_centers, cluster_center_indices, cluster_order)``. The
+        indices identify the original period each center was taken from, so
+        centers and indices always describe the same periods.
 
     Note:
         `cluster_periods` performs standard clustering on the temporal profile.
@@ -162,38 +177,37 @@ def cluster_sorted_periods(
     values_3d = candidates.copy().reshape(n_periods, n_columns, n_timesteps)
     sorted_values = (-np.sort(-values_3d, axis=2, kind="stable")).reshape(n_periods, -1)
 
-    _, center_indices, cluster_order = cluster_and_represent(
+    cluster_order = assign_clusters(
         sorted_values,
-        n_clusters=n_clusters,
-        n_iter=30,
+        n_clusters,
+        cluster.method,
+        n_iter=_N_ITER_SORTED,
         solver=cluster.solver,
-        cluster_method=cluster.method,
-        representation_method=cluster.get_representation(),
-        representation_dict=representation_dict,
-        n_timesteps_per_period=n_timesteps_per_period,
-        reference_attribute_idx=reference_attribute_idx,
     )
 
-    # Pick medoid from unsorted candidates (already weighted).
     cluster_centers = []
+    cluster_center_indices = []
     for cluster_num in np.unique(cluster_order):
         indices = np.where(cluster_order == cluster_num)[0]
         if len(indices) > 1:
             current_mean = sorted_values[indices].mean(axis=0)
-            mindist_idx = np.argmin(
-                np.square(sorted_values[indices] - current_mean).sum(axis=1)
+            closest = int(
+                np.argmin(np.square(sorted_values[indices] - current_mean).sum(axis=1))
             )
-            cluster_centers.append(candidates[indices][mindist_idx])
         else:
-            cluster_centers.append(candidates[indices][0])
+            closest = 0
+        # Take the profile from the unsorted candidates so the typical period
+        # keeps a realistic temporal shape.
+        cluster_centers.append(candidates[indices[closest]])
+        cluster_center_indices.append(int(indices[closest]))
 
-    return cluster_centers, center_indices, cluster_order
+    return cluster_centers, cluster_center_indices, cluster_order
 
 
 def use_predefined_assignments(
     candidates: np.ndarray,
     predef: PredefParams,
-    representation_method: str | Distribution | MinMaxMean | None,
+    cluster: ClusterConfig,
     representation_dict: dict | None,
     n_timesteps_per_period: int,
     reference_attribute_idx: int | None = None,
@@ -210,7 +224,8 @@ def use_predefined_assignments(
         candidates: Candidate period matrix for the new data.
         predef: Predefined assignments (``cluster_order`` and optional center
             indices).
-        representation_method: Representation to apply when recomputing centers.
+        cluster: Clustering configuration; supplies the representation applied
+            when recomputing centers.
         representation_dict: Per-column representation overrides.
         n_timesteps_per_period: Timesteps per period.
         reference_attribute_idx: Attribute (column) index used by the
@@ -233,8 +248,8 @@ def use_predefined_assignments(
         centers, computed_indices = representations(
             candidates,
             predef.cluster_order,  # type: ignore[arg-type]
-            default="medoid",
-            representation_method=representation_method,
+            default=DEFAULT_REPRESENTATION[cluster.method],
+            representation_method=cluster.get_representation(),
             representation_dict=representation_dict,
             n_timesteps_per_period=n_timesteps_per_period,
             reference_attribute_idx=reference_attribute_idx,
