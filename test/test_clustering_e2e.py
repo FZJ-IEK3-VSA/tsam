@@ -376,6 +376,36 @@ class TestClusteringTransfer:
             atol=1e-10,
         )
 
+    def test_apply_warns_when_extremes_cannot_be_replayed(self, input_data):
+        """append + a computed representation loses a cluster's members."""
+        result = run_aggregation(
+            input_data,
+            ClusteringTestCase(
+                id="append_mean",
+                method="hierarchical",
+                representation="mean",
+                extreme_method="append",
+                extreme_columns=["Load"],
+            ),
+        )
+        with pytest.warns(UserWarning, match="cannot be replayed exactly"):
+            result.clustering.apply(input_data)
+
+    def test_apply_is_silent_when_extremes_can_be_replayed(self, input_data, recwarn):
+        """A selected representation stores the period index, so it replays."""
+        result = run_aggregation(
+            input_data,
+            ClusteringTestCase(
+                id="append_medoid",
+                method="hierarchical",
+                representation="medoid",
+                extreme_method="append",
+                extreme_columns=["Load"],
+            ),
+        )
+        result.clustering.apply(input_data)
+        assert not [w for w in recwarn if "replayed exactly" in str(w.message)]
+
     @pytest.mark.parametrize(
         "test_case", TRANSFER_TEST_CASES, ids=get_transfer_test_ids()
     )
