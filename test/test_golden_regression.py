@@ -52,12 +52,7 @@ pytestmark = [
 # v4 rewrite, not an intended one; the golden pins the v3 reference so the fix
 # has something to be verified against. ``strict`` means a fix turns the xfail
 # into an XPASS and forces the entry to be removed.
-_V4_REGRESSIONS: dict[str, str] = {
-    "segmentation_medoid/testdata": (
-        "SegmentConfig(representation='medoid') diverges from v3 on a small "
-        "number of segments (~0.4% of cells). Root cause not yet identified."
-    ),
-}
+_V4_REGRESSIONS: dict[str, str] = {}
 
 
 def _parametrized_cases():

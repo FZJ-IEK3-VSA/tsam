@@ -135,6 +135,48 @@ Each stage now builds its own dict from its own configuration.
 previously computed with the *segment* column assignment. They are now computed
 with the one you asked for. Regenerate any pinned references.
 
+## Representative selection is deterministic on ties
+
+`medoid` and `maxoid` picked a cluster member with a bare `argmin`/`argmax` over
+summed distances. Ties are common — the two members of a two-member group are
+always equidistant — and were decided by floating-point noise, so the same data
+could give a different representative on a different machine. Distances are now
+rounded before comparison and the earliest member wins.
+
+**Action required:** none, unless you pinned a value that fell on a tie — in
+which case it was never reproducible anyway.
+
+## Transferring a clustering (`ClusteringResult.apply()`)
+
+- **The full `ClusterConfig` is replayed.** Only the representation was, so
+  `scale_by_column_means` (v3: `normalize_column_means`) reverted to its default
+  and the result came back silently rescaled.
+- **A padded partial last period is accepted.** Such a clustering previously
+  raised for any data, including its own input.
+- **`cluster_centers` is correct for `use_duration_curves`.** v3 recorded
+  indices from a different criterion than the centers, so a replay could produce
+  different typical periods. `aggregate()` itself is unaffected — only the
+  recorded indices, and therefore the transfer.
+- **Inexact transfers warn.** Both `extremes="replace"` and
+  `extremes="append"`/`"new_cluster"` with a *computed* representation
+  (`mean`, `distribution`, …) now warn. v3's advice to use `append` or
+  `new_cluster` for exact transfer held only for `medoid`/`maxoid`.
+
+**Action required:** if you transfer a clustering built with
+`scale_by_column_means=True`, the result changes — to the one you configured.
+
+## Configurations that now raise or warn
+
+| Configuration | v3 | v4 |
+|---|---|---|
+| Column in both `MinMaxMean.max_columns` and `min_columns` | silently `max` | `ValueError` |
+| `MinMaxMean` naming a column not in the data | silently ignored | `ValueError` |
+| `ClusterConfig.representation` with `use_duration_curves=True` | silently ignored | `UserWarning` |
+| Series length not a whole number of periods | padded silently | padded, with a `UserWarning` |
+
+**Action required:** a typo in a `MinMaxMean` column name used to be a no-op and
+is now an error.
+
 ## Removed deprecated APIs
 
 The v3 deprecation shims have been **removed** in v4:

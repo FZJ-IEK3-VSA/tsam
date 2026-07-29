@@ -17,15 +17,7 @@ from collections.abc import Callable
 
 import numpy as np
 
-
-def _deterministic_argmin(values: np.ndarray) -> int:
-    """Index of the minimum, with a platform-stable tie-break.
-
-    Rounds before comparing so values that are equal in exact arithmetic but
-    differ by floating-point noise across BLAS/platforms collapse to one value;
-    ``argmin`` then returns the lowest such index identically everywhere.
-    """
-    return int(np.argmin(np.round(values, 10)))
+from tsam.algorithms.selection import deterministic_argmin
 
 
 def _first_principal_component(matrix: np.ndarray) -> np.ndarray:
@@ -92,7 +84,7 @@ def _medoid(
     n_cands = cluster_data.shape[1]
     members = cluster_data.transpose(1, 0, 2).reshape(n_cands, -1)
     distances = np.linalg.norm(members[:, None, :] - members[None, :, :], axis=2)
-    medoid_profile = cluster_data[:, _deterministic_argmin(distances.sum(axis=0)), :]
+    medoid_profile = cluster_data[:, deterministic_argmin(distances.sum(axis=0)), :]
     return np.round(medoid_profile, 10).argsort(axis=1, kind="stable")
 
 
