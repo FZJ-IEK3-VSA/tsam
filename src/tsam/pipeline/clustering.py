@@ -12,6 +12,7 @@ import numpy as np
 
 from tsam.algorithms.clustering import assign_clusters, cluster_and_represent
 from tsam.algorithms.representations import representations
+from tsam.algorithms.selection import deterministic_argmin
 from tsam.config import DEFAULT_REPRESENTATION
 
 if TYPE_CHECKING:
@@ -212,8 +213,8 @@ def cluster_sorted_periods(
         indices = np.where(cluster_order == cluster_num)[0]
         if len(indices) > 1:
             current_mean = sorted_values[indices].mean(axis=0)
-            closest = int(
-                np.argmin(np.square(sorted_values[indices] - current_mean).sum(axis=1))
+            closest = deterministic_argmin(
+                np.square(sorted_values[indices] - current_mean).sum(axis=1)
             )
         else:
             closest = 0

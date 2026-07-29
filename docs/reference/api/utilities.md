@@ -32,6 +32,8 @@ The clustering and representation primitives the pipeline dispatches to.
 
 ::: tsam.algorithms.clustering
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
+::: tsam.algorithms.selection
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 ::: tsam.algorithms.representations
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 

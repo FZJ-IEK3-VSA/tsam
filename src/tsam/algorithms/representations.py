@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
 
 from tsam.algorithms.duration_representation import duration_representation
+from tsam.algorithms.selection import deterministic_argmax, deterministic_argmin
 from tsam.config import Distribution, MinMaxMean
 
 
@@ -143,7 +144,7 @@ def maxoid_representation(
     for cluster_num in np.unique(cluster_order):
         indices = np.where(cluster_order == cluster_num)
         dist_to_dataset = euclidean_distances(candidates, candidates[indices])
-        max_dist_idx = np.argmax(dist_to_dataset.sum(axis=0))
+        max_dist_idx = deterministic_argmax(dist_to_dataset.sum(axis=0))
         cluster_centers.append(candidates[indices][max_dist_idx])
         cluster_center_indices.append(indices[0][max_dist_idx])
 
@@ -161,7 +162,7 @@ def medoid_representation(
     for cluster_num in np.unique(cluster_order):
         indices = np.where(cluster_order == cluster_num)
         inner_dist_matrix = euclidean_distances(candidates[indices])
-        min_dist_idx = np.argmin(inner_dist_matrix.sum(axis=0))
+        min_dist_idx = deterministic_argmin(inner_dist_matrix.sum(axis=0))
         cluster_centers.append(candidates[indices][min_dist_idx])
         cluster_center_indices.append(indices[0][min_dist_idx])
 
