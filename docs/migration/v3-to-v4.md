@@ -100,6 +100,41 @@ rely on exact aggregated values with rescaling enabled, regenerate any pinned
 references. Aggregate metrics (integral, min/max envelope) are preserved or
 improved.
 
+## Cluster and segment representations are resolved independently
+
+`ClusterConfig.representation` and `SegmentConfig.representation` are two
+separate settings, but v3 resolved them into a **single** per-column
+`representationDict`, and the segment representation was applied last. Setting a
+`MinMaxMean` on `SegmentConfig` therefore silently overwrote the cluster
+representation's per-column assignment:
+
+```python
+tsam.aggregate(
+    data,
+    n_clusters=8,
+    cluster=ClusterConfig(representation=MinMaxMean(max_columns=["GHI"])),
+    segments=SegmentConfig(n_segments=6, representation=MinMaxMean(min_columns=["Load"])),
+)
+# v3: BOTH stages used {Load: min}; the cluster's {GHI: max} was discarded.
+# v4: the cluster stage uses {GHI: max}, the segment stage uses {Load: min}.
+```
+
+Each stage now builds its own dict from its own configuration.
+
+**What changes:**
+
+- Configurations that set a `MinMaxMean` (or a `Distribution` with per-column
+  effects) on **both** `ClusterConfig` and `SegmentConfig` now honour both.
+  Previously the cluster one was dropped, so cluster representatives change.
+- Configurations that set it on only one of the two are unaffected — this is the
+  overwhelming majority, and every golden regression case is bit-identical
+  except the one added to cover this.
+
+**Action required:** If you set a per-column representation on both
+`ClusterConfig` and `SegmentConfig`, your cluster representatives were
+previously computed with the *segment* column assignment. They are now computed
+with the one you asked for. Regenerate any pinned references.
+
 ## Removed deprecated APIs
 
 The v3 deprecation shims have been **removed** in v4:

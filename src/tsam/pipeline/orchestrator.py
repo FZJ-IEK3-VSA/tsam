@@ -279,6 +279,13 @@ def prepare_data(
     representation_dict = _build_representation_dict(
         data.columns, cluster_representation
     )
+    # Segmentation is configured independently of clustering, so it gets its
+    # own dict rather than borrowing the cluster stage's.
+    segment_representation_dict = (
+        _build_representation_dict(data.columns, cfg.segments.representation)
+        if cfg.segments is not None
+        else None
+    )
     original_column_order = list(data.columns)
     original_data = data.copy()
 
@@ -307,10 +314,17 @@ def prepare_data(
     # Add period sum features if requested
     # Period sums are extra columns appended for clustering distance only;
     # they must NOT reach representations() which expects original columns.
+    # They are summed from the *weighted* profiles so that a column's sum
+    # feature carries the same weight as its timestep features — summing the
+    # unweighted profiles would make a column's period sum count for relatively
+    # less the higher its weight.
     n_feature_cols = candidates.shape[1]
     if cluster.include_period_sums:
         candidates = add_period_sum_features(
-            period_profiles.profiles_dataframe, candidates
+            weighted_profiles_df
+            if weighted_profiles_df is not None
+            else period_profiles.profiles_dataframe,
+            candidates,
         )
 
     return PreparedData(
@@ -323,6 +337,7 @@ def prepare_data(
         original_data=original_data,
         weight_vector=weight_vector,
         weighted_profiles_df=weighted_profiles_df,
+        segment_representation_dict=segment_representation_dict,
     )
 
 
@@ -398,8 +413,12 @@ def cluster_candidates(
         else:
             cluster_centers, cluster_center_indices, cluster_order = (
                 cluster_sorted_periods(
-                    candidates,
+                    # Never the augmented matrix: this path reshapes its input
+                    # per column, and the period-sum block is not made of
+                    # timesteps, so including it shifts every column's block.
+                    rep_candidates if rep_candidates is not None else candidates,
                     period_profiles.n_columns,
+                    cfg.n_timesteps_per_period,
                     cfg.n_clusters,
                     cluster,
                 )
@@ -547,7 +566,7 @@ def refine_representatives(
                 segmentation_input,
                 cfg.n_timesteps_per_period,
                 cfg.segments,
-                prepared.representation_dict,
+                prepared.segment_representation_dict,
                 cfg.predef,
             )
         )

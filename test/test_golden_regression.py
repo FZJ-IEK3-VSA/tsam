@@ -51,26 +51,6 @@ pytestmark = [
 # has something to be verified against. ``strict`` means a fix turns the xfail
 # into an XPASS and forces the entry to be removed.
 _V4_REGRESSIONS: dict[str, str] = {
-    "period_sums_weighted/testdata": (
-        "include_period_sums + weights: v3 summed the *weighted* periodly "
-        "profiles into the extra features (weights were applied before "
-        "unstacking); v4's add_period_sum_features sums the unweighted "
-        "profiles_dataframe and appends them to weighted candidates, so column "
-        "weights no longer reach the period-sum features."
-    ),
-    "duration_curves_period_sums/testdata": (
-        "include_period_sums + use_duration_curves: v3's _clusterSortedPeriods "
-        "sorted normalizedPeriodlyProfiles (un-augmented); v4's "
-        "cluster_sorted_periods reshapes the *augmented* candidates with "
-        "n_timesteps = n_total // n_columns, which is off by one block and "
-        "sorts across column boundaries."
-    ),
-    "segmentation_minmax_mean/testdata": (
-        "SegmentConfig(representation=MinMaxMean(...)): v3 overrode "
-        "representationDict from the segment representation; v4 only ever "
-        "derives representation_dict from ClusterConfig.representation, so the "
-        "per-column min/max assignment never reaches the segmentation kernel."
-    ),
     "segmentation_medoid/testdata": (
         "SegmentConfig(representation='medoid') diverges from v3 on a small "
         "number of segments (~0.4% of cells). Root cause not yet identified."

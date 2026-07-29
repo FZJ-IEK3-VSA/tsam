@@ -128,6 +128,7 @@ def cluster_periods(
 def cluster_sorted_periods(
     candidates: np.ndarray,
     n_columns: int,
+    n_timesteps_per_period: int,
     n_clusters: int,
     cluster: ClusterConfig,
 ) -> tuple[list[np.ndarray], list[int], np.ndarray]:
@@ -152,12 +153,25 @@ def cluster_sorted_periods(
     path where the configured representation is honoured.
 
     Args:
-        candidates: Candidate period matrix (possibly weighted).
+        candidates: Candidate period matrix (possibly weighted), laid out as
+            ``n_columns`` contiguous blocks of equal length. It must **not**
+            carry the period-sum features that `ClusterConfig.include_period_sums`
+            appends: those are not timesteps, so they would make the per-column
+            reshape below misread every block boundary. Period sums therefore
+            do not influence duration-curve clustering.
         n_columns: Number of original columns, needed to reshape per-column
             before sorting.
+        n_timesteps_per_period: Length of each column's block. Passed in rather
+            than derived as ``candidates.shape[1] // n_columns`` because that
+            division cannot tell a wider block from an extra block, and so
+            silently accepted the augmented matrix.
         n_clusters: Number of clusters to form.
         cluster: Clustering configuration; only ``method`` and ``solver`` are
             used here, for the reason given above.
+
+    Raises:
+        ValueError: If ``candidates`` does not split evenly into ``n_columns``
+            blocks of the same length.
 
     Returns:
         ``(cluster_centers, cluster_center_indices, cluster_order)``. The
@@ -172,9 +186,16 @@ def cluster_sorted_periods(
     # Use candidates (already weighted) so that clustering distance respects
     # column weights — matching v3 behaviour.
     n_periods, n_total = candidates.shape
-    n_timesteps = n_total // n_columns
+    expected = n_columns * n_timesteps_per_period
+    if n_total != expected:
+        raise ValueError(
+            f"cluster_sorted_periods expects {n_columns} blocks of "
+            f"{n_timesteps_per_period} timesteps ({expected} columns), but the "
+            f"candidate matrix is {n_total} wide. Any appended period-sum "
+            "features must be trimmed off before sorting."
+        )
 
-    values_3d = candidates.copy().reshape(n_periods, n_columns, n_timesteps)
+    values_3d = candidates.copy().reshape(n_periods, n_columns, n_timesteps_per_period)
     sorted_values = (-np.sort(-values_3d, axis=2, kind="stable")).reshape(n_periods, -1)
 
     cluster_order = assign_clusters(

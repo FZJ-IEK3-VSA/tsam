@@ -133,12 +133,18 @@ def add_period_sum_features(
     These extra columns influence **only** which periods get grouped — they are
     stripped from the cluster centers during post-processing (the trim step) so
     they never reach the representation logic, which expects the original
-    columns. When per-column weights are active they are already baked into
-    ``candidates``, so the sums are appended to the weighted candidates.
+    columns.
+
+    ``profiles_df`` and ``candidates`` must be in the **same space**: when
+    per-column weights are active, the caller passes the weighted profiles, so
+    a column's sum feature carries the same weight as its timestep features.
+    Summing unweighted profiles into weighted candidates would mean the higher
+    a column's weight, the *less* its period sum counts relative to its own
+    timesteps.
 
     Args:
-        profiles_df: The unstacked, normalized period profiles (used to compute
-            the per-period sums).
+        profiles_df: The unstacked, normalized period profiles the sums are
+            computed from — weighted if ``candidates`` is weighted.
         candidates: Current candidate matrix (possibly already weighted) to
             augment.
 
