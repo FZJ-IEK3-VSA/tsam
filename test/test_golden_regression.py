@@ -73,13 +73,6 @@ def _parametrized_cases():
     ]
 
 
-_PARTIAL_PERIOD_REJECTED = (
-    "apply() validates len(data) // n_timesteps_per_period against "
-    "n_original_periods. The padded partial last period is counted in the "
-    "latter but floored out of the former, so a clustering built from a series "
-    "that does not fill whole periods raises 'Data has N periods, but "
-    "clustering expects N+1' — even when replayed on its own input."
-)
 _APPEND_SHIFTS_MEAN = (
     "extremes='append' moves a period out of its original cluster *after* the "
     "centers were computed, so the stored center includes a period the stored "
@@ -98,8 +91,6 @@ _TRANSFER_NOT_EXACT: dict[str, str] = {
     "stored assignment cannot reconstruct — ClusteringResult.apply() warns",
     "extremes_replace_segmentation": "same as extremes_replace, with segmentation",
     # --- defects ---
-    "period_week": _PARTIAL_PERIOD_REJECTED,
-    "period_48h": _PARTIAL_PERIOD_REJECTED,
     "kmeans_extremes_append": _APPEND_SHIFTS_MEAN,
     "averaging_extremes_append": _APPEND_SHIFTS_MEAN,
 }

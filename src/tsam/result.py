@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import warnings
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -1275,12 +1276,16 @@ class ClusteringResult:
                 f"but clustering expects {self.n_timesteps_per_period} timesteps per period"
             )
 
-        # Validate number of periods matches
-        n_periods_in_data = len(data) // self.n_timesteps_per_period
+        # Rounded up, matching how the pipeline counts: a series that does not
+        # fill whole periods has its last period padded, and that padded period
+        # is in cluster_assignments.
+        n_periods_in_data = math.ceil(len(data) / self.n_timesteps_per_period)
         if n_periods_in_data != self.n_original_periods:
             raise ValueError(
-                f"Data has {n_periods_in_data} periods, "
-                f"but clustering expects {self.n_original_periods} periods"
+                f"Data has {n_periods_in_data} periods "
+                f"({len(data)} timesteps at {self.n_timesteps_per_period} per "
+                f"period), but clustering expects {self.n_original_periods} "
+                "periods"
             )
 
         # Settings like scale_by_column_means shape the data, not just the
