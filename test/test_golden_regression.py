@@ -19,9 +19,11 @@ Usage::
 
 from __future__ import annotations
 
+import dataclasses
 import warnings
 from contextlib import contextmanager
 
+import numpy as np
 import pandas as pd
 import pytest
 from sklearn.exceptions import ConvergenceWarning
@@ -66,6 +68,64 @@ def _parametrized_cases():
             marks=pytest.mark.xfail(reason=_V4_REGRESSIONS[case.id], strict=True),
         )
         if case.id in _V4_REGRESSIONS
+        else case
+        for case in CASES
+    ]
+
+
+_SAMEMEAN_LOST = (
+    "ClusterConfig.scale_by_column_means is not stored on ClusteringResult at "
+    "all, and apply() rebuilds the config as "
+    "ClusterConfig(representation=self.representation), so the setting silently "
+    "reverts to False on transfer."
+)
+_PARTIAL_PERIOD_REJECTED = (
+    "apply() validates len(data) // n_timesteps_per_period against "
+    "n_original_periods. The padded partial last period is counted in the "
+    "latter but floored out of the former, so a clustering built from a series "
+    "that does not fill whole periods raises 'Data has N periods, but "
+    "clustering expects N+1' — even when replayed on its own input."
+)
+_APPEND_SHIFTS_MEAN = (
+    "extremes='append' moves a period out of its original cluster *after* the "
+    "centers were computed, so the stored center includes a period the stored "
+    "assignment excludes. With a medoid representation the center index is "
+    "stored and replays exactly; with a mean representation the center is "
+    "recomputed from the post-move assignment and differs."
+)
+
+
+# Configurations a stored ``ClusteringResult`` cannot replay exactly. Keyed by
+# config id, so they apply to that configuration on every dataset. Only the
+# first entry is a documented limitation; the rest are defects this test found.
+_TRANSFER_NOT_EXACT: dict[str, str] = {
+    "extremes_replace": "documented: 'replace' builds a hybrid representative "
+    "(some columns from the medoid, some from the extreme period) that the "
+    "stored assignment cannot reconstruct — ClusteringResult.apply() warns",
+    "extremes_replace_segmentation": "same as extremes_replace, with segmentation",
+    # --- defects ---
+    "segmentation_samemean": _SAMEMEAN_LOST,
+    "hierarchical_weighted_samemean": _SAMEMEAN_LOST,
+    "hierarchical_weighted_segmentation_samemean": _SAMEMEAN_LOST,
+    "samemean_unweighted": _SAMEMEAN_LOST,
+    "samemean_extremes": _SAMEMEAN_LOST,
+    "period_week": _PARTIAL_PERIOD_REJECTED,
+    "period_48h": _PARTIAL_PERIOD_REJECTED,
+    "kmeans_extremes_append": _APPEND_SHIFTS_MEAN,
+    "averaging_extremes_append": _APPEND_SHIFTS_MEAN,
+}
+
+
+def _apply_cases():
+    """CASES, with the configurations that cannot round-trip marked xfail."""
+    return [
+        pytest.param(
+            case,
+            marks=pytest.mark.xfail(
+                reason=_TRANSFER_NOT_EXACT[case.id.split("/")[0]], strict=True
+            ),
+        )
+        if case.id.split("/")[0] in _TRANSFER_NOT_EXACT
         else case
         for case in CASES
     ]
@@ -174,3 +234,103 @@ class TestGoldenRegression:
             check_like=True,  # v4 preserves input column order; golden CSVs are alphabetical
             atol=1e-7,
         )
+
+    @pytest.mark.parametrize("case", _apply_cases(), ids=case_ids(CASES))
+    def test_apply_reproduces_the_run(self, case: GoldenCase, update_golden):
+        """Replaying a stored clustering on its own input must change nothing.
+
+        This needs no golden file — the expected value is the run it came from
+        — so every configuration in the matrix gets transfer coverage for the
+        cost of a second aggregation. `test_api_matches_golden` pins *what* a
+        configuration computes; this pins that `ClusteringResult` carries
+        enough to compute it again.
+        """
+        if update_golden:
+            pytest.skip("updating golden files")
+
+        data = get_data(case.dataset, max_timesteps=case.max_timesteps)
+        # round_decimals and numerical_tolerance are call-time arguments of
+        # apply(), not part of the stored clustering, so the caller supplies
+        # them exactly as the original run did.
+        passthrough = {
+            key: case.new_kwargs[key]
+            for key in ("round_decimals", "numerical_tolerance")
+            if key in case.new_kwargs
+        }
+        with _expected_warnings(case):
+            with _expected_windows_kmeans_warnings(case):
+                result = run_new(data, case)
+                replayed = result.clustering.apply(data, **passthrough)
+
+        assert replayed.is_transferred
+        assert list(replayed.cluster_assignments) == list(result.cluster_assignments)
+
+        pd.testing.assert_frame_equal(
+            replayed.cluster_representatives,
+            result.cluster_representatives,
+            check_names=False,
+            atol=1e-7,
+        )
+
+
+def test_transfer_replays_rather_than_reclusters():
+    """Guard for `test_apply_reproduces_the_run`, which cannot show this itself.
+
+    Replaying on the same input is the only comparison with a known expected
+    value, but it is also the one a silent re-clustering would survive: a
+    deterministic method re-run on unchanged data lands on the same answer.
+    Perturbing the data separates the two — a replay keeps the stored
+    assignment, a re-clustering does not.
+    """
+    data = get_data("testdata")
+    case = next(c for c in CASES if c.id == "hierarchical_default/testdata")
+    result = run_new(data, case)
+
+    rng = np.random.default_rng(0)
+    perturbed = pd.DataFrame(
+        data.values * (1 + rng.normal(0, 0.35, size=data.shape)),
+        index=data.index,
+        columns=data.columns,
+    )
+    transferred = result.clustering.apply(perturbed)
+    freshly_clustered = run_new(perturbed, case)
+
+    assert list(transferred.cluster_assignments) == list(result.cluster_assignments)
+    assert list(freshly_clustered.cluster_assignments) != list(
+        result.cluster_assignments
+    ), "perturbation was too small to change the clustering; the guard proves nothing"
+
+
+def test_transfer_uses_the_stored_assignment():
+    """The negative control for `test_transfer_replays_rather_than_reclusters`.
+
+    That test shows `apply()` does not recluster. This one shows the stored
+    fields are what it clusters *by*: altering the assignment on the
+    `ClusteringResult` — leaving the data untouched — has to change the
+    representatives. If it did not, the transfer would be ignoring the very
+    thing it is supposed to replay.
+    """
+    data = get_data("testdata")
+    case = next(c for c in CASES if c.id == "hierarchical_default/testdata")
+    result = run_new(data, case)
+
+    original = result.clustering
+    # Rotate the assignment: same clusters, same sizes, different members.
+    altered = dataclasses.replace(
+        original,
+        cluster_assignments=tuple(
+            np.roll(np.array(original.cluster_assignments), 1).tolist()
+        ),
+        cluster_centers=None,
+    )
+
+    replayed = original.apply(data)
+    altered_replay = altered.apply(data)
+
+    assert list(altered_replay.cluster_assignments) != list(
+        replayed.cluster_assignments
+    )
+    assert not np.allclose(
+        altered_replay.cluster_representatives.values,
+        replayed.cluster_representatives.values,
+    ), "apply() ignored the stored assignment"

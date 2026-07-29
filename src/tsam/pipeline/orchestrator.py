@@ -377,9 +377,7 @@ def cluster_candidates(
         prepared.attribute_columns, cluster_representation
     )
 
-    # Cluster. Only the transfer path leaves the duration at zero — it does no
-    # clustering to time.
-    clustering_duration = 0.0
+    t_start = time.time()
 
     if cfg.predef is not None:
         cluster_centers, cluster_center_indices, cluster_order = (
@@ -393,7 +391,6 @@ def cluster_candidates(
             )
         )
     else:
-        t_start = time.time()
         # When period-sum features are appended, representations must run
         # on the non-augmented prefix so period-sum columns don't leak in.
         rep_candidates: np.ndarray | None = None
@@ -423,7 +420,8 @@ def cluster_candidates(
                     cluster,
                 )
             )
-        clustering_duration = time.time() - t_start
+
+    clustering_duration = time.time() - t_start
 
     # Ensure cluster_order is always np.ndarray
     cluster_order = np.asarray(cluster_order)
