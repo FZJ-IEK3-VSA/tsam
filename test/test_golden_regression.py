@@ -73,12 +73,6 @@ def _parametrized_cases():
     ]
 
 
-_SAMEMEAN_LOST = (
-    "ClusterConfig.scale_by_column_means is not stored on ClusteringResult at "
-    "all, and apply() rebuilds the config as "
-    "ClusterConfig(representation=self.representation), so the setting silently "
-    "reverts to False on transfer."
-)
 _PARTIAL_PERIOD_REJECTED = (
     "apply() validates len(data) // n_timesteps_per_period against "
     "n_original_periods. The padded partial last period is counted in the "
@@ -104,11 +98,6 @@ _TRANSFER_NOT_EXACT: dict[str, str] = {
     "stored assignment cannot reconstruct — ClusteringResult.apply() warns",
     "extremes_replace_segmentation": "same as extremes_replace, with segmentation",
     # --- defects ---
-    "segmentation_samemean": _SAMEMEAN_LOST,
-    "hierarchical_weighted_samemean": _SAMEMEAN_LOST,
-    "hierarchical_weighted_segmentation_samemean": _SAMEMEAN_LOST,
-    "samemean_unweighted": _SAMEMEAN_LOST,
-    "samemean_extremes": _SAMEMEAN_LOST,
     "period_week": _PARTIAL_PERIOD_REJECTED,
     "period_48h": _PARTIAL_PERIOD_REJECTED,
     "kmeans_extremes_append": _APPEND_SHIFTS_MEAN,

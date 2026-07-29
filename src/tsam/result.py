@@ -710,8 +710,11 @@ class ClusteringResult:
             the aggregation was unweighted.
         time_index: Original ``DatetimeIndex`` of the input data, kept so that
             ``disaggregate()`` can round-trip results to the original timestamps.
-        cluster_config: Reference only. Clustering configuration used to create
-            this result.
+        cluster_config: Clustering configuration used to create this result.
+            `apply()` replays under it, so settings that shape the data rather
+            than the assignment — `scale_by_column_means`, `include_period_sums`
+            — survive a transfer. Falls back to `representation` alone when
+            absent.
         segment_config: Reference only. Segmentation configuration used to create
             this result.
         extremes_config: Reference only. Extreme-period configuration used to
@@ -746,7 +749,8 @@ class ClusteringResult:
     # === Index fields (for disaggregate() round-trip) ===
     time_index: pd.DatetimeIndex | None = None
 
-    # === Reference fields (for documentation, not used by apply()) ===
+    # === Config fields (cluster_config is replayed by apply(); the other two
+    # are reference only) ===
     cluster_config: ClusterConfig | None = None
     segment_config: SegmentConfig | None = None
     extremes_config: ExtremeConfig | None = None
@@ -1279,8 +1283,12 @@ class ClusteringResult:
                 f"but clustering expects {self.n_original_periods} periods"
             )
 
-        # Build minimal ClusterConfig with just the representation.
-        cluster = ClusterConfig(representation=self.representation)
+        # Settings like scale_by_column_means shape the data, not just the
+        # assignment, so the replay needs the whole config. Hand-built results
+        # may not carry one.
+        cluster = self.cluster_config or ClusterConfig(
+            representation=self.representation
+        )
 
         # Validate (and normalize) the stored weights against the new data
         from tsam.weights import validate_weights
