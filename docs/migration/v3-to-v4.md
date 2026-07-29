@@ -155,24 +155,6 @@ were close enough to flip; one golden regression case changed as a result.
 **Action required:** none, unless you pinned a value that happened to fall on a
 tie. If you did, it was not reproducible across machines to begin with.
 
-## Period-sum features (`include_period_sums`)
-
-Two corrections, both affecting only configurations that switch this on:
-
-- **With `weights`.** The appended per-column sums are computed from the
-  *weighted* profiles again, so a column's sum feature carries the same weight
-  as its timestep features. In between they were summed unweighted and appended
-  to weighted candidates, which meant the higher a column's weight, the *less*
-  its period sum counted relative to its own timesteps.
-- **With `use_duration_curves`.** The sum features no longer reach the
-  duration-curve path. That path reshapes its input into one block of timesteps
-  per column, and the appended block is not made of timesteps, so including it
-  shifted every column's block and sorted across column boundaries. Period sums
-  do not influence duration-curve clustering, as in v3.
-
-**Action required:** if you use `include_period_sums` together with `weights` or
-`use_duration_curves`, regenerate any pinned references.
-
 ## Duration-curve clustering (`use_duration_curves`)
 
 `ClusteringResult.cluster_centers` now identifies the periods the returned
@@ -189,8 +171,9 @@ run, where before they silently did not.
 
 - **`ClusterConfig` is replayed in full.** `apply()` rebuilt a minimal
   configuration from the representation alone, so settings that shape the data
-  rather than the assignment — `scale_by_column_means` above all — reverted to
-  their defaults and the transferred result came back silently rescaled.
+  rather than the assignment — above all `scale_by_column_means`, which v3
+  spelled `normalize_column_means` — reverted to their defaults and the
+  transferred result came back silently rescaled.
 - **A padded partial last period is accepted.** The period count is rounded up
   to match how the pipeline counts, so a clustering built from a series that
   does not fill whole periods can be applied at all. Previously it raised
@@ -203,8 +186,8 @@ run, where before they silently did not.
   representations (`medoid`, `maxoid`).
 
 **Action required:** if you transfer a clustering built with
-`scale_by_column_means=True`, the result changes — it is now the one you
-configured.
+`scale_by_column_means=True` (v3: `normalize_column_means=True`), the result
+changes — it is now the one you configured.
 
 ## Configurations that now raise or warn
 
@@ -212,7 +195,7 @@ Three previously silent cases are reported:
 
 | Configuration | v3 | v4 |
 |---|---|---|
-| A column in both `MinMaxMean.max_columns` and `min_columns` | resolved by whichever loop ran last | `ValueError` |
+| A column in both `MinMaxMean.max_columns` and `min_columns` | silently treated as `max` | `ValueError` |
 | `MinMaxMean` naming a column that is not in the data | silently ignored | `ValueError` |
 | `ClusterConfig.representation` with `use_duration_curves=True` | silently ignored | `UserWarning` |
 
