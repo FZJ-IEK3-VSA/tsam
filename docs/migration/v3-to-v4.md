@@ -135,6 +135,95 @@ Each stage now builds its own dict from its own configuration.
 previously computed with the *segment* column assignment. They are now computed
 with the one you asked for. Regenerate any pinned references.
 
+## Representative selection is deterministic on ties
+
+`medoid` and `maxoid` pick a cluster member by the extreme of a summed-distance
+array. Ties in that array are common rather than exotic — every member of a
+two-member group is equidistant from the others — and v3 resolved them with a
+bare `argmin`/`argmax`, so the winner was decided by the order the squared
+differences happened to be accumulated in. It could change with the column
+order of the input, the BLAS build, or the array layout: the same code on the
+same data could pick a different representative on a different machine.
+
+Distances are now rounded before comparison, so noise-level differences count
+as ties and the earliest member wins, identically everywhere.
+
+**What changes:** results move only where the previous choice was undefined. On
+the packaged example data, 25 of 464 medoid selections sit on a tie and two
+were close enough to flip; one golden regression case changed as a result.
+
+**Action required:** none, unless you pinned a value that happened to fall on a
+tie. If you did, it was not reproducible across machines to begin with.
+
+## Period-sum features (`include_period_sums`)
+
+Two corrections, both affecting only configurations that switch this on:
+
+- **With `weights`.** The appended per-column sums are computed from the
+  *weighted* profiles again, so a column's sum feature carries the same weight
+  as its timestep features. In between they were summed unweighted and appended
+  to weighted candidates, which meant the higher a column's weight, the *less*
+  its period sum counted relative to its own timesteps.
+- **With `use_duration_curves`.** The sum features no longer reach the
+  duration-curve path. That path reshapes its input into one block of timesteps
+  per column, and the appended block is not made of timesteps, so including it
+  shifted every column's block and sorted across column boundaries. Period sums
+  do not influence duration-curve clustering, as in v3.
+
+**Action required:** if you use `include_period_sums` together with `weights` or
+`use_duration_curves`, regenerate any pinned references.
+
+## Duration-curve clustering (`use_duration_curves`)
+
+`ClusteringResult.cluster_centers` now identifies the periods the returned
+centers were actually taken from. Previously the indices came from a different
+criterion than the centers — and were `None` entirely for representations that
+are computed rather than selected — so replaying a stored clustering could
+produce different typical periods than the original run.
+
+**Action required:** none for a fresh aggregation; the typical periods are
+unchanged. Transfers of a duration-curve clustering now reproduce the original
+run, where before they silently did not.
+
+## Transferring a clustering (`ClusteringResult.apply()`)
+
+- **`ClusterConfig` is replayed in full.** `apply()` rebuilt a minimal
+  configuration from the representation alone, so settings that shape the data
+  rather than the assignment — `scale_by_column_means` above all — reverted to
+  their defaults and the transferred result came back silently rescaled.
+- **A padded partial last period is accepted.** The period count is rounded up
+  to match how the pipeline counts, so a clustering built from a series that
+  does not fill whole periods can be applied at all. Previously it raised
+  regardless of the data given to it, including its own input.
+- **Inexact transfers warn.** `apply()` and `to_json()` now warn for both
+  configurations that cannot be replayed exactly: `extremes="replace"`, and
+  `extremes="append"`/`"new_cluster"` combined with a representation that is
+  computed rather than selected. The v3 advice to "use `append` or
+  `new_cluster` for exact transfer" was only true for the selected
+  representations (`medoid`, `maxoid`).
+
+**Action required:** if you transfer a clustering built with
+`scale_by_column_means=True`, the result changes — it is now the one you
+configured.
+
+## Configurations that now raise or warn
+
+Three previously silent cases are reported:
+
+| Configuration | v3 | v4 |
+|---|---|---|
+| A column in both `MinMaxMean.max_columns` and `min_columns` | resolved by whichever loop ran last | `ValueError` |
+| `MinMaxMean` naming a column that is not in the data | silently ignored | `ValueError` |
+| `ClusterConfig.representation` with `use_duration_curves=True` | silently ignored | `UserWarning` |
+
+A series whose length is not a whole number of periods also emits a
+`UserWarning` now. This is still valid input — the last period is padded, its
+occurrence count reduced accordingly, and the padding dropped on reconstruction
+— but the padding is no longer invisible.
+
+**Action required:** a typo in a `MinMaxMean` column name used to be a no-op and
+is now an error. If you relied on that, fix the name.
+
 ## Removed deprecated APIs
 
 The v3 deprecation shims have been **removed** in v4:
