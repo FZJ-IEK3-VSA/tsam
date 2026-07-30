@@ -6,30 +6,64 @@ function instead. If you are coming from v2, start with the
 [v2 to v3 guide](v2-to-v3.md), which maps every old parameter to its
 current equivalent, then return here.
 
-There are also behavioral changes that may affect your results.
+Beyond the API removal there are behavioural changes. Most need nothing from
+you — these are the ones that do:
 
-## Weight semantics — restructured, not changed
+| If you… | See |
+|---|---|
+| set a per-column representation on **both** `ClusterConfig` and `SegmentConfig` | [Cluster and segment representations](#cluster-and-segment-representations-are-resolved-independently) — v3 ignored the cluster one |
+| index result columns by position | [Column order](#column-order-new-api-only) |
+| pass a non-datetime index without `temporal_resolution` | [Resolution defaults](#resolution-defaults-for-non-datetime-indices) |
+| upgrade from **3.4.1 or earlier** and use `distribution_minmax` / `maxoid` | [Integral and min/max preservation](#integral-and-minmax-preservation) |
+| transfer a clustering built with `scale_by_column_means` | [Transferring a clustering](#transferring-a-clustering-clusteringresultapply) |
+| rely on a `MinMaxMean` column name that does not exist | [Configurations that now raise or warn](#configurations-that-now-raise-or-warn) |
 
-`weights` is applied in one place now. v3 multiplied it into the normalized
-series before unstacking, so every downstream step saw weighted data and had to
-divide it back out again — rescaling, reconstruction and accuracy each carried
-their own compensation. v4 applies it to the clustering candidates only, and
-removes it once, after the set of representatives is final.
+Weight handling and representative tie-breaking also changed, but neither
+alters results for anyone coming from 3.4.2.
 
-**The same things are weighted either way:** the clustering distance, medoid and
-maxoid selection, extreme-period detection, and segment boundaries. And the same
-things are unweighted: rescaling, denormalization, the returned values, and the
-accuracy metrics. Only the location of the division moved.
+## Cluster and segment representations are resolved independently
 
-**What changes: nothing observable.** Every configuration in the golden matrix
-matches v3.4.2 to within `2e-13`, medoid and maxoid under non-uniform weights
-included. For `hierarchical_weighted` the agreement is total — same cluster
-assignments, same reconstruction, and the same selected medoid periods
-(`245, 78, 64, 17, 320, 201, 319, 263`). That is structural rather than lucky:
-both versions select the representative from weighted candidates, so the choice
-cannot diverge.
+!!! warning "v3 silently ignored a setting you passed"
 
-**Action required:** None.
+    If you set a per-column representation (`MinMaxMean`) on **both**
+    `ClusterConfig` and `SegmentConfig`, v3 discarded the cluster one entirely.
+    Not partially, not merged — ignored. Your cluster representatives were built
+    from the *segment* column assignment, whatever you asked for.
+
+    Measured on v3.4.2: `cluster=MinMaxMean(max_columns=["GHI"])` produces
+    **byte-identical** output to `cluster=MinMaxMean(min_columns=["Load"])` when
+    the segment representation is `min_columns=["Load"]` — the cluster setting
+    makes no difference at all. On v4 the two differ by 601.5.
+
+The two are separate settings, but v3 resolved them into a **single** per-column
+`representationDict` and applied the segment one last:
+
+```python
+tsam.aggregate(
+    data,
+    n_clusters=8,
+    cluster=ClusterConfig(representation=MinMaxMean(max_columns=["GHI"])),
+    segments=SegmentConfig(n_segments=6, representation=MinMaxMean(min_columns=["Load"])),
+)
+# v3: BOTH stages used {Load: min}; the cluster's {GHI: max} was discarded.
+# v4: the cluster stage uses {GHI: max}, the segment stage uses {Load: min}.
+```
+
+Each stage now builds its own dict from its own configuration.
+
+**What changes:**
+
+- Configurations setting a per-column representation on **both** stages now
+  honour both. Cluster representatives change — to the ones you configured.
+- Configurations setting it on only one stage are unaffected. That is the
+  overwhelming majority: every golden regression case is bit-identical except
+  the one added to cover this.
+
+**Action required:** If you set a per-column representation on both
+`ClusterConfig` and `SegmentConfig`, treat your v3 results for that
+configuration as wrong rather than merely different — they were computed with a
+column assignment you did not ask for. Regenerate any pinned references, and
+re-check any conclusion that rested on them.
 
 ## Column order (new API only)
 
@@ -111,41 +145,6 @@ them against the cap. This is two independent changes with different scopes:
 with rescaling enabled, regenerate any pinned references. Aggregate metrics
 (integral, min/max envelope) are preserved or improved.
 
-## Cluster and segment representations are resolved independently
-
-`ClusterConfig.representation` and `SegmentConfig.representation` are two
-separate settings, but v3 resolved them into a **single** per-column
-`representationDict`, and the segment representation was applied last. Setting a
-`MinMaxMean` on `SegmentConfig` therefore silently overwrote the cluster
-representation's per-column assignment:
-
-```python
-tsam.aggregate(
-    data,
-    n_clusters=8,
-    cluster=ClusterConfig(representation=MinMaxMean(max_columns=["GHI"])),
-    segments=SegmentConfig(n_segments=6, representation=MinMaxMean(min_columns=["Load"])),
-)
-# v3: BOTH stages used {Load: min}; the cluster's {GHI: max} was discarded.
-# v4: the cluster stage uses {GHI: max}, the segment stage uses {Load: min}.
-```
-
-Each stage now builds its own dict from its own configuration.
-
-**What changes:**
-
-- Configurations that set a `MinMaxMean` (or a `Distribution` with per-column
-  effects) on **both** `ClusterConfig` and `SegmentConfig` now honour both.
-  Previously the cluster one was dropped, so cluster representatives change.
-- Configurations that set it on only one of the two are unaffected — this is the
-  overwhelming majority, and every golden regression case is bit-identical
-  except the one added to cover this.
-
-**Action required:** If you set a per-column representation on both
-`ClusterConfig` and `SegmentConfig`, your cluster representatives were
-previously computed with the *segment* column assignment. They are now computed
-with the one you asked for. Regenerate any pinned references.
-
 ## Representative selection is deterministic on ties
 
 `medoid` and `maxoid` picked a cluster member with a bare `argmin`/`argmax` over
@@ -216,6 +215,29 @@ configuration. Passing `weights=` to `ClusterConfig` now raises `TypeError`.
   stage-neutral (each group's own distribution) versus `"global"` (the enclosing
   whole's). The old value still works — it is normalized to `"local"` and emits a
   `FutureWarning` — and is behaviorally identical.
+
+## Weight semantics — restructured, not changed
+
+`weights` is applied in one place now. v3 multiplied it into the normalized
+series before unstacking, so every downstream step saw weighted data and had to
+divide it back out again — rescaling, reconstruction and accuracy each carried
+their own compensation. v4 applies it to the clustering candidates only, and
+removes it once, after the set of representatives is final.
+
+**The same things are weighted either way:** the clustering distance, medoid and
+maxoid selection, extreme-period detection, and segment boundaries. And the same
+things are unweighted: rescaling, denormalization, the returned values, and the
+accuracy metrics. Only the location of the division moved.
+
+**What changes: nothing observable.** Every configuration in the golden matrix
+matches v3.4.2 to within `2e-13`, medoid and maxoid under non-uniform weights
+included. For `hierarchical_weighted` the agreement is total — same cluster
+assignments, same reconstruction, and the same selected medoid periods
+(`245, 78, 64, 17, 320, 201, 319, 263`). That is structural rather than lucky:
+both versions select the representative from weighted candidates, so the choice
+cannot diverge.
+
+**Action required:** None.
 
 ## Internal changes (no action required)
 
