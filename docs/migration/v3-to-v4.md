@@ -8,31 +8,28 @@ current equivalent, then return here.
 
 There are also behavioral changes that may affect your results.
 
-## Weight semantics
+## Weight semantics — restructured, not changed
 
-`weights` (top-level parameter to `aggregate()`) now affects
-**only** the clustering distance calculation. Previously, weights were baked
-into normalized data, which forced rescaling, reconstruction, and accuracy
-computation to compensate. In v4, all those steps operate on unweighted data.
+`weights` is applied in one place now. v3 multiplied it into the normalized
+series before unstacking, so every downstream step saw weighted data and had to
+divide it back out again — rescaling, reconstruction and accuracy each carried
+their own compensation. v4 applies it to the clustering candidates only, and
+removes it once, after the set of representatives is final.
 
-**What changes:**
+**The same things are weighted either way:** the clustering distance, medoid and
+maxoid selection, extreme-period detection, and segment boundaries. And the same
+things are unweighted: rescaling, denormalization, the returned values, and the
+accuracy metrics. Only the location of the division moved.
 
-- Cluster *assignments* are identical (the weighted distance matrix is
-  mathematically equivalent).
-- With medoid or maxoid representation and non-uniform weights, the selected
-  representative *can* differ, because the medoid is now chosen in the
-  unweighted output space.
-- On the packaged datasets it does not. Every configuration in the golden
-  matrix is identical to v3.4.2 to within `2e-13`, medoid and maxoid under
-  non-uniform weights included. For `hierarchical_weighted` the agreement is
-  total: the same cluster assignments, the same reconstruction, and the same
-  selected medoid periods (`245, 78, 64, 17, 320, 201, 319, 263`). The two
-  spaces pick the same members here.
+**What changes: nothing observable.** Every configuration in the golden matrix
+matches v3.4.2 to within `2e-13`, medoid and maxoid under non-uniform weights
+included. For `hierarchical_weighted` the agreement is total — same cluster
+assignments, same reconstruction, and the same selected medoid periods
+(`245, 78, 64, 17, 320, 201, 319, 263`). That is structural rather than lucky:
+both versions select the representative from weighted candidates, so the choice
+cannot diverge.
 
-**Action required:** For most users this change is invisible. If you use
-non-uniform `weights` with medoid or maxoid representation on your own data,
-the selection could differ there even though it does not on ours, so check any
-pinned values.
+**Action required:** None.
 
 ## Column order (new API only)
 
