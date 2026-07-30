@@ -99,7 +99,11 @@ def on_page_content(html: str, *, page, config, files) -> str:
         # Keep any fragment: a link may target a heading on the other page.
         path, sep, fragment = href.partition("#")
         resolved = _resolve(path, kind="Link", page=page, files=files)
-        return match.group(0) if resolved is None else prefix + resolved + sep + fragment + suffix
+        return (
+            match.group(0)
+            if resolved is None
+            else prefix + resolved + sep + fragment + suffix
+        )
 
     if "<img" in html:
         html = _IMG_SRC.sub(_rewrite_img, html)
