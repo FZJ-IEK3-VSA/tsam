@@ -20,14 +20,19 @@ computation to compensate. In v4, all those steps operate on unweighted data.
 - Cluster *assignments* are identical (the weighted distance matrix is
   mathematically equivalent).
 - With medoid or maxoid representation and non-uniform weights, the selected
-  representative may differ because the medoid is now chosen in the unweighted
-  output space.
-- Across all golden regression tests, the **only** affected configuration is
-  `hierarchical_weighted` — everything else is bit-identical.
+  representative *can* differ, because the medoid is now chosen in the
+  unweighted output space.
+- On the packaged datasets it does not. Every configuration in the golden
+  matrix is identical to v3.4.2 to within `2e-13`, medoid and maxoid under
+  non-uniform weights included. For `hierarchical_weighted` the agreement is
+  total: the same cluster assignments, the same reconstruction, and the same
+  selected medoid periods (`245, 78, 64, 17, 320, 201, 319, 263`). The two
+  spaces pick the same members here.
 
-**Action required:** If you use non-uniform `weights` with medoid or maxoid
-representation, verify that your downstream results are acceptable. For most
-users, this change is invisible.
+**Action required:** For most users this change is invisible. If you use
+non-uniform `weights` with medoid or maxoid representation on your own data,
+the selection could differ there even though it does not on ours, so check any
+pinned values.
 
 ## Column order (new API only)
 
@@ -80,7 +85,17 @@ them against the cap. This is two independent changes with different scopes:
    So "I only use the defaults" does not by itself mean your results are
    unchanged — it depends on whether any representative hit the envelope.
 
-**What changes:**
+!!! info "Already released in 3.4.2 — no change if you are upgrading from there"
+
+    This landed on the v3 line as
+    [#373](https://github.com/FZJ-IEK3-VSA/tsam/issues/373), released in
+    **3.4.2**. Measured against 3.4.2, v4 is identical here: `distribution_minmax`
+    agrees to within `1e-14`, with segmentation and with rescaling disabled alike.
+
+    It is a change only if you are coming from **3.4.1 or earlier**, where it
+    arrived as a one-line bug-fix entry rather than a flagged behaviour change.
+
+**What changes, coming from 3.4.1 or earlier:**
 
 - Results differ for `distribution_minmax` (new min/max algorithm) and for any
   configuration where rescaling clipped values against the envelope. The largest
@@ -88,17 +103,16 @@ them against the cap. This is two independent changes with different scopes:
 - The differences are usually small relative to the values but can reach ~20% at
   an individual peak cell, and are **not** always accompanied by the
   "maximal value … exceeds" warning.
-- On the packaged example datasets, the common `mean` / `medoid` / `kmeans`
-  paths are bit-identical to v3; the observed changes are confined to
-  `distribution_minmax`, `maxoid`/`kmaxoids`, and rescale-heavy configurations
-  (contiguous, extremes). Note this is an observation on the example data, not a
-  guarantee — the rescaling change above can in principle affect any
-  representation on other data.
+- The common `mean` / `medoid` / `kmeans` paths are bit-identical; the observed
+  changes are confined to `distribution_minmax`, `maxoid`/`kmaxoids`, and
+  rescale-heavy configurations. That is an observation on the example data, not
+  a guarantee — the rescaling change can in principle affect any representation
+  on other data.
 
-**Action required:** If you use `distribution_minmax`, `maxoid`/`kmaxoids`, or
-rely on exact aggregated values with rescaling enabled, regenerate any pinned
-references. Aggregate metrics (integral, min/max envelope) are preserved or
-improved.
+**Action required:** None if you are on 3.4.2. From 3.4.1 or earlier, if you use
+`distribution_minmax`, `maxoid`/`kmaxoids`, or rely on exact aggregated values
+with rescaling enabled, regenerate any pinned references. Aggregate metrics
+(integral, min/max envelope) are preserved or improved.
 
 ## Cluster and segment representations are resolved independently
 
