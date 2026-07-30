@@ -46,8 +46,8 @@ dependencies = [
   "pandas>=2.2.0,<=3.0.3",
   "numpy>=1.22.4,<=2.4.6",
   "pyomo>=6.4.8,<=6.10.1",
-  "tqdm>=4.21.0,<=4.68.4",
-  "highspy>=1.7.2,<=1.15.0",
+  "tqdm>=4.21.0,<=4.69.1",
+  "highspy>=1.7.2,<=1.15.1",
 ]
 
 requires-python = ">=3.10,<3.15"
@@ -66,7 +66,7 @@ develop = [
   "pytest-benchmark<=5.2.3",
   "codecov<=2.1.13",
   "mkdocs>=1.6,<=1.6.1",
-  "mkdocs-material>=9.5,<=9.7.6",
+  "mkdocs-material>=9.5,<=9.7.7",
   "mkdocstrings-python>=0.27,<=2.0.5",
   "mkdocs-jupyter>=0.25,<=0.26.1",      # 0.26.0 has packaging bug (mkdocs-jupyter#269)
   "mkdocs-gen-files>=0.5,<=0.6.1",
@@ -77,9 +77,9 @@ develop = [
   "ruff<=0.15.21",
   "mypy<=2.1.0",
   "pandas-stubs<=3.0.3.260530",
-  "pre-commit<=4.6.0",
+  "pre-commit<=4.6.1",
   "plotly>=5.0.0,<=6.9.0",
-  "notebook>=7.5.0,<=7.6.0",
+  "notebook>=7.5.0,<=7.6.1",
 ]
 plot = ["plotly>=5.0.0"]
 notebooks = ["notebook>=7.5.0", "plotly>=5.0.0"]
