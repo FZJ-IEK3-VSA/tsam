@@ -150,20 +150,63 @@ Use `!` after the prefix (e.g. `feat!:`) for breaking changes.
 
 - Follow [PEP 8](https://peps.python.org/pep-0008/) guidelines (enforced by Ruff)
 - Use meaningful variable and function names
-- Add docstrings to public functions and classes
 - Keep functions focused and reasonably sized
+
+### Docstrings
+
+- [Google style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
+  ([napoleon example](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html))
+- No types in docstrings — rely on type annotations (also for return types)
+- No defaults in docstrings when the value is visible in the signature
+- `Args:` for classes the user instantiates (e.g. config classes);
+  `Attributes:` for classes that carry results/stats (e.g. `AggregationResult`)
 
 ## Documentation
 
-Documentation is built using [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfun.github.io/mkdocs-material/) and hosted on [Read the Docs](https://tsam.readthedocs.io/).
+Documentation is built using [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) and hosted on [Read the Docs](https://tsam.readthedocs.io/).
 
 ### Building Documentation Locally
 
+The docs include executable Jupyter notebooks. To keep builds fast, the
+notebooks are **pre-executed in parallel** by a helper script, and
+`mkdocs-jupyter` is configured with `execute: false` so it only renders the
+already-populated outputs.
+
+Two steps:
+
 ```bash
+# 1. Pre-execute every notebook under docs/ (parallel)
+python scripts/execute_notebooks.py
+
+# 2. Serve the docs locally
 mkdocs serve
 ```
 
-The documentation will be available at `http://127.0.0.1:8000/`.
+The site will be available at `http://127.0.0.1:8000/`.
+
+You only need to re-run step 1 when a notebook (or its dependencies) changes —
+prose edits don't require it. Outputs are written back into the notebook files
+in place; on commit, `nbstripout` (already wired up via `pre-commit`) strips
+them so git diffs stay clean.
+
+Useful flags on the script:
+
+```bash
+python scripts/execute_notebooks.py --workers 4              # cap parallelism
+python scripts/execute_notebooks.py --exclude tuning.ipynb   # skip a notebook
+python scripts/execute_notebooks.py --timeout 1200           # raise per-cell timeout
+```
+
+To produce the built site (e.g. to inspect strict-mode warnings as CI does):
+
+```bash
+python scripts/execute_notebooks.py
+mkdocs build --strict
+```
+
+### Architecture Diagrams
+
+Architecture diagrams are authored in [D2](https://d2lang.com/). Both the `.d2` sources and the rendered `.svg` outputs live in `docs/assets/architecture/`. To update a diagram, edit the `.d2` file and re-render it with `d2 <name>.d2 <name>.svg`, then commit both files. A conda environment created from the environment.yml file ships the `d2` binary, so contributors who already use that environment do not need a separate install.
 
 ## Releasing
 

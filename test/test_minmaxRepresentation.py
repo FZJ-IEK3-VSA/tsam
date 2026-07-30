@@ -4,7 +4,13 @@ import numpy as np
 import pandas as pd
 
 from conftest import TESTDATA_CSV
-from tsam import ClusterConfig, MinMaxMean, aggregate, unstack_to_periods
+from tsam import (
+    ClusterConfig,
+    MinMaxMean,
+    SegmentConfig,
+    aggregate,
+    unstack_to_periods,
+)
 
 
 def test_minmaxRepresentation():
@@ -62,6 +68,104 @@ def test_minmaxRepresentation():
             algorithmResult = typPeriods.loc[i, :].loc[:, j].values
             # print(calculated,algorithmResult)
             np.testing.assert_array_almost_equal(calculated, algorithmResult, decimal=4)
+
+
+def test_segment_and_cluster_minmax_are_independent():
+    """A MinMaxMean on SegmentConfig steers segments, not cluster centers.
+
+    v3 kept a single global ``representationDict`` and let the segment
+    representation overwrite the cluster one, so the two stages could not name
+    different columns. They are resolved separately now.
+    """
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+
+    common = {
+        "n_clusters": 4,
+        "period_duration": 24,
+        "preserve_column_means": False,
+    }
+    cluster_minmax = ClusterConfig(
+        method="hierarchical",
+        representation=MinMaxMean(max_columns=["GHI"], min_columns=["T"]),
+    )
+
+    # Same cluster representation, different segment representations: if the
+    # segment dict were still shared with the cluster stage, these would be
+    # indistinguishable.
+    max_load = aggregate(
+        raw,
+        cluster=cluster_minmax,
+        segments=SegmentConfig(
+            n_segments=6, representation=MinMaxMean(max_columns=["Load"])
+        ),
+        **common,
+    )
+    min_load = aggregate(
+        raw,
+        cluster=cluster_minmax,
+        segments=SegmentConfig(
+            n_segments=6, representation=MinMaxMean(min_columns=["Load"])
+        ),
+        **common,
+    )
+
+    assert (
+        max_load.cluster_representatives["Load"].sum()
+        > min_load.cluster_representatives["Load"].sum()
+    ), "the segment representation did not reach the segmentation stage"
+
+    # The cluster representation is untouched by either: with no segmentation,
+    # GHI is still the per-cluster maximum.
+    unsegmented = aggregate(raw, cluster=cluster_minmax, **common)
+    periods = unstack_to_periods(raw, 24)
+    for cluster_no in range(4):
+        members = np.where(unsegmented.cluster_assignments == cluster_no)[0]
+        np.testing.assert_array_almost_equal(
+            periods.loc[members, "GHI"].max().values,
+            unsegmented.cluster_representatives.loc[cluster_no, "GHI"].values,
+            decimal=4,
+        )
+
+
+def test_segment_representation_no_longer_overwrites_the_cluster_one():
+    """Pins the v3 -> v4 breaking change in `MinMaxMean` resolution.
+
+    v3 resolved both stages into a single per-column dict and applied the
+    segment representation last, so a `MinMaxMean` on `SegmentConfig` silently
+    replaced the cluster one. Under that behaviour, asking for
+    ``cluster=max(GHI)`` alongside ``segment=min(Load)`` produced exactly what
+    ``cluster=min(Load)`` would have produced — the cluster request was
+    discarded.
+
+    Resolving the stages independently means those two configurations must
+    differ. If this assertion ever fails, the stages have been collapsed back
+    into one dict.
+    """
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    common = {"n_clusters": 4, "period_duration": 24, "preserve_column_means": False}
+    segments = SegmentConfig(
+        n_segments=6, representation=MinMaxMean(min_columns=["Load"])
+    )
+
+    as_configured = aggregate(
+        raw,
+        cluster=ClusterConfig(representation=MinMaxMean(max_columns=["GHI"])),
+        segments=segments,
+        **common,
+    )
+    # What v3 actually computed for the configuration above: the segment dict
+    # used for both stages.
+    v3_collapsed = aggregate(
+        raw,
+        cluster=ClusterConfig(representation=MinMaxMean(min_columns=["Load"])),
+        segments=segments,
+        **common,
+    )
+
+    assert not np.allclose(
+        as_configured.cluster_representatives.values,
+        v3_collapsed.cluster_representatives.values,
+    ), "the segment representation is overwriting the cluster one again"
 
 
 if __name__ == "__main__":

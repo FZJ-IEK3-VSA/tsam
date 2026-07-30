@@ -11,15 +11,16 @@ import shutil
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import numpy as np
 import pandas as pd
 import tqdm
 
-from tsam.api import _parse_duration_hours, aggregate
+from tsam.api import aggregate
+from tsam.commons import parse_duration_hours
 from tsam.config import (
     ClusterConfig,
     ExtremeConfig,
@@ -72,9 +73,9 @@ def _test_single_config_file(
         )
 
         # Reconstruct configs from serialized dicts
-        cluster = ClusterConfig(**opts["cluster_dict"])
+        cluster = ClusterConfig.from_dict(opts["cluster_dict"])
         extremes = (
-            ExtremeConfig(**opts["extremes_dict"])
+            ExtremeConfig.from_dict(opts["extremes_dict"])
             if opts["extremes_dict"] is not None
             else None
         )
@@ -146,10 +147,10 @@ def _parallel_context(
     serialized_opts = {
         "period_duration": aggregate_opts["period_duration"],
         "temporal_resolution": aggregate_opts["temporal_resolution"],
-        "cluster_dict": asdict(aggregate_opts["cluster"]),
+        "cluster_dict": aggregate_opts["cluster"].to_dict(),
         "segment_representation": aggregate_opts["segment_representation"],
         "extremes_dict": (
-            asdict(aggregate_opts["extremes"])
+            aggregate_opts["extremes"].to_dict()
             if aggregate_opts["extremes"] is not None
             else None
         ),
@@ -271,31 +272,23 @@ def _get_n_workers(n_jobs: int | None) -> int:
 class TuningResult:
     """Result of hyperparameter tuning.
 
-    Attributes
-    ----------
-    n_clusters : int
-        Optimal number of typical periods.
-    n_segments : int
-        Optimal number of segments per period.
-    rmse : float
-        RMSE of the optimal configuration.
-    history : list[dict]
-        History of all tested configurations with their RMSE values.
-    best_result : AggregationResult
-        The AggregationResult for the optimal configuration.
-    all_results : list[AggregationResult]
-        All AggregationResults from tuning.
+    Attributes:
+        n_clusters: Optimal number of typical periods.
+        n_segments: Optimal number of segments per period.
+        rmse: RMSE of the optimal configuration.
+        history: History of all tested configurations with their RMSE values.
+        best_result: The AggregationResult for the optimal configuration.
+        all_results: All AggregationResults from tuning.
 
-    Examples
-    --------
-    >>> result = find_optimal_combination(df, data_reduction=0.01)
-    >>> result.summary  # DataFrame of all tested configs
-    >>> result.plot()   # Visualize results
+    Examples:
+        >>> result = find_optimal_combination(df, data_reduction=0.01)
+        >>> result.summary  # DataFrame of all tested configs
+        >>> result.plot()   # Visualize results
 
-    >>> pareto = find_pareto_front(df, max_timesteps=500)
-    >>> pareto.find_by_timesteps(100)  # Find config closest to 100 timesteps
-    >>> for agg_result in pareto:      # Iterate over AggregationResults
-    ...     print(agg_result.accuracy.rmse.mean())
+        >>> pareto = find_pareto_front(df, max_timesteps=500)
+        >>> pareto.find_by_timesteps(100)  # Find config closest to 100 timesteps
+        >>> for agg_result in pareto:      # Iterate over AggregationResults
+        ...     print(agg_result.accuracy.rmse.mean())
     """
 
     n_clusters: int
@@ -311,7 +304,7 @@ class TuningResult:
         df = pd.DataFrame(self.history)
         if "timesteps" not in df.columns and len(df) > 0:
             df["timesteps"] = df["n_clusters"] * df["n_segments"]
-        return df
+        return cast("pd.DataFrame", df)
 
     def find_by_timesteps(self, target: int) -> AggregationResult:
         """Find the result closest to a target timestep count."""
@@ -371,8 +364,19 @@ class TuningResult:
         candidates.sort(key=lambda x: x[0])
         return self.all_results[candidates[0][1]]
 
-    def plot(self, show_labels: bool = True, **kwargs: object) -> object:
-        """Plot results (RMSE vs timesteps)."""
+    def plot(
+        self, show_labels: bool = True, annotate: bool = True, **kwargs: object
+    ) -> object:
+        """Plot results (RMSE vs timesteps).
+
+        Parameters
+        ----------
+        show_labels : bool, default True
+            Show the configuration details on hover.
+        annotate : bool, default True
+            Print the recommended ``periods x segments`` combination next to
+            each point, so each step's configuration is readable without hovering.
+        """
         import plotly.graph_objects as go
 
         summary = self.summary
@@ -382,21 +386,33 @@ class TuningResult:
             f"RMSE: {row['rmse']:.4f}"
             for _, row in summary.iterrows()
         ]
+        point_labels = [
+            f"{int(row['n_clusters'])}x{int(row['n_segments'])}"
+            for _, row in summary.iterrows()
+        ]
+
+        if annotate:
+            mode = "lines+markers+text" if len(summary) > 1 else "markers+text"
+        else:
+            mode = "lines+markers" if len(summary) > 1 else "markers"
 
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
                 x=summary["timesteps"],
                 y=summary["rmse"],
-                mode="lines+markers" if len(summary) > 1 else "markers",
+                mode=mode,
                 marker={"size": 10},
+                text=point_labels if annotate else None,
+                textposition="top center",
                 hovertext=hover_text if show_labels else None,
                 hoverinfo="text" if show_labels else "x+y",
                 **kwargs,
             )
         )
         fig.update_layout(
-            title="Tuning Results: Complexity vs Accuracy",
+            title="Tuning Results: Complexity vs Accuracy "
+            "(label = typical periods x segments)",
             xaxis_title="Timesteps (n_clusters x n_segments)",
             yaxis_title="RMSE",
             hovermode="closest",
@@ -409,7 +425,7 @@ class TuningResult:
     def __getitem__(self, index: int) -> AggregationResult:
         return self.all_results[index]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[AggregationResult]:
         return iter(self.all_results)
 
 
@@ -420,24 +436,17 @@ def find_clusters_for_reduction(
 ) -> int:
     """Calculate max clusters for a target data reduction.
 
-    Parameters
-    ----------
-    n_timesteps : int
-        Number of original timesteps.
-    n_segments : int
-        Number of segments per period.
-    data_reduction : float
-        Target reduction factor (e.g., 0.1 for 10% of original size).
+    Args:
+        n_timesteps: Number of original timesteps.
+        n_segments: Number of segments per period.
+        data_reduction: Target reduction factor (e.g., 0.1 for 10% of original size).
 
-    Returns
-    -------
-    int
+    Returns:
         Maximum number of clusters that achieves the reduction.
 
-    Examples
-    --------
-    >>> find_clusters_for_reduction(8760, 24, 0.01)  # 1% of hourly year
-    3
+    Examples:
+        >>> find_clusters_for_reduction(8760, 24, 0.01)  # 1% of hourly year
+        3
     """
     return int(np.floor(data_reduction * float(n_timesteps) / n_segments))
 
@@ -449,24 +458,17 @@ def find_segments_for_reduction(
 ) -> int:
     """Calculate max segments for a target data reduction.
 
-    Parameters
-    ----------
-    n_timesteps : int
-        Number of original timesteps.
-    n_clusters : int
-        Number of typical periods.
-    data_reduction : float
-        Target reduction factor (e.g., 0.1 for 10% of original size).
+    Args:
+        n_timesteps: Number of original timesteps.
+        n_clusters: Number of typical periods.
+        data_reduction: Target reduction factor (e.g., 0.1 for 10% of original size).
 
-    Returns
-    -------
-    int
+    Returns:
         Maximum number of segments that achieves the reduction.
 
-    Examples
-    --------
-    >>> find_segments_for_reduction(8760, 8, 0.01)  # 1% with 8 periods
-    10
+    Examples:
+        >>> find_segments_for_reduction(8760, 8, 0.01)  # 1% with 8 periods
+        10
     """
     return int(np.floor(data_reduction * float(n_timesteps) / n_clusters))
 
@@ -494,68 +496,51 @@ def find_optimal_combination(
     that achieve the specified data reduction, returning the one with
     minimum RMSE.
 
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Input time series data.
-    data_reduction : float
-        Target reduction factor (e.g., 0.01 for 1% of original size).
-    period_duration : int, float, or str, default 24
-        Length of each period. Accepts:
-        - int/float: hours (e.g., 24 for daily, 168 for weekly)
-        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
-    temporal_resolution : float or str, optional
-        Time resolution of input data. Accepts:
-        - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
-        - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
-        If not provided, inferred from the datetime index.
-    cluster : ClusterConfig, optional
-        Clustering configuration.
-    segment_representation : str, default "mean"
-        How to represent each segment: "mean" or "medoid".
-    extremes : ExtremeConfig, optional
-        Configuration for preserving extreme periods.
-    weights : dict[str, float], optional
-        Per-column weights that influence all pipeline stages.
-    preserve_column_means : bool, default True
-        Whether to rescale results to preserve original column means.
-    round_decimals : int, optional
-        Round results to this many decimal places.
-    numerical_tolerance : float, default 1e-13
-        Numerical tolerance for floating-point comparisons.
-    show_progress : bool, default True
-        Show progress bar during search.
-    save_all_results : bool, default False
-        If True, save all AggregationResults in all_results attribute.
-        Useful for detailed analysis but increases memory usage.
-    n_jobs : int, optional
-        Number of parallel jobs. If None or 1, runs sequentially.
-        Use -1 for all available CPUs, or a positive integer for
-        a specific number of workers. Parallel execution uses a file-based
-        approach where data is saved to a temp file and workers load from
-        disk - no DataFrame pickling, safe for sensitive data.
+    Args:
+        data: Input time series data.
+        data_reduction: Target reduction factor (e.g., 0.01 for 1% of original size).
+        period_duration: Length of each period. Accepts int/float
+            hours (e.g., 24 for daily, 168 for weekly) or a pandas Timedelta
+            string (e.g., '24h', '1d', '1w').
+        temporal_resolution: Time resolution of input data. Accepts float hours
+            (e.g., 1.0 for hourly, 0.25 for 15-minute) or a pandas Timedelta
+            string (e.g., '1h', '15min', '30min'). If not provided, inferred
+            from the datetime index.
+        cluster: Clustering configuration.
+        segment_representation: How to represent each segment, "mean" or "medoid".
+        extremes: Configuration for preserving extreme periods.
+        weights: Per-column weights that influence all pipeline stages.
+        preserve_column_means: Whether to rescale results to preserve original
+            column means.
+        round_decimals: Round results to this many decimal places.
+        numerical_tolerance: Numerical tolerance for floating-point comparisons.
+        show_progress: Show progress bar during search.
+        save_all_results: If True, save all AggregationResults in the all_results
+            attribute. Useful for detailed analysis but increases memory usage.
+        n_jobs: Number of parallel jobs. If None or 1, runs sequentially.
+            Use -1 for all available CPUs, or a positive integer for
+            a specific number of workers. Parallel execution uses a file-based
+            approach where data is saved to a temp file and workers load from
+            disk - no DataFrame pickling, safe for sensitive data.
 
-    Returns
-    -------
-    TuningResult
+    Returns:
         Result containing optimal parameters and history.
 
-    Examples
-    --------
-    >>> result = find_optimal_combination(df, data_reduction=0.01)
-    >>> print(f"Optimal: {result.n_clusters} periods, "
-    ...       f"{result.n_segments} segments")
+    Examples:
+        >>> result = find_optimal_combination(df, data_reduction=0.01)
+        >>> print(f"Optimal: {result.n_clusters} periods, "
+        ...       f"{result.n_segments} segments")
 
-    >>> # Use all CPUs for faster search (file-based, no DataFrame pickling)
-    >>> result = find_optimal_combination(df, data_reduction=0.01, n_jobs=-1)
+        >>> # Use all CPUs for faster search (file-based, no DataFrame pickling)
+        >>> result = find_optimal_combination(df, data_reduction=0.01, n_jobs=-1)
     """
     if cluster is None:
         cluster = ClusterConfig()
 
     # Parse duration parameters to hours
-    period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
+    period_duration_hours = parse_duration_hours(period_duration, "period_duration")
     temporal_resolution_hours = (
-        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        parse_duration_hours(temporal_resolution, "temporal_resolution")
         if temporal_resolution is not None
         else _infer_temporal_resolution(data)
     )
@@ -678,82 +663,65 @@ def find_pareto_front(
     period/segment space, finding configurations that are optimal
     for their complexity level.
 
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Input time series data.
-    period_duration : int, float, or str, default 24
-        Length of each period. Accepts:
-        - int/float: hours (e.g., 24 for daily, 168 for weekly)
-        - str: pandas Timedelta string (e.g., '24h', '1d', '1w')
-    temporal_resolution : float or str, optional
-        Time resolution of input data. Accepts:
-        - float: hours (e.g., 1.0 for hourly, 0.25 for 15-minute)
-        - str: pandas Timedelta string (e.g., '1h', '15min', '30min')
-        If not provided, inferred from the datetime index.
-    max_timesteps : int, optional
-        Stop when reaching this many timesteps. If None, explores
-        up to full resolution. Ignored if `timesteps` is provided.
-    timesteps : Sequence[int], optional
-        Specific timestep counts to explore. If provided, only evaluates
-        configurations that produce approximately these timestep counts.
-        Useful for faster exploration with large steps or specific ranges.
-        Examples: range(10, 500, 10), [10, 50, 100, 200, 500]
-    cluster : ClusterConfig, optional
-        Clustering configuration.
-    segment_representation : str, default "mean"
-        How to represent each segment: "mean" or "medoid".
-    extremes : ExtremeConfig, optional
-        Configuration for preserving extreme periods.
-    weights : dict[str, float], optional
-        Per-column weights that influence all pipeline stages.
-    preserve_column_means : bool, default True
-        Whether to rescale results to preserve original column means.
-    round_decimals : int, optional
-        Round results to this many decimal places.
-    numerical_tolerance : float, default 1e-13
-        Numerical tolerance for floating-point comparisons.
-    show_progress : bool, default True
-        Show progress bar.
-    n_jobs : int, optional
-        Number of parallel jobs for testing configurations.
-        If None or 1, runs sequentially. Use -1 for all available CPUs.
-        During steepest-descent phase, tests both directions in parallel.
+    Args:
+        data: Input time series data.
+        period_duration: Length of each period. Accepts int/float
+            hours (e.g., 24 for daily, 168 for weekly) or a pandas Timedelta
+            string (e.g., '24h', '1d', '1w').
+        temporal_resolution: Time resolution of input data. Accepts float hours
+            (e.g., 1.0 for hourly, 0.25 for 15-minute) or a pandas Timedelta
+            string (e.g., '1h', '15min', '30min'). If not provided, inferred
+            from the datetime index.
+        max_timesteps: Stop when reaching this many timesteps. If None, explores
+            up to full resolution. Ignored if `timesteps` is provided.
+        timesteps: Specific timestep counts to explore. If provided, only
+            evaluates configurations that produce approximately these timestep
+            counts. Useful for faster exploration with large steps or specific
+            ranges. Examples: range(10, 500, 10), [10, 50, 100, 200, 500].
+        cluster: Clustering configuration.
+        segment_representation: How to represent each segment, "mean" or "medoid".
+        extremes: Configuration for preserving extreme periods.
+        weights: Per-column weights that influence all pipeline stages.
+        preserve_column_means: Whether to rescale results to preserve original
+            column means.
+        round_decimals: Round results to this many decimal places.
+        numerical_tolerance: Numerical tolerance for floating-point comparisons.
+        show_progress: Show progress bar.
+        n_jobs: Number of parallel jobs for testing configurations.
+            If None or 1, runs sequentially. Use -1 for all available CPUs.
+            During steepest-descent phase, tests both directions in parallel.
 
-    Returns
-    -------
-    TuningResult
+    Returns:
         Result object containing Pareto-optimal configurations with
         convenience methods for analysis and visualization.
 
-    Examples
-    --------
-    >>> pareto = find_pareto_front(df, max_timesteps=500)
-    >>> pareto.summary  # DataFrame of all Pareto-optimal points
-    >>> pareto.plot()   # Visualize the Pareto front
-    >>> pareto.find_by_timesteps(100)  # Find config closest to 100 timesteps
-    >>> pareto.find_by_rmse(0.05)      # Find smallest config with RMSE <= 0.05
+    Examples:
+        >>> pareto = find_pareto_front(df, max_timesteps=500)
+        >>> pareto.summary  # DataFrame of all Pareto-optimal points
+        >>> pareto.plot()   # Visualize the Pareto front
+        >>> pareto.find_by_timesteps(100)  # Find config closest to 100 timesteps
+        >>> pareto.find_by_rmse(0.05)      # Find smallest config with RMSE <= 0.05
 
-    >>> # Iterate over AggregationResults
-    >>> for agg_result in pareto:
-    ...     print(f"RMSE: {agg_result.accuracy.rmse.mean():.4f}")
+        >>> # Iterate over AggregationResults
+        >>> for agg_result in pareto:
+        ...     print(f"RMSE: {agg_result.accuracy.rmse.mean():.4f}")
 
-    >>> # Use parallel execution for faster search
-    >>> pareto = find_pareto_front(df, max_timesteps=500, n_jobs=-1)
+        >>> # Use parallel execution for faster search
+        >>> pareto = find_pareto_front(df, max_timesteps=500, n_jobs=-1)
 
-    >>> # Explore only specific timestep counts (faster)
-    >>> pareto = find_pareto_front(df, timesteps=range(10, 500, 50))
+        >>> # Explore only specific timestep counts (faster)
+        >>> pareto = find_pareto_front(df, timesteps=range(10, 500, 50))
 
-    >>> # Explore a specific list of timestep targets
-    >>> pareto = find_pareto_front(df, timesteps=[10, 50, 100, 200, 500])
+        >>> # Explore a specific list of timestep targets
+        >>> pareto = find_pareto_front(df, timesteps=[10, 50, 100, 200, 500])
     """
     if cluster is None:
         cluster = ClusterConfig()
 
     # Parse duration parameters to hours
-    period_duration_hours = _parse_duration_hours(period_duration, "period_duration")
+    period_duration_hours = parse_duration_hours(period_duration, "period_duration")
     temporal_resolution_hours = (
-        _parse_duration_hours(temporal_resolution, "temporal_resolution")
+        parse_duration_hours(temporal_resolution, "temporal_resolution")
         if temporal_resolution is not None
         else _infer_temporal_resolution(data)
     )

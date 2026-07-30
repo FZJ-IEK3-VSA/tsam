@@ -1,3 +1,0 @@
-# tsam.timeseriesaggregation
-
-::: tsam.timeseriesaggregation

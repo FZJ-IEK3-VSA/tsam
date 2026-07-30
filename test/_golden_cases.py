@@ -35,7 +35,7 @@ TEST_DIR = Path(__file__).parent
 TEST_DATA_DIR = TEST_DIR / "data"
 GOLDEN_DIR = TEST_DATA_DIR / "golden"
 
-EXAMPLES_DIR = TEST_DIR.parent / "docs" / "notebooks"
+EXAMPLES_DIR = TEST_DIR.parent / "docs" / "data"
 TESTDATA_CSV = EXAMPLES_DIR / "testdata.csv"
 WIDE_CSV = TEST_DATA_DIR / "wide.csv"
 
@@ -111,24 +111,21 @@ _NEW_KWARGS: dict[str, dict] = {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(
-            method="hierarchical",
-            representation=Distribution(concurrency="medoid"),
+            method="hierarchical", representation=Distribution(concurrency="medoid")
         ),
     },
     "hierarchical_distribution_consensus": {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(
-            method="hierarchical",
-            representation=Distribution(concurrency="consensus"),
+            method="hierarchical", representation=Distribution(concurrency="consensus")
         ),
     },
     "hierarchical_distribution_assignment": {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(
-            method="hierarchical",
-            representation=Distribution(concurrency="assignment"),
+            method="hierarchical", representation=Distribution(concurrency="assignment")
         ),
     },
     "hierarchical_distribution_reference": {
@@ -229,7 +226,7 @@ _NEW_KWARGS: dict[str, dict] = {
     "segmentation_samemean": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(method="hierarchical", normalize_column_means=True),
+        "cluster": ClusterConfig(method="hierarchical", scale_by_column_means=True),
         "segments": SegmentConfig(n_segments=4),
     },
     "segmentation_distribution_global": {
@@ -434,7 +431,7 @@ _NEW_KWARGS: dict[str, dict] = {
         "period_duration": 24,
         "cluster": ClusterConfig(
             method="hierarchical",
-            normalize_column_means=True,
+            scale_by_column_means=True,
         ),
         "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
     },
@@ -488,7 +485,7 @@ _NEW_KWARGS: dict[str, dict] = {
         "period_duration": 24,
         "cluster": ClusterConfig(
             method="hierarchical",
-            normalize_column_means=True,
+            scale_by_column_means=True,
         ),
         "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         "segments": SegmentConfig(n_segments=4),
@@ -669,17 +666,17 @@ _NEW_KWARGS: dict[str, dict] = {
         "cluster": ClusterConfig(method="hierarchical", include_period_sums=True),
         "segments": SegmentConfig(n_segments=8),
     },
-    # --- normalize_column_means without weights (only weighted variants were
+    # --- scale_by_column_means without weights (only weighted variants were
     # pinned, so the two effects could not be told apart) ---
     "samemean_unweighted": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(method="hierarchical", normalize_column_means=True),
+        "cluster": ClusterConfig(method="hierarchical", scale_by_column_means=True),
     },
     "samemean_extremes": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(method="hierarchical", normalize_column_means=True),
+        "cluster": ClusterConfig(method="hierarchical", scale_by_column_means=True),
         "extremes": ExtremeConfig(method="append", max_value=["Load"]),
     },
     # --- n_clusters axis (only 8 was pinned) ---
@@ -1088,12 +1085,6 @@ _META: dict[str, dict] = {
         "max_timesteps": None,
         "rtol": 1e-05,
     },
-    "hierarchical_weighted_no_rescale": {
-        "seed": None,
-        "only_datasets": ["testdata"],
-        "max_timesteps": None,
-        "rtol": 1e-10,
-    },
     # Axis-completion cases added alongside the v3.4.2 cross-check. All are
     # pinned on ``testdata`` only: they exist to cover an option, not a
     # dataset, and a reconstructed golden costs ~0.5 MB per dataset.
@@ -1125,6 +1116,12 @@ _META: dict[str, dict] = {
     "single_cluster": _DETERMINISTIC_TESTDATA,
     "many_clusters": _DETERMINISTIC_TESTDATA,
     "round_zero": _DETERMINISTIC_TESTDATA,
+    "hierarchical_weighted_no_rescale": {
+        "seed": None,
+        "only_datasets": ["testdata"],
+        "max_timesteps": None,
+        "rtol": 1e-10,
+    },
 }
 
 

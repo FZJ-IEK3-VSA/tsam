@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from conftest import TESTDATA_CSV
-from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
+from tsam import ClusterConfig, ExtremeConfig, MinMaxMean, SegmentConfig, aggregate
 
 # NOTE: The legacy ``TimeSeriesAggregation`` constructor performed runtime
 # type-checks on a number of scalar/boolean keyword arguments (e.g.
@@ -14,6 +14,11 @@ from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
 # to be an array or list").  The new ``aggregate`` API expresses these through
 # typed config objects / dataclass fields, so there is no equivalent runtime
 # validation to assert against — those cases are intentionally not ported here.
+#
+# The legacy "non-datetime index requires temporal_resolution" error is also not
+# asserted: v4 intentionally defaults to hourly resolution in that case (the
+# common test data has a plain string index), documented in the v3->v4 migration
+# guide.
 
 
 def test_assert_raises():
@@ -34,27 +39,6 @@ def test_assert_raises():
             ValueError, match="Extreme period columns not found in data"
         ):
             aggregate(raw, n_clusters=8, extremes=cfg)
-
-    # missing datetime index and missing temporal_resolution argument
-    with pytest.raises(
-        ValueError,
-        match="'resolution' argument has to be nonnegative float or int or the given "
-        "timeseries needs a datetime index",
-    ):
-        aggregate(raw.reset_index(), n_clusters=8)
-
-    # erroneous datetime index (one entry cannot be converted) and missing resolution
-    rawErrInd = copy.deepcopy(raw)
-    as_list = rawErrInd.index.tolist()
-    idx = as_list.index("2010-01-01 00:30:00")
-    as_list[idx] = "erroneousDatetimeIndex"
-    rawErrInd.index = as_list
-    with pytest.raises(
-        ValueError,
-        match="'resolution' argument has to be nonnegative float or int or the given "
-        "timeseries needs a datetime index",
-    ):
-        aggregate(rawErrInd, n_clusters=8)
 
     # erroneous temporal_resolution argument
     with pytest.raises(ValueError, match="temporal_resolution"):
@@ -80,7 +64,7 @@ def test_assert_raises():
         aggregate(raw, n_clusters=8, segments=SegmentConfig(n_segments=25))
 
     # erroneous cluster method
-    with pytest.raises(ValueError, match="Unknown cluster method"):
+    with pytest.raises(ValueError, match="Unknown cluster_method"):
         aggregate(
             raw, n_clusters=8, cluster=ClusterConfig(method="erroneousClusterMethod")
         )
@@ -94,7 +78,7 @@ def test_assert_raises():
         )
 
     # erroneous extreme period method
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError, match="Unknown extreme period method"):
         aggregate(
             raw,
             n_clusters=8,
@@ -111,6 +95,31 @@ def test_assert_raises():
         match="Pre processed data includes NaN",
     ):
         aggregate(rawNan, n_clusters=8)
+
+
+def test_minmax_mean_rejects_column_listed_as_both():
+    """A column cannot keep its minimum and its maximum at the same time."""
+    with pytest.raises(ValueError, match="both max_columns and min_columns"):
+        MinMaxMean(max_columns=["Load", "T"], min_columns=["T"])
+
+
+def test_minmax_mean_rejects_unknown_column():
+    """A misspelled column name is reported instead of silently doing nothing."""
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    with pytest.raises(ValueError, match="not in the data"):
+        aggregate(
+            raw,
+            n_clusters=8,
+            cluster=ClusterConfig(
+                representation=MinMaxMean(max_columns=["erroneousAttribute"])
+            ),
+        )
+
+
+def test_representation_with_duration_curves_warns():
+    """The duration-curve path ignores the configured representation."""
+    with pytest.warns(UserWarning, match="no effect together with"):
+        ClusterConfig(representation="distribution", use_duration_curves=True)
 
 
 if __name__ == "__main__":

@@ -11,6 +11,13 @@ build:
   jobs:
     post_install:
       - pip install -e ".[develop]"
+    # mkdocs-jupyter runs with `execute: false`, so notebooks must be executed
+    # before the build or they render without outputs. Mirrors the docs job in
+    # .github/workflows/ci-develop.yaml. Workers are pinned because the script
+    # defaults to os.cpu_count()-1, which reports the host's CPUs rather than
+    # this container's quota.
+    pre_build:
+      - python scripts/execute_notebooks.py --workers 2
 
 # Build documentation with MkDocs
 mkdocs:

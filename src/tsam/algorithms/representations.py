@@ -1,0 +1,225 @@
+from __future__ import annotations
+
+import numpy as np
+from sklearn.metrics.pairwise import euclidean_distances
+
+from tsam.algorithms.duration_representation import duration_representation
+from tsam.algorithms.selection import deterministic_argmax, deterministic_argmin
+from tsam.config import Distribution, MinMaxMean
+
+
+def representations(
+    candidates: np.ndarray,
+    cluster_order: np.ndarray,
+    default: str,
+    representation_method: str | Distribution | MinMaxMean | None = None,
+    representation_dict: dict[str, str] | None = None,
+    distribution_period_wise: bool = True,
+    n_timesteps_per_period: int | None = None,
+    reference_attribute_idx: int | None = None,
+) -> tuple[list[np.ndarray], list[int] | None]:
+    """Compute each cluster's representative profile with the chosen method.
+
+    Dispatches to the representation named by ``representation_method`` — a
+    string (``"mean"``, ``"medoid"``, ``"maxoid"``, ``"minmax_mean"``,
+    ``"distribution"``, ``"distribution_minmax"``) or a ``Distribution`` /
+    ``MinMaxMean`` object — returning one representative period per cluster, in
+    cluster order.
+
+    Args:
+        candidates: Candidate matrix of period profiles, one row per original
+            period.
+        cluster_order: Cluster label assigned to each period.
+        default: Representation used when ``representation_method`` is ``None``.
+        representation_method: Representation to apply; ``None`` falls back to
+            ``default``.
+        representation_dict: Per-column method overrides for the min/max/mean
+            representation.
+        distribution_period_wise: For the distribution representation, preserve
+            the per-cluster duration curve (``True``) or the global one
+            (``False``).
+        n_timesteps_per_period: Timesteps per period; required by the
+            distribution and min/max/mean representations.
+
+    Returns:
+        A tuple ``(cluster_centers, cluster_center_indices)`` where
+        ``cluster_centers`` is the representative profile for each cluster, in
+        cluster order, and ``cluster_center_indices`` is, for medoid/maxoid, the
+        index of the original period chosen as each representative; ``None`` for
+        the other methods.
+
+    Note:
+        Related helpers: mean_representation, medoid_representation,
+        maxoid_representation, minmax_mean_representation.
+    """
+    cluster_center_indices = None
+    if representation_method is None:
+        representation_method = default
+
+    # --- Dispatch on Representation objects first ---
+    if isinstance(representation_method, Distribution):
+        period_wise = representation_method.scope == "local"
+        cluster_centers = duration_representation(
+            candidates,
+            cluster_order,
+            period_wise,
+            n_timesteps_per_period,  # type: ignore[arg-type]
+            represent_min_max=representation_method.preserve_minmax,
+            concurrency_method=representation_method.concurrency,
+            reference_attribute_idx=reference_attribute_idx,
+        )
+        return cluster_centers, cluster_center_indices
+
+    if isinstance(representation_method, MinMaxMean):
+        cluster_centers = minmax_mean_representation(
+            candidates,
+            cluster_order,
+            representation_dict,  # type: ignore[arg-type]
+            n_timesteps_per_period,  # type: ignore[arg-type]
+        )
+        return cluster_centers, cluster_center_indices
+
+    # --- String-based dispatch ---
+    if representation_method == "mean":
+        cluster_centers = mean_representation(candidates, cluster_order)
+    elif representation_method == "medoid":
+        cluster_centers, cluster_center_indices = medoid_representation(
+            candidates, cluster_order
+        )
+    elif representation_method == "maxoid":
+        cluster_centers, cluster_center_indices = maxoid_representation(
+            candidates, cluster_order
+        )
+    elif representation_method == "minmax_mean":
+        cluster_centers = minmax_mean_representation(
+            candidates,
+            cluster_order,
+            representation_dict,  # type: ignore[arg-type]
+            n_timesteps_per_period,  # type: ignore[arg-type]
+        )
+    elif representation_method == "distribution":
+        cluster_centers = duration_representation(
+            candidates,
+            cluster_order,
+            distribution_period_wise,
+            n_timesteps_per_period,  # type: ignore[arg-type]
+            represent_min_max=False,
+        )
+    elif representation_method == "distribution_minmax":
+        cluster_centers = duration_representation(
+            candidates,
+            cluster_order,
+            distribution_period_wise,
+            n_timesteps_per_period,  # type: ignore[arg-type]
+            represent_min_max=True,
+        )
+    else:
+        raise ValueError(f"Unknown representation method {representation_method!r}")
+
+    return cluster_centers, cluster_center_indices
+
+
+def maxoid_representation(
+    candidates: np.ndarray,
+    cluster_order: np.ndarray,
+) -> tuple[list[np.ndarray], list[int]]:
+    """Represent each cluster group by its maxoid (Euclidean distance).
+
+    Selects, for each cluster in ``cluster_order``, the member with the greatest
+    summed Euclidean distance to the **whole dataset** — i.e. the most globally
+    extreme period of the cluster.
+
+    Note:
+        The scope is intentionally asymmetric to
+        :func:`medoid_representation`. The medoid minimises distance *within its
+        own cluster* (most central member), whereas the maxoid maximises
+        distance to *all* periods, so it captures a globally extreme period
+        rather than merely the one most peripheral to its own cluster. This
+        also deviates from Sifa et al. (2015), who define the maxoid via the
+        sum of *squared* Euclidean distances; here plain (non-squared) distances
+        are used.
+    """
+    cluster_centers = []
+    cluster_center_indices = []
+    for cluster_num in np.unique(cluster_order):
+        indices = np.where(cluster_order == cluster_num)
+        dist_to_dataset = euclidean_distances(candidates, candidates[indices])
+        max_dist_idx = deterministic_argmax(dist_to_dataset.sum(axis=0))
+        cluster_centers.append(candidates[indices][max_dist_idx])
+        cluster_center_indices.append(indices[0][max_dist_idx])
+
+    return cluster_centers, cluster_center_indices
+
+
+def medoid_representation(
+    candidates: np.ndarray,
+    cluster_order: np.ndarray,
+) -> tuple[list[np.ndarray], list[int]]:
+    """Represent each cluster group by its medoid (Euclidean distance)."""
+    # set cluster center as medoid
+    cluster_centers = []
+    cluster_center_indices = []
+    for cluster_num in np.unique(cluster_order):
+        indices = np.where(cluster_order == cluster_num)
+        inner_dist_matrix = euclidean_distances(candidates[indices])
+        min_dist_idx = deterministic_argmin(inner_dist_matrix.sum(axis=0))
+        cluster_centers.append(candidates[indices][min_dist_idx])
+        cluster_center_indices.append(indices[0][min_dist_idx])
+
+    return cluster_centers, cluster_center_indices
+
+
+def mean_representation(
+    candidates: np.ndarray,
+    cluster_order: np.ndarray,
+) -> list[np.ndarray]:
+    """Represent each cluster group by its mean."""
+    # set cluster centers as means of the group candidates
+    cluster_centers = []
+    for cluster_num in np.unique(cluster_order):
+        indices = np.where(cluster_order == cluster_num)
+        current_mean = candidates[indices].mean(axis=0)
+        cluster_centers.append(current_mean)
+    return cluster_centers
+
+
+def minmax_mean_representation(
+    candidates: np.ndarray,
+    cluster_order: np.ndarray,
+    representation_dict: dict[str, str],
+    n_timesteps_per_period: int,
+) -> list[np.ndarray]:
+    """Represent each cluster group by per-timestep min, max, or mean values.
+
+    For each attribute (column), uses the minimum, maximum, or mean value of
+    each time step across all periods in the cluster, chosen per attribute by
+    ``representation_dict``.
+    """
+    cluster_centers = []
+    rep_values = list(representation_dict.values())
+    for cluster_num in np.unique(cluster_order):
+        indices = np.where(cluster_order == cluster_num)
+        current_cluster_center = np.zeros(
+            len(representation_dict) * n_timesteps_per_period
+        )
+        for attribute_num, rep in enumerate(rep_values):
+            start_idx = attribute_num * n_timesteps_per_period
+            end_idx = (attribute_num + 1) * n_timesteps_per_period
+            if rep == "min":
+                current_cluster_center[start_idx:end_idx] = candidates[
+                    indices, start_idx:end_idx
+                ].min(axis=1)
+            elif rep == "max":
+                current_cluster_center[start_idx:end_idx] = candidates[
+                    indices, start_idx:end_idx
+                ].max(axis=1)
+            elif rep == "mean":
+                current_cluster_center[start_idx:end_idx] = candidates[
+                    indices, start_idx:end_idx
+                ].mean(axis=1)
+            else:
+                raise ValueError(
+                    'At least one value in the representationDict is neither "min", "max" nor "mean".'
+                )
+        cluster_centers.append(current_cluster_center)
+    return cluster_centers

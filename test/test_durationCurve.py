@@ -3,6 +3,7 @@ import time
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from conftest import TESTDATA_CSV
 from tsam import ClusterConfig, aggregate, unstack_to_periods
@@ -52,6 +53,54 @@ def test_durationCurve():
         np.testing.assert_array_almost_equal(
             calculatedSorted.loc[minIdx], algorithmResult.iloc[0], decimal=4
         )
+
+
+@pytest.mark.parametrize("method", ["hierarchical", "kmeans"])
+def test_duration_curve_center_indices_identify_the_centers(method):
+    """The reported indices point at the periods the centers were taken from."""
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+    period_duration = 24
+
+    result = aggregate(
+        raw,
+        n_clusters=8,
+        period_duration=period_duration,
+        cluster=ClusterConfig(method=method, use_duration_curves=True),
+        preserve_column_means=False,
+    )
+
+    center_indices = result.clustering.cluster_centers
+    assert center_indices is not None, (
+        "duration-curve clustering always represents a cluster by a real period"
+    )
+
+    for cluster_no, period_no in enumerate(center_indices):
+        original_period = raw.iloc[
+            period_no * period_duration : (period_no + 1) * period_duration
+        ]
+        np.testing.assert_array_almost_equal(
+            result.cluster_representatives.loc[cluster_no].values,
+            original_period[result.cluster_representatives.columns].values,
+            decimal=4,
+        )
+
+
+@pytest.mark.parametrize("method", ["hierarchical", "kmeans"])
+def test_duration_curve_transfer_reproduces_the_original_run(method):
+    """Replaying a stored duration-curve clustering gives the same typical periods."""
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+
+    result = aggregate(
+        raw,
+        n_clusters=8,
+        period_duration=24,
+        cluster=ClusterConfig(method=method, use_duration_curves=True),
+    )
+    replayed = result.clustering.apply(raw)
+
+    pd.testing.assert_frame_equal(
+        result.cluster_representatives, replayed.cluster_representatives
+    )
 
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 """Tests for disaggregate functionality."""
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -226,38 +228,38 @@ class TestClusteringResultDisaggregate:
 
 
 class TestTimeIndexSerialization:
-    """Unit tests for _time_index_to_dict / _time_index_from_dict helpers."""
+    """Unit tests for time_index_to_dict / time_index_from_dict helpers."""
 
     def test_regular_index_compact(self):
-        from tsam.config import _time_index_to_dict
+        from tsam.commons import time_index_to_dict
 
         idx = pd.date_range("2025-01-01", periods=8760, freq="h")
-        d = _time_index_to_dict(idx)
+        d = time_index_to_dict(idx)
         assert isinstance(d, dict)
         assert set(d) == {"start", "periods", "freq"}
         assert d["periods"] == 8760
 
     def test_regular_index_roundtrip(self):
-        from tsam.config import _time_index_from_dict, _time_index_to_dict
+        from tsam.commons import time_index_from_dict, time_index_to_dict
 
         idx = pd.date_range("2025-01-01", periods=8760, freq="h")
-        restored = _time_index_from_dict(_time_index_to_dict(idx))
+        restored = time_index_from_dict(time_index_to_dict(idx))
         pd.testing.assert_index_equal(idx, restored)
 
     def test_irregular_index_fallback(self):
-        from tsam.config import _time_index_from_dict, _time_index_to_dict
+        from tsam.commons import time_index_from_dict, time_index_to_dict
 
         idx = pd.DatetimeIndex(["2025-01-01", "2025-01-03", "2025-01-07"])
-        d = _time_index_to_dict(idx)
+        d = time_index_to_dict(idx)
         assert isinstance(d, list)
-        restored = _time_index_from_dict(d)
+        restored = time_index_from_dict(d)
         pd.testing.assert_index_equal(idx, restored)
 
     def test_old_list_format_still_loads(self):
-        from tsam.config import _time_index_from_dict
+        from tsam.commons import time_index_from_dict
 
         raw = ["2025-01-01T00:00:00", "2025-01-01T01:00:00"]
-        restored = _time_index_from_dict(raw)
+        restored = time_index_from_dict(raw)
         assert len(restored) == 2
 
 
@@ -272,6 +274,17 @@ class TestDisaggregateEdgeCases:
         expanded = result.disaggregate(result.cluster_representatives)
         assert len(expanded) == len(short)
         pd.testing.assert_index_equal(expanded.index, short.index)
+
+    def test_padded_last_period_warns(self, sample_data):
+        """Padding the last period is reported rather than done silently."""
+        with pytest.warns(UserWarning, match="not a whole number"):
+            aggregate(sample_data.iloc[:100], n_clusters=3)
+
+    def test_whole_number_of_periods_does_not_warn(self, sample_data):
+        """A series that fills whole periods is never padded."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            aggregate(sample_data.iloc[:96], n_clusters=3)
 
     def test_single_cluster(self, sample_data):
         """Degenerate case: n_clusters=1."""

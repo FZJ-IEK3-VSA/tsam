@@ -48,7 +48,6 @@ New entries are automatically added by [release-please](https://github.com/googl
 
 ## [3.2.1](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.2.0...v3.2.1) (2026-03-25)
 
-
 ### Bug Fixes
 
 * use column weights in tuning RMSE objective ([#227](https://github.com/FZJ-IEK3-VSA/tsam/issues/227)) ([1ceee5c](https://github.com/FZJ-IEK3-VSA/tsam/commit/1ceee5c69856b61aed9eae3f5d5f713be8ac85e9)), closes [#226](https://github.com/FZJ-IEK3-VSA/tsam/issues/226)
@@ -112,7 +111,7 @@ See the [migration guide](migration-guide.md) for a complete guide on upgrading 
 
     - `cluster_representatives`: DataFrame with aggregated typical periods
     - `cluster_assignments`: Which cluster each original period belongs to
-    - `cluster_weights`: Occurrence count per cluster
+    - `cluster_counts`: Occurrence count per cluster (fractional for partial periods)
     - `accuracy`: `AccuracyMetrics` object with RMSE, MAE, and duration curve RMSE
     - `reconstructed`: Reconstructed time series (cached property)
     - `residuals`: Difference between original and reconstructed
@@ -177,7 +176,7 @@ compared to v2.3.9. Four distribution-related configurations (`hierarchical_dist
 `hierarchical_distribution_minmax`, `distribution_global`, `distribution_minmax_global`)
 produce slightly different results, but will be consistent across systems from now on. All statistical properties are preserved. The remaining
 23 configurations are bit-for-bit identical to v2.3.9. See the
-[migration guide](migration-guide.md) for details.
+[v2 to v3 migration guide](migration/v2-to-v3.md#result-consistency-and-reproducibility) for details.
 
 ### Known Limitations
 
@@ -254,22 +253,22 @@ aggregation = tsam_legacy.TimeSeriesAggregation(
 typical_periods = aggregation.createTypicalPeriods()
 ```
 
-## [2.3.9](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v2.3.9)
+## [2.3.9](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v.2.3.9)
 
 * Improved time series aggregation speed with segmentation (issue #96)
 * Fixed issue #99
 
-## [2.3.8](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v2.3.8)
+## [2.3.8](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v.2.3.8)
 
 * Enhanced time series aggregation speed with segmentation (issue #96)
 
-## [2.3.7](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v2.3.7)
+## [2.3.7](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v.2.3.7)
 
 * Added Python 3.13 support
 * Updated GitHub Actions workflow (ubuntu-20.04 to ubuntu-22.04)
 * Resolved invalid escape sequence error (issue #90)
 
-## [2.3.6](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v2.3.6)
+## [2.3.6](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v.2.3.6)
 
 * Migrated from `setup.py` to `pyproject.toml`
 * Changed project layout from flat to source structure
@@ -338,7 +337,7 @@ typical_periods = aggregation.createTypicalPeriods()
 * Significantly increased test coverage
 * Separation between clustering and representation (e.g., for Ward's hierarchical clustering, the representation by medoids or centroids can now be freely chosen)
 
-## [1.1.0](https://github.com/FZJ-IEK3-VSA/tsam/releases/tag/v1.1.0)
+## 1.1.0
 
 * Segmentation (clustering of adjacent time steps) according to Pineda et al. (2018)
 * k-MILP: Extension of MILP-based k-medoids clustering for automatic identification of extreme periods according to Zatti et al. (2019)
