@@ -64,7 +64,7 @@ develop = [
   "pytest-cov<=7.1.0",
   "pytest-xdist<=3.8.0",
   "pytest-benchmark<=5.2.3",
-  "pytest-benchmem<=0.4.11",
+  "pytest-benchmem<=0.4.11; python_version >= '3.11'",
   "codecov<=2.1.13",
   "mkdocs>=1.6,<=1.6.1",
   "mkdocs-material>=9.5,<=9.7.7",
