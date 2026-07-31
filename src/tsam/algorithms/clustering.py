@@ -8,7 +8,12 @@ from tsam.algorithms.representations import representations
 from tsam.config import DEFAULT_REPRESENTATION
 
 if TYPE_CHECKING:
-    from tsam.config import ClusterMethod, Distribution, MinMaxMean
+    from tsam.config import (
+        ClusterMethod,
+        ClusterMethodName,
+        Distribution,
+        MinMaxMean,
+    )
 
 
 def assign_clusters(
@@ -25,13 +30,19 @@ def assign_clusters(
     step.
 
     ``cluster_method`` is a method name ('averaging', 'kmeans', 'kmedoids',
-    'kmaxoids', 'hierarchical', 'contiguous') or, for k-medoids, a ``KMedoids``
-    config object carrying the solver options.
+    'kmaxoids', 'hierarchical', 'contiguous') or a method-config object —
+    ``KMedoids`` carrying solver options, ``KMeans`` carrying the restart
+    count.
     """
+    from tsam.config import KMeans as KMeansConfig
     from tsam.config import KMedoids
 
     kmedoids_config = cluster_method if isinstance(cluster_method, KMedoids) else None
-    cluster_method = "kmedoids" if kmedoids_config is not None else cluster_method
+    kmeans_config = cluster_method if isinstance(cluster_method, KMeansConfig) else None
+    if kmedoids_config is not None:
+        cluster_method = "kmedoids"
+    elif kmeans_config is not None:
+        cluster_method = "kmeans"
 
     if cluster_method == "averaging":
         n_sets = len(candidates)
@@ -46,7 +57,18 @@ def assign_clusters(
     if cluster_method == "kmeans":
         from sklearn.cluster import KMeans
 
-        k_means = KMeans(n_clusters=n_clusters, max_iter=1000, n_init=n_iter, tol=1e-4)
+        # An explicit n_init on the config wins; otherwise the caller's default
+        # stands, which differs between the ordinary and duration-curve paths.
+        if kmeans_config is not None and kmeans_config.n_init is not None:
+            n_iter = kmeans_config.n_init
+        random_state = kmeans_config.random_state if kmeans_config else None
+        k_means = KMeans(
+            n_clusters=n_clusters,
+            max_iter=1000,
+            n_init=n_iter,
+            tol=1e-4,
+            random_state=random_state,
+        )
         return np.asarray(k_means.fit_predict(candidates))
 
     if cluster_method == "kmedoids":
@@ -108,9 +130,16 @@ def cluster_and_represent(
     representatives (using the per-method default unless ``representation_method``
     overrides it).
     """
+    from tsam.config import KMeans as KMeansConfig
     from tsam.config import KMedoids
 
-    method_name = "kmedoids" if isinstance(cluster_method, KMedoids) else cluster_method
+    method_name: ClusterMethodName
+    if isinstance(cluster_method, KMedoids):
+        method_name = "kmedoids"
+    elif isinstance(cluster_method, KMeansConfig):
+        method_name = "kmeans"
+    else:
+        method_name = cluster_method
     cluster_order = assign_clusters(
         candidates,
         n_clusters,
