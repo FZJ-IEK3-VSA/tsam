@@ -561,8 +561,10 @@ def _validate_disaggregate_input(
         data = data.droplevel(list(range(2, data.index.nlevels)))
 
     # Validate cluster IDs
-    data_clusters = set(data.index.get_level_values(0).unique())
-    expected_clusters = set(clustering.cluster_assignments)
+    cluster_level = data.index.get_level_values(0)
+    unique_clusters = cluster_level.unique()
+    data_clusters = set(unique_clusters)
+    expected_clusters = clustering._cluster_id_set
     if data_clusters != expected_clusters:
         missing = expected_clusters - data_clusters
         extra = data_clusters - expected_clusters
@@ -585,12 +587,15 @@ def _validate_disaggregate_input(
         expected = clustering.n_timesteps_per_period
         kind = "timesteps"
 
-    for cluster in data.index.get_level_values(0).unique():
-        n_in_cluster = len(data.loc[cluster])
-        if n_in_cluster != expected:
-            raise ValueError(
-                f"cluster {cluster} has {n_in_cluster} {kind}, expected {expected}"
-            )
+    counts = cluster_level.value_counts()
+    mismatched = counts[counts != expected]
+    if len(mismatched):
+        # Report the first offending cluster in index order, as a row-wise scan would.
+        cluster = next(c for c in unique_clusters if c in mismatched.index)
+        raise ValueError(
+            f"cluster {cluster} has {int(mismatched[cluster])} {kind}, "
+            f"expected {expected}"
+        )
 
     return data
 
@@ -896,10 +901,15 @@ class ClusteringResult:
 
         return tuple(assignments_list), tuple(durations_list), centers
 
+    @cached_property
+    def _cluster_id_set(self) -> frozenset[int]:
+        """Distinct cluster IDs, cached so repeated disaggregation stays cheap."""
+        return frozenset(self.cluster_assignments)
+
     @property
     def n_clusters(self) -> int:
         """Number of clusters (typical periods)."""
-        return len(set(self.cluster_assignments))
+        return len(self._cluster_id_set)
 
     @property
     def n_original_periods(self) -> int:
