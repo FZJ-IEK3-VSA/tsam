@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+## [4.0.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.4.2...v4.0.0) (2026-08-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* new pipeline architecture ([#234](https://github.com/FZJ-IEK3-VSA/tsam/issues/234))
+
+### Features
+
+* new pipeline architecture ([#234](https://github.com/FZJ-IEK3-VSA/tsam/issues/234)) ([5d99d59](https://github.com/FZJ-IEK3-VSA/tsam/commit/5d99d594f192d6e41c10ba0e0573d5a57c80719f))
+
 ## [3.4.2](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.4.1...v3.4.2) (2026-07-22)
 
 
