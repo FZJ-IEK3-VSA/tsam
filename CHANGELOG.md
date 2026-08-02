@@ -4,6 +4,60 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+## [4.0.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.4.2...v4.0.0) (2026-08-02)
+
+tsam v4 is a rewrite of the internals: aggregation is now a chain of stateless functions in `src/tsam/pipeline/`, the class-based `TimeSeriesAggregation` API has been removed — `tsam.aggregate()` is the single entry point — and every internal identifier moved from camelCase to snake_case. For the overwhelming majority of configurations the results are bit-identical to 3.4.2; the exceptions are listed below and in the [migration guide](https://tsam.readthedocs.io/en/latest/migration/v3-to-v4/), which says for each change whether — and what — you need to do.
+
+The v4 line was squash-merged as a single commit ([#234](https://github.com/FZJ-IEK3-VSA/tsam/issues/234)); the entries below are reconstructed from the pull requests it contains.
+
+
+### ⚠ BREAKING CHANGES
+
+* the legacy `TimeSeriesAggregation` API and the v3 compatibility shims have been removed — use `tsam.aggregate()` instead ([#337](https://github.com/FZJ-IEK3-VSA/tsam/issues/337), [#338](https://github.com/FZJ-IEK3-VSA/tsam/issues/338))
+* package structure reorganized (`utils/` → `algorithms/`, new `pipeline/`, public serializers) ([#338](https://github.com/FZJ-IEK3-VSA/tsam/issues/338))
+* new pipeline architecture, weight decoupling, and snake_case API ([#176](https://github.com/FZJ-IEK3-VSA/tsam/issues/176))
+* per-column `weights` are now a top-level argument of `aggregate()`; `ClusterConfig(weights=...)` raises `TypeError` ([#176](https://github.com/FZJ-IEK3-VSA/tsam/issues/176))
+* cluster and segment representations are resolved independently — v3 silently discarded the cluster setting when both were set ([#436](https://github.com/FZJ-IEK3-VSA/tsam/issues/436))
+* the duration representation preserves the integral and the min/max envelope ([#376](https://github.com/FZJ-IEK3-VSA/tsam/issues/376))
+* `cluster_representatives`, `reconstructed`, and `original` return columns in input order instead of alphabetically sorted ([#234](https://github.com/FZJ-IEK3-VSA/tsam/issues/234))
+* `MinMaxMean` naming a column that is not in the data — or the same column in both `min_columns` and `max_columns` — now raises `ValueError` instead of being silently ignored ([#234](https://github.com/FZJ-IEK3-VSA/tsam/issues/234))
+* review follow-ups on the v4 pipeline ([#434](https://github.com/FZJ-IEK3-VSA/tsam/issues/434))
+
+### Features
+
+* new pipeline architecture ([#234](https://github.com/FZJ-IEK3-VSA/tsam/issues/234)) ([5d99d59](https://github.com/FZJ-IEK3-VSA/tsam/commit/5d99d594f192d6e41c10ba0e0573d5a57c80719f))
+* concurrency-preserving distribution ordering ([#377](https://github.com/FZJ-IEK3-VSA/tsam/issues/377), [#400](https://github.com/FZJ-IEK3-VSA/tsam/issues/400))
+* type annotations for all functions in `src/tsam` ([#339](https://github.com/FZJ-IEK3-VSA/tsam/issues/339), [#402](https://github.com/FZJ-IEK3-VSA/tsam/issues/402))
+* **plot:** `compare()` gained `time_slice` and a color dimension ([#338](https://github.com/FZJ-IEK3-VSA/tsam/issues/338))
+* **plot:** new cluster-representative plot ([#412](https://github.com/FZJ-IEK3-VSA/tsam/issues/412))
+
+### Bug Fixes
+
+* **result:** `ClusteringResult.apply()` is now faithful to the run it replays ([#438](https://github.com/FZJ-IEK3-VSA/tsam/issues/438))
+* **algorithms:** representative selection breaks ties deterministically ([#439](https://github.com/FZJ-IEK3-VSA/tsam/issues/439))
+* **pipeline:** restore v3 parity for period sums ([#436](https://github.com/FZJ-IEK3-VSA/tsam/issues/436))
+* **representations:** correct maxoid variable name and document its scope ([#366](https://github.com/FZJ-IEK3-VSA/tsam/issues/366), [#419](https://github.com/FZJ-IEK3-VSA/tsam/issues/419))
+* **docs:** disable `navigation.instant` so notebook plots render ([#388](https://github.com/FZJ-IEK3-VSA/tsam/issues/388))
+
+### Deprecations
+
+* `result.plot.cluster_weights()` is renamed to `result.plot.cluster_counts()`; the old name still works and emits a `FutureWarning`
+* `Distribution(scope="cluster")` is renamed to `Distribution(scope="local")`; `"cluster"` is normalized and emits a `FutureWarning` ([#378](https://github.com/FZJ-IEK3-VSA/tsam/issues/378), [#382](https://github.com/FZJ-IEK3-VSA/tsam/issues/382), [#383](https://github.com/FZJ-IEK3-VSA/tsam/issues/383))
+
+### Documentation
+
+* documentation restructured along Diátaxis (Tutorials / How-to / Explanation / Reference) ([#412](https://github.com/FZJ-IEK3-VSA/tsam/issues/412))
+* v4 API reference and architecture docs ([#331](https://github.com/FZJ-IEK3-VSA/tsam/issues/331))
+* docstrings normalized to Google style ([#339](https://github.com/FZJ-IEK3-VSA/tsam/issues/339), [#379](https://github.com/FZJ-IEK3-VSA/tsam/issues/379), [#384](https://github.com/FZJ-IEK3-VSA/tsam/issues/384), [#416](https://github.com/FZJ-IEK3-VSA/tsam/issues/416))
+* terminology in docs and notebooks aligned with the glossary ([#422](https://github.com/FZJ-IEK3-VSA/tsam/issues/422))
+* branding and logos unified across README and the RTD landing page ([#433](https://github.com/FZJ-IEK3-VSA/tsam/issues/433))
+* tuning-notebook animation starts at full resolution ([#421](https://github.com/FZJ-IEK3-VSA/tsam/issues/421))
+
+### Already shipped in 3.x (v4 ports — not new when upgrading from 3.4.2)
+
+* DatetimeIndex preserved through the aggregate/disaggregate round-trip ([#314](https://github.com/FZJ-IEK3-VSA/tsam/issues/314) — released in 3.4.0)
+* column weights in the accuracy metrics ([#263](https://github.com/FZJ-IEK3-VSA/tsam/issues/263) — released in 3.3.0)
+
 ## [3.4.2](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.4.1...v3.4.2) (2026-07-22)
 
 
