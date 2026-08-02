@@ -70,5 +70,9 @@ Thumbs.db
 trash/
 
 # Notebook output artifacts (regenerated when notebooks run)
-docs/notebooks/results/
-docs/notebooks/clustering.json
+docs/**/results/
+docs/**/clustering.json
+.cache/
+
+# uv resolves this on demand; do not track it
+uv.lock

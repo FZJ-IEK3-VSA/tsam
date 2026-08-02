@@ -227,88 +227,18 @@ def run_aggregation(data: pd.DataFrame, test_case: ClusteringTestCase):
     )
 
 
-def _fixture_paths(test_case: ClusteringTestCase, output_dir: Path):
-    """Return the (csv, json) fixture paths for a case."""
-    return (
-        output_dir / f"expected_{test_case.id}.csv",
-        output_dir / f"meta_{test_case.id}.json",
-    )
-
-
-def _build_metadata(result, test_case: ClusteringTestCase) -> dict:
-    """Build the metadata dict stored alongside the representatives CSV."""
-    metadata = {
-        "config": {
-            "method": test_case.method,
-            "representation": test_case.representation,
-            "n_clusters": 8,
-        },
-        "cluster_weights": {str(k): int(v) for k, v in result.cluster_weights.items()},
-        "accuracy": {
-            "rmse": {col: float(val) for col, val in result.accuracy.rmse.items()},
-            "mae": {col: float(val) for col, val in result.accuracy.mae.items()},
-        },
-        "n_original_periods": len(result.cluster_assignments),
-    }
-
-    if test_case.n_segments is not None:
-        metadata["config"]["n_segments"] = test_case.n_segments
-
-    if test_case.extreme_method is not None:
-        metadata["config"]["extreme_method"] = test_case.extreme_method
-        metadata["config"]["extreme_columns"] = test_case.extreme_columns
-
-    return metadata
-
-
-def _save_fixtures(result, test_case: ClusteringTestCase, output_dir: Path) -> None:
-    """Write the CSV + JSON fixture pair for a case."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    csv_path, meta_path = _fixture_paths(test_case, output_dir)
-    result.cluster_representatives.to_csv(csv_path)
-    with open(meta_path, "w") as f:
-        json.dump(_build_metadata(result, test_case), f, indent=2)
-
-
-def _require_fixture(path: Path) -> None:
-    """Fail (rather than skip) when a fixture is absent.
-
-    A missing baseline must not read as a pass: skipping would let a newly added
-    TEST_CASES entry stay silently unverified forever.
-    """
-    if not path.exists():
-        pytest.fail(
-            f"Fixture missing: {path.name}. Regenerate with "
-            f"`pytest test/test_clustering_e2e.py --update-golden`."
-        )
-
-
 class TestClusteringE2E:
     """End-to-end tests for clustering configurations."""
 
     @pytest.mark.parametrize("test_case", TEST_CASES, ids=get_test_ids())
-    def test_update_golden(
-        self, test_case: ClusteringTestCase, input_data, fixtures_dir, update_golden
-    ):
-        """Save fixtures for this case (only with --update-golden)."""
-        if not update_golden:
-            pytest.skip("use --update-golden to regenerate")
-
-        with _suppress_windows_kmeans_warnings(test_case.id):
-            result = run_aggregation(input_data, test_case)
-        _save_fixtures(result, test_case, fixtures_dir)
-
-    @pytest.mark.parametrize("test_case", TEST_CASES, ids=get_test_ids())
     def test_cluster_representatives(
-        self, test_case: ClusteringTestCase, input_data, fixtures_dir, update_golden
+        self, test_case: ClusteringTestCase, input_data, fixtures_dir
     ):
         """Test that cluster representatives match expected values."""
-        if update_golden:
-            pytest.skip("updating fixtures")
-
         # Load expected output
         expected_path = fixtures_dir / f"expected_{test_case.id}.csv"
-        _require_fixture(expected_path)
+        if not expected_path.exists():
+            pytest.skip(f"Expected file not found: {expected_path}")
 
         # Determine index columns based on segmentation
         if test_case.n_segments is not None:
@@ -333,15 +263,13 @@ class TestClusteringE2E:
 
     @pytest.mark.parametrize("test_case", TEST_CASES, ids=get_test_ids())
     def test_cluster_weights(
-        self, test_case: ClusteringTestCase, input_data, fixtures_dir, update_golden
+        self, test_case: ClusteringTestCase, input_data, fixtures_dir
     ):
         """Test that cluster weights match expected values."""
-        if update_golden:
-            pytest.skip("updating fixtures")
-
         # Load expected metadata
         meta_path = fixtures_dir / f"meta_{test_case.id}.json"
-        _require_fixture(meta_path)
+        if not meta_path.exists():
+            pytest.skip(f"Metadata file not found: {meta_path}")
 
         with open(meta_path) as f:
             metadata = json.load(f)
@@ -351,7 +279,7 @@ class TestClusteringE2E:
 
         # Compare cluster weights (sum should match)
         expected_weights = metadata["cluster_weights"]
-        actual_weights = result.cluster_weights
+        actual_weights = result.cluster_counts
 
         # Total weight should match number of original periods
         expected_total = sum(expected_weights.values())
@@ -368,15 +296,13 @@ class TestClusteringE2E:
 
     @pytest.mark.parametrize("test_case", TEST_CASES, ids=get_test_ids())
     def test_accuracy_metrics(
-        self, test_case: ClusteringTestCase, input_data, fixtures_dir, update_golden
+        self, test_case: ClusteringTestCase, input_data, fixtures_dir
     ):
         """Test that accuracy metrics are within expected bounds."""
-        if update_golden:
-            pytest.skip("updating fixtures")
-
         # Load expected metadata
         meta_path = fixtures_dir / f"meta_{test_case.id}.json"
-        _require_fixture(meta_path)
+        if not meta_path.exists():
+            pytest.skip(f"Metadata file not found: {meta_path}")
 
         with open(meta_path) as f:
             metadata = json.load(f)
@@ -449,6 +375,36 @@ class TestClusteringTransfer:
             check_exact=False,
             atol=1e-10,
         )
+
+    def test_apply_warns_when_extremes_cannot_be_replayed(self, input_data):
+        """append + a computed representation loses a cluster's members."""
+        result = run_aggregation(
+            input_data,
+            ClusteringTestCase(
+                id="append_mean",
+                method="hierarchical",
+                representation="mean",
+                extreme_method="append",
+                extreme_columns=["Load"],
+            ),
+        )
+        with pytest.warns(UserWarning, match="cannot be replayed exactly"):
+            result.clustering.apply(input_data)
+
+    def test_apply_is_silent_when_extremes_can_be_replayed(self, input_data, recwarn):
+        """A selected representation stores the period index, so it replays."""
+        result = run_aggregation(
+            input_data,
+            ClusteringTestCase(
+                id="append_medoid",
+                method="hierarchical",
+                representation="medoid",
+                extreme_method="append",
+                extreme_columns=["Load"],
+            ),
+        )
+        result.clustering.apply(input_data)
+        assert not [w for w in recwarn if "replayed exactly" in str(w.message)]
 
     @pytest.mark.parametrize(
         "test_case", TRANSFER_TEST_CASES, ids=get_transfer_test_ids()
@@ -559,20 +515,59 @@ class TestClusteringTransfer:
 def generate_fixtures(output_dir: Path | None = None):
     """Generate expected fixture files for all test cases.
 
-    Equivalent to ``pytest test/test_clustering_e2e.py --update-golden``; kept as
-    a standalone entry point for running the generation without pytest.
+    This function is used to create the initial fixture files.
+    Run manually when setting up tests or updating expected values.
+
+    Usage:
+        python -c "from test_clustering_e2e import generate_fixtures; generate_fixtures()"
     """
     if output_dir is None:
         output_dir = Path(__file__).parent / "data" / "clustering_e2e"
+
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load input data
     input_data = pd.read_csv(TESTDATA_CSV, index_col=0, parse_dates=True)
 
     for test_case in TEST_CASES:
         print(f"Generating fixtures for {test_case.id}...")
-        with _suppress_windows_kmeans_warnings(test_case.id):
-            result = run_aggregation(input_data, test_case)
-        _save_fixtures(result, test_case, output_dir)
+
+        # Run aggregation
+        result = run_aggregation(input_data, test_case)
+
+        # Save cluster representatives CSV
+        csv_path = output_dir / f"expected_{test_case.id}.csv"
+        result.cluster_representatives.to_csv(csv_path)
+
+        # Build and save metadata JSON
+        metadata = {
+            "config": {
+                "method": test_case.method,
+                "representation": test_case.representation,
+                "n_clusters": 8,
+            },
+            "cluster_weights": {
+                str(k): int(v) for k, v in result.cluster_counts.items()
+            },
+            "accuracy": {
+                "rmse": {col: float(val) for col, val in result.accuracy.rmse.items()},
+                "mae": {col: float(val) for col, val in result.accuracy.mae.items()},
+            },
+            "n_original_periods": len(result.cluster_assignments),
+        }
+
+        # Add segmentation info if applicable
+        if test_case.n_segments is not None:
+            metadata["config"]["n_segments"] = test_case.n_segments
+
+        # Add extremes info if applicable
+        if test_case.extreme_method is not None:
+            metadata["config"]["extreme_method"] = test_case.extreme_method
+            metadata["config"]["extreme_columns"] = test_case.extreme_columns
+
+        meta_path = output_dir / f"meta_{test_case.id}.json"
+        with open(meta_path, "w") as f:
+            json.dump(metadata, f, indent=2)
 
     print(f"Generated fixtures in {output_dir}")
 

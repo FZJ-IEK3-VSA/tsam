@@ -1,5 +1,10 @@
-site_name: ETHOS.TSAM Documentation
-site_url: https://fzj-iek3-vsa.github.io/tsam/
+site_name: ETHOS.TSAM
+# Read the Docs serves each version under /en/<version>/, so the bare domain is
+# one path segment short: it makes every <link rel="canonical"> a 404 and breaks
+# the root-absolute asset paths MkDocs bakes into 404.html. RTD passes the real
+# per-version URL in READTHEDOCS_CANONICAL_URL; fall back to the default version
+# for local builds.
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, "https://tsam.readthedocs.io/en/latest/"]
 repo_url: https://github.com/FZJ-IEK3-VSA/tsam
 repo_name: FZJ-IEK3-VSA/tsam
 edit_uri: edit/develop/docs/
@@ -13,9 +18,6 @@ theme:
     text: Roboto
     code: Roboto Mono
   features:
-    - navigation.instant
-    - navigation.instant.prefetch
-    - navigation.instant.progress
     - navigation.tabs
     - navigation.sections
     - navigation.indexes
@@ -50,39 +52,68 @@ nav:
   - Home:
     - index.md
     - Installation: installation.md
-    - Getting Started: getting-started.md
-    - Migration Guide: migration-guide.md
-    - Glossary: glossary.md
-  - Examples:
-    - Getting Started:
-      - notebooks/quickstart.ipynb
-      - notebooks/visualization.ipynb
-    - Clustering Methods:
-      - notebooks/clustering_methods.ipynb
-      - notebooks/representations.ipynb
-      - notebooks/k_maxoids.ipynb
-    - Advanced Features:
-      - notebooks/segmentation.ipynb
-      - notebooks/optimization_input.ipynb
-      - notebooks/clustering_transfer.ipynb
-      - notebooks/disaggregation.ipynb
-    - Hyperparameter Tuning:
-      - notebooks/tuning.ipynb
-      - notebooks/pareto_optimization.ipynb
-      - notebooks/building_energy_system.ipynb
-  - Learn:
-    - Mathematical Background: background/math.md
-    - Further Reading: further-reading.md
-  - API Reference: api/
-  - About:
-    - Changelog: changelog.md
+    - Migration:
+      - Overview: migration-guide.md
+      - v3 to v4: migration/v3-to-v4.md
+      - v2 to v3: migration/v2-to-v3.md
+    - Contributing: contributing.md
     - Legal Notice: legal-notice.md
+  - Tutorials:
+    - Overview: tutorials/index.md
+    - Your first aggregation: tutorials/quickstart.ipynb
+    - Choosing a method: tutorials/choosing_a_method.ipynb
+    - Comparing clustering methods: tutorials/comparing_clustering_methods.ipynb
+    - Comparing representations: tutorials/comparing_representations.ipynb
+  - How-to guides:
+    - Overview: how-to/index.md
+    - Aggregate a time series: how-to/how_to_aggregate.ipynb
+    - Make it smaller:
+      - Segmentation: how-to/segmentation.ipynb
+      - How small can you go?: how-to/tuning.ipynb
+    - Control what it preserves:
+      - Clustering methods: how-to/clustering_methods.ipynb
+      - Representations: how-to/representations.ipynb
+      - Extreme periods: how-to/extreme_periods.ipynb
+    - Make it fast:
+      - How long will this take?: how-to/runtime.ipynb
+    - Put it to work:
+      - Working with typical periods: how-to/working_with_typical_periods.ipynb
+      - Optimization workflow: how-to/optimization_workflow.ipynb
+  - Explanation:
+    - How aggregation works:
+      - Overview: explanation/how-aggregation-works/00_overview.ipynb
+      - Preprocessing: explanation/how-aggregation-works/01_preprocessing.ipynb
+      - Clustering:
+        - Partitional clustering: explanation/how-aggregation-works/02_clustering/01_partitional_clustering.ipynb
+        - Agglomerative clustering: explanation/how-aggregation-works/02_clustering/02_agglomerative_clustering.ipynb
+        - Extremal-prototype selection: explanation/how-aggregation-works/02_clustering/03_extremal_prototype_selection.ipynb
+        - Averaging: explanation/how-aggregation-works/02_clustering/04_averaging.ipynb
+      - Representation: explanation/how-aggregation-works/03_representation.ipynb
+      - Extreme periods: explanation/how-aggregation-works/04_extreme_periods.ipynb
+      - Rescaling: explanation/how-aggregation-works/05_rescaling.ipynb
+      - Segmentation: explanation/how-aggregation-works/06_segmentation.ipynb
+    - Background:
+      - explanation/background/index.md
+      - Architecture:
+        - explanation/background/architecture/index.md
+        - System Context: explanation/background/architecture/context.md
+        - Pipeline Guide: explanation/background/architecture/pipeline_guide.md
+      - Decisions:
+        - explanation/background/decisions/index.md
+        - 0001 — V4 Pipeline: explanation/background/decisions/0001-v4-pipeline.md
+      - Further Reading: explanation/further-reading.md
+  - Reference:
+    - API:
+      - reference/api/index.md
+      - Configuration: reference/api/configuration.md
+      - Results: reference/api/results.md
+      - Pipeline internals: reference/api/pipeline.md
+      - Tuning: reference/api/tuning.md
+      - Utilities: reference/api/utilities.md
+    - Notation and equations: reference/notation.md
+    - Glossary: reference/glossary.md
+    - Changelog: changelog.md
 
-# gen_ref_pages.py lives in docs/ because gen-files requires scripts to be
-# relative to the project root, but mkdocs-jupyter would otherwise pick it up
-# and try to execute it as a notebook, crashing the build.
-exclude_docs: |
-  gen_ref_pages.py
 
 plugins:
   - search
@@ -95,22 +126,23 @@ plugins:
             show_root_heading: true
             members_order: source
             docstring_style: auto
+            docstring_section_style: table
+            summary: true
             show_symbol_type_heading: true
             show_symbol_type_toc: true
             separate_signature: true
             show_signature_annotations: true
   - mkdocs-jupyter:
-      execute: true
+      # Notebooks are pre-executed in parallel by scripts/execute_notebooks.py
+      # before `mkdocs build`/`mkdocs serve`; see CONTRIBUTING.md. mkdocs
+      # only renders the already-populated outputs, which keeps the build
+      # fast.
+      execute: false
       kernel_name: python3
       include_source: true
       allow_errors: false
       include_requirejs: true
       toc_depth: 3
-  - gen-files:
-      scripts:
-        - docs/gen_ref_pages.py
-  - literate-nav:
-      nav_file: SUMMARY.md
 
 markdown_extensions:
   - pymdownx.arithmatex:
@@ -129,7 +161,8 @@ markdown_extensions:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: ['.']
   - pymdownx.mark
   - admonition
   - pymdownx.details
@@ -141,7 +174,20 @@ markdown_extensions:
   - abbr
   - toc:
       permalink: true
-      toc_depth: 2
+      toc_depth: 3
+
+# Tooling that lives under docs/ but is not a documentation page. overrides/ is
+# Material theme template source (see theme.custom_dir), likewise not content.
+exclude_docs: |
+  scripts/
+  hooks/
+  overrides/
+
+# Build hooks (loaded as modules; not affected by exclude_docs above).
+hooks:
+  - docs/hooks/strip_duplicate_mathjax.py
+  - docs/hooks/notebook_asset_paths.py
+  - docs/hooks/notebook_toc_anchors.py
 
 extra:
   generator: false
@@ -153,3 +199,7 @@ extra_javascript:
   - https://cdn.plot.ly/plotly-3.3.0.min.js
   - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+  - https://cdn.jsdelivr.net/npm/panzoom@9.4.3/dist/panzoom.min.js
+  - javascripts/diagram-zoom-init.js
+  - javascripts/notebook-prompts.js
+  - javascripts/notebook-download.js

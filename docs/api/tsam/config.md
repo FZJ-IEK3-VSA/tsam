@@ -1,3 +1,0 @@
-# tsam.config
-
-::: tsam.config

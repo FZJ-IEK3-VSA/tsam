@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import tsam.timeseriesaggregation as tsam
 from conftest import TESTDATA_CSV
 from tsam import (
     ClusterConfig,
@@ -124,7 +123,7 @@ def test_distributionMinMaxRepresentation():
         predictedPeriods.min(),
     )
 
-    # distributionAndMinMaxRepresentation now enforces the per-cluster envelope
+    # distribution + preserve_minmax now enforces the per-cluster envelope
     # strictly, so the mean can drift slightly in clusters where the old code
     # would have produced values above the local max. The trade buys a hard
     # guarantee that the aggregated series never exceeds the input envelope.
@@ -135,22 +134,26 @@ def test_distributionMinMaxRepresentation():
 def test_distributionMinMaxRepresentation_with_rescale():
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
-    aggregation = tsam.TimeSeriesAggregation(
+    aggregation = aggregate(
         raw,
-        noTypicalPeriods=24,
-        segmentation=True,
-        noSegments=8,
-        hoursPerPeriod=24,
-        sortValues=False,
-        clusterMethod="hierarchical",
-        representationMethod="distributionAndMinMaxRepresentation",
-        distributionPeriodWise=False,
-        rescaleClusterPeriods=True,
-        extremePeriodMethod="None",
+        n_clusters=24,
+        period_duration=24,
+        segments=SegmentConfig(
+            n_segments=8,
+            representation=Distribution(scope="global", preserve_minmax=True),
+        ),
+        cluster=ClusterConfig(
+            method="hierarchical",
+            use_duration_curves=False,
+            representation=Distribution(scope="global", preserve_minmax=True),
+        ),
+        preserve_column_means=True,  # rescaling enabled
     )
 
-    predictedPeriods = aggregation.predictOriginalData()
+    predictedPeriods = aggregation.reconstructed
 
+    # The aggregated series must never exceed the input envelope, even with
+    # rescaling active, and the integral is preserved.
     assert (predictedPeriods.max() <= raw.max() + 1e-10).all()
     assert (predictedPeriods.min() >= raw.min() - 1e-10).all()
 

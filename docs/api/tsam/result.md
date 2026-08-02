@@ -1,3 +1,0 @@
-# tsam.result
-
-::: tsam.result
