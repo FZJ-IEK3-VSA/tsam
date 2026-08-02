@@ -75,7 +75,7 @@ develop = [
   "nbclient<=0.11.0",                   # imported directly by scripts/execute_notebooks.py
   "nbformat<=5.10.4",                   # (arrived transitively via notebook until now)
   "ruff<=0.16.1",
-  "mypy<=2.1.0",
+  "mypy<=2.3.0",
   "pandas-stubs<=3.0.3.260530",
   "pre-commit<=4.6.1",
   "plotly>=5.0.0,<=6.9.0",
