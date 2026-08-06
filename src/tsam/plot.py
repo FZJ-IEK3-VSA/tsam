@@ -151,6 +151,11 @@ def _to_rgba(color: str, alpha: float) -> str:
     return f"rgba({r}, {g}, {b}, {alpha})"
 
 
+# Opacity for the cluster-period shading in `clusters_over_time`, reused by
+# the legend swatches so the two can never drift out of sync.
+_PERIOD_SHADE_OPACITY = 0.35
+
+
 # Distinguishable at small sizes and without relying on colour alone.
 _PATH_SYMBOLS = (
     "circle",
@@ -809,6 +814,7 @@ class ResultPlotAccessor:
 
         return fig
 
+
     def clusters_over_time(
         self,
         columns: list[str] | None = None,
@@ -820,13 +826,13 @@ class ResultPlotAccessor:
         title: str | None = None,
     ) -> go.Figure:
         """Plot the series over time with each period shaded by its cluster.
-
+ 
         Each period (e.g. day) on the time axis is shaded with the colour of the
         cluster it was assigned to, so you can see which typical period stands in
         for each stretch of time — and whether a cluster spans several
         consecutive periods. Cluster colours match :meth:`cluster_members` and
         :meth:`cluster_representatives`, so a cluster can be traced across plots.
-
+ 
         Parameters
         ----------
         columns : list[str], optional
@@ -845,11 +851,11 @@ class ResultPlotAccessor:
             the y axes as ``column [unit]``.
         title : str, optional
             Plot title.
-
+ 
         Returns
         -------
         go.Figure
-
+ 
         Examples
         --------
         >>> result.plot.clusters_over_time(columns=["Load"])
@@ -858,7 +864,7 @@ class ResultPlotAccessor:
         ... )
         """
         from plotly.subplots import make_subplots
-
+ 
         result = self._result
         columns = _validate_columns(
             columns, list(result.original.columns), "original data"
@@ -867,14 +873,14 @@ class ResultPlotAccessor:
         original = result.original
         assignments = result.cluster_assignments
         cmap = _cluster_color_map(assignments)
-
+ 
         times = frame.index
         n_periods = len(assignments)
         steps_per_period = result.n_timesteps_per_period
         step = (times[1] - times[0]) if len(times) > 1 else 1
         period_bounds = [times[p * steps_per_period] for p in range(n_periods)]
         period_bounds.append(times[-1] + step)
-
+ 
         n = len(columns)
         fig = make_subplots(
             rows=n,
@@ -882,7 +888,7 @@ class ResultPlotAccessor:
             shared_xaxes=True,
             subplot_titles=columns if n > 1 else None,
         )
-
+ 
         shapes: list[dict] = []
         for row, col in enumerate(columns, start=1):
             if overlay_original:
@@ -928,7 +934,7 @@ class ResultPlotAccessor:
                     "y0": 0,
                     "y1": 1,
                     "fillcolor": cmap[int(cluster)],
-                    "opacity": 0.18,
+                    "opacity": _PERIOD_SHADE_OPACITY,
                     "layer": "below",
                     "line": {
                         "width": 0.5 if mark_periods else 0,
@@ -937,23 +943,37 @@ class ResultPlotAccessor:
                 }
                 for period, cluster in enumerate(assignments)
             )
-
+ 
         fig.update_layout(shapes=shapes)
-
+ 
         # One legend entry per cluster (colours shared across all cluster plots).
+        # The swatch fill is blended to the same opacity as the shaded bands
+        # (over a white background), so what's shown in the legend is what the
+        # band actually looks like on the chart. A solid outline in the full
+        # saturated colour keeps the swatch identifiable despite the fade —
+        # without it, hues like blue (#636EFA) and purple (#AB63FA) become
+        # nearly indistinguishable pastels at 18% opacity, which is what made
+        # the legend and shading look mismatched even though the underlying
+        # cluster->colour mapping (cmap) was always identical in both places.
+
         for cid, color in cmap.items():
             fig.add_trace(
                 go.Scatter(
                     x=[None],
                     y=[None],
                     mode="markers",
-                    marker={"color": color, "size": 10, "symbol": "square"},
+                    marker={
+                        "color": _to_rgba(color, _PERIOD_SHADE_OPACITY),
+                        "size": 14,
+                        "symbol": "square",
+                        #"line": {"color": color, "width": 1.5},
+                    },
                     name=f"cluster {cid}",
                 ),
                 row=1,
                 col=1,
             )
-
+ 
         if mark_periods:
             fig.update_xaxes(
                 minor={"tickvals": period_bounds, "ticklen": 6, "tickcolor": "grey"}
