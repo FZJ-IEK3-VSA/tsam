@@ -962,12 +962,7 @@ class ResultPlotAccessor:
                     x=[None],
                     y=[None],
                     mode="markers",
-                    marker={
-                        "color": _to_rgba(color, _PERIOD_SHADE_OPACITY),
-                        "size": 14,
-                        "symbol": "square",
-                        #"line": {"color": color, "width": 1.5},
-                    },
+                    marker={"color": _to_rgba(color, _PERIOD_SHADE_OPACITY), "size": 14, "symbol": "square"},
                     name=f"cluster {cid}",
                 ),
                 row=1,
