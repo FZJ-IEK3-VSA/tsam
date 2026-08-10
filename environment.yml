@@ -31,4 +31,4 @@ dependencies:
   - ruff <=0.16.1
   - mypy <=2.3.0
   - pre-commit <=4.6.1
-  - pandas-stubs <=3.0.3.260530
+  - pandas-stubs <=3.0.5.260730
