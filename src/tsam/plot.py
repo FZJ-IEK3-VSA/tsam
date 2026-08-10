@@ -814,7 +814,6 @@ class ResultPlotAccessor:
 
         return fig
 
-
     def clusters_over_time(
         self,
         columns: list[str] | None = None,
@@ -826,13 +825,13 @@ class ResultPlotAccessor:
         title: str | None = None,
     ) -> go.Figure:
         """Plot the series over time with each period shaded by its cluster.
- 
+
         Each period (e.g. day) on the time axis is shaded with the colour of the
         cluster it was assigned to, so you can see which typical period stands in
         for each stretch of time — and whether a cluster spans several
         consecutive periods. Cluster colours match :meth:`cluster_members` and
         :meth:`cluster_representatives`, so a cluster can be traced across plots.
- 
+
         Parameters
         ----------
         columns : list[str], optional
@@ -851,11 +850,11 @@ class ResultPlotAccessor:
             the y axes as ``column [unit]``.
         title : str, optional
             Plot title.
- 
+
         Returns
         -------
         go.Figure
- 
+
         Examples
         --------
         >>> result.plot.clusters_over_time(columns=["Load"])
@@ -864,7 +863,7 @@ class ResultPlotAccessor:
         ... )
         """
         from plotly.subplots import make_subplots
- 
+
         result = self._result
         columns = _validate_columns(
             columns, list(result.original.columns), "original data"
@@ -873,14 +872,14 @@ class ResultPlotAccessor:
         original = result.original
         assignments = result.cluster_assignments
         cmap = _cluster_color_map(assignments)
- 
+
         times = frame.index
         n_periods = len(assignments)
         steps_per_period = result.n_timesteps_per_period
         step = (times[1] - times[0]) if len(times) > 1 else 1
         period_bounds = [times[p * steps_per_period] for p in range(n_periods)]
         period_bounds.append(times[-1] + step)
- 
+
         n = len(columns)
         fig = make_subplots(
             rows=n,
@@ -888,7 +887,7 @@ class ResultPlotAccessor:
             shared_xaxes=True,
             subplot_titles=columns if n > 1 else None,
         )
- 
+
         shapes: list[dict] = []
         for row, col in enumerate(columns, start=1):
             if overlay_original:
@@ -943,9 +942,9 @@ class ResultPlotAccessor:
                 }
                 for period, cluster in enumerate(assignments)
             )
- 
+
         fig.update_layout(shapes=shapes)
- 
+
         # One legend entry per cluster (colours shared across all cluster plots).
         # The swatch fill is blended to the same opacity as the shaded bands
         # (over a white background), so what's shown in the legend is what the
@@ -962,13 +961,17 @@ class ResultPlotAccessor:
                     x=[None],
                     y=[None],
                     mode="markers",
-                    marker={"color": _to_rgba(color, _PERIOD_SHADE_OPACITY), "size": 14, "symbol": "square"},
+                    marker={
+                        "color": _to_rgba(color, _PERIOD_SHADE_OPACITY),
+                        "size": 14,
+                        "symbol": "square",
+                    },
                     name=f"cluster {cid}",
                 ),
                 row=1,
                 col=1,
             )
- 
+
         if mark_periods:
             fig.update_xaxes(
                 minor={"tickvals": period_bounds, "ticklen": 6, "tickcolor": "grey"}

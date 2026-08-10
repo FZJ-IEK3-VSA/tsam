@@ -11,7 +11,7 @@ import pandas as pd
 def infer_resolution(data: pd.DataFrame) -> float:
     """Infer temporal resolution (hours per step) from a data index."""
     if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 1:
-        return (data.index[1] - data.index[0]).total_seconds() / 3600
+        return float((data.index[1] - data.index[0]).total_seconds() / 3600)
     return 1.0
 
 

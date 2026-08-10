@@ -193,8 +193,8 @@ class TestClustersOverTime:
 
     def test_consistent_cluster_colors(self, result):
         """Legend colours match the shared map used by the other cluster plots."""
-        from tsam.plot import _cluster_color_map, _to_rgba, _PERIOD_SHADE_OPACITY
-    
+        from tsam.plot import _PERIOD_SHADE_OPACITY, _cluster_color_map, _to_rgba
+
         cmap = _cluster_color_map(result.cluster_assignments)
         fig = result.plot.clusters_over_time(columns=[result.original.columns[0]])
         legend_colors = {

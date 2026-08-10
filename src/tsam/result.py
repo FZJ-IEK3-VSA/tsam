@@ -280,7 +280,7 @@ class AggregationResult:
         which is the authoritative source. Note: cluster_counts may
         have more entries than actual cluster IDs due to tsam quirks.
         """
-        return self.cluster_representatives.index.get_level_values(0).nunique()
+        return int(self.cluster_representatives.index.get_level_values(0).nunique())
 
     @cached_property
     def n_segments(self) -> int | None:
