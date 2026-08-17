@@ -29,6 +29,6 @@ dependencies:
   - d2
   # Linting and formatting
   - ruff <=0.16.3
-  - mypy <=2.3.0
+  - mypy <=2.3.1
   - pre-commit <=4.6.2
   - pandas-stubs <=3.0.5.260730
