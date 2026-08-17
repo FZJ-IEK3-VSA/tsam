@@ -77,7 +77,7 @@ develop = [
   "ruff<=0.16.2",
   "mypy<=2.3.0",
   "pandas-stubs<=3.0.5.260730",
-  "pre-commit<=4.6.1",
+  "pre-commit<=4.6.2",
   "plotly>=5.0.0,<=6.9.0",
   "notebook>=7.5.0,<=7.6.1",
 ]
