@@ -79,7 +79,7 @@ develop = [
   "pandas-stubs<=3.0.5.260730",
   "pre-commit<=4.6.1",
   "plotly>=5.0.0,<=6.9.0",
-  "notebook>=7.5.0,<=7.6.1",
+  "notebook>=7.5.0,<=7.6.2",
 ]
 plot = ["plotly>=5.0.0"]
 notebooks = ["notebook>=7.5.0", "plotly>=5.0.0"]
