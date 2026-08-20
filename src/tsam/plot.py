@@ -151,6 +151,11 @@ def _to_rgba(color: str, alpha: float) -> str:
     return f"rgba({r}, {g}, {b}, {alpha})"
 
 
+# Opacity for the cluster-period shading in `clusters_over_time`, reused by
+# the legend swatches so the two can never drift out of sync.
+_PERIOD_SHADE_OPACITY = 0.35
+
+
 # Distinguishable at small sizes and without relying on colour alone.
 _PATH_SYMBOLS = (
     "circle",
@@ -928,7 +933,7 @@ class ResultPlotAccessor:
                     "y0": 0,
                     "y1": 1,
                     "fillcolor": cmap[int(cluster)],
-                    "opacity": 0.18,
+                    "opacity": _PERIOD_SHADE_OPACITY,
                     "layer": "below",
                     "line": {
                         "width": 0.5 if mark_periods else 0,
@@ -941,13 +946,26 @@ class ResultPlotAccessor:
         fig.update_layout(shapes=shapes)
 
         # One legend entry per cluster (colours shared across all cluster plots).
+        # The swatch fill is blended to the same opacity as the shaded bands
+        # (over a white background), so what's shown in the legend is what the
+        # band actually looks like on the chart. A solid outline in the full
+        # saturated colour keeps the swatch identifiable despite the fade —
+        # without it, hues like blue (#636EFA) and purple (#AB63FA) become
+        # nearly indistinguishable pastels at 18% opacity, which is what made
+        # the legend and shading look mismatched even though the underlying
+        # cluster->colour mapping (cmap) was always identical in both places.
+
         for cid, color in cmap.items():
             fig.add_trace(
                 go.Scatter(
                     x=[None],
                     y=[None],
                     mode="markers",
-                    marker={"color": color, "size": 10, "symbol": "square"},
+                    marker={
+                        "color": _to_rgba(color, _PERIOD_SHADE_OPACITY),
+                        "size": 14,
+                        "symbol": "square",
+                    },
                     name=f"cluster {cid}",
                 ),
                 row=1,
