@@ -18,9 +18,19 @@ Usage::
     pytest benchmarks/ --benchmark-only                       # quick tier, timing
     pytest benchmarks/ --benchmark-only --slow                # + k-medoids, 96/400 columns
     pytest benchmarks/ --benchmark-only --large               # + production-sized cases
-    pytest benchmarks/ --benchmark-only --benchmark-memory    # + memray peak memory
     pytest benchmarks/ --benchmark-only --benchmark-save=dev  # snapshot to .benchmarks/
+    pytest benchmarks/ --benchmark-disable --slow --large     # run once, no timing (CI)
 
+Comparing two snapshots needs nothing beyond pytest-benchmark::
+
+    pytest-benchmark compare '*base*' '*dev*' --group-by=name
+
+The dims below additionally make the runs plottable by any axis with
+`pytest-benchmem <https://github.com/fluxopt/pytest-benchmem>`_, which is
+optional and lives in the separate ``bench`` extra::
+
+    pip install -e '.[develop,bench]'
+    pytest benchmarks/ --benchmark-only --benchmark-memory   # memray peak memory
     benchmem compare '*base*' '*dev*' --columns time --diff
     benchmem plot  .benchmarks/*/0001_dev.json --x n_columns --color method
     benchmem plot  .benchmarks/*/0001_dev.json --x n_clusters --where n_segments=12
@@ -53,6 +63,19 @@ SCALE_COLUMNS = 48
 LARGE_OPTS = {"rounds": 3, "iterations": 1, "warmup_rounds": 0}
 
 
+def _tag(data: pd.DataFrame, dataset: str) -> pd.DataFrame:
+    """Label ``data`` with the dataset it came from, for :func:`_stamp_dims`.
+
+    Shape alone does not identify a dataset: ``_wide_columns(4)`` and
+    ``_testdata()`` are both 8760 x 4 but hold different values, so without
+    this tag they stamp identically and ``--x n_columns`` plots them as one
+    point. Set explicitly rather than relying on ``attrs`` propagation, which
+    pandas does not guarantee through concat and reindex.
+    """
+    data.attrs["dataset"] = dataset
+    return data
+
+
 @lru_cache
 def _load(path: str) -> pd.DataFrame:
     return pd.read_csv(path, index_col=0, parse_dates=True)
@@ -60,7 +83,7 @@ def _load(path: str) -> pd.DataFrame:
 
 def _testdata() -> pd.DataFrame:
     """One year of hourly GHI/T/Wind/Load data (8760 x 4)."""
-    return _load(str(TESTDATA_CSV))
+    return _tag(_load(str(TESTDATA_CSV)), "testdata")
 
 
 def _wide_columns(n_columns: int) -> pd.DataFrame:
@@ -68,21 +91,21 @@ def _wide_columns(n_columns: int) -> pd.DataFrame:
     base = _load(str(WIDE_CSV))
     repeats = -(-n_columns // base.shape[1])
     tiled = pd.concat([base.add_suffix(f"_{i}") for i in range(repeats)], axis=1)
-    return tiled.iloc[:, :n_columns]
+    return _tag(tiled.iloc[:, :n_columns], "wide")
 
 
 def _tile_years(data: pd.DataFrame, n_years: int) -> pd.DataFrame:
     """``data`` repeated ``n_years`` times on one continuous hourly index."""
     tiled = pd.concat([data] * n_years, ignore_index=True)
     tiled.index = pd.date_range("2020-01-01", periods=len(tiled), freq="h")
-    return tiled
+    return _tag(tiled, data.attrs.get("dataset", "unknown"))
 
 
 def _quarter_hourly() -> pd.DataFrame:
     """testdata linearly interpolated to 15-min resolution (35,040 rows)."""
     base = _testdata()
     idx = pd.date_range(base.index[0], periods=len(base) * 4, freq="15min")
-    return base.reindex(idx).interpolate(method="linear").ffill()
+    return _tag(base.reindex(idx).interpolate(method="linear").ffill(), "testdata")
 
 
 def _stamp_dims(benchmark, data: pd.DataFrame, n_clusters: int, kwargs: dict) -> None:
@@ -96,6 +119,11 @@ def _stamp_dims(benchmark, data: pd.DataFrame, n_clusters: int, kwargs: dict) ->
     turns the suite into one queryable dataset instead of a set of unrelated
     curves. The varied axis stays a real parametrize param, so nothing
     collapses.
+
+    ``dataset`` is part of that shape. Two frames of the same size are not
+    interchangeable inputs — the same clustering on different values takes
+    different time — so without it a plot would silently average the
+    ``wide`` and ``testdata`` four-column runs into one point.
     """
     cluster = kwargs.get("cluster")
     segments = kwargs.get("segments")
@@ -111,6 +139,7 @@ def _stamp_dims(benchmark, data: pd.DataFrame, n_clusters: int, kwargs: dict) ->
 
     benchmark.extra_info.update(
         {
+            "dataset": data.attrs.get("dataset", "unknown"),
             "n_timesteps": len(data),
             "n_columns": data.shape[1],
             "n_clusters": n_clusters,
@@ -252,30 +281,11 @@ def test_extremes_3y(benchmark):
     )
 
 
-@pytest.mark.large
-@pytest.mark.benchmark(group="large")
-def test_large_wide(benchmark):
-    """Production-sized single frame: two years hourly x 256 columns."""
-    data = _tile_years(_wide_columns(256), 2)
-    _stamp_dims(benchmark, data, N_CLUSTERS, {})
-    benchmark.pedantic(lambda: aggregate(data, N_CLUSTERS), **LARGE_OPTS)
-
-
-@pytest.mark.large
-@pytest.mark.benchmark(group="large")
-def test_large_scenarios(benchmark):
-    """Eight sequential year x 64-column aggregations (multi-scenario workload)."""
-    data = _wide_columns(64)
-    _stamp_dims(benchmark, data, N_CLUSTERS, {})
-    benchmark.extra_info["n_slices"] = 8
-    benchmark.pedantic(
-        lambda: [aggregate(data, N_CLUSTERS) for _ in range(8)], **LARGE_OPTS
-    )
-
-
 def _fine_data() -> pd.DataFrame:
     """FINE 8-region example: 5 profiles x 8 regions, hourly year (8760 x 40)."""
-    return _load(str(ROOT / "benchmarks" / "data" / "fine_multiregional.csv.gz"))
+    return _tag(
+        _load(str(ROOT / "benchmarks" / "data" / "fine_multiregional.csv.gz")), "fine"
+    )
 
 
 @pytest.mark.benchmark(group="headline")
@@ -316,7 +326,7 @@ def test_fine_production(benchmark):
     distribution, 12 segments, peak-demand extremes. ~6 s on tsam 3.4.2."""
     base = _fine_data()
     wide = pd.concat([base.add_suffix(f"_{i}") for i in range(10)], axis=1)
-    data = pd.concat([wide] * 2, ignore_index=True)
+    data = _tag(pd.concat([wide] * 2, ignore_index=True), "fine")
     data.index = pd.date_range("2020-01-01", periods=len(data), freq="h")
     kwargs = {
         "cluster": ClusterConfig(

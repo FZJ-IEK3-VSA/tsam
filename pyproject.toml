@@ -55,8 +55,8 @@ requires-python = ">=3.10,<3.15"
 [project.optional-dependencies]
 # Most deps below are mirrored in environment.yml and updated via conda-forge
 # by Renovate (see .github/renovate.json). PyPI-only entries — pytest-benchmark,
-# pytest-benchmem, mkdocstrings[python], pandas-stubs, notebook, nbclient,
-# nbformat — stay on the pep621 manager.
+# mkdocstrings[python], pandas-stubs, notebook, nbclient, nbformat — stay on the
+# pep621 manager.
 # When adding a dep that should be dual-channel, mirror it in environment.yml
 # and update .github/renovate.json.
 develop = [
@@ -64,7 +64,6 @@ develop = [
   "pytest-cov<=7.1.0",
   "pytest-xdist<=3.8.0",
   "pytest-benchmark<=5.2.3",
-  "pytest-benchmem<=0.4.11; python_version >= '3.11'",
   "codecov<=2.1.13",
   "mkdocs>=1.6,<=1.6.1",
   "mkdocs-material>=9.5,<=9.7.7",
@@ -84,6 +83,12 @@ develop = [
 ]
 plot = ["plotly>=5.0.0"]
 notebooks = ["notebook>=7.5.0", "plotly>=5.0.0"]
+# Optional benchmark tooling, deliberately out of `develop`. The suite under
+# benchmarks/ runs on pytest-benchmark alone; pytest-benchmem only adds the
+# memray pass and the dim-aware `benchmem` plot/compare CLI on top of the same
+# JSON. Keeping it separate means a contributor's dev install does not pull it,
+# and the suite stays runnable on Python 3.10, which benchmem does not support.
+bench = ["pytest-benchmem<=0.5.4; python_version >= '3.11'"]
 
 [tool.hatch.version]
 source = "vcs"
