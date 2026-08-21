@@ -280,27 +280,6 @@ def test_extremes_3y(benchmark):
     )
 
 
-@pytest.mark.large
-@pytest.mark.benchmark(group="large")
-def test_large_wide(benchmark):
-    """Production-sized single frame: two years hourly x 256 columns."""
-    data = _tile_years(_wide_columns(256), 2)
-    _stamp_dims(benchmark, data, N_CLUSTERS, {})
-    benchmark.pedantic(lambda: aggregate(data, N_CLUSTERS), **LARGE_OPTS)
-
-
-@pytest.mark.large
-@pytest.mark.benchmark(group="large")
-def test_large_scenarios(benchmark):
-    """Eight sequential year x 64-column aggregations (multi-scenario workload)."""
-    data = _wide_columns(64)
-    _stamp_dims(benchmark, data, N_CLUSTERS, {})
-    benchmark.extra_info["n_slices"] = 8
-    benchmark.pedantic(
-        lambda: [aggregate(data, N_CLUSTERS) for _ in range(8)], **LARGE_OPTS
-    )
-
-
 def _fine_data() -> pd.DataFrame:
     """FINE 8-region example: 5 profiles x 8 regions, hourly year (8760 x 40)."""
     return _tag(

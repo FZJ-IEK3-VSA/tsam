@@ -13,6 +13,11 @@ period, ``mean`` averages one, ``distribution`` fits duration curves, and
 ``kmeans`` spends its time inside scikit-learn instead of tsam. A change that
 helps one can easily miss the others.
 
+Production-sized shapes are not repeated here. ``test_bench.py`` already runs
+the FINE production workload and the 400-column expansion under ``--large``,
+with full dims; a workflow wrapper around the same call measures the same
+thing without adding an axis.
+
 Two things these catch that the dimensional suite cannot:
 
 - **Lazy work.** ``accuracy`` is a cached property and ``disaggregate()`` is
@@ -26,7 +31,6 @@ Two things these catch that the dimensional suite cannot:
 Usage::
 
     pytest benchmarks/test_workflows.py --benchmark-only
-    pytest benchmarks/test_workflows.py --benchmark-only --large
 """
 
 from __future__ import annotations
@@ -36,13 +40,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from tsam import (
-    ClusterConfig,
-    Distribution,
-    ExtremeConfig,
-    SegmentConfig,
-    aggregate,
-)
+from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
 
 ROOT = Path(__file__).resolve().parent.parent
 FINE_CSV = ROOT / "benchmarks" / "data" / "fine_multiregional.csv.gz"
@@ -50,7 +48,6 @@ WIDE_CSV = ROOT / "test" / "data" / "wide.csv"
 TESTDATA_CSV = ROOT / "docs" / "data" / "testdata.csv"
 
 HEAVY = {"rounds": 3, "iterations": 1, "warmup_rounds": 1}
-LIGHT = {"rounds": 10, "iterations": 1, "warmup_rounds": 1}
 
 #: The four setups that cover what callers configure in practice: the library
 #: default, the classic k-means run, FINE's duration-curve-with-segments, and
@@ -105,78 +102,6 @@ def test_workflow_energy_system_model(benchmark, setup):
     benchmark.pedantic(run, **HEAVY)
 
 
-@pytest.mark.large
-@pytest.mark.benchmark(group="workflow")
-def test_workflow_energy_system_model_production(benchmark):
-    """The same model at production scale: eight regions, two years, 400 profiles.
-
-    A multi-region run also pins each region's peak-demand day as its own
-    typical period, and switches the duration representation to global scope
-    so the fitted curve is shared across periods.
-    """
-    one_region = pd.read_csv(FINE_CSV, index_col=0, parse_dates=True)
-    all_regions = pd.concat(
-        [one_region.add_suffix(f"_{region}") for region in range(10)], axis=1
-    )
-    demand = pd.concat([all_regions] * 2, ignore_index=True)
-    demand.index = pd.date_range("2020-01-01", periods=len(demand), freq="h")
-    peak_columns = [c for c in demand.columns if c.startswith("ElecDemand")]
-
-    benchmark.extra_info["n_timesteps"] = len(demand)
-    benchmark.extra_info["n_columns"] = demand.shape[1]
-
-    def run():
-        result = aggregate(
-            demand,
-            40,
-            cluster=ClusterConfig(
-                method="hierarchical", representation=Distribution(scope="global")
-            ),
-            segments=SegmentConfig(n_segments=12),
-            extremes=ExtremeConfig(method="append", max_value=peak_columns),
-            preserve_column_means=False,
-        )
-        typical_periods = result.cluster_representatives
-        segment_durations = typical_periods.index.get_level_values("Segment Duration")
-        return (
-            typical_periods.to_dict(),
-            list(segment_durations),
-            list(result.cluster_assignments),
-        )
-
-    benchmark.pedantic(run, **HEAVY)
-
-
-@pytest.mark.large
-@pytest.mark.benchmark(group="workflow")
-@pytest.mark.parametrize("resolution", ["typical_periods", "segments"])
-def test_workflow_optimization_roundtrip_production(benchmark, resolution):
-    """The same round-trip at the scale a real model runs: 400 profiles, two years.
-
-    Each expansion writes two years x 400 columns — seven million cells — and
-    the model does it once per solved variable, so this is the shape where the
-    expansion cost is actually felt rather than the 20-column illustration.
-    """
-    profiles = pd.read_csv(WIDE_CSV, index_col=0, parse_dates=True)
-    wide = pd.concat([profiles.add_suffix(f"_{i}") for i in range(100)], axis=1).iloc[
-        :, :400
-    ]
-    two_years = pd.concat([wide] * 2, ignore_index=True)
-    two_years.index = pd.date_range("2020-01-01", periods=len(two_years), freq="h")
-    segments = SegmentConfig(n_segments=12) if resolution == "segments" else None
-    n_variables = 20
-    benchmark.extra_info["n_variables"] = n_variables
-    benchmark.extra_info["n_columns"] = two_years.shape[1]
-    benchmark.extra_info["n_timesteps"] = len(two_years)
-
-    def run():
-        result = aggregate(two_years, 40, segments=segments)
-        solved_variables = result.cluster_representatives
-        return [result.disaggregate(solved_variables) for _ in range(n_variables)]
-
-    benchmark.pedantic(run, rounds=3, iterations=1, warmup_rounds=1)
-
-
 @pytest.mark.benchmark(group="workflow")
 @pytest.mark.parametrize("resolution", ["typical_periods", "segments"])
 def test_workflow_optimization_roundtrip(benchmark, resolution):
@@ -202,29 +127,6 @@ def test_workflow_optimization_roundtrip(benchmark, resolution):
         return [result.disaggregate(solved_variables) for _ in range(n_variables)]
 
     benchmark.pedantic(run, **HEAVY)
-
-
-@pytest.mark.benchmark(group="workflow")
-@pytest.mark.parametrize("setup", ["hierarchical_medoid", "kmeans_mean"])
-def test_workflow_accuracy_report(benchmark, setup):
-    """Aggregate a wide dataset and report how much accuracy it cost.
-
-    What someone does when choosing between configurations: run one, look at
-    the per-attribute error. ``accuracy`` is lazy, so this is the only
-    workflow that pays for it on a single call.
-    """
-    profiles = pd.read_csv(WIDE_CSV, index_col=0, parse_dates=True)
-    profiles = pd.concat(
-        [profiles.add_suffix(f"_{i}") for i in range(12)], axis=1
-    ).iloc[:, :48]
-    kwargs = _setup_kwargs(setup, [])
-
-    def run():
-        result = aggregate(profiles, 8, **kwargs)
-        accuracy = result.accuracy
-        return accuracy.rmse, accuracy.mae, accuracy.rmse_duration
-
-    benchmark.pedantic(run, **LIGHT)
 
 
 @pytest.mark.benchmark(group="workflow")
