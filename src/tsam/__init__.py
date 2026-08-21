@@ -59,6 +59,7 @@ from tsam.result import (
     AggregationResult,
     ClusteringResult,
     ConcurrencyMetrics,
+    ExtremeReplacement,
 )
 
 try:
@@ -74,6 +75,7 @@ __all__ = [
     "ConcurrencyMetrics",
     "Distribution",
     "ExtremeConfig",
+    "ExtremeReplacement",
     "MinMaxMean",
     "SegmentConfig",
     "aggregate",

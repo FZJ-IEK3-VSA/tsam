@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import time
 import warnings
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -42,6 +42,9 @@ from tsam.pipeline.types import (
     PreparedData,
     RefinedRepresentatives,
 )
+
+if TYPE_CHECKING:
+    from tsam.result import ExtremeReplacement
 
 # Only the orchestration entry points are public API of this module. Setting
 # __all__ keeps the imported stage functions (normalize, cluster_periods, …)
@@ -222,6 +225,66 @@ def _cluster_carving_extremes(
                 )
             regular_reps.append(int(original_indices[members[0]]))
     return cluster_centers, cluster_center_indices, cluster_order, regular_reps
+
+
+def _reinject_replacements(
+    cluster_periods_list: list[np.ndarray],
+    replacements: tuple[ExtremeReplacement, ...],
+    profiles_df: pd.DataFrame,
+) -> list[int]:
+    """Replay stored ``replace`` injections onto transferred centers.
+
+    Mirrors the ``replace`` branch of `add_extreme_periods` but reads the *new*
+    data's weighted profile at the stored period and overwrites the same column
+    of the stored cluster's center. Runs before unweighting, so injected values
+    are unweighted uniformly with the rest. Mutates ``cluster_periods_list`` in
+    place.
+
+    A clustering may legitimately be applied to a different set of columns —
+    fitting on one attribute and transferring to the whole dataset is a
+    supported workflow. An injection whose column is not among the new ones has
+    nothing to overwrite, so it is skipped with a warning and that cluster keeps
+    its plain representative; the rest of the transfer is unaffected.
+
+    Returns:
+        The clusters that actually received an injection, in the order the
+        replacements name them. Only those are extreme clusters on this run —
+        a cluster whose only injection was skipped is an ordinary one, and
+        rescaling should treat it as such.
+
+    Raises:
+        ValueError: if a stored cluster index is out of range for the
+            transferred clustering, which means the two do not belong together.
+    """
+    n_clusters = len(cluster_periods_list)
+    injected_clusters: list[int] = []
+    missing_columns: list[str] = []
+    for replacement in replacements:
+        if not 0 <= replacement.cluster < n_clusters:
+            raise ValueError(
+                f"Cannot transfer 'replace' extreme: cluster index "
+                f"{replacement.cluster} is out of range for {n_clusters} clusters."
+            )
+        try:
+            index = profiles_df.columns.get_loc(replacement.column)
+        except KeyError:
+            missing_columns.append(str(replacement.column))
+            continue
+        cluster_periods_list[replacement.cluster][index] = profiles_df.loc[
+            replacement.period, :
+        ].values[index]
+        injected_clusters.append(replacement.cluster)
+
+    if missing_columns:
+        warnings.warn(
+            "Cannot replay the 'replace' extreme for "
+            f"{', '.join(repr(column) for column in missing_columns)}: not "
+            "present in the data being transferred to. Those clusters keep "
+            "their plain representative; the rest of the transfer is exact.",
+            UserWarning,
+            stacklevel=2,
+        )
+    return injected_clusters
 
 
 def _representatives_to_dataframe(
@@ -614,9 +677,11 @@ def cluster_candidates(
     # Ensure cluster_order is always np.ndarray
     cluster_order = np.asarray(cluster_order)
 
-    # Trim eval features from representatives (still weighted)
+    # Trim eval features from representatives (still weighted). Copies are made
+    # so in-place replace re-injection on the transfer path cannot alias
+    # `candidates`.
     cluster_periods_list: list[np.ndarray] = [
-        center[: prepared.n_feature_cols] for center in cluster_centers
+        np.array(center[: prepared.n_feature_cols]) for center in cluster_centers
     ]
 
     return ClusterAssignment(
@@ -715,6 +780,15 @@ def refine_representatives(
     else:
         if cfg.predef is not None and cfg.predef.extreme_cluster_idx is not None:
             extreme_cluster_idx = list(cfg.predef.extreme_cluster_idx)
+        if cfg.predef is not None and cfg.predef.extreme_replacements:
+            injected_clusters = _reinject_replacements(
+                cluster_periods_list,
+                cfg.predef.extreme_replacements,
+                profiles_for_extremes,
+            )
+            extreme_cluster_idx = list(
+                dict.fromkeys(extreme_cluster_idx + injected_clusters)
+            )
 
     # Unweight all representatives (regular + extreme) — remove weights
     # before downstream steps (rescale, denorm) which expect unweighted data.

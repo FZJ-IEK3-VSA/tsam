@@ -17,7 +17,7 @@ if TYPE_CHECKING:
         ExtremeConfig,
         SegmentConfig,
     )
-    from tsam.result import ClusteringResult
+    from tsam.result import ClusteringResult, ExtremeReplacement
 
 
 ExtremeKind = Literal["max", "min", "mean_max", "mean_min"]
@@ -146,6 +146,7 @@ class PredefParams:
     cluster_order: list | np.ndarray
     cluster_center_indices: list[int] | np.ndarray | None = None
     extreme_cluster_idx: list[int] | None = None
+    extreme_replacements: tuple[ExtremeReplacement, ...] | None = None
     segment_order: list | None = None
     segment_durations: list | None = None
     segment_centers: list | None = None
