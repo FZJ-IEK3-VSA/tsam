@@ -78,5 +78,37 @@ def test_extremePeriods():
     )
 
 
+def test_new_cluster_emptying_a_regular_cluster():
+    """`new_cluster` can absorb every period of a regular cluster.
+
+    The emptied cluster is then missing from the occurrence counts, which used
+    to leave rescaling with a weighting vector too short to index by cluster id
+    (issue #478).
+    """
+    raw = pd.read_csv(TESTDATA_CSV, index_col=0)
+
+    aggregation = aggregate(
+        raw,
+        n_clusters=8,
+        period_duration=24,
+        cluster=ClusterConfig(
+            method="hierarchical", representation="distribution_minmax"
+        ),
+        extremes=ExtremeConfig(
+            method="new_cluster", max_value=["Load"], min_value=["T"]
+        ),
+    )
+
+    occupied = set(np.unique(aggregation.cluster_assignments).tolist())
+    assert len(occupied) < aggregation.n_clusters, (
+        "expected this configuration to empty a regular cluster"
+    )
+
+    reconstructed = aggregation.reconstructed
+    np.testing.assert_array_almost_equal(
+        raw.mean().values, reconstructed.mean().values, decimal=6
+    )
+
+
 if __name__ == "__main__":
     test_extremePeriods()
