@@ -1,15 +1,29 @@
 """Tests for composable extreme-period handling (issue #410).
 
-``preserve_n_clusters`` makes the number of typical periods a pure function of the
-config (exactly ``n_clusters``), so results from independent datasets align.
+Two guarantees are covered:
+
+- ``preserve_n_clusters`` makes the number of typical periods a pure function of the
+  config (exactly ``n_clusters``), so results from independent datasets align.
+- The ``replace`` extreme method transfers exactly through ``apply()`` / JSON.
 """
+
+import dataclasses
+import json
+import warnings
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from conftest import TESTDATA_CSV
-from tsam import ClusterConfig, ExtremeConfig, aggregate
+from tsam import (
+    ClusterConfig,
+    ClusteringResult,
+    ExtremeConfig,
+    ExtremeReplacement,
+    SegmentConfig,
+    aggregate,
+)
 
 N_CLUSTERS = 8
 PERIOD_HOURS = 24
@@ -248,6 +262,148 @@ class TestFixedTotalCount:
         applied = direct.clustering.apply(real_data)
         assert n_typical_periods(applied) == N_CLUSTERS
         assert_same_representatives(direct, applied)
+
+
+def aggregate_with_replace(data, **aggregate_kwargs):
+    """Aggregate with extremes spliced into the nearest existing center."""
+    return aggregate(
+        data,
+        n_clusters=N_CLUSTERS,
+        period_duration=PERIOD_HOURS,
+        extremes=ExtremeConfig(
+            method="replace",
+            max_value=["GHI", "Load"],
+            min_value=["GHI", "Load"],
+        ),
+        **aggregate_kwargs,
+    )
+
+
+@pytest.fixture(scope="module")
+def replaced(real_data):
+    """A `replace` aggregation of the shared dataset, built once."""
+    return aggregate_with_replace(real_data)
+
+
+# `replace` moves no period between clusters, so the stored assignment still
+# describes what the representatives were built from and the replay is exact
+# whatever else is configured — including a *computed* representation, where
+# `append` is not. The weighted case matters because the injection is read
+# from the weighted profiles.
+REPLACE_CASES: dict[str, dict] = {
+    "plain": {},
+    "weighted columns": {"weights": {"GHI": 5.0, "Load": 1.0}},
+    "computed representation": {"cluster": ClusterConfig(representation="mean")},
+    "segmented": {"segments": SegmentConfig(n_segments=6)},
+}
+
+
+class TestReplaceTransfer:
+    """The replace method round-trips exactly through apply() and JSON."""
+
+    def test_replacements_are_readable_dataclasses(self, replaced, real_data):
+        replacements = replaced.clustering.extreme_replacements
+        assert replacements
+        for replacement in replacements:
+            assert isinstance(replacement, ExtremeReplacement)
+            assert isinstance(replacement.cluster, int)
+            assert replacement.column in real_data.columns
+            assert isinstance(replacement.period, int)
+
+    @pytest.mark.parametrize("case", REPLACE_CASES.values(), ids=list(REPLACE_CASES))
+    def test_apply_reproduces_representatives(self, real_data, case):
+        direct = aggregate_with_replace(real_data, **case)
+        assert direct.clustering.extreme_replacements
+        assert_same_representatives(direct, direct.clustering.apply(real_data))
+
+    def test_apply_injects_the_new_data_at_the_stored_period(self, real_data):
+        """What storing the replacements buys: the injection follows the data.
+
+        Replaying on the same data cannot show this — the injected values are
+        the ones already there. Transfer to a different slice instead: every
+        stored injection must take the *new* slice's values at that period,
+        which the same clustering stripped of its replacements does not do.
+        """
+        n_periods = 100
+        source = real_data.iloc[: n_periods * PERIOD_HOURS]
+        target = real_data.iloc[n_periods * PERIOD_HOURS : 2 * n_periods * PERIOD_HOURS]
+
+        clustering = aggregate_with_replace(source).clustering
+        stripped = dataclasses.replace(clustering, extreme_replacements=None)
+
+        transferred = clustering.apply(target)
+        with pytest.warns(UserWarning, match="predates"):
+            without_injection = stripped.apply(target)
+
+        for replacement in clustering.extreme_replacements:
+            start = replacement.period * PERIOD_HOURS
+            expected = target.iloc[start : start + PERIOD_HOURS][replacement.column]
+            injected = transferred.cluster_representatives.loc[
+                replacement.cluster, replacement.column
+            ]
+            np.testing.assert_allclose(injected, expected.to_numpy(), atol=1e-8)
+            # ...and that is not just what the center held anyway.
+            assert not np.allclose(
+                injected,
+                without_injection.cluster_representatives.loc[
+                    replacement.cluster, replacement.column
+                ],
+                atol=1e-8,
+            )
+
+    def test_json_roundtrip_reproduces_representatives(
+        self, replaced, real_data, tmp_path
+    ):
+        path = tmp_path / "replace.json"
+        replaced.clustering.to_json(str(path))
+        loaded = ClusteringResult.from_json(str(path))
+        assert loaded.extreme_replacements == replaced.clustering.extreme_replacements
+        assert_same_representatives(replaced, loaded.apply(real_data))
+
+    def test_missing_column_is_skipped_not_fatal(self, real_data):
+        """Transferring to a different set of columns stays supported.
+
+        Fitting on one set of attributes and applying to another is a normal
+        workflow, and every other configuration allows it. An injection whose
+        column is gone simply has nothing to overwrite.
+        """
+        fitted = aggregate(
+            real_data,
+            n_clusters=N_CLUSTERS,
+            period_duration=PERIOD_HOURS,
+            extremes=ExtremeConfig(method="replace", max_value=["T"]),
+        )
+        without_t = real_data.drop(columns=["T"])
+
+        with pytest.warns(UserWarning, match="Cannot replay the 'replace' extreme"):
+            transferred = fitted.clustering.apply(without_t)
+
+        assert list(transferred.cluster_representatives.columns) == list(
+            without_t.columns
+        )
+        assert n_typical_periods(transferred) == N_CLUSTERS
+
+    def test_no_warning_for_fresh_replace(self, replaced, real_data, tmp_path):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            replaced.clustering.apply(real_data)
+            replaced.clustering.to_json(str(tmp_path / "clustering.json"))
+
+    def test_legacy_clustering_without_replacements_still_warns(
+        self, replaced, real_data, tmp_path
+    ):
+        """A pre-fix clustering (no stored replacements) falls back and warns."""
+        path = tmp_path / "clustering.json"
+        replaced.clustering.to_json(str(path))
+        payload = json.loads(path.read_text())
+        payload.pop("extreme_replacements", None)
+        legacy_path = tmp_path / "legacy.json"
+        legacy_path.write_text(json.dumps(payload))
+
+        legacy = ClusteringResult.from_json(str(legacy_path))
+        assert legacy.extreme_replacements is None
+        with pytest.warns(UserWarning, match="predates"):
+            legacy.apply(real_data)
 
 
 class TestExtremeConfigSerialization:
