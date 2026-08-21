@@ -17,25 +17,32 @@ if TYPE_CHECKING:
 def detect_extreme_periods(
     profiles_df: pd.DataFrame,
     extremes: ExtremeConfig,
-    cluster_centers: list,
+    cluster_centers: list | None = None,
 ) -> list[ExtremePeriod]:
-    """Detect which periods carry the configured extremes.
+    """Detect which periods carry the configured extremes, independent of clustering.
 
     Detection is a pure function of the period profiles (per-column
-    ``idxmax``/``idxmin`` on the value or the period mean); the centers are
-    consulted only to drop extremes that clustering already produced.
+    ``idxmax``/``idxmin`` on the value or the period mean), so it can run before
+    clustering or after it. Passing ``cluster_centers=None`` disables the "already
+    a center" dedup, which the preserve_n_clusters path relies on: the detected
+    periods are excluded from clustering, so they can never coincide with a
+    regular center.
 
     Args:
         profiles_df: Period profiles (weighted if weights are active).
         extremes: Which extremes to preserve.
-        cluster_centers: Existing representatives, for the "already a center"
-            dedup.
+        cluster_centers: Existing representatives, used only for the "already a
+            center" dedup. ``None`` disables that guard.
 
     Returns:
         One [`ExtremePeriod`][tsam.pipeline.types.ExtremePeriod] per extreme that
         survives the redundancy check, in detection order.
     """
-    center_profiles = [center.tolist() for center in cluster_centers]
+    center_profiles = (
+        [center.tolist() for center in cluster_centers]
+        if cluster_centers is not None
+        else []
+    )
     # (columns to check, which extreme of them to look for)
     checks: list[tuple[list[str], ExtremeKind]] = [
         (extremes.max_value, "max"),
@@ -70,6 +77,7 @@ def add_extreme_periods(
     cluster_centers: list,
     cluster_order: list | np.ndarray,
     extremes: ExtremeConfig,
+    predetected: list[ExtremePeriod] | None = None,
 ) -> tuple[list, list | np.ndarray, list[int], list[ExtremePeriod]]:
     """Ensure periods with extreme values survive into the typical-period set.
 
@@ -100,6 +108,10 @@ def add_extreme_periods(
     | `"new_cluster"` | Like append, but also reassign nearby periods to the new cluster. |
     | `"replace"` | Overwrite the relevant column values in the nearest existing center. |
 
+    ``ExtremeConfig.preserve_n_clusters`` instead carves the extremes out of the
+    budget so the total stays exactly ``n_clusters``; that path detects extremes
+    up front and passes them in via ``predetected``.
+
     Args:
         profiles_df: Period profiles (weighted if weights are active), searched
             for extremes.
@@ -107,6 +119,10 @@ def add_extreme_periods(
         cluster_order: Per-period cluster assignment, updated in place for the
             chosen method.
         extremes: Which extremes to preserve and how to integrate them.
+        predetected: Extremes already found by `detect_extreme_periods`, reused
+            instead of re-detecting. The preserve_n_clusters path passes them so
+            the same periods size the budget and are added back. When ``None``,
+            detection runs here as before.
 
     Returns:
         ``(new_cluster_centers, new_cluster_order, extreme_cluster_idx,
@@ -119,7 +135,10 @@ def add_extreme_periods(
         `cluster_periods` produces the clusters this stage augments, and
         `rescale_representatives` skips extreme clusters when correcting means.
     """
-    extreme_periods = detect_extreme_periods(profiles_df, extremes, cluster_centers)
+    if predetected is not None:
+        extreme_periods = predetected
+    else:
+        extreme_periods = detect_extreme_periods(profiles_df, extremes, cluster_centers)
 
     new_cluster_centers = list(cluster_centers)
     new_cluster_order = list(cluster_order)

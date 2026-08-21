@@ -248,12 +248,21 @@ class ClusterAssignment:
         cluster_order: Per-period cluster assignment.
         cluster_center_indices: Medoid period indices, if applicable.
         clustering_duration: Wall-clock time spent clustering.
+        predetected_extremes: Extremes detected before clustering on the
+            ``ExtremeConfig.preserve_n_clusters`` path, so that the periods
+            carved out of the cluster budget are the same ones added back.
+            ``None`` on every other path, where detection runs later.
+        regular_reps: One original period per regular cluster, kept aside on the
+            same path so that carving cannot leave a cluster empty. ``None``
+            when the path did not run.
     """
 
     cluster_periods_list: list[np.ndarray]
     cluster_order: np.ndarray
     cluster_center_indices: list[int] | None
     clustering_duration: float
+    predetected_extremes: list[ExtremePeriod] | None = None
+    regular_reps: list[int] | None = None
 
 
 @dataclass(frozen=True)
