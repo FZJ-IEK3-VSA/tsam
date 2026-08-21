@@ -212,17 +212,17 @@ def segmentation(
                     segment_center_indices[c] for c in cluster_order_unique
                 ]
 
+        # stacked first: pandas sanitizes a list of arrays column by column
+        segment_values = pd.DataFrame(
+            np.asarray(cluster_centers), columns=normalized_typical_periods.columns
+        )
         # predict each time step of the period by representing it with the corresponding segment's values
-        predicted_segmented = (
-            pd.DataFrame(cluster_centers, columns=normalized_typical_periods.columns)
-            .reindex(cluster_order)
-            .reset_index(drop=True)
+        predicted_segmented = segment_values.reindex(cluster_order).reset_index(
+            drop=True
         )
         # represent the period by the segments in the right order only instead of each time step
-        segmented_typical = (
-            pd.DataFrame(cluster_centers, columns=normalized_typical_periods.columns)
-            .reindex(cluster_order_unique)
-            .set_index(np.sort(indices))
+        segmented_typical = segment_values.reindex(cluster_order_unique).set_index(
+            np.sort(indices)
         )
         # keep additional information on the lengths of the segments in the right order
         segment_duration = (

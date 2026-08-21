@@ -14,4 +14,5 @@ segmentation, and extreme-period handling.
         - ExtremeConfig
         - Distribution
         - MinMaxMean
+        - KMedoids
         - KMeans
