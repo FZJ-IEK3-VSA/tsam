@@ -83,7 +83,8 @@ def test_new_cluster_emptying_a_regular_cluster():
 
     The emptied cluster is then missing from the occurrence counts, which used
     to leave rescaling with a weighting vector too short to index by cluster id
-    (issue #478).
+    (issue #478). Such a cluster is now dropped before rescaling runs, so the
+    label space stays dense; test_empty_clusters.py covers that invariant.
     """
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
@@ -99,8 +100,9 @@ def test_new_cluster_emptying_a_regular_cluster():
         ),
     )
 
-    occupied = set(np.unique(aggregation.cluster_assignments).tolist())
-    assert len(occupied) < aggregation.n_clusters, (
+    # Two extremes on top of 8 clusters would be 10; one fewer means a regular
+    # cluster lost every period to them and was dropped.
+    assert aggregation.n_clusters < 10, (
         "expected this configuration to empty a regular cluster"
     )
 
