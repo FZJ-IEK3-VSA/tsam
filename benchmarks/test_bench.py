@@ -19,6 +19,7 @@ Usage::
     pytest benchmarks/ --benchmark-only --slow                # + k-medoids, 96/400 columns
     pytest benchmarks/ --benchmark-only --large               # + production-sized cases
     pytest benchmarks/ --benchmark-only --benchmark-save=dev  # snapshot to .benchmarks/
+    pytest benchmarks/ --benchmark-disable --slow --large     # run once, no timing (CI)
 
 Comparing two snapshots needs nothing beyond pytest-benchmark::
 
