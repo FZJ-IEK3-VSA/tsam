@@ -18,9 +18,18 @@ Usage::
     pytest benchmarks/ --benchmark-only                       # quick tier, timing
     pytest benchmarks/ --benchmark-only --slow                # + k-medoids, 96/400 columns
     pytest benchmarks/ --benchmark-only --large               # + production-sized cases
-    pytest benchmarks/ --benchmark-only --benchmark-memory    # + memray peak memory
     pytest benchmarks/ --benchmark-only --benchmark-save=dev  # snapshot to .benchmarks/
 
+Comparing two snapshots needs nothing beyond pytest-benchmark::
+
+    pytest-benchmark compare '*base*' '*dev*' --group-by=name
+
+The dims below additionally make the runs plottable by any axis with
+`pytest-benchmem <https://github.com/fluxopt/pytest-benchmem>`_, which is
+optional and lives in the separate ``bench`` extra::
+
+    pip install -e '.[develop,bench]'
+    pytest benchmarks/ --benchmark-only --benchmark-memory   # memray peak memory
     benchmem compare '*base*' '*dev*' --columns time --diff
     benchmem plot  .benchmarks/*/0001_dev.json --x n_columns --color method
     benchmem plot  .benchmarks/*/0001_dev.json --x n_clusters --where n_segments=12
