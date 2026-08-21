@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import time
 import warnings
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -28,7 +28,7 @@ from tsam.pipeline.clustering import (
     cluster_sorted_periods,
     use_predefined_assignments,
 )
-from tsam.pipeline.extremes import add_extreme_periods
+from tsam.pipeline.extremes import add_extreme_periods, detect_extreme_periods
 from tsam.pipeline.normalize import denormalize, normalize
 from tsam.pipeline.periods import add_period_sum_features, unstack_to_periods
 from tsam.pipeline.rescale import rescale_representatives
@@ -42,6 +42,9 @@ from tsam.pipeline.types import (
     PreparedData,
     RefinedRepresentatives,
 )
+
+if TYPE_CHECKING:
+    from tsam.result import ExtremeReplacement
 
 # Only the orchestration entry points are public API of this module. Setting
 # __all__ keeps the imported stage functions (normalize, cluster_periods, …)
@@ -63,6 +66,225 @@ def _count_occurrences(cluster_order: np.ndarray) -> dict[int, float]:
     """
     nums, counts = np.unique(cluster_order, return_counts=True)
     return {int(num): float(counts[ii]) for ii, num in enumerate(nums)}
+
+
+def _drop_empty_clusters(
+    cluster_periods_list: list[np.ndarray],
+    cluster_order: np.ndarray,
+    extreme_cluster_idx: list[int],
+    cluster_center_indices: list[int] | None,
+) -> tuple[list[np.ndarray], np.ndarray, list[int], list[int] | None]:
+    """Remove clusters that ended up representing no periods, and close the gap.
+
+    ``method="new_cluster"`` can absorb every member of a regular cluster. Its
+    id would then leave a hole in the label space, and cluster ids are positions
+    downstream — representatives are looked up by id, and `representations`
+    returns one center per *observed* label — so a hole misaligns every cluster
+    above it. Nothing is lost by dropping it: a cluster with no periods
+    contributes nothing to the reconstruction, though the run then returns fewer
+    typical periods than ``n_clusters`` asked for.
+
+    Returns:
+        The inputs with empty clusters removed and every id renumbered, or the
+        inputs unchanged when no cluster is empty.
+    """
+    n_clusters = len(cluster_periods_list)
+    occupied = {int(label) for label in np.asarray(cluster_order).ravel()}
+    if len(occupied) == n_clusters:
+        return (
+            cluster_periods_list,
+            cluster_order,
+            extreme_cluster_idx,
+            cluster_center_indices,
+        )
+
+    kept_ids = sorted(occupied)
+    renumbered = {old_id: new_id for new_id, old_id in enumerate(kept_ids)}
+
+    return (
+        [cluster_periods_list[old_id] for old_id in kept_ids],
+        np.array(
+            [renumbered[int(label)] for label in np.asarray(cluster_order).ravel()],
+            dtype=int,
+        ),
+        [renumbered[old_id] for old_id in extreme_cluster_idx],
+        # Center indices cover only the clusters clustering produced; the
+        # extremes get theirs appended later and always hold their own period.
+        None
+        if cluster_center_indices is None
+        else [
+            cluster_center_indices[old_id]
+            for old_id in kept_ids
+            if old_id < len(cluster_center_indices)
+        ],
+    )
+
+
+def _profiles_for_extremes(prepared: PreparedData) -> pd.DataFrame:
+    """Period profiles in the space extreme detection and re-injection work in.
+
+    Weighted when weights are active, so that the profiles line up with the
+    still-weighted representatives clustering hands on.
+    """
+    if prepared.weighted_profiles_df is not None:
+        return prepared.weighted_profiles_df
+    return prepared.period_profiles.profiles_dataframe
+
+
+def _resolve_preserve_n_clusters(
+    cfg: PipelineConfig,
+    profiles_for_extremes: pd.DataFrame,
+) -> tuple[bool, list[ExtremePeriod] | None, list[int]]:
+    """Set up the opt-in preserve_n_clusters path, or report it does not apply.
+
+    Active only for from-scratch runs whose ``ExtremeConfig`` requests
+    ``preserve_n_clusters`` with an ``append``/``new_cluster`` method. Detects the
+    distinct extremes up front with ``cluster_centers=None``, so the "already a
+    center" dedup never fires and the carved count is a pure function of the
+    config.
+
+    Returns:
+        ``(active, predetected_extremes, extreme_step_nos)``. ``active`` is False
+        when the path does not apply or no extremes are detected.
+
+    Raises:
+        ValueError: if the distinct extremes leave no budget for regular clusters
+            (``n_clusters - D < 1``).
+    """
+    preserve_n_clusters = (
+        cfg.predef is None
+        and cfg.extremes is not None
+        and getattr(cfg.extremes, "preserve_n_clusters", False)
+        and cfg.extremes.method in ("append", "new_cluster")
+    )
+    if not preserve_n_clusters or cfg.extremes is None:
+        return False, None, []
+
+    predetected_extremes = detect_extreme_periods(profiles_for_extremes, cfg.extremes)
+    extreme_step_nos = [int(extreme.step_no) for extreme in predetected_extremes]
+    n_distinct_extremes = len(extreme_step_nos)
+    if n_distinct_extremes and cfg.n_clusters - n_distinct_extremes < 1:
+        raise ValueError(
+            f"preserve_n_clusters requires n_clusters ({cfg.n_clusters}) to exceed the "
+            f"number of distinct extreme periods ({n_distinct_extremes}); reduce "
+            f"extreme columns or raise n_clusters."
+        )
+    if n_distinct_extremes == 0:
+        return False, None, []
+    return True, predetected_extremes, extreme_step_nos
+
+
+def _cluster_carving_extremes(
+    run_clustering,
+    candidates: np.ndarray,
+    n_clusters: int,
+    extreme_step_nos: list[int],
+    rep_candidates: np.ndarray | None,
+) -> tuple[list, list[int] | None, np.ndarray, list[int]]:
+    """Cluster the non-extreme periods into ``n_clusters - D`` groups.
+
+    Excludes ``extreme_step_nos``, clusters the rest via ``run_clustering``, and
+    maps the subset assignments and center indices back to original period
+    coordinates. Extreme positions get a placeholder id that `add_extreme_periods`
+    overwrites when it adds the extremes back, giving a final total of exactly
+    ``n_clusters``.
+
+    Returns:
+        ``(cluster_centers, cluster_center_indices, cluster_order,
+        regular_reps)`` — ``regular_reps[k]`` is an original period index that
+        stays in regular cluster ``k`` (used to keep the cluster non-empty).
+    """
+    n_regular = n_clusters - len(extreme_step_nos)
+    mask = np.ones(candidates.shape[0], dtype=bool)
+    mask[extreme_step_nos] = False
+    original_indices = np.where(mask)[0]
+    subset_rep = rep_candidates[mask] if rep_candidates is not None else None
+    cluster_centers, subset_center_indices, subset_order = run_clustering(
+        candidates[mask], n_regular, subset_rep
+    )
+    subset_order = np.asarray(subset_order)
+
+    cluster_order = np.empty(candidates.shape[0], dtype=int)
+    cluster_order[mask] = subset_order
+    cluster_order[extreme_step_nos] = 0
+
+    if subset_center_indices is not None:
+        regular_reps = [int(original_indices[j]) for j in subset_center_indices]
+        cluster_center_indices: list[int] | None = regular_reps
+    else:
+        cluster_center_indices = None
+        regular_reps = []
+        for k in range(n_regular):
+            members = np.where(subset_order == k)[0]
+            if members.size == 0:
+                raise ValueError(
+                    f"preserve_n_clusters: the clustering backend produced an empty "
+                    f"regular cluster ({k}), so exactly n_clusters typical periods "
+                    f"cannot be guaranteed. Use a method that yields non-empty "
+                    f"clusters (e.g. 'hierarchical')."
+                )
+            regular_reps.append(int(original_indices[members[0]]))
+    return cluster_centers, cluster_center_indices, cluster_order, regular_reps
+
+
+def _reinject_replacements(
+    cluster_periods_list: list[np.ndarray],
+    replacements: tuple[ExtremeReplacement, ...],
+    profiles_df: pd.DataFrame,
+) -> list[int]:
+    """Replay stored ``replace`` injections onto transferred centers.
+
+    Mirrors the ``replace`` branch of `add_extreme_periods` but reads the *new*
+    data's weighted profile at the stored period and overwrites the same column
+    of the stored cluster's center. Runs before unweighting, so injected values
+    are unweighted uniformly with the rest. Mutates ``cluster_periods_list`` in
+    place.
+
+    A clustering may legitimately be applied to a different set of columns —
+    fitting on one attribute and transferring to the whole dataset is a
+    supported workflow. An injection whose column is not among the new ones has
+    nothing to overwrite, so it is skipped with a warning and that cluster keeps
+    its plain representative; the rest of the transfer is unaffected.
+
+    Returns:
+        The clusters that actually received an injection, in the order the
+        replacements name them. Only those are extreme clusters on this run —
+        a cluster whose only injection was skipped is an ordinary one, and
+        rescaling should treat it as such.
+
+    Raises:
+        ValueError: if a stored cluster index is out of range for the
+            transferred clustering, which means the two do not belong together.
+    """
+    n_clusters = len(cluster_periods_list)
+    injected_clusters: list[int] = []
+    missing_columns: list[str] = []
+    for replacement in replacements:
+        if not 0 <= replacement.cluster < n_clusters:
+            raise ValueError(
+                f"Cannot transfer 'replace' extreme: cluster index "
+                f"{replacement.cluster} is out of range for {n_clusters} clusters."
+            )
+        try:
+            index = profiles_df.columns.get_loc(replacement.column)
+        except KeyError:
+            missing_columns.append(str(replacement.column))
+            continue
+        cluster_periods_list[replacement.cluster][index] = profiles_df.loc[
+            replacement.period, :
+        ].values[index]
+        injected_clusters.append(replacement.cluster)
+
+    if missing_columns:
+        warnings.warn(
+            "Cannot replay the 'replace' extreme for "
+            f"{', '.join(repr(column) for column in missing_columns)}: not "
+            "present in the data being transferred to. Those clusters keep "
+            "their plain representative; the rest of the transfer is exact.",
+            UserWarning,
+            stacklevel=2,
+        )
+    return injected_clusters
 
 
 def _representatives_to_dataframe(
@@ -360,6 +582,11 @@ def cluster_candidates(
     - [`use_predefined_assignments`][tsam.pipeline.clustering.use_predefined_assignments]
       — the transfer path, replaying a stored clustering on new data.
 
+    ``ExtremeConfig.preserve_n_clusters`` wraps the first two: the extremes are
+    detected before clustering and held back, so the periods that remain are
+    grouped into ``n_clusters - D`` clusters and the extremes fill the rest of
+    the budget in the next phase.
+
     Any period-sum features appended for the clustering distance are trimmed
     off the representatives afterwards. The representatives stay in weighted
     space: extreme detection in the next phase needs them that way, and it
@@ -376,6 +603,36 @@ def cluster_candidates(
     reference_attribute_idx = _resolve_reference_attribute_idx(
         prepared.attribute_columns, cluster_representation
     )
+
+    preserve_n_clusters, predetected_extremes, extreme_step_nos = (
+        _resolve_preserve_n_clusters(cfg, _profiles_for_extremes(prepared))
+    )
+
+    def _run_clustering(
+        cands: np.ndarray, n_k: int, rep_cands: np.ndarray | None
+    ) -> tuple[list, list[int] | None, np.ndarray | list]:
+        if not cluster.use_duration_curves:
+            return cluster_periods(
+                cands,
+                n_k,
+                cluster,
+                prepared.representation_dict,
+                cfg.n_timesteps_per_period,
+                representation_candidates=rep_cands,
+                reference_attribute_idx=reference_attribute_idx,
+            )
+        return cluster_sorted_periods(
+            # Never the augmented matrix: this path reshapes its input per
+            # column, and the period-sum block is not made of timesteps, so
+            # including it shifts every column's block.
+            rep_cands if rep_cands is not None else cands,
+            period_profiles.n_columns,
+            cfg.n_timesteps_per_period,
+            n_k,
+            cluster,
+        )
+
+    regular_reps: list[int] | None = None
 
     t_start = time.time()
 
@@ -397,28 +654,22 @@ def cluster_candidates(
         if candidates.shape[1] != prepared.n_feature_cols:
             rep_candidates = candidates[:, : prepared.n_feature_cols]
 
-        if not cluster.use_duration_curves:
-            cluster_centers, cluster_center_indices, cluster_order = cluster_periods(
+        if preserve_n_clusters:
+            (
+                cluster_centers,
+                cluster_center_indices,
+                cluster_order,
+                regular_reps,
+            ) = _cluster_carving_extremes(
+                _run_clustering,
                 candidates,
                 cfg.n_clusters,
-                cluster,
-                prepared.representation_dict,
-                cfg.n_timesteps_per_period,
-                representation_candidates=rep_candidates,
-                reference_attribute_idx=reference_attribute_idx,
+                extreme_step_nos,
+                rep_candidates,
             )
         else:
-            cluster_centers, cluster_center_indices, cluster_order = (
-                cluster_sorted_periods(
-                    # Never the augmented matrix: this path reshapes its input
-                    # per column, and the period-sum block is not made of
-                    # timesteps, so including it shifts every column's block.
-                    rep_candidates if rep_candidates is not None else candidates,
-                    period_profiles.n_columns,
-                    cfg.n_timesteps_per_period,
-                    cfg.n_clusters,
-                    cluster,
-                )
+            cluster_centers, cluster_center_indices, cluster_order = _run_clustering(
+                candidates, cfg.n_clusters, rep_candidates
             )
 
     clustering_duration = time.time() - t_start
@@ -426,9 +677,11 @@ def cluster_candidates(
     # Ensure cluster_order is always np.ndarray
     cluster_order = np.asarray(cluster_order)
 
-    # Trim eval features from representatives (still weighted)
+    # Trim eval features from representatives (still weighted). Copies are made
+    # so in-place replace re-injection on the transfer path cannot alias
+    # `candidates`.
     cluster_periods_list: list[np.ndarray] = [
-        center[: prepared.n_feature_cols] for center in cluster_centers
+        np.array(center[: prepared.n_feature_cols]) for center in cluster_centers
     ]
 
     return ClusterAssignment(
@@ -436,6 +689,8 @@ def cluster_candidates(
         cluster_order=cluster_order,
         cluster_center_indices=cluster_center_indices,
         clustering_duration=clustering_duration,
+        predetected_extremes=predetected_extremes,
+        regular_reps=regular_reps,
     )
 
 
@@ -479,6 +734,8 @@ def refine_representatives(
     period_profiles = prepared.period_profiles
     cluster_periods_list = assignment.cluster_periods_list
     cluster_order = assignment.cluster_order
+    cluster_center_indices = assignment.cluster_center_indices
+    profiles_for_extremes = _profiles_for_extremes(prepared)
 
     # Add extreme periods if configured
     # Extremes run in weighted space (matching develop): weighted profiles
@@ -488,11 +745,6 @@ def refine_representatives(
     extreme_cluster_idx: list[int] = []
 
     if cfg.extremes is not None:
-        profiles_for_extremes = (
-            prepared.weighted_profiles_df
-            if prepared.weighted_profiles_df is not None
-            else period_profiles.profiles_dataframe
-        )
         (
             cluster_periods_list,
             extended_order,
@@ -503,11 +755,40 @@ def refine_representatives(
             cluster_periods_list,
             cluster_order,
             cfg.extremes,
+            predetected=assignment.predetected_extremes,
         )
         cluster_order = np.asarray(extended_order)
+        # The carved path clustered without the extremes, so every regular
+        # cluster is handed back one period that is guaranteed to stay in it.
+        # This runs before the drop below, and is what keeps it a no-op here:
+        # preserve_n_clusters promises exactly n_clusters, so it cannot afford
+        # to have one dropped.
+        if assignment.regular_reps is not None:
+            for cluster_id, period in enumerate(assignment.regular_reps):
+                cluster_order[period] = cluster_id
+        (
+            cluster_periods_list,
+            cluster_order,
+            extreme_cluster_idx,
+            cluster_center_indices,
+        ) = _drop_empty_clusters(
+            cluster_periods_list,
+            cluster_order,
+            extreme_cluster_idx,
+            cluster_center_indices,
+        )
     else:
         if cfg.predef is not None and cfg.predef.extreme_cluster_idx is not None:
             extreme_cluster_idx = list(cfg.predef.extreme_cluster_idx)
+        if cfg.predef is not None and cfg.predef.extreme_replacements:
+            injected_clusters = _reinject_replacements(
+                cluster_periods_list,
+                cfg.predef.extreme_replacements,
+                profiles_for_extremes,
+            )
+            extreme_cluster_idx = list(
+                dict.fromkeys(extreme_cluster_idx + injected_clusters)
+            )
 
     # Unweight all representatives (regular + extreme) — remove weights
     # before downstream steps (rescale, denorm) which expect unweighted data.
@@ -575,7 +856,7 @@ def refine_representatives(
         normalized_typical_periods=normalized_typical_periods,
         cluster_order=cluster_order,
         cluster_counts=cluster_counts,
-        cluster_center_indices=assignment.cluster_center_indices,
+        cluster_center_indices=cluster_center_indices,
         extreme_cluster_idx=extreme_cluster_idx,
         extreme_periods=extreme_periods,
         rescale_deviations=rescale_deviations,

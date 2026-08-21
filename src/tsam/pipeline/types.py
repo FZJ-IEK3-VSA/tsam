@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
+
+import numpy as np
 
 if TYPE_CHECKING:
-    import numpy as np
     import pandas as pd
     from sklearn.preprocessing import MinMaxScaler
 
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
         ExtremeConfig,
         SegmentConfig,
     )
-    from tsam.result import ClusteringResult
+    from tsam.result import ClusteringResult, ExtremeReplacement
 
 
 ExtremeKind = Literal["max", "min", "mean_max", "mean_min"]
@@ -26,9 +27,9 @@ ExtremeKind = Literal["max", "min", "mean_max", "mean_min"]
 class ExtremePeriod:
     """An original period kept intact because of an extreme value it holds.
 
-    Produced by `add_extreme_periods`, one per extreme that survives the
-    redundancy check. Mutable, because which cluster the period ends up in is
-    only settled once the integration method has run.
+    Located by `locate` and kept by `detect_extreme_periods`, one per extreme
+    that survives the redundancy check. Mutable, because which cluster the
+    period ends up in is only settled once the integration method has run.
 
     Attributes:
         column: Data column whose extreme this period holds.
@@ -38,9 +39,9 @@ class ExtremePeriod:
         step_no: Index of the period in the period-profile matrix.
         profile: The period's profile, in the same (weighted) space as the
             cluster centers it joins.
-        new_cluster_no: Cluster created for this period by the
-            ``"new_cluster"`` method; ``None`` for the other methods, which do
-            not create one.
+        new_cluster_no: Cluster created for this period by ``"append"`` or
+            ``"new_cluster"``; ``None`` under ``"replace"``, which splices the
+            period into an existing cluster instead of creating one.
     """
 
     column: str | tuple
@@ -48,6 +49,51 @@ class ExtremePeriod:
     step_no: int
     profile: np.ndarray
     new_cluster_no: int | None = None
+
+    @classmethod
+    def locate(
+        cls,
+        profiles_df: pd.DataFrame,
+        column: str | tuple,
+        kind: ExtremeKind,
+    ) -> ExtremePeriod:
+        """Find the period holding one extreme of one column, and capture it.
+
+        The four kinds are the four questions tsam asks of a column: which
+        period holds its single highest (``"max"``) or lowest (``"min"``)
+        value, and which has the highest (``"mean_max"``) or lowest
+        (``"mean_min"``) average. Pure — it reads *profiles_df* and nothing
+        else, so it is the same answer before and after clustering.
+
+        Args:
+            profiles_df: Period profiles, in whatever space the caller works in
+                (weighted, when weights are active).
+            column: Column to search.
+            kind: Which of the column's four extremes to look for.
+
+        Returns:
+            The located period. Whether it is worth *keeping* is the caller's
+            call — see `detect_extreme_periods`.
+        """
+        # One column's block: the stubs cannot see that indexing a
+        # (column, TimeStep) MultiIndex by level 0 yields a frame, not a series.
+        values = cast("pd.DataFrame", profiles_df[column])
+        if kind == "max":
+            step_no = values.max(axis=1).idxmax()
+        elif kind == "min":
+            step_no = values.min(axis=1).idxmin()
+        elif kind == "mean_max":
+            step_no = values.mean(axis=1).idxmax()
+        else:  # mean_min
+            step_no = values.mean(axis=1).idxmin()
+        return cls(
+            column=column,
+            kind=kind,
+            # Period profiles are indexed by period number, so the label
+            # `idxmax`/`idxmin` returns is the row index.
+            step_no=int(step_no),
+            profile=np.asarray(profiles_df.loc[step_no, :].values),
+        )
 
 
 @dataclass(frozen=True)
@@ -100,6 +146,7 @@ class PredefParams:
     cluster_order: list | np.ndarray
     cluster_center_indices: list[int] | np.ndarray | None = None
     extreme_cluster_idx: list[int] | None = None
+    extreme_replacements: tuple[ExtremeReplacement, ...] | None = None
     segment_order: list | None = None
     segment_durations: list | None = None
     segment_centers: list | None = None
@@ -202,12 +249,21 @@ class ClusterAssignment:
         cluster_order: Per-period cluster assignment.
         cluster_center_indices: Medoid period indices, if applicable.
         clustering_duration: Wall-clock time spent clustering.
+        predetected_extremes: Extremes detected before clustering on the
+            ``ExtremeConfig.preserve_n_clusters`` path, so that the periods
+            carved out of the cluster budget are the same ones added back.
+            ``None`` on every other path, where detection runs later.
+        regular_reps: One original period per regular cluster, kept aside on the
+            same path so that carving cannot leave a cluster empty. ``None``
+            when the path did not run.
     """
 
     cluster_periods_list: list[np.ndarray]
     cluster_order: np.ndarray
     cluster_center_indices: list[int] | None
     clustering_duration: float
+    predetected_extremes: list[ExtremePeriod] | None = None
+    regular_reps: list[int] | None = None
 
 
 @dataclass(frozen=True)

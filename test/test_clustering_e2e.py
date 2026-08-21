@@ -335,14 +335,10 @@ class TestClusteringE2E:
             )
 
 
-# Subset of test cases for transfer tests (skip slow or unsupported ones)
-# - kmedoids/contiguous: too slow for repeated runs
-# - replace extreme method: creates hybrid representation (some columns from medoid,
-#   some from extreme period) that cannot be perfectly reproduced during transfer
+# Subset of test cases for transfer tests (skip slow methods only).
+# All extreme methods, including 'replace', now transfer exactly via apply().
 TRANSFER_TEST_CASES = [
-    tc
-    for tc in TEST_CASES
-    if tc.method not in ("kmedoids", "contiguous") and tc.extreme_method != "replace"
+    tc for tc in TEST_CASES if tc.method not in ("kmedoids", "contiguous")
 ]
 
 
@@ -375,36 +371,6 @@ class TestClusteringTransfer:
             check_exact=False,
             atol=1e-10,
         )
-
-    def test_apply_warns_when_extremes_cannot_be_replayed(self, input_data):
-        """append + a computed representation loses a cluster's members."""
-        result = run_aggregation(
-            input_data,
-            ClusteringTestCase(
-                id="append_mean",
-                method="hierarchical",
-                representation="mean",
-                extreme_method="append",
-                extreme_columns=["Load"],
-            ),
-        )
-        with pytest.warns(UserWarning, match="cannot be replayed exactly"):
-            result.clustering.apply(input_data)
-
-    def test_apply_is_silent_when_extremes_can_be_replayed(self, input_data, recwarn):
-        """A selected representation stores the period index, so it replays."""
-        result = run_aggregation(
-            input_data,
-            ClusteringTestCase(
-                id="append_medoid",
-                method="hierarchical",
-                representation="medoid",
-                extreme_method="append",
-                extreme_columns=["Load"],
-            ),
-        )
-        result.clustering.apply(input_data)
-        assert not [w for w in recwarn if "replayed exactly" in str(w.message)]
 
     @pytest.mark.parametrize(
         "test_case", TRANSFER_TEST_CASES, ids=get_transfer_test_ids()
@@ -510,6 +476,131 @@ class TestClusteringTransfer:
             check_exact=False,
             atol=1e-10,
         )
+
+
+# A representation either *selects* an existing period — so its index is stored
+# and a replay picks the same period back out — or *computes* new values, which
+# a replay has to rebuild from the stored assignment.
+SELECTING_REPRESENTATIONS = ["medoid", "maxoid"]
+COMPUTING_REPRESENTATIONS = [
+    "mean",
+    "distribution",
+    "distribution_minmax",
+    "minmax_mean",
+]
+
+
+class TestTransferExactness:
+    """Which configurations `ClusteringResult.apply()` can reproduce exactly.
+
+    A `ClusteringResult` stores the *assignment* — which period went to which
+    cluster — and, when the representation allows it, the index of the period
+    each cluster chose. Whether a replay lands on the same representatives
+    follows from those two facts, and from one thing extreme handling does:
+
+    - A **selecting** representation names an existing period, so the index is
+      stored and the replay picks the same period back out.
+    - A **computing** representation builds new values, so the replay
+      recomputes them from the stored assignment.
+    - `append` and `new_cluster` move a period into a cluster of its own
+      *after* the representatives were computed, so the stored assignment no
+      longer describes what those representatives were built from. Recomputing
+      from it gives a different answer; replaying a stored index does not.
+    - `replace` moves no period between clusters. The assignment still
+      describes the representatives, and the values it splices in are stored
+      as `(cluster, column, period)` injections and replayed on the new data,
+      so it reproduces exactly whatever the representation is.
+
+    The rule that falls out — and what this class pins down in both
+    directions, including whether `apply()` warns:
+
+        exact  <=>  no extremes, or method="replace", or a selecting representation
+    """
+
+    @staticmethod
+    def _replay(data, *, representation, extreme_method):
+        """Aggregate, apply to the same data, and report (exact, warned)."""
+        extremes = (
+            ExtremeConfig(method=extreme_method, max_value=["Load"])
+            if extreme_method
+            else None
+        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = aggregate(
+                data,
+                n_clusters=8,
+                period_duration=24,
+                cluster=ClusterConfig(
+                    method="hierarchical", representation=representation
+                ),
+                extremes=extremes,
+            )
+            replayed = result.clustering.apply(data)
+        exact = np.allclose(
+            result.cluster_representatives.to_numpy(),
+            replayed.cluster_representatives.to_numpy(),
+            atol=1e-8,
+        )
+        warned = any("replayed exactly" in str(w.message) for w in caught)
+        return exact, warned
+
+    @pytest.mark.parametrize(
+        "representation", SELECTING_REPRESENTATIONS + COMPUTING_REPRESENTATIONS
+    )
+    def test_without_extremes_every_representation_replays(
+        self, input_data, representation
+    ):
+        """The baseline: nothing moves, so nothing can drift."""
+        exact, warned = self._replay(
+            input_data, representation=representation, extreme_method=None
+        )
+        assert exact
+        assert not warned
+
+    @pytest.mark.parametrize("representation", SELECTING_REPRESENTATIONS)
+    @pytest.mark.parametrize("extreme_method", ["append", "new_cluster", "replace"])
+    def test_selecting_representation_replays_with_any_method(
+        self, input_data, extreme_method, representation
+    ):
+        exact, warned = self._replay(
+            input_data,
+            representation=representation,
+            extreme_method=extreme_method,
+        )
+        assert exact
+        assert not warned
+
+    @pytest.mark.parametrize("representation", COMPUTING_REPRESENTATIONS)
+    def test_replace_replays_even_when_the_representation_is_computed(
+        self, input_data, representation
+    ):
+        """`replace` moves nothing, so the recomputed centers still match."""
+        exact, warned = self._replay(
+            input_data, representation=representation, extreme_method="replace"
+        )
+        assert exact
+        assert not warned
+
+    @pytest.mark.parametrize("representation", COMPUTING_REPRESENTATIONS)
+    @pytest.mark.parametrize("extreme_method", ["append", "new_cluster"])
+    def test_moving_methods_do_not_replay_a_computed_representation(
+        self, input_data, extreme_method, representation
+    ):
+        """The one inexact corner — asserted, not just documented.
+
+        Fixing this means storing the assignment the representatives were built
+        from, not only the one the extremes left behind. Until then `apply()`
+        has to say so, and this test fails the day it stops being true either
+        way round.
+        """
+        exact, warned = self._replay(
+            input_data,
+            representation=representation,
+            extreme_method=extreme_method,
+        )
+        assert not exact
+        assert warned
 
 
 def generate_fixtures(output_dir: Path | None = None):

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import warnings
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, cast
 
@@ -276,9 +276,9 @@ class AggregationResult:
     def n_clusters(self) -> int:
         """Number of clusters (typical periods).
 
-        Derived from the cluster_representatives DataFrame index,
-        which is the authoritative source. Note: cluster_counts may
-        have more entries than actual cluster IDs due to tsam quirks.
+        Counted from the cluster_representatives index. Empty clusters are
+        dropped when the clustering is built, so this agrees with
+        :attr:`ClusteringResult.n_clusters`.
         """
         return int(self.cluster_representatives.index.get_level_values(0).nunique())
 
@@ -665,6 +665,48 @@ def _expand_periods(
 
 
 @dataclass(frozen=True)
+class ExtremeReplacement:
+    """One ``replace`` extreme injection, recorded for exact transfer.
+
+    Records that column ``column`` of cluster ``cluster``'s representative was
+    overwritten with the values of period ``period``. `ClusteringResult.apply()`
+    replays these on new data so the ``replace`` method reproduces exactly.
+
+    Attributes:
+        cluster: Index of the cluster whose representative was modified.
+        column: Name of the attribute column that was overwritten.
+        period: Index of the original period supplying the injected values.
+    """
+
+    cluster: int
+    column: str
+    period: int
+
+    @classmethod
+    def from_extreme(
+        cls, extreme: ExtremePeriod, cluster_order: list | np.ndarray
+    ) -> ExtremeReplacement:
+        """Record the injection ``replace`` made for one extreme period.
+
+        ``replace`` splices the extreme into the cluster the period was already
+        assigned to and leaves the assignment alone, so *cluster_order* still
+        names the cluster that was modified.
+
+        Args:
+            extreme: The preserved period, as `add_extreme_periods` returned it.
+            cluster_order: Per-period cluster assignment from the same run.
+        """
+        return cls(
+            cluster=int(cluster_order[extreme.step_no]),
+            # Column names are `str` everywhere a ClusteringResult records
+            # them; `ExtremePeriod` only widens the type for MultiIndex input,
+            # which never reaches this path.
+            column=cast("str", extreme.column),
+            period=int(extreme.step_no),
+        )
+
+
+@dataclass(frozen=True)
 class ClusteringResult:
     """Clustering assignments that can be saved/loaded and applied to new data.
 
@@ -745,6 +787,7 @@ class ClusteringResult:
     segment_representation: Representation | None = None
     temporal_resolution: float | None = None
     extreme_cluster_indices: tuple[int, ...] | None = None
+    extreme_replacements: tuple[ExtremeReplacement, ...] | None = None
     weights: dict[str, float] | None = None
 
     # === Index fields (for disaggregate() round-trip) ===
@@ -810,6 +853,16 @@ class ClusteringResult:
 
             cluster_centers = tuple(center_indices)
 
+        # Record replace injections so apply() can replay them on new data. A
+        # (possibly empty) tuple marks a run made with transfer support; None is
+        # reserved for pre-fix clusterings that cannot reproduce replace.
+        extreme_replacements: tuple[ExtremeReplacement, ...] | None = None
+        if extremes_config is not None and extremes_config.method == "replace":
+            extreme_replacements = tuple(
+                ExtremeReplacement.from_extreme(extreme, cluster_order)
+                for extreme in extreme_periods
+            )
+
         # Compute segment data if segmentation was used
         segment_assignments: tuple[tuple[int, ...], ...] | None = None
         segment_durations: tuple[tuple[int, ...], ...] | None = None
@@ -855,6 +908,7 @@ class ClusteringResult:
             temporal_resolution=temporal_resolution,
             n_timesteps_per_period=n_timesteps_per_period,
             extreme_cluster_indices=extreme_cluster_indices_tuple,
+            extreme_replacements=extreme_replacements,
             weights=dict(weights) if weights else None,
             time_index=time_index,
             cluster_config=cluster_config,
@@ -1015,6 +1069,10 @@ class ClusteringResult:
             result["temporal_resolution"] = self.temporal_resolution
         if self.extreme_cluster_indices is not None:
             result["extreme_cluster_indices"] = list(self.extreme_cluster_indices)
+        if self.extreme_replacements is not None:
+            result["extreme_replacements"] = [
+                asdict(replacement) for replacement in self.extreme_replacements
+            ]
         if self.weights is not None:
             result["weights"] = self.weights
         if self.time_index is not None:
@@ -1062,6 +1120,11 @@ class ClusteringResult:
             kwargs["temporal_resolution"] = data["temporal_resolution"]
         if "extreme_cluster_indices" in data:
             kwargs["extreme_cluster_indices"] = tuple(data["extreme_cluster_indices"])
+        if "extreme_replacements" in data:
+            kwargs["extreme_replacements"] = tuple(
+                ExtremeReplacement(**replacement)
+                for replacement in data["extreme_replacements"]
+            )
         if "weights" in data:
             kwargs["weights"] = data["weights"]
         raw_time_index = data.get("time_index")
@@ -1079,20 +1142,25 @@ class ClusteringResult:
     def _inexact_transfer_reason(self) -> str | None:
         """Why replaying this clustering cannot reproduce it exactly, if it cannot.
 
-        Returns None when a transfer is exact. Both cases below come from
+        Returns None when a transfer is exact. What can go wrong comes from
         extreme-period handling changing the representatives after the fact:
         `apply()` replays the stored assignment, and the stored assignment is
-        not what those representatives were built from.
+        not what those representatives were built from. `replace` escapes that
+        by storing its injections outright, so it only fails for clusterings
+        made before those were recorded.
         """
         if self.extremes_config is None:
             return None
         if self.extremes_config.method == "replace":
+            if self.extreme_replacements is not None:
+                return None
             return (
                 "the 'replace' extreme method builds a hybrid representative — "
                 "some columns from the cluster representative, some from the "
-                "extreme period. A transfer uses the stored cluster centers "
-                "directly, without that injection. Use 'append' or "
-                "'new_cluster' for an exact transfer"
+                "extreme period, and this clustering predates the stored "
+                "replacements that let a transfer reproduce that injection. A "
+                "transfer uses the stored cluster centers directly, without it. "
+                "Re-run the original aggregation for an exact transfer"
             )
         if self.cluster_centers is None:
             return (
@@ -1113,9 +1181,9 @@ class ClusteringResult:
             path: File path to save to.
 
         Note:
-            If the clustering used the 'replace' extreme method, a warning will be
-            issued because the saved clustering cannot be perfectly reproduced when
-            loaded and applied later. See :meth:`apply` for details.
+            If the clustering cannot be reproduced exactly when it is loaded and
+            applied later, a warning is issued here. See `apply` for which
+            configurations those are.
 
         Examples:
             >>> result.clustering.to_json("clustering.json")
@@ -1238,29 +1306,36 @@ class ClusteringResult:
             Aggregation result using this clustering.
 
         Note:
-            **Extreme period transfer limitations.** Extreme-period handling
-            runs *after* the representatives have been computed, and only the
-            assignment it leaves behind is stored. Two configurations therefore
-            cannot be replayed exactly, and both emit a `UserWarning`:
+            **When a transfer is exact.** A clustering stores the
+            *assignment* — which period went to which cluster — and, when the
+            representation allows it, the index of the period each cluster
+            chose. A replay reproduces the original representatives unless
+            extreme handling moved a period after they were computed:
 
-            - **`method="replace"`** builds a hybrid representative — some
-              columns from the cluster representative, some from the extreme
-              period. A transfer uses the stored cluster centers directly,
-              without that injection.
-            - **`method="append"` or `"new_cluster"` with a representation that
-              is *computed* rather than *selected*** (`"mean"`, `"distribution"`,
-              `"minmax_mean"`, …). These methods move a period into its own
-              cluster after that period's original cluster was represented. A
-              selected representation (`"medoid"`, `"maxoid"`) stores the chosen
-              period's index and replays exactly; a computed one is recomputed
-              from the stored assignment, which no longer contains the moved
-              period, so that one cluster differs. With
-              `preserve_column_means=True` the rescaling then spreads the
-              difference across every cluster.
+            | Extremes | `"medoid"` / `"maxoid"` | `"mean"`, `"distribution"`, `"distribution_minmax"`, `"minmax_mean"` |
+            |---|---|---|
+            | none | exact | exact |
+            | `"replace"` | exact | exact |
+            | `"append"`, `"new_cluster"` | exact | **differs**, warns |
 
-            For an exact transfer with extreme periods, use `"append"` or
-            `"new_cluster"` together with a `"medoid"` or `"maxoid"`
-            representation.
+            `"medoid"` and `"maxoid"` name an existing period, so the index is
+            stored and the replay picks the same period back out. The others
+            build new values, which the replay recomputes from the stored
+            assignment — and `"append"`/`"new_cluster"` moved a period into a
+            cluster of its own *after* the representatives were computed, so
+            that assignment no longer describes what they were built from. One
+            cluster therefore differs, and with `preserve_column_means=True`
+            the rescaling spreads the difference across every cluster. For an
+            exact transfer with these methods, use `"medoid"` or `"maxoid"`.
+
+            `"replace"` escapes this because it moves no period between
+            clusters. The values it splices in are stored as
+            `(cluster, column, period)` injections and replayed against the new
+            data at the same period, so the hybrid representative is rebuilt
+            exactly. Two cases fall back to the plain representative, each with
+            a `UserWarning`: clusterings produced before those injections were
+            recorded, and an injection whose column is absent from the data
+            being transferred to.
 
         Examples:
             >>> # Cluster on wind data, apply to full dataset
@@ -1346,6 +1421,7 @@ class ClusteringResult:
             extreme_cluster_idx=list(self.extreme_cluster_indices)
             if self.extreme_cluster_indices
             else None,
+            extreme_replacements=self.extreme_replacements,
             segment_order=[list(s) for s in self.segment_assignments]
             if self.segment_assignments
             else None,

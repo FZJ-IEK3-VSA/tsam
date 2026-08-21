@@ -52,6 +52,14 @@ def representations(
         Related helpers: mean_representation, medoid_representation,
         maxoid_representation, minmax_mean_representation.
     """
+    labels = np.unique(np.asarray(cluster_order))
+    if labels.size and not np.array_equal(labels, np.arange(labels.size)):
+        raise ValueError(
+            f"cluster_order must use every label from 0 to {int(labels.max())}: "
+            f"one center is returned per cluster, so an unused label shifts every "
+            f"cluster above it and leaves the highest one without a center."
+        )
+
     cluster_center_indices = None
     if representation_method is None:
         representation_method = default

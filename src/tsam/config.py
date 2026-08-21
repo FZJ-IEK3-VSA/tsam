@@ -483,6 +483,18 @@ class ExtremeConfig:
             preserved. Example: ["solar_generation"] to preserve highest solar day.
         min_period: Column names where the period with minimum total should be
             preserved. Example: ["wind_generation"] to preserve lowest wind day.
+        preserve_n_clusters: If True, the aggregation returns exactly ``n_clusters``
+            typical periods regardless of the data (opt-in). Extreme periods are
+            carved from the budget: the distinct extreme periods are detected up
+            front and excluded from clustering, the rest are clustered into
+            ``n_clusters - n_distinct_extremes``, and the extremes are added back
+            as their own clusters. This makes the count a pure function of the
+            config so results from independent datasets can be stacked/aligned.
+            Applies to ``method="append"`` and ``"new_cluster"`` and requires
+            ``n_clusters`` to exceed the number of distinct extreme periods. It
+            is a no-op for ``method="replace"`` (which never adds clusters, so it
+            is already count-stable) and emits a warning there. Default False
+            preserves the historical (data-dependent, ``n_clusters + k``) count.
     """
 
     method: ExtremeMethod = "append"
@@ -490,12 +502,21 @@ class ExtremeConfig:
     min_value: list[str] = field(default_factory=list)
     max_period: list[str] = field(default_factory=list)
     min_period: list[str] = field(default_factory=list)
+    preserve_n_clusters: bool = False
 
     def __post_init__(self) -> None:
         if self.method not in EXTREME_METHODS:
             raise ValueError(
                 f"Unknown extreme period method {self.method!r}. "
                 f"Valid options: {list(EXTREME_METHODS)}"
+            )
+        if self.preserve_n_clusters and self.method == "replace":
+            warnings.warn(
+                "preserve_n_clusters has no effect with method='replace': the 'replace' "
+                "method never adds clusters, so the count is already exactly "
+                "n_clusters. The flag is ignored here.",
+                UserWarning,
+                stacklevel=2,
             )
 
     def has_extremes(self) -> bool:
@@ -517,6 +538,8 @@ class ExtremeConfig:
             result["max_period"] = self.max_period
         if self.min_period:
             result["min_period"] = self.min_period
+        if self.preserve_n_clusters:
+            result["preserve_n_clusters"] = True
         return result
 
     @classmethod
@@ -528,4 +551,5 @@ class ExtremeConfig:
             min_value=data.get("min_value", []),
             max_period=data.get("max_period", []),
             min_period=data.get("min_period", []),
+            preserve_n_clusters=data.get("preserve_n_clusters", False),
         )

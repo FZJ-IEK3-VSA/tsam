@@ -167,10 +167,13 @@ which case it was never reproducible anyway.
   indices from a different criterion than the centers, so a replay could produce
   different typical periods. `aggregate()` itself is unaffected — only the
   recorded indices, and therefore the transfer.
-- **Inexact transfers warn.** Both `extremes="replace"` and
-  `extremes="append"`/`"new_cluster"` with a *computed* representation
-  (`mean`, `distribution`, …) now warn. v3's advice to use `append` or
-  `new_cluster` for exact transfer held only for `medoid`/`maxoid`.
+- **`extremes="replace"` transfers exactly.** v3 dropped the peak injection on
+  replay and fell back to the plain center. v4 records each
+  `(cluster, column, period)` injection and replays it on the new data.
+- **Inexact transfers warn.** `extremes="append"`/`"new_cluster"` with a
+  *computed* representation (`mean`, `distribution`, …) now warns. v3's advice
+  to use `append` or `new_cluster` for exact transfer held only for
+  `medoid`/`maxoid`.
 
 **Action required:** if you transfer a clustering built with
 `scale_by_column_means=True`, the result changes — to the one you configured.
