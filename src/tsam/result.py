@@ -276,9 +276,9 @@ class AggregationResult:
     def n_clusters(self) -> int:
         """Number of clusters (typical periods).
 
-        Derived from the cluster_representatives DataFrame index,
-        which is the authoritative source. Note: cluster_counts may
-        have more entries than actual cluster IDs due to tsam quirks.
+        Counted from the cluster_representatives index. Empty clusters are
+        dropped when the clustering is built, so this agrees with
+        :attr:`ClusteringResult.n_clusters`.
         """
         return int(self.cluster_representatives.index.get_level_values(0).nunique())
 

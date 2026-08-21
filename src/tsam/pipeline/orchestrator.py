@@ -65,6 +65,58 @@ def _count_occurrences(cluster_order: np.ndarray) -> dict[int, float]:
     return {int(num): float(counts[ii]) for ii, num in enumerate(nums)}
 
 
+def _drop_empty_clusters(
+    cluster_periods_list: list[np.ndarray],
+    cluster_order: np.ndarray,
+    extreme_cluster_idx: list[int],
+    cluster_center_indices: list[int] | None,
+) -> tuple[list[np.ndarray], np.ndarray, list[int], list[int] | None]:
+    """Remove clusters that ended up representing no periods, and close the gap.
+
+    ``method="new_cluster"`` can absorb every member of a regular cluster. Its
+    id would then leave a hole in the label space, and cluster ids are positions
+    downstream — representatives are looked up by id, and `representations`
+    returns one center per *observed* label — so a hole misaligns every cluster
+    above it. Nothing is lost by dropping it: a cluster with no periods
+    contributes nothing to the reconstruction, though the run then returns fewer
+    typical periods than ``n_clusters`` asked for.
+
+    Returns:
+        The inputs with empty clusters removed and every id renumbered, or the
+        inputs unchanged when no cluster is empty.
+    """
+    n_clusters = len(cluster_periods_list)
+    occupied = {int(label) for label in np.asarray(cluster_order).ravel()}
+    if len(occupied) == n_clusters:
+        return (
+            cluster_periods_list,
+            cluster_order,
+            extreme_cluster_idx,
+            cluster_center_indices,
+        )
+
+    kept_ids = sorted(occupied)
+    renumbered = {old_id: new_id for new_id, old_id in enumerate(kept_ids)}
+
+    return (
+        [cluster_periods_list[old_id] for old_id in kept_ids],
+        np.array(
+            [renumbered[int(label)] for label in np.asarray(cluster_order).ravel()],
+            dtype=int,
+        ),
+        [renumbered[old_id] for old_id in extreme_cluster_idx],
+        # Center indices cover only the clusters clustering produced; the
+        # extremes get theirs appended later and always hold their own period.
+        None
+        if cluster_center_indices is None
+        else [
+            cluster_center_indices[old_id]
+            for old_id in kept_ids
+            if old_id < len(cluster_center_indices)
+        ],
+    )
+
+
 def _representatives_to_dataframe(
     cluster_periods_list: list[np.ndarray],
     column_index: pd.MultiIndex,
@@ -479,6 +531,7 @@ def refine_representatives(
     period_profiles = prepared.period_profiles
     cluster_periods_list = assignment.cluster_periods_list
     cluster_order = assignment.cluster_order
+    cluster_center_indices = assignment.cluster_center_indices
 
     # Add extreme periods if configured
     # Extremes run in weighted space (matching develop): weighted profiles
@@ -505,6 +558,17 @@ def refine_representatives(
             cfg.extremes,
         )
         cluster_order = np.asarray(extended_order)
+        (
+            cluster_periods_list,
+            cluster_order,
+            extreme_cluster_idx,
+            cluster_center_indices,
+        ) = _drop_empty_clusters(
+            cluster_periods_list,
+            cluster_order,
+            extreme_cluster_idx,
+            cluster_center_indices,
+        )
     else:
         if cfg.predef is not None and cfg.predef.extreme_cluster_idx is not None:
             extreme_cluster_idx = list(cfg.predef.extreme_cluster_idx)
@@ -575,7 +639,7 @@ def refine_representatives(
         normalized_typical_periods=normalized_typical_periods,
         cluster_order=cluster_order,
         cluster_counts=cluster_counts,
-        cluster_center_indices=assignment.cluster_center_indices,
+        cluster_center_indices=cluster_center_indices,
         extreme_cluster_idx=extreme_cluster_idx,
         extreme_periods=extreme_periods,
         rescale_deviations=rescale_deviations,
