@@ -806,7 +806,7 @@ class ClusteringResult:
                 and extremes_config.method in ("new_cluster", "append")
             ):
                 for extreme in extreme_periods:
-                    center_indices.append(int(extreme.step_no))
+                    center_indices.append(int(extreme.period_row_index))
 
             cluster_centers = tuple(center_indices)
 
