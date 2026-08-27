@@ -100,21 +100,33 @@ def _drop_empty_clusters(
 ) -> tuple[list[np.ndarray], np.ndarray, list[int], list[int] | None]:
     """Remove clusters that ended up representing no periods, and close the gap.
 
-    ``method="new_cluster"`` can absorb every member of a regular cluster. Its
-    id would then leave a hole in the label space, and cluster ids are positions
-    downstream — representatives are looked up by id, and `representations`
-    returns one center per *observed* label — so a hole misaligns every cluster
-    above it. Nothing is lost by dropping it: a cluster with no periods
-    contributes nothing to the reconstruction, though the run then returns fewer
-    typical periods than ``n_clusters`` asked for.
+    A hole in the label space can open at either end of this phase.
+    ``method="new_cluster"`` can absorb every member of a regular cluster; on
+    the transfer path a stored assignment can arrive with a hole already in it.
+    Cluster ids are positions downstream — representatives are looked up by id,
+    and `representations` returns one center per *observed* label — so a hole
+    misaligns every cluster above it. Nothing is lost by dropping it: a cluster
+    with no periods contributes nothing to the reconstruction, though the run
+    then returns fewer typical periods than ``n_clusters`` asked for.
+
+    Clustering itself is not a source of holes here: `assign_clusters` already
+    hands back a dense label space, so what this sees is what extremes did to
+    it.
 
     Returns:
         The inputs with empty clusters removed and every id renumbered, or the
         inputs unchanged when no cluster is empty.
     """
     n_clusters = len(cluster_periods_list)
-    occupied = {int(label) for label in np.asarray(cluster_order).ravel()}
-    if len(occupied) == n_clusters:
+    kept_ids = sorted({int(label) for label in np.asarray(cluster_order).ravel()})
+    if kept_ids and (kept_ids[0] < 0 or kept_ids[-1] >= n_clusters):
+        outside = [label for label in kept_ids if label < 0 or label >= n_clusters]
+        raise ValueError(
+            f"cluster_order holds labels outside range(0, {n_clusters}): "
+            f"{outside}. Every label names a representative by position, so a "
+            f"label without one can be neither kept nor dropped."
+        )
+    if kept_ids == list(range(n_clusters)):
         return (
             cluster_periods_list,
             cluster_order,
@@ -122,7 +134,6 @@ def _drop_empty_clusters(
             cluster_center_indices,
         )
 
-    kept_ids = sorted(occupied)
     renumbered = {old_id: new_id for new_id, old_id in enumerate(kept_ids)}
 
     return (
@@ -510,6 +521,20 @@ def cluster_candidates(
         center[: prepared.n_feature_cols] for center in cluster_centers
     ]
 
+    # Clustering does not promise to fill every cluster it was asked for: with
+    # fewer distinct period shapes than clusters, some methods leave one empty.
+    # `assign_clusters` drops those so ids stay usable as positions, which makes
+    # the shortfall invisible unless it is said out loud.
+    if cfg.predef is None and len(cluster_periods_list) < cfg.n_clusters:
+        warnings.warn(
+            f"Clustering produced {len(cluster_periods_list)} non-empty clusters "
+            f"for the requested n_clusters={cfg.n_clusters}: "
+            f"'{cluster.method}' found fewer distinct period shapes than "
+            f"clusters, and empty clusters are dropped rather than kept as "
+            f"typical periods representing no periods. The aggregation is valid "
+            f"but returns fewer typical periods than requested."
+        )
+
     return ClusterAssignment(
         cluster_periods_list=cluster_periods_list,
         cluster_order=cluster_order,
@@ -585,20 +610,23 @@ def refine_representatives(
             cfg.extremes,
         )
         cluster_order = np.asarray(extended_order)
-        (
-            cluster_periods_list,
-            cluster_order,
-            extreme_cluster_idx,
-            cluster_center_indices,
-        ) = _drop_empty_clusters(
-            cluster_periods_list,
-            cluster_order,
-            extreme_cluster_idx,
-            cluster_center_indices,
-        )
     else:
         if cfg.predef is not None and cfg.predef.extreme_cluster_idx is not None:
             extreme_cluster_idx = list(cfg.predef.extreme_cluster_idx)
+
+    # Unconditional: extremes are one way to empty a cluster, not the only one,
+    # and every id below indexes into cluster_periods_list.
+    (
+        cluster_periods_list,
+        cluster_order,
+        extreme_cluster_idx,
+        cluster_center_indices,
+    ) = _drop_empty_clusters(
+        cluster_periods_list,
+        cluster_order,
+        extreme_cluster_idx,
+        cluster_center_indices,
+    )
 
     # Unweight all representatives (regular + extreme) — remove weights
     # before downstream steps (rescale, denorm) which expect unweighted data.

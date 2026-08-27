@@ -12,6 +12,7 @@ import pytest
 
 from conftest import TESTDATA_CSV
 from tsam import ClusterConfig, ExtremeConfig, aggregate
+from tsam.algorithms.clustering import assign_clusters
 from tsam.algorithms.representations import representations
 
 # The combination that empties a regular cluster on this dataset: the
@@ -71,3 +72,73 @@ def test_representations_rejects_a_label_space_with_holes():
             representation_dict=None,
             n_timesteps_per_period=4,
         )
+
+
+# --- clustering alone, no extremes configured -----------------------------
+#
+# Twenty days over three distinct day shapes. No clustering method can fill
+# eight clusters from three shapes, so some are left empty — with no
+# ExtremeConfig anywhere in sight.
+SHAPE_STARVED_CASE = {
+    "n_clusters": 8,
+    "cluster": ClusterConfig(method="kmaxoids", representation="mean"),
+}
+
+
+@pytest.fixture
+def three_shapes():
+    index = pd.date_range("2020-01-01", periods=24 * 20, freq="h")
+    values = np.concatenate([[1.0, 5.0, 9.0][i % 3] * np.ones(24) for i in range(20)])
+    return pd.DataFrame({"x": values, "y": values * 2}, index=index)
+
+
+def test_clustering_alone_cannot_leave_a_hole(three_shapes):
+    np.random.seed(0)  # kmaxoids draws from numpy.random
+    with pytest.warns(UserWarning, match="non-empty clusters"):
+        result = aggregate(three_shapes, **SHAPE_STARVED_CASE)
+
+    used_labels = {int(label) for label in result.cluster_assignments}
+
+    assert used_labels == set(range(result.n_clusters))
+    assert result.n_clusters == result.clustering.n_clusters
+    assert result.n_clusters < SHAPE_STARVED_CASE["n_clusters"]
+    # Every period is still accounted for by exactly one cluster.
+    assert sum(result.cluster_counts.values()) == pytest.approx(20)
+
+
+@pytest.mark.parametrize("preserve_column_means", [True, False])
+def test_shape_starved_clustering_still_transfers(three_shapes, preserve_column_means):
+    np.random.seed(0)
+    with pytest.warns(UserWarning, match="non-empty clusters"):
+        result = aggregate(
+            three_shapes,
+            preserve_column_means=preserve_column_means,
+            **SHAPE_STARVED_CASE,
+        )
+
+    transferred = result.clustering.apply(three_shapes)
+
+    assert transferred.n_clusters == result.n_clusters
+    np.testing.assert_array_equal(
+        transferred.cluster_assignments, result.cluster_assignments
+    )
+
+
+def test_assign_clusters_closes_gaps_in_the_label_space():
+    # Three distinct rows, eight clusters asked for: kmaxoids cannot fill them.
+    candidates = np.repeat([[0.0, 0.0], [5.0, 5.0], [9.0, 9.0]], 4, axis=0)
+
+    np.random.seed(0)
+    order = assign_clusters(candidates, n_clusters=8, cluster_method="kmaxoids")
+
+    labels = np.unique(order)
+    np.testing.assert_array_equal(labels, np.arange(labels.size))
+    assert labels.size < 8
+
+
+def test_assign_clusters_leaves_a_dense_label_space_alone():
+    candidates = np.repeat([[0.0, 0.0], [5.0, 5.0], [9.0, 9.0]], 4, axis=0)
+
+    order = assign_clusters(candidates, n_clusters=3, cluster_method="hierarchical")
+
+    np.testing.assert_array_equal(np.unique(order), np.arange(3))

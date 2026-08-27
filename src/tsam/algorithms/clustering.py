@@ -11,6 +11,29 @@ if TYPE_CHECKING:
     from tsam.config import ClusterMethod, Distribution, MinMaxMean
 
 
+def _densify_labels(cluster_order: np.ndarray) -> np.ndarray:
+    """Renumber cluster labels onto ``0..n-1``, closing gaps left by empty clusters.
+
+    No clustering method promises to fill every cluster it was asked for.
+    k-maxoids on data with fewer distinct period shapes than clusters is the
+    plainest case: it leaves labels nobody uses, so the assignment comes back as
+    e.g. ``[0, 1, 3]`` for ``n_clusters=8``.
+
+    Cluster ids are positions everywhere downstream — representatives live in a
+    list indexed by id, and
+    :func:`~tsam.algorithms.representations.representations` returns one center
+    per *observed* label — so an unused label shifts every cluster above it and
+    leaves the highest one without a representative. Nothing is lost by dropping
+    it: a cluster with no members has no periods to compute a representative
+    from, and contributes nothing to the reconstruction.
+
+    Renumbering preserves order, so a label space that is already dense — every
+    method's normal outcome — comes back with its labels unchanged.
+    """
+    labels = np.unique(cluster_order)
+    return np.asarray(np.searchsorted(labels, cluster_order), dtype=int)
+
+
 def assign_clusters(
     candidates: np.ndarray,
     n_clusters: int,
@@ -27,7 +50,28 @@ def assign_clusters(
 
     Valid ``cluster_method`` values: 'averaging', 'kmeans', 'kmedoids',
     'kmaxoids', 'hierarchical', 'contiguous'.
+
+    Returns:
+        The cluster id of each period, as a dense label space: the ids run
+        ``0..n-1`` with no gaps, where ``n`` is the number of clusters that
+        actually received periods. That can be fewer than *n_clusters* — see
+        :func:`_densify_labels` for why the gaps are closed rather than kept.
     """
+    return _densify_labels(
+        _raw_assignment(
+            candidates, n_clusters, cluster_method, n_iter=n_iter, solver=solver
+        )
+    )
+
+
+def _raw_assignment(
+    candidates: np.ndarray,
+    n_clusters: int,
+    cluster_method: str,
+    n_iter: int = 100,
+    solver: str = "highs",
+) -> np.ndarray:
+    """Dispatch to the clustering method, returning its labels as it produced them."""
     if cluster_method == "averaging":
         n_sets = len(candidates)
         cluster_size = n_sets // n_clusters
