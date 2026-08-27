@@ -119,14 +119,22 @@ def _drop_empty_clusters(
         inputs unchanged when no cluster is empty.
     """
     n_clusters = len(cluster_periods_list)
-    kept_ids = sorted({int(label) for label in np.asarray(cluster_order).ravel()})
-    if kept_ids and (kept_ids[0] < 0 or kept_ids[-1] >= n_clusters):
-        outside = [label for label in kept_ids if label < 0 or label >= n_clusters]
+
+    # The ids that still hold at least one period, ascending.
+    labels = np.asarray(cluster_order).ravel()
+    kept_ids = sorted({int(label) for label in labels})
+
+    # Every id below indexes cluster_periods_list, so one out of range means
+    # labels and representatives have gone out of step.
+    outside = [old_id for old_id in kept_ids if not 0 <= old_id < n_clusters]
+    if outside:
         raise ValueError(
             f"cluster_order holds labels outside range(0, {n_clusters}): "
             f"{outside}. Every label names a representative by position, so a "
             f"label without one can be neither kept nor dropped."
         )
+
+    # Already dense: nothing to drop, so hand the inputs straight back.
     if kept_ids == list(range(n_clusters)):
         return (
             cluster_periods_list,
@@ -135,25 +143,28 @@ def _drop_empty_clusters(
             cluster_center_indices,
         )
 
+    # Old id -> new id, for the structures that store ids rather than labels.
     renumbered = {old_id: new_id for new_id, old_id in enumerate(kept_ids)}
 
-    return (
-        [cluster_periods_list[old_id] for old_id in kept_ids],
-        # Same renumbering rule as the clustering stage, so both stages close a
-        # gap the same way; here it is the parallel structures below that make
-        # the difference, since only this stage has any.
-        densify_labels(cluster_order),
-        [renumbered[old_id] for old_id in extreme_cluster_idx],
-        # Center indices cover only the clusters clustering produced; the
-        # extremes get theirs appended later and always hold their own period.
-        None
-        if cluster_center_indices is None
-        else [
+    kept_periods = [cluster_periods_list[old_id] for old_id in kept_ids]
+
+    # Same renumbering rule as the clustering stage, so both close a gap the
+    # same way; the parallel structures are what make this stage different.
+    dense_order = densify_labels(cluster_order)
+
+    dense_extreme_idx = [renumbered[old_id] for old_id in extreme_cluster_idx]
+
+    # Center indices cover only the clusters clustering produced; the extremes
+    # get theirs appended later and always hold their own period.
+    kept_center_indices = None
+    if cluster_center_indices is not None:
+        kept_center_indices = [
             cluster_center_indices[old_id]
             for old_id in kept_ids
             if old_id < len(cluster_center_indices)
-        ],
-    )
+        ]
+
+    return kept_periods, dense_order, dense_extreme_idx, kept_center_indices
 
 
 def _representatives_to_dataframe(

@@ -30,8 +30,12 @@ def densify_labels(cluster_order: np.ndarray) -> np.ndarray:
     Renumbering preserves order, so a label space that is already dense — every
     method's normal outcome — comes back with its labels unchanged.
     """
-    labels = np.unique(cluster_order)
-    return np.asarray(np.searchsorted(labels, cluster_order), dtype=int)
+    # The labels actually in use, ascending and without duplicates.
+    used_labels = np.unique(cluster_order)
+    # A label's position in that sorted list is its new id: the lowest label
+    # becomes 0, the next becomes 1, and any gap between them closes.
+    new_ids = np.searchsorted(used_labels, cluster_order)
+    return np.asarray(new_ids, dtype=int)
 
 
 def assign_clusters(
