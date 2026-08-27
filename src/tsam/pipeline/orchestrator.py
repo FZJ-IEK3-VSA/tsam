@@ -20,6 +20,7 @@ from typing import cast
 import numpy as np
 import pandas as pd
 
+from tsam.algorithms.clustering import densify_labels
 from tsam.config import Distribution, MinMaxMean
 from tsam.options import options
 from tsam.pipeline.accuracy import reconstruct
@@ -138,10 +139,10 @@ def _drop_empty_clusters(
 
     return (
         [cluster_periods_list[old_id] for old_id in kept_ids],
-        np.array(
-            [renumbered[int(label)] for label in np.asarray(cluster_order).ravel()],
-            dtype=int,
-        ),
+        # Same renumbering rule as the clustering stage, so both stages close a
+        # gap the same way; here it is the parallel structures below that make
+        # the difference, since only this stage has any.
+        densify_labels(cluster_order),
         [renumbered[old_id] for old_id in extreme_cluster_idx],
         # Center indices cover only the clusters clustering produced; the
         # extremes get theirs appended later and always hold their own period.

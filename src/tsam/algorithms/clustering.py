@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from tsam.config import ClusterMethod, Distribution, MinMaxMean
 
 
-def _densify_labels(cluster_order: np.ndarray) -> np.ndarray:
+def densify_labels(cluster_order: np.ndarray) -> np.ndarray:
     """Renumber cluster labels onto ``0..n-1``, closing gaps left by empty clusters.
 
     No clustering method promises to fill every cluster it was asked for.
@@ -55,9 +55,9 @@ def assign_clusters(
         The cluster id of each period, as a dense label space: the ids run
         ``0..n-1`` with no gaps, where ``n`` is the number of clusters that
         actually received periods. That can be fewer than *n_clusters* — see
-        :func:`_densify_labels` for why the gaps are closed rather than kept.
+        :func:`densify_labels` for why the gaps are closed rather than kept.
     """
-    return _densify_labels(
+    return densify_labels(
         _raw_assignment(
             candidates, n_clusters, cluster_method, n_iter=n_iter, solver=solver
         )
