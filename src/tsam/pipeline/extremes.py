@@ -153,34 +153,36 @@ def add_extreme_periods(
 
     if extremes.method == "append":
         new_cluster_centers = list(cluster_centers)
-        for i, extreme in enumerate(extreme_periods):
+        for current_index, extreme in enumerate(extreme_periods):
             extreme_cluster_idx.append(len(new_cluster_centers))
             new_cluster_centers.append(extreme.profile)
-            new_cluster_order[extreme.period_row_index] = i + len(cluster_centers)
+            new_cluster_order[extreme.period_row_index] = current_index + len(
+                cluster_centers
+            )
 
     elif extremes.method == "new_cluster":
         new_cluster_centers = list(cluster_centers)
-        for i, extreme in enumerate(extreme_periods):
+        for current_index, extreme in enumerate(extreme_periods):
             extreme_cluster_idx.append(len(new_cluster_centers))
             new_cluster_centers.append(extreme.profile)
-            extreme.new_cluster_no = i + len(cluster_centers)
+            extreme.new_cluster_no = current_index + len(cluster_centers)
 
         # A period holds at most one extreme, so this is a 1:1 lookup.
         extreme_by_step = {
             extreme.period_row_index: extreme for extreme in extreme_periods
         }
 
-        for i, c_period in enumerate(new_cluster_order):
+        for current_index, cluster_period in enumerate(new_cluster_order):
             # A period that is itself an extreme joins its own new cluster.
-            own_extreme = extreme_by_step.get(i)
+            own_extreme = extreme_by_step.get(current_index)
             if own_extreme is not None:
-                new_cluster_order[i] = own_extreme.new_cluster_no
+                new_cluster_order[current_index] = own_extreme.new_cluster_no
                 continue
 
-            period_profile = profiles_df.iloc[i].values
+            period_profile = profiles_df.iloc[current_index].values
             # Find the closest extreme period (deterministic: first match with smallest distance)
             best_extreme = None
-            best_dist = sum((period_profile - cluster_centers[c_period]) ** 2)
+            best_dist = sum((period_profile - cluster_centers[cluster_period]) ** 2)
             for extreme in extreme_periods:
                 extreme_dist = sum((period_profile - extreme.profile) ** 2)
                 if extreme_dist < best_dist:
@@ -188,7 +190,7 @@ def add_extreme_periods(
                     best_extreme = extreme
 
             if best_extreme is not None:
-                new_cluster_order[i] = best_extreme.new_cluster_no
+                new_cluster_order[current_index] = best_extreme.new_cluster_no
 
     elif extremes.method == "replace":
         new_cluster_centers = list(cluster_centers)
