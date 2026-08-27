@@ -58,7 +58,10 @@ __all__ = [
 def _count_occurrences(cluster_order: np.ndarray) -> dict[int, float]:
     """Count how many original periods each cluster represents.
 
-    Returns float values because the partial-period adjustment can produce
+    Returns a dictionary with the cluster index as key and the number of
+    occurrences in the cluster_order as value. If a cluster does not represent any period
+    the output dictionary might not include all clusters. The number of occurrences is
+    stored as a float value because the partial-period adjustment can produce
     fractional counts downstream.
     """
     nums, counts = np.unique(cluster_order, return_counts=True)
@@ -523,14 +526,14 @@ def refine_representatives(
     rescale_exclude = cfg.rescale_exclude_columns or []
     if cfg.rescale_cluster_periods:
         cluster_periods_list, rescale_deviations = rescale_representatives(  # type: ignore[assignment]
-            cluster_periods_list,
-            cluster_counts,
-            extreme_cluster_idx,
-            period_profiles.profiles_dataframe,
-            prepared.original_data,
-            prepared.norm_data.scale_by_column_means,
-            cfg.n_timesteps_per_period,
-            rescale_exclude,
+            cluster_periods=cluster_periods_list,
+            cluster_period_no_occur=cluster_counts,
+            extreme_cluster_idx=extreme_cluster_idx,
+            profiles_df=period_profiles.profiles_dataframe,
+            original_data=prepared.original_data,
+            normalize_column_means=prepared.norm_data.scale_by_column_means,
+            n_timesteps_per_period=cfg.n_timesteps_per_period,
+            exclude_columns=rescale_exclude,
         )
         cluster_periods_list = list(cluster_periods_list)
 

@@ -6,13 +6,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from tsam.pipeline.types import ExtremePeriod
+from tsam.pipeline.types import ExtremeKind, ExtremePeriod
 
 if TYPE_CHECKING:
     import pandas as pd
 
     from tsam.config import ExtremeConfig
-    from tsam.pipeline.types import ExtremeKind
 
 
 def _detect_extreme(
