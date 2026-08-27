@@ -55,17 +55,41 @@ __all__ = [
 ]
 
 
-def _count_occurrences(cluster_order: np.ndarray) -> dict[int, float]:
+def _count_occurrences(cluster_order: np.ndarray, n_clusters: int) -> dict[int, float]:
     """Count how many original periods each cluster represents.
 
-    Returns a dictionary with the cluster index as key and the number of
-    occurrences in the cluster_order as value. If a cluster does not represent any period
-    the output dictionary might not include all clusters. The number of occurrences is
-    stored as a float value because the partial-period adjustment can produce
-    fractional counts downstream.
+    The result is total over the cluster ids: every id in ``range(n_clusters)``
+    gets an entry, and a cluster that ended up representing no periods is
+    counted 0 rather than left out. Cluster ids are positions downstream —
+    representatives are looked up by id — so no consumer should have to tell
+    "absent" apart from "zero". The counts are floats because the partial-period
+    adjustment can produce fractional values.
+
+    Args:
+        cluster_order: Per-period cluster assignment.
+        n_clusters: Size of the id space, i.e. the number of representatives.
+            Every label in *cluster_order* must fall inside it.
+
+    Returns:
+        Occurrence count per cluster id, one entry per id in
+        ``range(n_clusters)``.
+
+    Raises:
+        ValueError: If *cluster_order* holds a label outside the id space.
+            Labels and representative positions have then gone out of step, and
+            counting them here would silently drop a cluster's periods.
     """
     nums, counts = np.unique(cluster_order, return_counts=True)
-    return {int(num): float(counts[ii]) for ii, num in enumerate(nums)}
+    if nums.size and (nums[0] < 0 or nums[-1] >= n_clusters):
+        outside = [int(num) for num in nums if num < 0 or num >= n_clusters]
+        raise ValueError(
+            f"cluster_order holds labels outside range(0, {n_clusters}): "
+            f"{outside}. Cluster ids index the representatives, so a label "
+            f"without a representative cannot be counted."
+        )
+    occurrences = dict.fromkeys(range(n_clusters), 0.0)
+    occurrences.update({int(num): float(counts[ii]) for ii, num in enumerate(nums)})
+    return occurrences
 
 
 def _representatives_to_dataframe(
@@ -519,7 +543,7 @@ def refine_representatives(
         cluster_periods_list = [center * inv_tile for center in cluster_periods_list]
 
     # Compute cluster counts
-    cluster_counts = _count_occurrences(cluster_order)
+    cluster_counts = _count_occurrences(cluster_order, len(cluster_periods_list))
 
     # Rescale if requested
     rescale_deviations: dict[str, dict] = {}

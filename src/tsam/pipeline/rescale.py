@@ -75,10 +75,7 @@ def rescale_representatives(
 
     n_clusters = len(cluster_periods)
     weighting_vec = np.array(
-        [
-            float(cluster_period_no_occur.get(cluster_id, 0.0))
-            for cluster_id in range(n_clusters)
-        ]
+        [float(cluster_period_no_occur[cluster_id]) for cluster_id in range(n_clusters)]
     )
     n_cols = len(columns)
     n_timesteps = n_timesteps_per_period
