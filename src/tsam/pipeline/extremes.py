@@ -42,11 +42,15 @@ def _detect_extreme(
         extreme_periods: Extremes accepted so far; appended to in place.
     """
     profile = np.asarray(profiles_df.loc[period_row_index, :].values)
-    already_taken = any(extreme.period_row_index == period_row_index for extreme in extreme_periods)
+    already_taken = any(
+        extreme.period_row_index == period_row_index for extreme in extreme_periods
+    )
     if already_taken or profile.tolist() in center_profiles:
         return None
     extreme_periods.append(
-        ExtremePeriod(column=column, kind=kind, period_row_index=period_row_index, profile=profile)
+        ExtremePeriod(
+            column=column, kind=kind, period_row_index=period_row_index, profile=profile
+        )
     )
 
 
@@ -130,7 +134,9 @@ def add_extreme_periods(
             elif kind == "mean_min":
                 step_no = profiles_df[column].mean(axis=1).idxmin()  # type: ignore[call-overload]
             else:
-                raise AssertionError(f"unhandled kind: {kind!r}. Only {ExtremeKind!r} is handled.")
+                raise AssertionError(
+                    f"unhandled kind: {kind!r}. Only {ExtremeKind!r} is handled."
+                )
 
             _detect_extreme(
                 profiles_df=profiles_df,
@@ -160,7 +166,9 @@ def add_extreme_periods(
             extreme.new_cluster_no = i + len(cluster_centers)
 
         # A period holds at most one extreme, so this is a 1:1 lookup.
-        extreme_by_step = {extreme.period_row_index: extreme for extreme in extreme_periods}
+        extreme_by_step = {
+            extreme.period_row_index: extreme for extreme in extreme_periods
+        }
 
         for i, c_period in enumerate(new_cluster_order):
             # A period that is itself an extreme joins its own new cluster.
