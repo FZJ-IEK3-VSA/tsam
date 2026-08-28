@@ -256,6 +256,15 @@ Representation = RepresentationMethod | Distribution | MinMaxMean
 ClusterMethod = ClusterMethodName | KMedoids
 
 
+def method_name(method: ClusterMethod) -> ClusterMethodName:
+    """Canonical string name of a clustering method, in either form.
+
+    ``KMedoids(...)`` and the bare string ``"kmedoids"`` name the same method,
+    so anything dispatching on the name resolves it through here.
+    """
+    return "kmedoids" if isinstance(method, KMedoids) else method
+
+
 def method_to_dict(method: ClusterMethod) -> str | dict[str, Any]:
     """Serialize a clustering method to a JSON-compatible format."""
     if isinstance(method, KMedoids):
@@ -400,7 +409,7 @@ class ClusterConfig:
     @property
     def method_name(self) -> ClusterMethodName:
         """Canonical string name of the clustering method."""
-        return "kmedoids" if isinstance(self.method, KMedoids) else self.method
+        return method_name(self.method)
 
     @property
     def solver(self) -> Solver:

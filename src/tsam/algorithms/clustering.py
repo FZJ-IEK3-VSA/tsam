@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from tsam.algorithms.representations import representations
-from tsam.config import DEFAULT_REPRESENTATION, KMedoids
+from tsam.config import DEFAULT_REPRESENTATION, KMedoids, method_name
 
 if TYPE_CHECKING:
     from tsam.config import ClusterMethod, Distribution, MinMaxMean
@@ -82,8 +82,12 @@ def _raw_assignment(
 ) -> np.ndarray:
     """Dispatch to the clustering method, returning its labels as it produced them."""
 
-    kmedoids_config = cluster_method if isinstance(cluster_method, KMedoids) else None
-    cluster_method = "kmedoids" if kmedoids_config is not None else cluster_method
+    # Split the method argument into the name to dispatch on and the k-medoids
+    # config to run with: the bare string "kmedoids" simply means KMedoids().
+    kmedoids_config = (
+        cluster_method if isinstance(cluster_method, KMedoids) else KMedoids()
+    )
+    cluster_method = method_name(cluster_method)
 
     if cluster_method == "averaging":
         n_sets = len(candidates)
@@ -104,11 +108,10 @@ def _raw_assignment(
     if cluster_method == "kmedoids":
         from tsam.algorithms.k_medoids_exact import ExactKMedoids
 
-        config = kmedoids_config if kmedoids_config is not None else KMedoids()
         kmedoids = ExactKMedoids(
             n_clusters=n_clusters,
-            solver=config.solver,
-            options=config.options,
+            solver=kmedoids_config.solver,
+            options=kmedoids_config.options,
         )
         return np.asarray(kmedoids.fit_predict(candidates))
 
@@ -160,9 +163,6 @@ def cluster_and_represent(
     representatives (using the per-method default unless ``representation_method``
     overrides it).
     """
-    from tsam.config import KMedoids
-
-    method_name = "kmedoids" if isinstance(cluster_method, KMedoids) else cluster_method
     cluster_order = assign_clusters(
         candidates,
         n_clusters,
@@ -180,7 +180,7 @@ def cluster_and_represent(
     cluster_centers, cluster_center_indices = representations(
         rep_candidates,
         cluster_order,
-        default=DEFAULT_REPRESENTATION[method_name],
+        default=DEFAULT_REPRESENTATION[method_name(cluster_method)],
         representation_method=representation_method,
         representation_dict=representation_dict,
         distribution_period_wise=distribution_period_wise,
