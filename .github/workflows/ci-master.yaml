@@ -92,7 +92,7 @@ jobs:
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     uses: FZJ-IEK3-VSA/.github/.github/workflows/extract_versions.yml@v1
     with:
-      libraries: "scikit-learn,pandas,numpy,pyomo,networkx,tqdm,highspy"
+      libraries: "scikit-learn,scipy,pandas,numpy,pyomo,tqdm,highspy"
       version_type: both
       env_file: environment.yml
 

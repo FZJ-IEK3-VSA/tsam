@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Literal, get_args
 
 # Type aliases for clarity
-ClusterMethod = Literal[
+ClusterMethodName = Literal[
     "averaging",
     "kmeans",
     "kmedoids",
@@ -30,7 +30,7 @@ RepresentationMethod = Literal[
 # represented by the cluster mean, medoid-based methods by the medoid, and
 # kmaxoids by the maxoid. This is the single source of these defaults — resolve
 # them through ``ClusterConfig.get_representation`` rather than repeating them.
-DEFAULT_REPRESENTATION: dict[ClusterMethod, RepresentationMethod] = {
+DEFAULT_REPRESENTATION: dict[ClusterMethodName, RepresentationMethod] = {
     "averaging": "mean",
     "kmeans": "mean",
     "kmedoids": "medoid",
@@ -50,6 +50,96 @@ ExtremeMethod = Literal[
 EXTREME_METHODS: tuple[str, ...] = get_args(ExtremeMethod)
 
 Solver = Literal["highs", "cbc", "gurobi", "cplex"]
+
+
+@dataclass(frozen=True)
+class KMedoids:
+    """Exact k-medoids clustering configuration.
+
+    Selects real periods as cluster centers by solving a MILP. Pass it to
+    ``ClusterConfig(method=KMedoids(...))`` to tune the solver. The bare string
+    ``method="kmedoids"`` is equivalent to ``KMedoids()`` with defaults.
+
+    Args:
+        solver: MILP solver. Options: "highs" (open source, default), "cbc",
+            "gurobi", "cplex".
+        options: Solver options forwarded verbatim to the solver. Option names
+            are solver-specific — e.g. ``{"time_limit": 300}`` to bound HiGHS
+            runtime in seconds, ``{"mip_rel_gap": 0.01}`` for the optimality gap,
+            or ``{"threads": 4}``. Empty by default (the solver's own defaults
+            apply, i.e. no enforced time limit).
+    """
+
+    solver: Solver = "highs"
+    # Excluded from __hash__ (dicts are unhashable) but kept in __eq__ so two
+    # configs differing only in options still compare unequal.
+    options: dict[str, Any] = field(default_factory=dict, hash=False)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a JSON-compatible dict tagged with ``type``."""
+        result: dict[str, Any] = {"type": "kmedoids"}
+        if self.solver != "highs":
+            result["solver"] = self.solver
+        if self.options:
+            result["options"] = dict(self.options)
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> KMedoids:
+        """Rebuild from a dict of solver options."""
+        return cls(
+            solver=data.get("solver", "highs"),
+            options=data.get("options", {}),
+        )
+
+
+@dataclass(frozen=True)
+class KMeans:
+    """K-means clustering configuration.
+
+    Groups periods around synthesized centroids. Pass it to
+    ``ClusterConfig(method=KMeans(...))`` to control the restart count; the
+    bare string ``method="kmeans"`` is equivalent to ``KMeans()``.
+
+    Args:
+        n_init: How many times k-means is run from a different random
+            initialization, keeping the best result by inertia. ``None`` uses
+            tsam's default, which is 100 for ordinary clustering and 30 when
+            ``use_duration_curves=True``.
+
+            More restarts cost proportionally more time and buy a better and
+            more reproducible optimum: at 40 clusters over a year of 40
+            profiles, 100 restarts take about 600 ms against 60 ms for 10 —
+            scikit-learn's own default — and 6 ms for 1. Lowering it is the
+            single largest speedup available for k-means, at the price of a
+            possibly different local optimum, so it is left to the caller
+            rather than changed here.
+        random_state: Seed for the initialization. ``None`` — the default, and
+            what tsam has always passed — draws from an unseeded RNG, so two
+            identical calls can return different clusters. Set an integer to
+            make a run reproducible; that is worth more the lower ``n_init``
+            is, since fewer restarts leave more of the outcome to the draw.
+    """
+
+    n_init: int | None = None
+    random_state: int | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a JSON-compatible dict tagged with ``type``."""
+        result: dict[str, Any] = {"type": "kmeans"}
+        if self.n_init is not None:
+            result["n_init"] = self.n_init
+        if self.random_state is not None:
+            result["random_state"] = self.random_state
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> KMeans:
+        """Rebuild from a dict."""
+        return cls(
+            n_init=data.get("n_init"),
+            random_state=data.get("random_state"),
+        )
 
 
 @dataclass(frozen=True)
@@ -211,6 +301,45 @@ class MinMaxMean:
 Representation = RepresentationMethod | Distribution | MinMaxMean
 
 
+# The clustering method: a string name (backward compat) or a typed object
+# carrying that method's options (currently ``KMedoids`` and ``KMeans``;
+# more may follow).
+ClusterMethod = ClusterMethodName | KMedoids | KMeans
+
+
+def method_name(method: ClusterMethod) -> ClusterMethodName:
+    """Canonical string name of a clustering method, in either form.
+
+    A method-config object and the bare string name the same method:
+    ``KMedoids(...)`` is ``"kmedoids"``, ``KMeans(...)`` is ``"kmeans"``. Anything
+    dispatching on the name resolves it through here.
+    """
+    if isinstance(method, KMedoids):
+        return "kmedoids"
+    if isinstance(method, KMeans):
+        return "kmeans"
+    return method
+
+
+def method_to_dict(method: ClusterMethod) -> str | dict[str, Any]:
+    """Serialize a clustering method to a JSON-compatible format."""
+    if isinstance(method, (KMedoids, KMeans)):
+        return method.to_dict()
+    return method
+
+
+def method_from_dict(data: str | dict) -> ClusterMethod:
+    """Deserialize a clustering method from a JSON-compatible format."""
+    if isinstance(data, str):
+        return data  # type: ignore[return-value]
+    method_type = data.get("type")
+    if method_type == "kmedoids":
+        return KMedoids.from_dict(data)
+    if method_type == "kmeans":
+        return KMeans.from_dict(data)
+    raise ValueError(f"Unknown clustering method type: {method_type!r}")
+
+
 def representation_to_dict(rep: Representation) -> str | dict[str, Any]:
     """Serialize a representation value to a JSON-compatible format."""
     if isinstance(rep, (Distribution, MinMaxMean)):
@@ -235,10 +364,16 @@ class ClusterConfig:
     """Configuration for the clustering algorithm.
 
     Args:
-        method: Clustering algorithm to use:
+        method: Clustering algorithm to use. Accepts a string shortcut or a
+            config object carrying that method's own options (``KMeans``,
+            ``KMedoids``).
             - "averaging": Sequential averaging of periods
-            - "kmeans": K-means clustering (fast, uses centroids)
-            - "kmedoids": K-medoids using MILP optimization (uses actual periods)
+            - "kmeans": K-means clustering (fast, uses centroids); pass
+              ``KMeans(n_init=..., random_state=...)`` to control the restart
+              count and the seed
+            - "kmedoids": K-medoids using MILP optimization (uses actual
+              periods); pass ``KMedoids(solver=..., options=...)`` to
+              configure the solver
             - "kmaxoids": K-maxoids (selects most dissimilar periods)
             - "hierarchical": Agglomerative hierarchical clustering
             - "contiguous": Hierarchical with temporal contiguity constraint
@@ -274,8 +409,8 @@ class ClusterConfig:
             Matches periods by their value distribution rather than timing.
         include_period_sums: Include period totals as additional features for
             clustering. Helps preserve total energy/load values.
-        solver: MILP solver for kmedoids method. Options: "highs" (open source),
-            "cbc", "gurobi", "cplex".
+        solver: Deprecated. Use ``method=KMedoids(solver=...)`` instead. When
+            set, forwarded to the k-medoids config.
     """
 
     method: ClusterMethod
@@ -283,14 +418,12 @@ class ClusterConfig:
     scale_by_column_means: bool
     use_duration_curves: bool
     include_period_sums: bool
-    solver: Solver
 
     __slots__ = (
         "include_period_sums",
         "method",
         "representation",
         "scale_by_column_means",
-        "solver",
         "use_duration_curves",
     )
 
@@ -301,14 +434,26 @@ class ClusterConfig:
         scale_by_column_means: bool = False,
         use_duration_curves: bool = False,
         include_period_sums: bool = False,
-        solver: Solver = "highs",
+        solver: Solver | None = None,
     ) -> None:
+        if solver is not None:
+            warnings.warn(
+                "ClusterConfig(solver=...) is deprecated; pass "
+                "method=KMedoids(solver=...) instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if isinstance(method, KMedoids):
+                method = replace(method, solver=solver)
+            elif method == "kmedoids":
+                method = KMedoids(solver=solver)
+            # solver has no effect for non-kmedoids methods (it never did); ignored.
+
         object.__setattr__(self, "method", method)
         object.__setattr__(self, "representation", representation)
         object.__setattr__(self, "scale_by_column_means", scale_by_column_means)
         object.__setattr__(self, "use_duration_curves", use_duration_curves)
         object.__setattr__(self, "include_period_sums", include_period_sums)
-        object.__setattr__(self, "solver", solver)
 
         if representation is not None and use_duration_curves:
             warnings.warn(
@@ -321,6 +466,16 @@ class ClusterConfig:
                 UserWarning,
                 stacklevel=2,
             )
+
+    @property
+    def method_name(self) -> ClusterMethodName:
+        """Canonical string name of the clustering method."""
+        return method_name(self.method)
+
+    @property
+    def solver(self) -> Solver:
+        """Solver used by the k-medoids method (``"highs"`` for other methods)."""
+        return self.method.solver if isinstance(self.method, KMedoids) else "highs"
 
     def __setattr__(self, name: str, value: object) -> None:
         raise AttributeError("ClusterConfig is immutable")
@@ -351,11 +506,11 @@ class ClusterConfig:
         """Get the representation, using the method's default if not specified."""
         if self.representation is not None:
             return self.representation
-        return DEFAULT_REPRESENTATION.get(self.method, "mean")
+        return DEFAULT_REPRESENTATION.get(self.method_name, "mean")
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        result: dict[str, Any] = {"method": self.method}
+        result: dict[str, Any] = {"method": method_to_dict(self.method)}
         if self.representation is not None:
             result["representation"] = representation_to_dict(self.representation)
         if self.scale_by_column_means:
@@ -364,8 +519,6 @@ class ClusterConfig:
             result["use_duration_curves"] = self.use_duration_curves
         if self.include_period_sums:
             result["include_period_sums"] = self.include_period_sums
-        if self.solver != "highs":
-            result["solver"] = self.solver
         return result
 
     @classmethod
@@ -375,13 +528,16 @@ class ClusterConfig:
         representation = (
             representation_from_dict(rep_data) if rep_data is not None else None
         )
+        method = method_from_dict(data.get("method", "hierarchical"))
+        # Legacy flat form: {"method": "kmedoids", "solver": ...}
+        if method == "kmedoids" and "solver" in data:
+            method = KMedoids(solver=data["solver"])
         return cls(
-            method=data.get("method", "hierarchical"),
+            method=method,
             representation=representation,
             scale_by_column_means=data.get("scale_by_column_means", False),
             use_duration_curves=data.get("use_duration_curves", False),
             include_period_sums=data.get("include_period_sums", False),
-            solver=data.get("solver", "highs"),
         )
 
 
@@ -479,9 +635,9 @@ class ExtremeConfig:
             period. Example: ["electricity_demand"] to preserve peak demand hour.
         min_value: Column names where the minimum value should be preserved.
             Example: ["temperature"] to preserve coldest hour.
-        max_period: Column names where the period with maximum total should be
+        max_period: Column names where the period with maximum mean should be
             preserved. Example: ["solar_generation"] to preserve highest solar day.
-        min_period: Column names where the period with minimum total should be
+        min_period: Column names where the period with minimum mean should be
             preserved. Example: ["wind_generation"] to preserve lowest wind day.
     """
 
