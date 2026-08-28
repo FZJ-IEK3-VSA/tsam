@@ -311,7 +311,7 @@ class ClusterConfig:
             - "averaging": Sequential averaging of periods
             - "kmeans": K-means clustering (fast, uses centroids)
             - "kmedoids": K-medoids using MILP optimization (uses actual
-              periods); pass ``KMedoids(solver=..., timelimit=...)`` to
+              periods); pass ``KMedoids(solver=..., options=...)`` to
               configure the solver
             - "kmaxoids": K-maxoids (selects most dissimilar periods)
             - "hierarchical": Agglomerative hierarchical clustering
