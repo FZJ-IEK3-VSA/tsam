@@ -1,0 +1,246 @@
+% Building Block View — arc42 §5, Level 1 (whitebox of the tsam library).
+% Notation: UML 2.5 component diagram (OMG UML 2.5.1 — Component is defined in
+% clause 11 "Structured Classifiers", Dependency in clause 7 "Common Structure",
+% and the diagram type itself is listed in Annex A).
+%
+% ── PRINT TARGET ──────────────────────────────────────────────────────────
+% "AutoRecovery save of ETHOS.docx" is US Letter with 1 inch margins, so the
+% text column is 165.1 x 228.6 mm and every figure already in it is placed at
+% the full 165 mm width (wp:extent cx="5943600" EMU). Word scales the picture
+% to that width, so two things must hold, not one:
+%   * ASPECT RATIO h/w <= 1.24, or the scaled figure is taller than the page.
+%   * WIDTH <= ~165 mm, or Word scales the whole drawing DOWN and every font
+%     with it — at 176 mm wide, \scriptsize prints as 6.6 pt.
+% This file is 165.1 x 201.7 mm: exactly the text width, so Word scales it 1.00;
+% aspect 1.22, i.e. 202 mm tall, leaving ~27 mm of the page for a caption.
+%
+% ── WHY THE «component» KEYWORD IS GONE ───────────────────────────────────
+% UML lets a Component be marked either with the keyword or with the component
+% ICON, and does not require the marker on every box when the diagram says once
+% what its boxes are. Repeating «component» ten times cost a line of type in
+% every box — the largest single block of vertical space in the old layout — to
+% say something the reader learns once. The distinction that actually earns a
+% visual channel is WHERE a box sits, so fill colour now carries it:
+%   blue  = component that exposes public API (has an API compartment)
+%   white = component internal to tsam (exports nothing)
+%   grey  = external dependency, outside the tsam package
+% The legend states "every box is a component" once, and the package boundary
+% still carries internal-vs-external on its own, so a greyscale print survives.
+%
+% ── HOW .representation IS SHOWN ──────────────────────────────────────────
+% Distribution and MinMaxMean are NOT peers of the three configs handed to
+% aggregate(): they are the values the `representation` ATTRIBUTE of
+% ClusterConfig / SegmentConfig takes (config.py:211 —
+% Representation = RepresentationMethod | Distribution | MinMaxMean). The old
+% italic run-in header "nested in .representation:" did not read as an
+% attribute at all. It is now a drawn sub-compartment INSIDE Configuration
+% whose caption names the attribute and both owning classes in full, so the
+% containment is visible before the words are read. Keep that caption at or
+% under 26 characters a line: at 7 pt a longer line overflows the 44 mm
+% sub-box, and because a TikZ node clips nothing, the spill silently sets the
+% whole drawing's width (that is how the first attempt reached 176 mm).
+% The full data model is the separate configuration class diagram.
+%
+% ── OTHER CONFORMANCE NOTES ───────────────────────────────────────────────
+%   * components that expose public API carry a second compartment listing it,
+%     each entry prefixed "+" for UML public visibility. Those names are exactly
+%     tsam/__init__.py's __all__, so "what is public API" reads off the diagram.
+%   * the API compartment carries aggregate()'s real OPERATION SIGNATURE with
+%     typed parameters. That is how UML says "the caller constructs a
+%     ClusterConfig and hands it in as the cluster argument" — no extra arrows.
+%   * tsam is drawn with the UML PACKAGE notation (body plus a folder tab).
+%   * the entry point is a provided interface (the ball-and-stick "lollipop").
+%   * no human actor appears: actors belong to use case diagrams.
+%
+% ── EDGE ROUTING: ORTHOGONAL, AND VERIFIED NON-CROSSING ───────────────────
+% Every dependency is horizontal, vertical, or a right-angle elbow. The old
+% revision drew centre-to-centre diagonals (tools->api, api->results,
+% pipeline->results, pipeline->config), which read as "roughly connected"
+% rather than as routed edges. Grid (c1/c2 boxes 44 mm, c3 boxes 48 mm):
+%   row A  y -16..-48   Tools (c1)   API (c2)       Results (c3)
+%   row B  y -56..-100  —            Pipeline (c2)  Configuration (c3)
+%   row C  y -78..-116  —            Algorithms (c2) Commons (c3)
+%   columns  c1 = 24 (2..46)   c2 = 77 (55..99)   c3 = 133 (109..157)
+% Lanes, each checked against the y-range of every other line sharing it:
+%   x = 50.5  pipeline -> scikit-learn   (y -62 .. -136)
+%   x = 102   algorithms -> Pyomo        (y -87 .. -136)
+%   x = 106   pipeline -> Results        (y -59 .. -51)
+%             algorithms -> Commons      (y -81 .. -110)
+% x = 106 carries two edges precisely because their y-ranges are disjoint. The
+% two edges leaving Algorithms east are deliberately ordered the other way from
+% the obvious one — Commons leaves ABOVE Pyomo — because the reverse ordering
+% puts Pyomo lane across the Commons entry leg at (106, -110).
+%
+% The colour key sits at y -170, BELOW HiGHS, not beside it: on the HiGHS row
+% the third swatch label reaches x = 136 and HiGHS spans x = 109..157.
+%
+% Guillemets MUST be written as \guillemotleft / \guillemotright. Literal UTF-8
+% « » does not survive: with T1 encoding those code points land on the wrong
+% glyph slots and render as "nlibraryz".
+%
+% Regenerate:
+%   tectonic building_block_view.tex
+%   pdftocairo -svg building_block_view.pdf building_block_view.svg
+
+\documentclass[10pt,border=1mm]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
+
+\definecolor{fzjblue}{HTML}{023D6B}
+\definecolor{fzjdark}{HTML}{012845}
+\definecolor{tintblue}{HTML}{DCE9F2}
+\definecolor{nestfill}{HTML}{F4F8FB}
+\definecolor{extfill}{HTML}{E6E9EC}
+\definecolor{extline}{HTML}{8A94A0}
+\definecolor{greytext}{HTML}{3F4A55}
+
+\newcommand{\grp}[1]{{\itshape\color{greytext}#1}}
+
+\begin{document}
+\begin{tikzpicture}[
+  x=1mm, y=1mm,
+  % component that exposes public API
+  api/.style={
+    draw=fzjblue, line width=0.45mm, fill=tintblue, text=fzjdark,
+    align=center, font=\small},
+  % component internal to tsam
+  int/.style={
+    draw=fzjblue, line width=0.45mm, fill=white, text=fzjdark,
+    align=center, font=\small},
+  % external dependency
+  ext/.style={
+    draw=extline, line width=0.4mm, fill=extfill, text=greytext,
+    minimum width=40mm, minimum height=15mm, text width=36mm,
+    align=center, font=\small},
+  hdr/.style={font=\small, text=fzjdark, align=center},
+  mem/.style={font=\scriptsize, text=fzjdark, align=left, anchor=north west},
+  rule/.style={draw=fzjblue, line width=0.3mm},
+  % UML dependency: dashed line with an OPEN arrowhead
+  dep/.style={-{Straight Barb[scale=1.6]}, dashed, draw=fzjblue, line width=0.3mm},
+  extdep/.style={dep, draw=extline},
+  elbl/.style={font=\scriptsize, text=greytext, inner sep=1.4pt, fill=white},
+  lgd/.style={font=\scriptsize, text=greytext, anchor=west}
+]
+\hyphenpenalty=10000 \exhyphenpenalty=10000
+
+% ══ provided interface on API: the entry point, in UML ball notation ═══════
+\node[circle, draw=fzjblue, line width=0.4mm, fill=white, minimum size=4mm,
+      inner sep=0] (iface) at (77,-6) {};
+\draw[draw=fzjblue, line width=0.4mm] (iface.south) -- (77,-16);
+\node[anchor=west, font=\scriptsize, text=fzjdark] at (80.5,-6) {aggregate()};
+
+% ══ row A — the three components that expose public API ════════════════════
+% Tools: x 2..46, y -16..-36
+\node[api, minimum width=44mm, minimum height=20mm] (tools) at (24,-26) {};
+\node[hdr] at (24,-20) {Tools};
+\draw[rule] (2,-24) -- (46,-24);
+\node[mem] at (4,-25) {+ tuning\\+ plot};
+
+% API: x 55..99, y -16..-48. The signature is the point of this compartment.
+\node[api, minimum width=44mm, minimum height=32mm] (apic) at (77,-32) {};
+\node[hdr] at (77,-20) {API};
+\draw[rule] (55,-24) -- (99,-24);
+\node[mem] at (57,-25)
+  {+ aggregate(data, n\_clusters,\\
+   \quad cluster: ClusterConfig,\\
+   \quad segments: SegmentConfig,\\
+   \quad extremes: ExtremeConfig, \ldots)\\
+   \quad $\rightarrow$ AggregationResult\\
+   + unstack\_to\_periods(\ldots)};
+
+% Results: x 109..157, y -16..-42
+\node[api, minimum width=48mm, minimum height=26mm] (results) at (133,-29) {};
+\node[hdr] at (133,-20) {Results};
+\draw[rule] (109,-24) -- (157,-24);
+\node[mem] at (111,-25)
+  {+ AggregationResult\\+ ClusteringResult\\+ AccuracyMetrics\\+ ConcurrencyMetrics};
+
+% ══ row B ══════════════════════════════════════════════════════════════════
+\node[int, minimum width=44mm, minimum height=12mm] (pipeline) at (77,-62) {Pipeline};
+
+% Configuration: x 109..157, y -56..-100. The sub-compartment is the point:
+% Distribution and MinMaxMean are VALUES OF AN ATTRIBUTE of the two configs
+% listed above them, not further arguments of aggregate().
+\node[api, minimum width=48mm, minimum height=44mm] (config) at (133,-78) {};
+\node[hdr] at (133,-60) {Configuration};
+\draw[rule] (109,-64) -- (157,-64);
+\node[mem] at (111,-65)
+  {\grp{passed to aggregate():}\\
+   + ClusterConfig\\+ SegmentConfig\\+ ExtremeConfig};
+\node[draw=fzjblue, line width=0.25mm, dash pattern=on 1mm off 0.8mm,
+      fill=nestfill, minimum width=44mm, minimum height=19mm,
+      anchor=north west, inner sep=0] at (111,-79) {};
+% Five SHORT lines, not three long ones. A TikZ node clips nothing, so an
+% over-long line here does not wrap or get cut: it silently spills across the
+% sub-box border and sets the whole drawing's width. At \scriptsize the 44 mm
+% box holds about 26 characters, so every line below is kept under that.
+\node[mem] at (112.5,-80)
+  {representation \grp{attribute}\\
+   \grp{of} ClusterConfig \grp{and}\\
+   SegmentConfig \grp{takes:}\\
+   + Distribution\\
+   + MinMaxMean};
+
+% ══ row C ══════════════════════════════════════════════════════════════════
+\node[int, minimum width=44mm, minimum height=12mm] (algorithms) at ( 77,-84)  {Algorithms};
+\node[int, minimum width=48mm, minimum height=12mm] (commons)    at (133,-110) {Commons};
+
+% ══ the tsam package: UML package notation (body + folder tab) ═════════════
+\begin{scope}[on background layer]
+  \node[draw=fzjblue, line width=0.45mm, fill=white, inner sep=3.5mm,
+        fit=(tools)(apic)(pipeline)(results)(algorithms)(config)(commons)(iface)]
+        (tsambox) {};
+  \draw[draw=fzjblue, line width=0.45mm, fill=white]
+    (tsambox.north west) rectangle ++(30,8);
+\end{scope}
+\node[anchor=west, text=fzjblue, font=\small\bfseries]
+  at ([shift={(2mm,4mm)}]tsambox.north west) {tsam};
+
+% ══ externals ══════════════════════════════════════════════════════════════
+\node[ext] (plotly)  at ( 24,-136) {Plotly};
+\node[ext] (sklearn) at ( 77,-136) {scikit-learn};
+\node[ext] (pyomo)   at (133,-136) {Pyomo};
+\node[ext] (highs)   at (133,-158) {HiGHS};
+
+% ══ dependencies inside the package — all orthogonal ═══════════════════════
+\draw[dep] ( 46,-26) -- ( 55,-26);                              % Tools -> API
+\draw[dep] ( 99,-26) -- (109,-26);                              % API -> Results
+\draw[dep] ( 77,-48) -- ( 77,-56);                              % API -> Pipeline
+\draw[dep] ( 99,-65) -- (109,-65);                              % Pipeline -> Configuration
+\draw[dep] ( 77,-68) -- ( 77,-78);                              % Pipeline -> Algorithms
+\draw[dep] ( 99,-59) -- (106,-59) -- (106,-51) -- (133,-51) -- (133,-42);
+\draw[dep] ( 99,-81) -- (106,-81) -- (106,-110) -- (109,-110);  % Algorithms -> Commons
+
+% ══ dependencies leaving the package, each down a verified-clear lane ══════
+\draw[extdep] ( 24,-36) -- ( 24,-128.5);                        % Tools -> Plotly
+\draw[extdep] ( 55,-62) -- (50.5,-62) -- (50.5,-136) -- (57,-136);
+\draw[extdep] ( 77,-90) -- ( 77,-128.5);                        % Algorithms -> scikit-learn
+\draw[extdep] ( 99,-87) -- (102,-87) -- (102,-136) -- (113,-136);
+\draw[extdep] (133,-143.5) -- (133,-150.5);                     % Pyomo -> HiGHS
+% free-standing, not pos= on the path: pos applies to the LAST segment only.
+% The pocket is the band between the package boundary (-121) and the externals
+% row (-128.5), which nothing else occupies.
+\node[elbl, anchor=east] at (100,-124.5) {exact kmedoids};
+
+% ══ key: colour swatches, then one paragraph ═══════════════════════════════
+\node[api, minimum width=12mm, minimum height=6mm] at ( 8,-170) {};
+\node[lgd] at (15.5,-170) {exposes public API};
+\node[int, minimum width=12mm, minimum height=6mm] at (55,-170) {};
+\node[lgd] at (62.5,-170) {internal to tsam};
+\node[ext, minimum width=12mm, minimum height=6mm, text width=8mm] at (100,-170) {};
+\node[lgd] at (107.5,-170) {external dependency};
+
+\node[anchor=north west, font=\scriptsize, text=greytext, text width=160mm,
+      align=left, inner sep=0] at (-2,-178)
+  {\textbf{Key.} Every box is a component; the fill says where it sits, and the
+   \texttt{tsam} package boundary says the same thing again so a greyscale print still
+   reads. \texttt{+} marks public API --- the second compartment lists exactly what
+   \texttt{tsam.\_\_all\_\_} exports, so a component without one is internal. A dashed line
+   with an open arrowhead is a \guillemotleft use\guillemotright{} dependency; the ball is a provided
+   interface. Configuration and Commons are used by every building block; those arrows
+   are omitted for clarity, as are numpy and pandas.};
+
+\end{tikzpicture}
+\end{document}

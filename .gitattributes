@@ -2,8 +2,8 @@
 #
 # Why this exists: tsam is developed on both Windows and Linux, and several tools
 # in this repo rewrite whole files rather than editing them in place — nbstripout
-# and ruff-format rewrite notebooks on every commit, and `d2` regenerates the
-# architecture SVGs. On Windows those tools emit CRLF, so a one-line edit turns
+# and ruff-format rewrite notebooks on every commit, and `tectonic` regenerates
+# the architecture diagrams. On Windows those tools emit CRLF, so a one-line edit turns
 # into a whole-file diff and real changes become impossible to review. Pinning
 # eol=lf makes the line ending a property of the repository instead of a property
 # of whoever last touched the file.

@@ -1,0 +1,423 @@
+% Architecture and workflow of ETHOS.TSAM — the manuscript's Fig. 1.
+%
+% ── NOTATION: UML 2.5.1 ───────────────────────────────────────────────────
+%   * Component and its nested internal structure: clause 11, Structured
+%     Classifiers. Pipeline is drawn as a WHITEBOX. That is also arc42 §5
+%     Level 2 (the whitebox/blackbox recursion), not a deviation from it.
+%   * Dependency (dashed line, open arrowhead): clause 7, Common Structure.
+%   * Action (ROUND-CORNERED rectangle): clause 16, Actions.
+%   * ObjectFlow (solid line, open arrowhead): clause 15, Activities.
+%   * Activity name in the upper left of the region that frames it: clause 15.
+%
+% ── WHY THE PHASES ARE ROUND-CORNERED AND THE COMPONENTS ARE NOT ──────────
+% The four phases are not components. They are the temporal steps of one run,
+% and an earlier revision drew them as sharp-cornered boxes with the same
+% border as Tools/API/Results, which said the opposite: that the pipeline is
+% built out of four more parts of the same kind as the boxes above it.
+%
+% UML already separates structure from behaviour by SHAPE, so no invention is
+% needed. A Classifier is a sharp-cornered rectangle; an Action is a
+% round-cornered one (clause 16). Making the phases round-cornered is therefore
+% the whole fix, and it costs nothing else: colour keeps its existing job
+% (public API / internal / external for the components, amber for optional
+% stages) and shape alone carries structure-versus-behaviour. It also survives
+% a greyscale print, which a colour difference would not.
+%
+% Two consequences follow, and both make the figure MORE conformant than the
+% revision before it:
+%
+%   * The chain between the phases is now an ObjectFlow — an activity edge,
+%     solid with an open arrowhead (clause 15) — and its labels name the object
+%     that flows. The previous revision had to draw it as a Connector between
+%     nested parts (clause 11.4) and lean on §11.7 to let that Connector
+%     realize an InformationFlow, purely to win a solid line that a dashed
+%     Dependency could not be told apart from. That liberty is gone: an
+%     ObjectFlow between Actions is solid because UML says it is.
+%   * The Pipeline's second compartment is the behaviour it owns, so it carries
+%     the activity's name in its upper left, \guillemotleft activity\guillemotright{} run\_pipeline
+%     (src/tsam/pipeline/orchestrator.py:697). That is where UML puts an
+%     Activity's name, and it tells the reader in one line that what follows is
+%     a run, not a parts list.
+%
+% The legend gains one row for the round-cornered swatch. It is paid for by
+% giving the middle legend row three columns instead of two, so the figure's
+% height does not move — see the PRINT TARGET note, there was ~1.6 mm of slack
+% and a fourth row needs 8.
+%
+% ── WHY CONFIGURATION AND COMMONS HAVE NO ARROWS ──────────────────────────
+% Both are used by EVERY building block. An earlier revision drew one arrow
+% into each (Pipeline -> Configuration, Algorithms -> Commons), which is worse
+% than drawing none: it asserts a specific dependency that is not the real
+% relationship, and a reader is entitled to conclude that nothing else uses
+% them. UML has no "used by everything" edge, so the conformant device is a
+% KEYWORD on the component: both carry \guillemotleft shared\guillemotright, both arrows are gone, and
+% the legend says what the keyword means.
+%
+% Fill colour keeps its existing job (blue = exposes public API, white =
+% internal, grey = external), so the two channels do not collide: Configuration
+% stays blue because ClusterConfig and friends are public, Commons stays white.
+%
+% Each keyword is declared ONCE. \guillemotleft use\guillemotright and \guillemotleft shared\guillemotright live in the legend;
+% \guillemotleft activity\guillemotright appears once in the drawing, on the compartment it names,
+% because that is the position that carries its meaning.
+%
+% ── OPTIONAL STAGES ───────────────────────────────────────────────────────
+% Stages that run only when the caller configures them are set in AMBER inside
+% the phase boxes, which is the same optional-means-amber convention the other
+% two figures of this manuscript already use. Verified against
+% src/tsam/pipeline/orchestrator.py:
+%   Phase 1  prepare_data          normalize, unstack_to_periods,
+%                                  [weights], [period sums]
+%   Phase 2  cluster_candidates    assign clusters, representations
+%   Phase 3  refine_representatives [extremes], [unweight], count occurrences,
+%                                  [rescale], [segment]
+%   Phase 4  build_result          denormalize, reconstruct + accuracy
+% Note `unweight` is conditional — orchestrator.py:514 guards it on
+% `prepared.weight_vector is not None` — and `count occurrences` (line 519) is
+% the only unconditional step in Phase 3. An earlier draft of this figure
+% called the whole of Phase 3 optional, which was wrong.
+%
+% ── PRINT TARGET ──────────────────────────────────────────────────────────
+% US Letter, 1 inch margins, text column 165.1 x 228.6 mm, every figure placed
+% at full text width (wp:extent cx="5943600" EMU = 6.5 in).
+%   * ASPECT h/w <= 1.24, or the scaled figure outgrows the page.
+%   * WIDTH <= ~165 mm, or Word scales the drawing DOWN and every font with it.
+% The drawing measures 162.1 x 199.4 mm, aspect 1.230 — about 1.6 mm of height
+% to spare. Anything that adds a row has to take one away somewhere else.
+%
+% ── LAYOUT GRID (millimetres, y negative downwards) ───────────────────────
+%   columns  c1 = 24 (2..46)   c2 = 77 (55..99)   c3 = 133 (109..157)
+%   row A    y -16..-48    Tools (c1)  API (c2)  Results (c3)
+%   Pipeline y -56..-97    whitebox, x 2..157; header -60, compartment rule -64
+%     the activity name sits in the compartment's upper left at (11,-64.5),
+%     anchored north west; it is \tiny, ~2.4 mm tall, so it clears the phase
+%     tops at -68 by ~1.1 mm. That 4 mm band is the only space it has.
+%     four parts 22 mm wide on a 41.67 mm pitch, 19.67 mm gaps, y -68..-93:
+%       6..28 (c 17)          47.7..69.7 (c 58.7)
+%       89.3..111.3 (c 100.3) 131..153 (c 142)
+%     object flows run at y -80.5 across the gaps; their labels are
+%     free-standing nodes anchored south at y -76.5, each inside its own
+%     19.67 mm gap. A label node is 16 mm of text width plus 0.6 mm of inner
+%     sep a side = 17.2 mm, so it clears the phase boxes by ~1.2 mm a side. The
+%     first attempt used 24.45 mm parts and 16.4 mm gaps, where 17.2 mm did not
+%     fit at all and "Refined Representatives" overlapped the Phase 4 box.
+%     They are NOT `pos=` labels: pos on a multi-segment path applies to the
+%     last segment only, and a white-filled label centred on the flow would
+%     leave only a stub of visible line at each end.
+%   row C    y -105..-131  Commons (c1)  Algorithms (c2)  Configuration (c3)
+%   externals y -143..-158  scikit-learn (c2)  Pyomo (c3)
+%   legend rows y -171, -179, -187; row 2 has THREE columns (swatch at x 8,
+%     dependency arrow 53..65, object flow arrow 98..110), which is what lets
+%     the new shape swatch in without a fourth row. Measured label widths at
+%     \scriptsize: "pipeline phase (action)" 28.08 mm ends at 43.6,
+%     "\guillemotleft use\guillemotright dependency" 22.28 ends at 88.8, "object flow between phases"
+%     33.13 ends at 144.6 — all inside the 157 right edge, so the drawing's
+%     width is still set by the package boundary and does not move.
+%   Lanes, each checked against every other line sharing it:
+%     x = 150   Pipeline -> Results        (y -56 .. -42)
+%     x = 104   Algorithms -> Pyomo        (y -114 .. -150.5); clear of
+%               Configuration, which starts at x 109
+%     x =  77   API -> Pipeline (-48..-56), Pipeline -> Algorithms (-97..-105),
+%               Algorithms -> scikit-learn (-123..-143); disjoint y-ranges
+%   The "exact kmedoids" label hangs off the RIGHT side of the x = 104 lane,
+%   anchored west at (105.5,-143.5), so it touches the edge it names and only
+%   that one. Anchored east at (102,-142) it ran leftwards to x 82.6, which put
+%   it 5.6 mm from the Algorithms -> scikit-learn lane at x = 77 and 1.5 mm
+%   from its own: near enough to both to be read as labelling either. On the
+%   right of the lane it is 28 mm clear of x = 77, 3.5 mm below the package
+%   boundary at -138.5 and 2 mm above the Pyomo box at -147.
+%
+% ── TRAPS RE-CHECKED HERE (see the project notes) ─────────────────────────
+%   * A TikZ node CLIPS NOTHING: an over-long line spills across its border and
+%     silently sets the drawing's width. Every node below has a `text width`.
+%   * `inner sep=0` on any full-width text block.
+%   * Guillemets as \guillemotleft / \guillemotright — literal UTF-8 renders as
+%     "nsharedz" under T1. \textperiodcentered{} for the middot, --- for the
+%     em dash.
+%   * A TikZ STYLE cannot be applied to part of a node's text; the greyed and
+%     ambered stage lines use \newcommand DECLARATIONS instead.
+%   * MEASURE text, do not estimate it. Widths that matter here, from
+%     _measure.tex (\settowidth, then read out of the PDF — tectonic swallows
+%     \typeout):
+%         unstack_to_periods   \tiny roman   21.26 mm
+%         unstack_to_periods   \tiny \texttt 16.80 mm
+%         count occurrences    \tiny roman   18.76 mm
+%         Representatives      \tiny roman   16.46 mm
+%         exact kmedoids       \scriptsize   18.87 mm
+%     A phase box is 22.5 mm wide with 19.5 mm of text width, so the roman form
+%     overflowed the text box by 1.76 mm and cleared the border by ~0.6 mm,
+%     which prints as touching it.
+%   * The legend swatch takes `rounded corners=1.5mm`, not the phases' 2.2 mm.
+%     A 2.2 mm radius on a 6 mm-tall swatch eats three quarters of its height
+%     and reads as a lozenge rather than as the same shape, smaller.
+%
+% ── WHEN A STAGE NAME IS SET IN MONOSPACE ─────────────────────────────────
+% The rule is: a stage written as a snake_case IDENTIFIER is set in \texttt,
+% because it names a function; a stage written as prose is not, because it
+% describes a step. `unstack_to_periods` and the activity's own name
+% `run_pipeline` qualify. This is also what makes them fit — see the
+% measurements above.
+%
+% Regenerate:
+%   tectonic architecture_overview.tex
+%   pdftocairo -svg architecture_overview.pdf architecture_overview.svg
+
+\documentclass[10pt,border=1mm]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
+
+\definecolor{fzjblue}{HTML}{023D6B}
+\definecolor{fzjdark}{HTML}{012845}
+\definecolor{tintblue}{HTML}{DCE9F2}
+\definecolor{phasefill}{HTML}{F4F8FB}
+\definecolor{teal}{HTML}{21918C}
+\definecolor{amber}{HTML}{A8681A}
+\definecolor{extfill}{HTML}{E6E9EC}
+\definecolor{extline}{HTML}{8A94A0}
+\definecolor{greytext}{HTML}{3F4A55}
+
+% DECLARATIONS, not TikZ styles: a style cannot be applied to part of a node's
+% text, which is what the phase tags and the two kinds of stage line need.
+\newcommand{\ph}{\tiny\color{greytext}}
+\newcommand{\stg}{\tiny\color{fzjdark}}
+\newcommand{\opt}{\tiny\color{amber}}
+\newcommand{\kw}{\scriptsize\color{greytext}}
+
+\begin{document}
+\begin{tikzpicture}[
+  x=1mm, y=1mm,
+  api/.style={
+    draw=fzjblue, line width=0.45mm, fill=tintblue, text=fzjdark,
+    align=center, font=\small},
+  int/.style={
+    draw=fzjblue, line width=0.45mm, fill=white, text=fzjdark,
+    align=center, font=\small},
+  % UML Action: a ROUND-CORNERED rectangle. This is the only thing separating
+  % the pipeline's temporal phases from the components around them.
+  phase/.style={
+    draw=fzjblue, line width=0.35mm, fill=phasefill, text=fzjdark,
+    rounded corners=2.2mm,
+    minimum width=22.5mm, minimum height=25mm, text width=19.5mm,
+    align=center, font=\scriptsize},
+  ext/.style={
+    draw=extline, line width=0.4mm, fill=extfill, text=greytext,
+    minimum width=40mm, minimum height=15mm, text width=36mm,
+    align=center, font=\small},
+  hdr/.style={font=\small, text=fzjdark, align=center},
+  mem/.style={font=\scriptsize, text=fzjdark, align=left, anchor=north west},
+  rule/.style={draw=fzjblue, line width=0.3mm},
+  % UML Dependency: dashed line, open arrowhead. Keyword declared in the legend.
+  dep/.style={-{Straight Barb[scale=1.6]}, dashed, draw=fzjblue, line width=0.3mm},
+  extdep/.style={dep, draw=extline},
+  % UML ObjectFlow between Actions: SOLID line, open arrowhead. The label names
+  % the object that flows.
+  conn/.style={-{Straight Barb[scale=2]}, draw=teal, line width=0.5mm},
+  flbl/.style={font=\tiny, text=fzjdark, align=center, anchor=south,
+               text width=14mm, inner sep=0.25mm},
+  elbl/.style={font=\scriptsize, text=greytext, inner sep=1.4pt, fill=white},
+  lgd/.style={font=\scriptsize, text=greytext, anchor=west}
+]
+\hyphenpenalty=10000 \exhyphenpenalty=10000
+
+% ══ provided interface: the entry point, in UML ball notation ══════════════
+\node[circle, draw=fzjblue, line width=0.4mm, fill=white, minimum size=4mm,
+      inner sep=0] (iface) at (77,-6) {};
+\draw[draw=fzjblue, line width=0.4mm] (iface.south) -- (77,-16);
+\node[anchor=west, font=\scriptsize, text=fzjdark] at (80.5,-6) {aggregate()};
+
+% ══ row A — the three components that expose public API ════════════════════
+% The whole c1 column is left-aligned at x = 9, not x = 2, to open the lane the
+% Tools -> Plotly dependency needs. See the LANE note in the header.
+% unstack_to_periods sits here rather than in API. It IS public API
+% (tsam.__all__), but its documented job is reshaping a series for a plotly
+% heatmap (api.py:282) — it is never part of an aggregate() call. Grouping it
+% with the other user-facing helpers says that; the cost is that the box is a
+% purpose grouping here, since the function's module is api.py. Written without
+% "(...)": at \scriptsize the parenthesised form sets 38.9 mm and would spill
+% the 37 mm box, and `tuning` / `plot` carry no parens either.
+\node[api, minimum width=41mm, minimum height=24mm] (tools) at (29.5,-28) {};
+\node[hdr] at (29.5,-20) {Tools};
+\draw[rule] (9,-24) -- (50,-24);
+\node[mem, text width=37mm] at (11,-25)
+  {+ tuning\\+ plot\\+ unstack\_to\_periods};
+
+\node[api, minimum width=44mm, minimum height=28mm] (apic) at (77,-30) {};
+\node[hdr] at (77,-20) {API};
+\draw[rule] (55,-24) -- (99,-24);
+\node[mem, text width=40mm] at (57,-25)
+  {+ aggregate(data, n\_clusters,\\
+   \quad cluster: ClusterConfig,\\
+   \quad segments: SegmentConfig,\\
+   \quad extremes: ExtremeConfig, \ldots)\\
+   \quad $\rightarrow$ AggregationResult};
+
+\node[api, minimum width=48mm, minimum height=26mm] (results) at (133,-29) {};
+\node[hdr] at (133,-20) {Results};
+\draw[rule] (109,-24) -- (157,-24);
+\node[mem, text width=44mm] at (111,-25)
+  {+ AggregationResult\\+ ClusteringResult\\+ AccuracyMetrics\\+ ConcurrencyMetrics};
+
+% ══ Pipeline — a component whose second compartment holds the ACTIVITY ═════
+\node[int, minimum width=148mm, minimum height=41mm] (pipeline) at (83,-76.5) {};
+\node[hdr] at (83,-60) {Pipeline};
+\draw[rule] (9,-64) -- (157,-64);
+
+% The activity's name, in the upper left of the compartment that frames it —
+% which is where UML puts it. It is the one place \guillemotleft activity\guillemotright appears; saying
+% it here rather than in the legend is what tells the reader that the four
+% round-cornered boxes below are steps of a run and not four more parts.
+\node[anchor=north west, font=\tiny, text=greytext, inner sep=0.2mm]
+  at (11,-64.5) {\guillemotleft activity\guillemotright{} \texttt{run\_pipeline}};
+
+\node[phase] (p1) at ( 24.25,-80.5)
+  {{\ph Phase 1}\\[0.4mm]\textbf{Prepare data}\\[0.8mm]
+   {\stg normalize\\\texttt{unstack\_to\_periods}\\}{\opt apply weights\\add period sums}};
+\node[phase] (p2) at ( 63.42,-80.5)
+  {{\ph Phase 2}\\[0.4mm]\textbf{Cluster}\\[0.8mm]
+   {\stg assign clusters\\representations}};
+\node[phase] (p3) at (102.58,-80.5)
+  {{\ph Phase 3}\\[0.4mm]\textbf{Refine}\\[0.8mm]
+   {\opt extreme periods\\unweight\\}{\stg count occurrences\\}{\opt rescale\\segment}};
+\node[phase] (p4) at (141.75,-80.5)
+  {{\ph Phase 4}\\[0.4mm]\textbf{Build result}\\[0.8mm]
+   {\stg denormalize\\reconstruct\\accuracy metrics}};
+
+% Object flows between the actions, labelled with the object each conveys. The
+% labels are free-standing nodes in the gaps, NOT pos= labels on the paths.
+% A label node is 16 mm of text width plus 0.6 mm of inner sep a side = 17.2 mm,
+% so the gap must exceed that: at the previous 24.45 mm parts the gap was
+% 16.4 mm and "Refined Representatives" overlapped the Phase 4 box.
+\draw[conn] ( 35.50,-80.5) -- ( 52.17,-80.5);
+\draw[conn] ( 74.67,-80.5) -- ( 91.33,-80.5);
+\draw[conn] (113.83,-80.5) -- (130.50,-80.5);
+% Anchored south at -76.5, not -79: the flow sits at -80.5 and its Straight
+% Barb at scale 2 reaches ~1.5 mm above the line, which was touching the
+% descenders of the two-line labels. All three move together so the row stays
+% level.
+\node[flbl] at ( 43.83,-76.5)  {Prepared\\Data};
+\node[flbl] at ( 83.00,-76.5) {Cluster\\Assignment};
+% "Representatives" sets 17.4 mm at \tiny, wider than the 16.67 mm gap, so it
+% overran the Phase 4 border. Hyphenation is off globally (\hyphenpenalty),
+% so the break is made by hand.
+\node[flbl] at (122.17,-76.5)  {Refined\\Represen-\\tatives};
+
+% ══ row C ══════════════════════════════════════════════════════════════════
+% Commons and Configuration carry \guillemotleft shared\guillemotright and NO arrows: they are used by
+% every building block, and one arrow each would assert the wrong relationship.
+% Commons has no API compartment, so the keyword rides in the node's own text
+% and centres itself; a separate \node[hdr] sat visibly high in the box.
+\node[int, minimum width=41mm, minimum height=18mm, text width=37mm]
+  (commons) at (29.5,-114) {{\kw \guillemotleft shared\guillemotright}\\[0.3mm]Commons};
+
+\node[int, minimum width=44mm, minimum height=18mm] (algorithms) at (77,-114) {Algorithms};
+
+% Distribution and MinMaxMean are in tsam.__all__ too, so the "+ = public API"
+% convention was incomplete without them. They are not peers of the three
+% configs — they are the values the `representation` attribute of ClusterConfig
+% and SegmentConfig takes — hence the indented run-in line rather than two more
+% "+" entries.
+\node[api, minimum width=48mm, minimum height=30mm] (config) at (133,-120) {};
+\node[hdr] at (133,-109.5) {{\kw \guillemotleft shared\guillemotright}\\[0.3mm]Configuration};
+\draw[rule] (109,-114.5) -- (157,-114.5);
+\node[mem, text width=44mm] at (111,-115.5)
+  {+ ClusterConfig\\+ SegmentConfig\\+ ExtremeConfig\\
+   \quad{\tiny .representation takes}\\
+   \quad + Distribution, MinMaxMean};
+
+% ══ the tsam package: UML package notation (body + folder tab) ═════════════
+\begin{scope}[on background layer]
+  \node[draw=fzjblue, line width=0.45mm, fill=white, inner sep=3.5mm,
+        fit=(tools)(apic)(results)(pipeline)(commons)(algorithms)(config)(iface)]
+        (tsambox) {};
+  \draw[draw=fzjblue, line width=0.45mm, fill=white]
+    (tsambox.north west) rectangle ++(30,8);
+\end{scope}
+\node[anchor=west, text=fzjblue, font=\small\bfseries]
+  at ([shift={(2mm,4mm)}]tsambox.north west) {tsam};
+
+% ══ externals ══════════════════════════════════════════════════════════════
+% The pervasive dependencies go in the free c1 slot, with no edges, for the
+% same reason Commons and Configuration have none: NumPy and pandas are used by
+% every building block, so one arrow each would assert the wrong relationship.
+% Plotly is not pervasive — only Tools uses it — and a full-width Pipeline
+% whitebox blocks every vertical lane between row A and this row, so it cannot
+% be given an honest edge either; it is named here with its user instead.
+% Two boxes, not one: NumPy and pandas are \guillemotleft shared\guillemotright and Plotly is not, so
+% putting them in a single box made the keyword claim something false about
+% Plotly. The pocket below Tools (x 2..46, y -36..-56) is free but unusable —
+% it is INSIDE the package rectangle, and an external dependency drawn there
+% would read as part of tsam. A UML package is a rectangle; it cannot be
+% notched around the box.
+% Plotly is the UPPER box so the lane can reach its west edge without the
+% vertical passing through the other box.
+\node[ext, minimum width=41mm, minimum height=9mm, text width=37mm]
+  (plotly) at ( 29.5,-150) {Plotly};
+\node[ext, minimum width=41mm, minimum height=8mm, text width=37mm]
+  (pydata) at ( 29.5,-160.5)
+  {{\kw \guillemotleft shared\guillemotright}\\pandas \textperiodcentered{} NumPy};
+
+\node[ext] (sklearn) at ( 77,-154.5) {scikit-learn};
+\node[ext] (pyomo)   at (133,-154.5)
+  {Pyomo\\{\tiny HiGHS \textperiodcentered{} CBC \textperiodcentered{} Gurobi
+   \textperiodcentered{} CPLEX}};
+
+% ══ dependencies — all orthogonal ══════════════════════════════════════════
+\draw[dep] ( 50,-26)  -- ( 55,-26);                 % Tools -> API
+\draw[dep] ( 99,-26)  -- (109,-26);                 % API -> Results
+\draw[dep] ( 77,-44)  -- ( 77,-56);                 % API -> Pipeline
+\draw[dep] (150,-56)  -- (150,-42);                 % Pipeline -> Results
+\draw[dep] ( 77,-97)  -- ( 77,-105);                % Pipeline -> Algorithms
+
+% Tools -> Plotly, down the only corridor that exists. Every column is
+% left-aligned at x = 9 and the package boundary lands at 5.5, so the lane at
+% x = 1 runs OUTSIDE the package with 4.5 mm of daylight — enough not to read
+% as a second border. It leaves Tools' west edge, so it crosses the boundary
+% once, at the top, which is exactly what a dependency leaving the package
+% should do.
+\draw[extdep] (  9,-26) -- (  1,-26) -- (  1,-150) -- (  9,-150);
+
+\draw[extdep] ( 77,-123) -- ( 77,-147);             % Algorithms -> scikit-learn
+\draw[extdep] ( 99,-114) -- (104,-114) -- (104,-154.5) -- (113,-154.5);
+% On the RIGHT of its own lane, not the left. Anchored east at (102,-142) the
+% label reached back to x 82.6, close enough to the scikit-learn lane at x = 77
+% to be read as labelling that edge instead. Here it touches x = 104 with 1 mm
+% of daylight and is 28 mm clear of x = 77.
+\node[elbl, anchor=west] at (105.5,-143.5) {exact kmedoids};
+
+% ══ key ════════════════════════════════════════════════════════════════════
+% Row 1 colour swatches (what kind of component), row 2 shape and edge kinds
+% (what kind of element), row 3 the two text conventions. Row 2 runs THREE
+% columns so the round-cornered swatch fits without a fourth row, which the
+% aspect budget cannot pay for.
+\node[api, minimum width=12mm, minimum height=6mm] at ( 8,-171) {};
+\node[lgd] at (15.5,-171) {exposes public API};
+
+\node[int, minimum width=12mm, minimum height=6mm] at (52,-171) {};
+\node[lgd] at (59.5,-171) {internal to tsam};
+
+\node[ext, minimum width=12mm, minimum height=6mm, text width=8mm] at (95,-171) {};
+\node[lgd] at (102.5,-171) {external dependency};
+
+% The shape swatch. 1.5 mm of radius, not the phases' 2.2, because the swatch
+% is 6 mm tall and 2.2 would round it into a lozenge.
+\node[phase, rounded corners=1.5mm, minimum width=12mm, minimum height=6mm,
+      text width=8mm] at (8,-179) {};
+\node[lgd] at (15.5,-179) {pipeline phase (action)};
+
+\draw[dep] (53,-179) -- (65,-179);
+\node[lgd] at (66.5,-179)
+  {\guillemotleft use\guillemotright{} dependency};
+
+\draw[conn] (98,-179) -- (110,-179);
+\node[lgd] at (111.5,-179) {object flow between phases};
+
+\node[lgd, text=amber] at (4,-187) {\textit{amber}};
+\node[lgd] at (17.5,-187) {stage runs only when configured};
+
+\node[lgd, text=greytext] at (72,-187) {\guillemotleft shared\guillemotright};
+\node[lgd] at (85.5,-187) {used by every building block};
+
+\end{tikzpicture}
+\end{document}

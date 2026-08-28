@@ -1,0 +1,336 @@
+% Feature Model of the tsam aggregation configuration — VERSION 3.
+%
+% v1 = feature_model.tex        (phase tags, no owners)
+% v2 = feature_model_v2.tex     (phase tags AND owners — mixed two concerns)
+% v3 = this file                (owners only, one owner per column)
+%
+% Notation: FODA feature diagram (Kang et al., CMU/SEI-90-TR-21, 1990), the
+% software-product-line notation for describing the space of valid
+% configurations:
+%   filled circle on an edge   = MANDATORY feature
+%   open circle on an edge     = OPTIONAL feature
+%   unfilled arc across a fan  = ALTERNATIVE group (choose EXACTLY ONE)
+%   filled arc across a fan    = OR group (choose ONE OR MORE)
+%   dashed arrow               = cross-tree constraint (requires)
+%
+% ── WHAT V3 CHANGES, AND WHY ──────────────────────────────────────────────
+%  1. THE PHASE TAGS ARE GONE. A feature model describes which configurations
+%     are legal; WHEN a feature takes effect is a runtime concern and belongs to
+%     the architecture figure, which already shows all four phases with their
+%     stage lists. The tags were also not even true: `weights` is applied in
+%     Phase 1 and undone in Phase 3, so no single phase labels it. Column order
+%     still follows the pipeline, which carries the sequence implicitly without
+%     the diagram asserting temporal semantics it has no notation for.
+%  2. ONE OWNER PER COLUMN. v2 tagged the Weighting group `ClusterConfig` and
+%     then had to tag one leaf `aggregate()`, because `weights` is a keyword
+%     argument while the scaling flags are ClusterConfig fields. A column that
+%     mixes owners defeats the point of the tag, so the aggregate() keywords now
+%     have their own column and every column names exactly one object.
+%  3. MinMaxMean IS EXPANDED, like Distribution. Both are classes a caller
+%     constructs, so both get their parameters drawn. max_columns / min_columns
+%     form an OR group: MinMaxMean with neither populated returns plain mean
+%     (see issue #490), so at least one is required for the feature to do
+%     anything.
+%
+% ── OWNERSHIP, VERIFIED AGAINST THE CODE ──────────────────────────────────
+% src/tsam/api.py:25-38 and src/tsam/config.py:
+%   aggregate()     weights, preserve_column_means, rescale_exclude_columns
+%   ClusterConfig   method, representation, scale_by_column_means,
+%                   use_duration_curves, include_period_sums
+%   ExtremeConfig   method
+%   SegmentConfig   n_segments, representation
+%   Distribution    scope, preserve_minmax, concurrency  (a value of
+%                   ClusterConfig.representation / SegmentConfig.representation)
+%   MinMaxMean      max_columns, min_columns  (likewise)
+%
+% ── WHY SOME GROUPS HAVE NO ARC ───────────────────────────────────────────
+% An arc means the children form a group — pick exactly one, or pick one or
+% more. The aggregate() keywords, the ClusterConfig flags and Segmentation's
+% two fields are not groups: each is independently settable, so each edge
+% carries its own marker instead. v1/v2 drew the weighting options as an OR
+% group, which was wrong — nothing forces you to set any of them.
+%
+% ── PRINT TARGET ──────────────────────────────────────────────────────────
+% Text column 165.1 x 228.6 mm, figures at full width: ASPECT h/w <= 1.24 and
+% WIDTH <= ~165 mm. Dropping the phase line returns the group boxes to 11 mm
+% and the leaf pitch to 10 mm, which is what pays for MinMaxMean's expansion.
+%
+% ── MEASURED WIDTHS (\settowidth, read out of the PDF) ────────────────────
+% Leaf boxes are 21 mm wide with 18.5 mm of text width; group boxes 24.5 /
+% 21.5 mm. At \scriptsize:
+%   representation 17.43   column_means 18.56   max_columns 17.23
+%   MinMaxMean     17.01   Distribution 14.97   hierarchical 14.16
+%   n_segments     14.64   new_cluster  15.04   independent  14.96
+%   Keyword options 20.72 (breaks at the space)
+% At \tiny: ClusterConfig \ttfamily 12.14, aggregate() \ttfamily 10.27,
+%   rescale_exclude_ 18.31.
+% All inside their boxes. `representation` was suspected of overflowing and
+% does not — 17.43 < 18.5.
+%
+% ── LAYOUT GRID (millimetres, y negative downwards) ───────────────────────
+% BAND 1 — six columns, pitch 27, boxes 24.5 mm:
+%   c1 = 17 Keyword options  c2 = 44 Grouping       c3 = 71 Representation
+%   c4 = 98 Clustering input c5 = 125 Extreme       c6 = 152 Segmentation
+%   root (84.5,-8) 44x9   bar -18   markers -20.7   groups -24..-35
+%   leaf bus ci-15, elbow -40 -> -38, stub ci-15 -> ci-10.5
+%   leaves 21 mm (ci +/- 10.5), rows -46 -56 -66 -76 -86 -96
+% BAND 2 — two expansions side by side, so MinMaxMean costs no extra height:
+%   Distribution root (50,-110) 44x9;  MinMaxMean root (136,-110) 44x9
+%   Distribution sub-columns pitch 32: 18, 50, 82; boxes and leaves 24 mm;
+%     sub-bus ci-16, elbow -140, leaves rows -147 -156 -165 -174 -183
+%   MinMaxMean bus x 110, leaves 40 mm at (136,-125) and (136,-134)
+%   Lanes: Distribution connector x 86 (y -76..-104), MinMaxMean connector
+%     x 89 (y -86..-98) then y -98 eastwards — starts right of 86, so the two
+%     never cross. Constraint lane x 32: 2 mm from scope's leaves (end 30) and
+%     2 mm from concurrency's bus (34).
+%
+% ── TRAPS ─────────────────────────────────────────────────────────────────
+%   * A TikZ node CLIPS NOTHING and LaTeX will not break at `\_`.
+%   * A TikZ STYLE cannot be applied to part of a node's text; the owner tag
+%     uses a \newcommand DECLARATION.
+%   * NEVER sed this file — a `s/\\wd/.../` pattern once rewrote every bare
+%     "wd", turning \newcommand into \newcommamywd.
+%
+% Regenerate:
+%   tectonic feature_model_v3.tex
+%   pdftocairo -svg feature_model_v3.pdf feature_model_v3.svg
+
+\documentclass[10pt,border=1mm]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
+
+\definecolor{fzjblue}{HTML}{023D6B}
+\definecolor{fzjdark}{HTML}{012845}
+\definecolor{tintblue}{HTML}{DCE9F2}
+\definecolor{amber}{HTML}{A8681A}
+\definecolor{ambertint}{HTML}{FBF1E4}
+\definecolor{greytext}{HTML}{3F4A55}
+
+% A DECLARATION, not a TikZ style: a style cannot be applied to part of a
+% node's text, which is what the owner tag needs.
+\newcommand{\ow}{\tiny\ttfamily\color{fzjdark}}
+
+\begin{document}
+\begin{tikzpicture}[
+  x=1mm, y=1mm,
+  root/.style={
+    draw=fzjblue, line width=0.55mm, fill=tintblue, text=fzjdark,
+    minimum width=44mm, minimum height=9mm, text width=40mm,
+    align=center, font=\small\bfseries},
+  grpm/.style={
+    draw=fzjblue, line width=0.5mm, fill=tintblue, text=fzjdark,
+    minimum width=24.5mm, minimum height=11mm, text width=21.5mm,
+    align=center, font=\scriptsize},
+  grpo/.style={
+    draw=amber, line width=0.5mm, dash pattern=on 1.6mm off 1.2mm,
+    fill=ambertint, text=fzjdark,
+    minimum width=24.5mm, minimum height=11mm, text width=21.5mm,
+    align=center, font=\scriptsize},
+  leaf/.style={
+    draw=fzjblue, line width=0.3mm, fill=white, text=fzjdark,
+    minimum width=21mm, minimum height=8mm, text width=18.5mm,
+    align=center, font=\scriptsize},
+  leafo/.style={
+    draw=amber, line width=0.3mm, fill=white, text=fzjdark,
+    minimum width=21mm, minimum height=8mm, text width=18.5mm,
+    align=center, font=\scriptsize},
+  leafx/.style={leaf, line width=0.6mm, fill=tintblue},
+  % band 2 sub-groups and leaves
+  sgrpm/.style={grpm, minimum width=24mm, text width=21mm},
+  sgrpo/.style={grpo, minimum width=24mm, text width=21mm},
+  sleaf/.style={leaf, minimum width=24mm, text width=21mm},
+  sleafo/.style={leafo, minimum width=24mm, text width=21mm},
+  wleafo/.style={leafo, minimum width=40mm, text width=37mm},
+  edge/.style={draw=fzjblue, line width=0.35mm},
+  edgeo/.style={draw=amber, line width=0.35mm},
+  % arcs keep their column's colour in the drawing; black in the legend, where
+  % the two group kinds are colour-independent
+  arc/.style={draw=fzjblue, line width=0.5mm},
+  arco/.style={draw=amber, line width=0.5mm},
+  arck/.style={draw=black, line width=0.5mm},
+  edgek/.style={draw=black, line width=0.35mm},
+  req/.style={-{Straight Barb[scale=1.5]}, dashed, draw=greytext,
+              line width=0.35mm},
+  lgd/.style={font=\scriptsize, text=greytext, anchor=west}
+]
+\hyphenpenalty=10000 \exhyphenpenalty=10000
+
+% ══════════════════════════════════════════════════════════════════════════
+% BAND 1 — six columns, ONE owning object each, in pipeline order
+% ══════════════════════════════════════════════════════════════════════════
+\node[root] (root) at (84.5,-8) {aggregate()};
+\draw[edge] (84.5,-12.5) -- (84.5,-18);
+\draw[edge] (17,-18) -- (152,-18);
+
+\foreach \x in {44,71}{
+  \draw[edge] (\x,-18) -- (\x,-24);
+  \node[circle, draw=fzjblue, fill=fzjblue, line width=0.3mm,
+        minimum size=3.2mm, inner sep=0] at (\x,-20.7) {};
+}
+\foreach \x in {17,98,125,152}{
+  \draw[edgeo] (\x,-18) -- (\x,-24);
+  \node[circle, draw=amber, fill=white, line width=0.35mm,
+        minimum size=3.2mm, inner sep=0] at (\x,-20.7) {};
+}
+
+\node[grpo] at ( 17,-29.5) {\textbf{Keyword}\\\textbf{options}\\{\ow aggregate()}};
+\node[grpm] at ( 44,-29.5) {\textbf{Grouping}\\{\ow ClusterConfig}};
+\node[grpm] at ( 71,-29.5) {\textbf{Represen-}\\\textbf{tation}\\{\ow ClusterConfig}};
+\node[grpo] at ( 98,-29.5) {\textbf{Clustering}\\\textbf{input}\\{\ow ClusterConfig}};
+\node[grpo] at (125,-29.5) {\textbf{Extreme}\\\textbf{periods}\\{\ow ExtremeConfig}};
+\node[grpo] at (152,-29.5) {\textbf{Segmen-}\\\textbf{tation}\\{\ow SegmentConfig}};
+
+% ── c1 aggregate() keywords — three INDEPENDENT optional features ─────────
+% No arc: nothing forces you to set any of them.
+\draw[edgeo] (17,-35) -- (17,-38) -- (2,-38) -- (2,-66);
+\foreach \y in {-46,-56,-66}{
+  \draw[edgeo] (2,\y) -- (6.5,\y);
+  \node[circle, draw=amber, fill=white, line width=0.3mm,
+        minimum size=2.2mm, inner sep=0] at (4.25,\y) {};
+}
+\node[leafo] at (17,-46) {weights};
+\node[leafo] at (17,-56) {preserve\_\\column\_means};
+\node[leafo] at (17,-66) {\tiny rescale\_exclude\_\\columns};
+
+% ── c2 Grouping — ALTERNATIVE group, 6 leaves ─────────────────────────────
+\draw[edge] (44,-35) -- (44,-38) -- (29,-38) -- (29,-96);
+\foreach \y in {-46,-56,-66,-76,-86,-96}{ \draw[edge] (29,\y) -- (33.5,\y); }
+\draw[arc] (33.5,-46) arc[start angle=90, end angle=270, x radius=3mm, y radius=25mm];
+\node[leaf] at (44,-46) {averaging};
+\node[leaf] at (44,-56) {kmeans};
+\node[leaf] at (44,-66) {kmedoids};
+\node[leaf] at (44,-76) {kmaxoids};
+\node[leaf] at (44,-86) {hierarchical};
+\node[leaf] at (44,-96) {contiguous};
+
+% ── c3 Representation — ALTERNATIVE group, 5 leaves ───────────────────────
+% Distribution and MinMaxMean are drawn heavier and tinted: both are classes,
+% both are expanded in band 2.
+\draw[edge] (71,-35) -- (71,-38) -- (56,-38) -- (56,-86);
+\foreach \y in {-46,-56,-66,-76,-86}{ \draw[edge] (56,\y) -- (60.5,\y); }
+\draw[arc] (60.5,-46) arc[start angle=90, end angle=270, x radius=3mm, y radius=20mm];
+\node[leaf]  at (71,-46) {mean};
+\node[leaf]  at (71,-56) {medoid};
+\node[leaf]  at (71,-66) {maxoid};
+\node[leafx] at (71,-76) {Distribution};
+\node[leafx] at (71,-86) {MinMaxMean};
+
+% ── c4 Clustering input — three INDEPENDENT optional flags ────────────────
+\draw[edgeo] (98,-35) -- (98,-38) -- (83,-38) -- (83,-66);
+\foreach \y in {-46,-56,-66}{
+  \draw[edgeo] (83,\y) -- (87.5,\y);
+  \node[circle, draw=amber, fill=white, line width=0.3mm,
+        minimum size=2.2mm, inner sep=0] at (85.25,\y) {};
+}
+\node[leafo] at (98,-46) {scale\_by\\column\_means};
+\node[leafo] at (98,-56) {use\_duration\\\_curves};
+\node[leafo] at (98,-66) {include\_\\period\_sums};
+
+% ── c5 Extreme periods — ALTERNATIVE group, 3 leaves ──────────────────────
+\draw[edgeo] (125,-35) -- (125,-38) -- (110,-38) -- (110,-66);
+\foreach \y in {-46,-56,-66}{ \draw[edgeo] (110,\y) -- (114.5,\y); }
+\draw[arco] (114.5,-46) arc[start angle=90, end angle=270, x radius=3mm, y radius=10mm];
+\node[leafo] at (125,-46) {append};
+\node[leafo] at (125,-56) {replace};
+\node[leafo] at (125,-66) {new\_cluster};
+
+% ── c6 Segmentation — both fields required once it is on ──────────────────
+\draw[edgeo] (152,-35) -- (152,-38) -- (137,-38) -- (137,-56);
+\foreach \y in {-46,-56}{
+  \draw[edgeo] (137,\y) -- (141.5,\y);
+  \node[circle, draw=amber, fill=amber, line width=0.3mm,
+        minimum size=2.2mm, inner sep=0] at (139.25,\y) {};
+}
+\node[leafo] at (152,-46) {n\_segments};
+\node[leafo] at (152,-56) {representation};
+
+% ══════════════════════════════════════════════════════════════════════════
+% BAND 2 — the two representation classes, expanded side by side
+% ══════════════════════════════════════════════════════════════════════════
+\draw[edge] (81.5,-76) -- (86,-76) -- (86,-104) -- (50,-104) -- (50,-105.5);
+\draw[edge] (81.5,-86) -- (89,-86) -- (89,-98) -- (136,-98) -- (136,-105.5);
+
+\node[root] (dist) at ( 50,-110) {Distribution};
+\node[root] (mmm)  at (136,-110) {MinMaxMean};
+
+% ── Distribution: three independent parameters ────────────────────────────
+\draw[edge] (50,-114.5) -- (50,-120);
+\draw[edge] (18,-120) -- (82,-120);
+
+\draw[edge] (18,-120) -- (18,-125.5);
+\node[circle, draw=fzjblue, fill=fzjblue, line width=0.3mm,
+      minimum size=3.2mm, inner sep=0] at (18,-122.5) {};
+\foreach \x in {50,82}{
+  \draw[edgeo] (\x,-120) -- (\x,-125.5);
+  \node[circle, draw=amber, fill=white, line width=0.35mm,
+        minimum size=3.2mm, inner sep=0] at (\x,-122.5) {};
+}
+
+\node[sgrpm] at (18,-131) {\textbf{scope}};
+\node[sgrpo] at (50,-131) {\textbf{concurrency}};
+\node[sgrpo] at (82,-131) {\textbf{preserve\_}\\\textbf{minmax}};
+
+% scope — ALTERNATIVE group, 2 leaves
+\draw[edge] (18,-136.5) -- (18,-140) -- (2,-140) -- (2,-156);
+\foreach \y in {-147,-156}{ \draw[edge] (2,\y) -- (6,\y); }
+\draw[arc] (6,-147) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=4.5mm];
+\node[sleaf] at (18,-147) {local};
+\node[sleaf] at (18,-156) {global};
+
+% concurrency — ALTERNATIVE group, 5 leaves
+\draw[edgeo] (50,-136.5) -- (50,-140) -- (34,-140) -- (34,-183);
+\foreach \y in {-147,-156,-165,-174,-183}{ \draw[edgeo] (34,\y) -- (38,\y); }
+\draw[arco] (38,-147) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=18mm];
+\node[sleafo] at (50,-147) {independent};
+\node[sleafo] at (50,-156) {reference};
+\node[sleafo] at (50,-165) {medoid};
+\node[sleafo] at (50,-174) {consensus};
+\node[sleafo] at (50,-183) {assignment};
+
+% cross-tree constraint: concurrency is only valid with scope = local
+\draw[req] (38,-131) -- (32,-131) -- (32,-147) -- (30,-147);
+
+% ── MinMaxMean: an OR group — at least one column list must be given ──────
+% With neither populated MinMaxMean returns plain mean (issue #490), so this is
+% an OR group, not two independent optional features.
+\draw[edgeo] (136,-114.5) -- (136,-118) -- (110,-118) -- (110,-134);
+\foreach \y in {-125,-134}{ \draw[edgeo] (110,\y) -- (116,\y); }
+\filldraw[arco, fill=amber]
+  (116,-125) arc[start angle=90, end angle=270, x radius=4mm, y radius=4.5mm] -- cycle;
+\node[wleafo] at (136,-125) {max\_columns};
+\node[wleafo] at (136,-134) {min\_columns};
+
+% ══ key ═══════════════════════════════════════════════════════════════════
+\node[circle, draw=fzjblue, fill=fzjblue, line width=0.3mm,
+      minimum size=3.2mm, inner sep=0] at (4,-195) {};
+\node[lgd] at (7.5,-195) {mandatory};
+
+\node[circle, draw=amber, fill=white, line width=0.35mm,
+      minimum size=3.2mm, inner sep=0] at (40,-195) {};
+\node[lgd] at (43.5,-195) {optional};
+
+\draw[edgek] (72,-192.5) -- (76,-192.5);
+\draw[edgek] (72,-197.5) -- (76,-197.5);
+\draw[edgek] (72,-197.5) -- (72,-192.5);
+\draw[arck] (76,-192.5) arc[start angle=90, end angle=270, x radius=2mm, y radius=2.5mm];
+\node[lgd] at (78,-195) {choose exactly one};
+
+\draw[edgek] (116,-192.5) -- (120,-192.5);
+\draw[edgek] (116,-197.5) -- (120,-197.5);
+\draw[edgek] (116,-197.5) -- (116,-192.5);
+\filldraw[arck, fill=black]
+  (120,-192.5) arc[start angle=90, end angle=270, x radius=2mm, y radius=2.5mm] -- cycle;
+\node[lgd] at (122,-195) {choose one or more};
+
+\draw[req] (4,-202) -- (16,-202);
+\node[lgd] at (17.5,-202) {requires};
+
+\node[leafx, minimum width=12mm, minimum height=5mm, text width=8mm] at (46,-202) {};
+\node[lgd] at (53.5,-202) {expanded below};
+
+\node[lgd] at (100,-202) {{\ow ClusterConfig}\ \ object you construct};
+
+\end{tikzpicture}
+\end{document}

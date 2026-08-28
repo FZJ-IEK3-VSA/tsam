@@ -23,13 +23,17 @@ output types live in the API reference —
 
 ## Overview
 
-The diagram below traces the user-facing data flow on the left — a **time series**
-and a **`Config`** go into [`aggregate()`][tsam.aggregate], which returns the
-**clustered data** — through the four-phase `run_pipeline()` down the center, with
-the milestone dataclass passed between phases. The right column lists the
-clustering, representation, and segmentation options that Phases 2 and 3 draw on.
+The diagram below is the runtime view of a full [`aggregate()`][tsam.aggregate]
+call: every stage in the order it runs, with the milestone dataclass handed from
+one phase to the next, and a guard on each stage that runs only when the caller
+configures it. Phases 1 and 2 are the left column, Phases 3 and 4 the right.
 
-![Pipeline data flow](../../../assets/architecture/pipeline_diagram.svg)
+![Runtime view of a full aggregate() call](../../../assets/architecture/runtime_view.svg)
+
+For the static side — which modules exist and what depends on what — see the
+building block view:
+
+![Building block view of the tsam library](../../../assets/architecture/building_block_view.svg)
 
 !!! note "Relation to Hoffmann et al. (2020)"
 

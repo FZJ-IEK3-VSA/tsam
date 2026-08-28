@@ -206,7 +206,34 @@ mkdocs build --strict
 
 ### Architecture Diagrams
 
-Architecture diagrams are authored in [D2](https://d2lang.com/). Both the `.d2` sources and the rendered `.svg` outputs live in `docs/assets/architecture/`. To update a diagram, edit the `.d2` file and re-render it with `d2 <name>.d2 <name>.svg`, then commit both files. A conda environment created from the environment.yml file ships the `d2` binary, so contributors who already use that environment do not need a separate install.
+Architecture diagrams are authored in [TikZ](https://tikz.dev/) and compiled with
+[Tectonic](https://tectonic-typesetting.github.io/). The `.tex` sources and the rendered `.pdf` / `.svg` outputs live in `docs/assets/architecture/`. A conda environment created from the environment.yml file ships the `tectonic` binary, so contributors who already use that environment do not need a separate install.
+
+To update a diagram, edit the `.tex` file, then re-render and re-export it:
+
+```bash
+tectonic <name>.tex                     # -> <name>.pdf
+pdftocairo -svg <name>.pdf <name>.svg   # -> the SVG the docs embed
+```
+
+Commit the `.tex`, the `.pdf` and the `.svg`. `pdftocairo` comes from
+[Poppler](https://poppler.freedesktop.org/) and is not part of the project
+environment; install it separately (`conda install -c conda-forge poppler`) if
+you need to regenerate the SVG.
+
+Two conventions matter when editing these files:
+
+- **Positions are literal millimetres and layout is fully manual.** That is
+  deliberate: it is what keeps connectors from being routed through boxes, and it
+  makes the DIN A4 print budget (165 mm printable width) exact rather than
+  something you verify after the fact. If you move a box, check that the lanes
+  the long edges run down are still clear — each is named in a comment.
+- **Font sizes are real points.** `\small` is 9 pt and `\footnotesize` is 8 pt at
+  the 10 pt base; keep 8 pt as the floor so the diagram stays legible in print.
+
+Non-ASCII must be written as LaTeX commands (`\guillemotleft`,
+`\textperiodcentered{}`, `---`) rather than literal UTF-8: under `T1` font
+encoding a raw `«` or `·` silently renders as the wrong glyph.
 
 ## Releasing
 

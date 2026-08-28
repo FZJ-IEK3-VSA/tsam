@@ -1,0 +1,104 @@
+% System Context — arc42 §3 "Context and Scope".
+% Converted from context_diagram.d2 when the project moved to TikZ/tectonic.
+%
+% Notation: a UML use-case-style context sketch — the actor is a UML stick
+% figure, tsam and its neighbours are «system» components, and the arrows are
+% labelled with what actually crosses each boundary. arc42 §3 prescribes no
+% notation, only that the diagram show the system in its environment and name
+% every external interface.
+%
+% The point of this diagram is the SCOPE LINE: tsam neither reads files nor
+% calls any downstream framework. Both of those are the user's job, which is why
+% the modeler — not tsam — owns the arrow into the downstream frameworks.
+%
+% Print target: DIN A4 portrait, 165 mm printable width, ~235 mm usable height.
+% Font sizes are real points (\small = 9 pt, \footnotesize = 8 pt at a 10 pt
+% base), so the print budget holds by construction.
+%
+% Guillemets MUST be written as \guillemotleft / \guillemotright — literal UTF-8
+% « » lands on the wrong glyph slot under T1 encoding.
+%
+% Regenerate:
+%   tectonic context_diagram.tex
+%   pdftocairo -svg context_diagram.pdf context_diagram.svg
+
+\documentclass[10pt,border=3mm]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,shapes.geometric}
+
+\definecolor{fzjblue}{HTML}{023D6B}
+\definecolor{fzjdark}{HTML}{012845}
+\definecolor{tintblue}{HTML}{DCE9F2}
+\definecolor{extfill}{HTML}{E6E9EC}
+\definecolor{extline}{HTML}{8A94A0}
+\definecolor{greytext}{HTML}{3F4A55}
+
+\begin{document}
+\begin{tikzpicture}[
+  x=1mm, y=1mm,
+  % the system under discussion
+  sys/.style={
+    draw=fzjblue, line width=0.8mm, fill=tintblue, text=fzjdark,
+    minimum width=54mm, minimum height=20mm, text width=50mm,
+    align=center, font=\small},
+  % neighbouring systems, outside the scope
+  nbr/.style={
+    draw=extline, line width=0.4mm, fill=extfill, text=greytext,
+    minimum width=54mm, minimum height=20mm, text width=50mm,
+    align=center, font=\small},
+  lbl/.style={font=\footnotesize, text=greytext, align=center, inner sep=1.4pt},
+  rel/.style={-{Straight Barb[scale=1.6]}, draw=fzjblue, line width=0.35mm},
+  extrel/.style={-{Straight Barb[scale=1.6]}, draw=extline, line width=0.35mm}
+]
+\hyphenpenalty=10000 \exhyphenpenalty=10000
+
+% ══ the actor: a UML stick figure ══════════════════════════════════════════
+\begin{scope}[draw=fzjdark, line width=0.4mm]
+  \draw (30,-8) circle (3.2);
+  \draw (30,-11.2) -- (30,-20);
+  \draw (24,-14.5) -- (36,-14.5);
+  \draw (30,-20) -- (25,-27);
+  \draw (30,-20) -- (35,-27);
+\end{scope}
+\node[font=\small, text=fzjdark, align=center, anchor=north] at (30,-29)
+  {Energy-system modeler\\or data scientist};
+
+% ══ the system and its neighbours ══════════════════════════════════════════
+\node[sys] (tsam) at (30,-72)
+  {\textbf{ETHOS.TSAM}\\{\footnotesize\guillemotleft system\guillemotright}\\
+   {\footnotesize time-series aggregation library}};
+\node[nbr] (solver) at (120,-72)
+  {\textbf{MILP solver}\\{\footnotesize\guillemotleft external system\guillemotright}\\
+   {\footnotesize e.g. HiGHS, via Pyomo}};
+\node[nbr] (down) at (120,-20)
+  {\textbf{Downstream frameworks}\\{\footnotesize\guillemotleft external system\guillemotright}\\
+   {\footnotesize ETHOS.FINE, flixopt, oemof}};
+
+% ══ relationships ══════════════════════════════════════════════════════════
+% the modeler drives tsam and receives the aggregation back
+\draw[rel] (30,-40) -- (30,-62);
+\node[lbl, anchor=west] at (33,-51)
+  {passes a \texttt{pandas.DataFrame},\\gets typical periods, cluster\\order and accuracy metrics};
+
+% the modeler — NOT tsam — feeds the result onward. This is the scope line.
+\draw[extrel] (43,-24) -- (93,-24);
+\node[lbl, anchor=south] at (68,-22) {feeds typical periods into\\an optimization model};
+
+% the solver is reached only by the exact k-medoids method
+\draw[extrel] (93,-72) -- (57,-72);
+\node[lbl, anchor=south] at (75,-70) {only for the exact\\k-medoids method};
+
+% ══ scope note ═════════════════════════════════════════════════════════════
+\node[anchor=north west, font=\footnotesize, text=greytext, text width=150mm,
+      align=left] at (0,-100)
+  {\textbf{Scope.} tsam does not read files, write files, or call any downstream
+   framework --- all of that is the user's responsibility, which is why the arrow
+   into the downstream frameworks starts at the modeler and not at tsam. The only
+   optional external dependency is a MILP solver, required when
+   \texttt{ClusterConfig(method="kmedoids")} runs exactly; every other clustering
+   method runs without one.};
+
+\end{tikzpicture}
+\end{document}
