@@ -112,13 +112,16 @@ def compute_accuracy(
     diff = orig - pred
     duration_diff = np.sort(orig, axis=0) - np.sort(pred, axis=0)
 
-    return pd.DataFrame(
-        {
-            "RMSE": np.sqrt((diff**2).mean(axis=0)),
-            "RMSE_duration": np.sqrt((duration_diff**2).mean(axis=0)),
-            "MAE": np.abs(diff).mean(axis=0),
-        },
-        index=normalized_original.columns,
+    return cast(
+        "pd.DataFrame",
+        pd.DataFrame(
+            {
+                "RMSE": np.sqrt((diff**2).mean(axis=0)),
+                "RMSE_duration": np.sqrt((duration_diff**2).mean(axis=0)),
+                "MAE": np.abs(diff).mean(axis=0),
+            },
+            index=normalized_original.columns,
+        ),
     )
 
 
