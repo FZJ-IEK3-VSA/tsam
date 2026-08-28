@@ -61,11 +61,14 @@ def assign_clusters(
         actually received periods. That can be fewer than *n_clusters* — see
         :func:`densify_labels` for why the gaps are closed rather than kept.
     """
-    return densify_labels(
-        _raw_assignment(
+    raw_cluster_order=_raw_assignment(
             candidates, n_clusters, cluster_method, n_iter=n_iter, solver=solver
         )
-    )
+    # Clustering configuration might yield non-dense cluster indices (e.g., when
+    # fewer clusters are needed due to duplicated periods). We reassign indices
+    # to be contiguous so downstream functions have a clear, well-defined data structure.
+    cluster_order= densify_labels(cluster_order=raw_cluster_order)
+    return cluster_order
 
 
 def _raw_assignment(
