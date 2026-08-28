@@ -62,9 +62,9 @@ uv pip install -e ".[develop]"
 **Using conda**
 
 ```bash
-conda env create --file=environment.yml
-conda activate tsam_dev
-pip install -e ".[develop]"
+conda env create -n tsam_env --file=environment.yml
+conda activate tsam_env
+pip install -e . --no-deps
 ```
 
 ## Development Tools
