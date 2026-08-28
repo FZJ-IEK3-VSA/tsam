@@ -20,12 +20,13 @@ def densify_labels(cluster_order: np.ndarray) -> np.ndarray:
     e.g. ``[0, 1, 3]`` for ``n_clusters=8``.
 
     Cluster ids are positions everywhere downstream — representatives live in a
-    list indexed by id, and
-    :func:`~tsam.algorithms.representations.representations` returns one center
-    per *observed* label — so an unused label shifts every cluster above it and
-    leaves the highest one without a representative. Nothing is lost by dropping
-    it: a cluster with no members has no periods to compute a representative
-    from, and contributes nothing to the reconstruction.
+    list indexed by id — so an unused label puts every cluster above it out of
+    step with its representative.
+    :func:`~tsam.algorithms.representations.representations` refuses such a
+    label space outright, which is why densifying happens here, before it is
+    called. Nothing is lost by dropping the label: a cluster with no members has
+    no periods to compute a representative from, and contributes nothing to the
+    reconstruction.
 
     Renumbering preserves order, so a label space that is already dense — every
     method's normal outcome — comes back with its labels unchanged.
@@ -61,13 +62,13 @@ def assign_clusters(
         actually received periods. That can be fewer than *n_clusters* — see
         :func:`densify_labels` for why the gaps are closed rather than kept.
     """
-    raw_cluster_order=_raw_assignment(
-            candidates, n_clusters, cluster_method, n_iter=n_iter, solver=solver
-        )
+    raw_cluster_order = _raw_assignment(
+        candidates, n_clusters, cluster_method, n_iter=n_iter, solver=solver
+    )
     # Clustering configuration might yield non-dense cluster indices (e.g., when
     # fewer clusters are needed due to duplicated periods). We reassign indices
     # to be contiguous so downstream functions have a clear, well-defined data structure.
-    cluster_order= densify_labels(cluster_order=raw_cluster_order)
+    cluster_order = densify_labels(cluster_order=raw_cluster_order)
     return cluster_order
 
 

@@ -48,6 +48,12 @@ def representations(
         index of the original period chosen as each representative; ``None`` for
         the other methods.
 
+    Raises:
+        ValueError: If *cluster_order* leaves a label unused. One center is
+            returned per cluster, so a gap would renumber every cluster above it
+            — callers must densify first (see
+            :func:`~tsam.algorithms.clustering.densify_labels`).
+
     Note:
         Related helpers: mean_representation, medoid_representation,
         maxoid_representation, minmax_mean_representation.

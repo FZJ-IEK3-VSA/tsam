@@ -101,18 +101,27 @@ def _drop_empty_clusters(
 ) -> tuple[list[np.ndarray], np.ndarray, list[int], list[int] | None]:
     """Remove clusters that ended up representing no periods, and close the gap.
 
-    A hole in the label space can open at either end of this phase.
-    ``method="new_cluster"`` can absorb every member of a regular cluster; on
-    the transfer path a stored assignment can arrive with a hole already in it.
-    Cluster ids are positions downstream — representatives are looked up by id,
-    and `representations` returns one center per *observed* label — so a hole
-    misaligns every cluster above it. Nothing is lost by dropping it: a cluster
-    with no periods contributes nothing to the reconstruction, though the run
-    then returns fewer typical periods than ``n_clusters`` asked for.
+    An id can fall out of use at either end of this phase. Both
+    ``method="append"`` and ``method="new_cluster"`` move every extreme period
+    into a cluster of its own, so a small cluster whose members all turn out
+    extreme is left with nothing; ``new_cluster`` pulls neighbours away on top
+    of that. It takes a computed representation, though: an extreme whose
+    profile equals a center is skipped as redundant, so under ``medoid`` the
+    medoid member always stays behind. And on the transfer path a stored
+    assignment can arrive with an unused id already in it — that path skips
+    `assign_clusters`, so `densify_labels` never runs on it. A result this
+    pipeline produced cannot be holed, so that only happens for a hand-built or
+    hand-edited `ClusteringResult`.
 
-    Clustering itself is not a source of holes here: `assign_clusters` already
-    hands back a dense label space, so what this sees is what extremes did to
-    it.
+    Cluster ids are positions downstream, so an unused id has to go: an
+    interior one puts every cluster above it out of step with its
+    representative, and a trailing one leaves a center that surfaces as a
+    typical period representing no periods. Nothing is lost by dropping it,
+    though the run then returns fewer typical periods than ``n_clusters``
+    asked for.
+
+    Not sources: ``method="replace"`` edits centers without touching the
+    assignment, and clustering hands back a dense label space already.
 
     Returns:
         The inputs with empty clusters removed and every id renumbered, or the
