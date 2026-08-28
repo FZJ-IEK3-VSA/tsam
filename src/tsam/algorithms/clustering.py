@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from tsam.algorithms.representations import representations
-from tsam.config import DEFAULT_REPRESENTATION, KMedoids, method_name
+from tsam.config import DEFAULT_REPRESENTATION, KMeans, KMedoids, method_name
 
 if TYPE_CHECKING:
     from tsam.config import ClusterMethod, Distribution, MinMaxMean
@@ -52,8 +52,10 @@ def assign_clusters(
     :func:`cluster_and_represent` for the combined clustering + representation
     step.
 
-    Valid ``cluster_method`` values: 'averaging', 'kmeans', 'kmedoids',
-    'kmaxoids', 'hierarchical', 'contiguous'.
+    ``cluster_method`` is a method name ('averaging', 'kmeans', 'kmedoids',
+    'kmaxoids', 'hierarchical', 'contiguous') or a method-config object —
+    ``KMedoids`` carrying the solver options, ``KMeans`` the restart count and
+    the seed.
 
     Returns:
         The cluster id of each period, as a dense label space: the ids run
@@ -82,11 +84,13 @@ def _raw_assignment(
 ) -> np.ndarray:
     """Dispatch to the clustering method, returning its labels as it produced them."""
 
-    # Split the method argument into the name to dispatch on and the k-medoids
-    # config to run with: the bare string "kmedoids" simply means KMedoids().
+    # Split the method argument into the name to dispatch on and the configs to
+    # run with: the bare strings "kmedoids" and "kmeans" mean nothing more than
+    # KMedoids() and KMeans() with their defaults.
     kmedoids_config = (
         cluster_method if isinstance(cluster_method, KMedoids) else KMedoids()
     )
+    kmeans_config = cluster_method if isinstance(cluster_method, KMeans) else KMeans()
     cluster_method = method_name(cluster_method)
 
     if cluster_method == "averaging":
@@ -100,9 +104,19 @@ def _raw_assignment(
         return np.asarray(order)
 
     if cluster_method == "kmeans":
-        from sklearn.cluster import KMeans
+        # Aliased: the module-level ``KMeans`` is tsam's config object.
+        from sklearn.cluster import KMeans as SklearnKMeans
 
-        k_means = KMeans(n_clusters=n_clusters, max_iter=1000, n_init=n_iter, tol=1e-4)
+        # An explicit n_init on the config wins; otherwise the caller's default
+        # stands, which differs between the ordinary and duration-curve paths.
+        n_init = n_iter if kmeans_config.n_init is None else kmeans_config.n_init
+        k_means = SklearnKMeans(
+            n_clusters=n_clusters,
+            max_iter=1000,
+            n_init=n_init,
+            tol=1e-4,
+            random_state=kmeans_config.random_state,
+        )
         return np.asarray(k_means.fit_predict(candidates))
 
     if cluster_method == "kmedoids":

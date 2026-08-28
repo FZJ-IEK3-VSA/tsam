@@ -94,6 +94,55 @@ class KMedoids:
 
 
 @dataclass(frozen=True)
+class KMeans:
+    """K-means clustering configuration.
+
+    Groups periods around synthesized centroids. Pass it to
+    ``ClusterConfig(method=KMeans(...))`` to control the restart count; the
+    bare string ``method="kmeans"`` is equivalent to ``KMeans()``.
+
+    Args:
+        n_init: How many times k-means is run from a different random
+            initialization, keeping the best result by inertia. ``None`` uses
+            tsam's default, which is 100 for ordinary clustering and 30 when
+            ``use_duration_curves=True``.
+
+            More restarts cost proportionally more time and buy a better and
+            more reproducible optimum: at 40 clusters over a year of 40
+            profiles, 100 restarts take about 600 ms against 60 ms for 10 —
+            scikit-learn's own default — and 6 ms for 1. Lowering it is the
+            single largest speedup available for k-means, at the price of a
+            possibly different local optimum, so it is left to the caller
+            rather than changed here.
+        random_state: Seed for the initialization. ``None`` — the default, and
+            what tsam has always passed — draws from an unseeded RNG, so two
+            identical calls can return different clusters. Set an integer to
+            make a run reproducible; that is worth more the lower ``n_init``
+            is, since fewer restarts leave more of the outcome to the draw.
+    """
+
+    n_init: int | None = None
+    random_state: int | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a JSON-compatible dict tagged with ``type``."""
+        result: dict[str, Any] = {"type": "kmeans"}
+        if self.n_init is not None:
+            result["n_init"] = self.n_init
+        if self.random_state is not None:
+            result["random_state"] = self.random_state
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> KMeans:
+        """Rebuild from a dict."""
+        return cls(
+            n_init=data.get("n_init"),
+            random_state=data.get("random_state"),
+        )
+
+
+@dataclass(frozen=True)
 class Distribution:
     """Representation that preserves the value distribution (duration curve).
 
@@ -251,23 +300,30 @@ class MinMaxMean:
 # Union type for representation (strings remain valid for backward compat)
 Representation = RepresentationMethod | Distribution | MinMaxMean
 
+
 # The clustering method: a string name (backward compat) or a typed object
-# carrying that method's options (currently only ``KMedoids``; more may follow).
-ClusterMethod = ClusterMethodName | KMedoids
+# carrying that method's options (currently ``KMedoids`` and ``KMeans``;
+# more may follow).
+ClusterMethod = ClusterMethodName | KMedoids | KMeans
 
 
 def method_name(method: ClusterMethod) -> ClusterMethodName:
     """Canonical string name of a clustering method, in either form.
 
-    ``KMedoids(...)`` and the bare string ``"kmedoids"`` name the same method,
-    so anything dispatching on the name resolves it through here.
+    A method-config object and the bare string name the same method:
+    ``KMedoids(...)`` is ``"kmedoids"``, ``KMeans(...)`` is ``"kmeans"``. Anything
+    dispatching on the name resolves it through here.
     """
-    return "kmedoids" if isinstance(method, KMedoids) else method
+    if isinstance(method, KMedoids):
+        return "kmedoids"
+    if isinstance(method, KMeans):
+        return "kmeans"
+    return method
 
 
 def method_to_dict(method: ClusterMethod) -> str | dict[str, Any]:
     """Serialize a clustering method to a JSON-compatible format."""
-    if isinstance(method, KMedoids):
+    if isinstance(method, (KMedoids, KMeans)):
         return method.to_dict()
     return method
 
@@ -279,6 +335,8 @@ def method_from_dict(data: str | dict) -> ClusterMethod:
     method_type = data.get("type")
     if method_type == "kmedoids":
         return KMedoids.from_dict(data)
+    if method_type == "kmeans":
+        return KMeans.from_dict(data)
     raise ValueError(f"Unknown clustering method type: {method_type!r}")
 
 
@@ -306,10 +364,13 @@ class ClusterConfig:
     """Configuration for the clustering algorithm.
 
     Args:
-        method: Clustering algorithm to use. Accepts a string shortcut or, for
-            k-medoids, a ``KMedoids`` config object to tune the solver.
+        method: Clustering algorithm to use. Accepts a string shortcut or a
+            config object carrying that method's own options (``KMeans``,
+            ``KMedoids``).
             - "averaging": Sequential averaging of periods
-            - "kmeans": K-means clustering (fast, uses centroids)
+            - "kmeans": K-means clustering (fast, uses centroids); pass
+              ``KMeans(n_init=..., random_state=...)`` to control the restart
+              count and the seed
             - "kmedoids": K-medoids using MILP optimization (uses actual
               periods); pass ``KMedoids(solver=..., options=...)`` to
               configure the solver

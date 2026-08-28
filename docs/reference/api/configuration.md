@@ -15,3 +15,4 @@ segmentation, and extreme-period handling.
         - Distribution
         - MinMaxMean
         - KMedoids
+        - KMeans
