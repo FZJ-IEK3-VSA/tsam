@@ -240,6 +240,11 @@ def use_predefined_assignments(
     medoid periods (if center indices were saved) or recomputed from the new
     candidates under the same assignment.
 
+    This is the one path that does not run `assign_clusters`, so the stored
+    order is never densified. A label space with a gap is caught by
+    `representations` when centers are recomputed, but goes unchecked when
+    center indices were saved; `_drop_empty_clusters` closes it later.
+
     Args:
         candidates: Candidate period matrix for the new data.
         predef: Predefined assignments (``cluster_order`` and optional center

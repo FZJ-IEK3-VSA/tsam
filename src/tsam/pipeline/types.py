@@ -45,7 +45,7 @@ class ExtremePeriod:
 
     column: str | tuple
     kind: ExtremeKind
-    step_no: int
+    period_row_index: int
     profile: np.ndarray
     new_cluster_no: int | None = None
 
