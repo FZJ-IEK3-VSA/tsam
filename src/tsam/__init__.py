@@ -50,6 +50,7 @@ from tsam.config import (
     ClusterConfig,
     Distribution,
     ExtremeConfig,
+    KMedoids,
     MinMaxMean,
     SegmentConfig,
 )
@@ -74,6 +75,7 @@ __all__ = [
     "ConcurrencyMetrics",
     "Distribution",
     "ExtremeConfig",
+    "KMedoids",
     "MinMaxMean",
     "SegmentConfig",
     "aggregate",

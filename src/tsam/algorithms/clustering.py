@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from tsam.algorithms.representations import representations
-from tsam.config import DEFAULT_REPRESENTATION
+from tsam.config import DEFAULT_REPRESENTATION, KMedoids, method_name
 
 if TYPE_CHECKING:
     from tsam.config import ClusterMethod, Distribution, MinMaxMean
@@ -42,9 +42,8 @@ def densify_labels(cluster_order: np.ndarray) -> np.ndarray:
 def assign_clusters(
     candidates: np.ndarray,
     n_clusters: int,
-    cluster_method: str,
+    cluster_method: ClusterMethod,
     n_iter: int = 100,
-    solver: str = "highs",
 ) -> np.ndarray:
     """Assign each period to a cluster.
 
@@ -63,7 +62,10 @@ def assign_clusters(
         :func:`densify_labels` for why the gaps are closed rather than kept.
     """
     raw_cluster_order = _raw_assignment(
-        candidates, n_clusters, cluster_method, n_iter=n_iter, solver=solver
+        candidates,
+        n_clusters,
+        cluster_method,
+        n_iter=n_iter,
     )
     # Clustering configuration might yield non-dense cluster indices (e.g., when
     # fewer clusters are needed due to duplicated periods). We reassign indices
@@ -75,11 +77,18 @@ def assign_clusters(
 def _raw_assignment(
     candidates: np.ndarray,
     n_clusters: int,
-    cluster_method: str,
+    cluster_method: ClusterMethod,
     n_iter: int = 100,
-    solver: str = "highs",
 ) -> np.ndarray:
     """Dispatch to the clustering method, returning its labels as it produced them."""
+
+    # Split the method argument into the name to dispatch on and the k-medoids
+    # config to run with: the bare string "kmedoids" simply means KMedoids().
+    kmedoids_config = (
+        cluster_method if isinstance(cluster_method, KMedoids) else KMedoids()
+    )
+    cluster_method = method_name(cluster_method)
+
     if cluster_method == "averaging":
         n_sets = len(candidates)
         cluster_size = n_sets // n_clusters
@@ -97,9 +106,13 @@ def _raw_assignment(
         return np.asarray(k_means.fit_predict(candidates))
 
     if cluster_method == "kmedoids":
-        from tsam.algorithms.k_medoids_exact import KMedoids
+        from tsam.algorithms.k_medoids_exact import ExactKMedoids
 
-        kmedoids = KMedoids(n_clusters=n_clusters, solver=solver)
+        kmedoids = ExactKMedoids(
+            n_clusters=n_clusters,
+            solver=kmedoids_config.solver,
+            options=kmedoids_config.options,
+        )
         return np.asarray(kmedoids.fit_predict(candidates))
 
     if cluster_method == "kmaxoids":
@@ -135,8 +148,7 @@ def cluster_and_represent(
     candidates: np.ndarray,
     n_clusters: int = 8,
     n_iter: int = 100,
-    cluster_method: str = "kmeans",
-    solver: str = "highs",
+    cluster_method: ClusterMethod = "kmeans",
     representation_method: str | Distribution | MinMaxMean | None = None,
     representation_dict: dict[str, str] | None = None,
     distribution_period_wise: bool = True,
@@ -152,7 +164,10 @@ def cluster_and_represent(
     overrides it).
     """
     cluster_order = assign_clusters(
-        candidates, n_clusters, cluster_method, n_iter=n_iter, solver=solver
+        candidates,
+        n_clusters,
+        cluster_method,
+        n_iter=n_iter,
     )
 
     # Representatives may be drawn from a separate candidate set
@@ -165,8 +180,7 @@ def cluster_and_represent(
     cluster_centers, cluster_center_indices = representations(
         rep_candidates,
         cluster_order,
-        # assign_clusters has already rejected any unknown cluster_method.
-        default=DEFAULT_REPRESENTATION[cast("ClusterMethod", cluster_method)],
+        default=DEFAULT_REPRESENTATION[method_name(cluster_method)],
         representation_method=representation_method,
         representation_dict=representation_dict,
         distribution_period_wise=distribution_period_wise,
