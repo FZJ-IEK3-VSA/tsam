@@ -1,0 +1,55 @@
+% Shared colour palette for the ETHOS.TSAM manuscript figures.
+%
+% ── WHY THIS FILE EXISTS ──────────────────────────────────────────────────
+% Reviewer request on the submitted manuscript:
+%
+%   "I would use as few different colors across your figures as possible. […]
+%    I would make sure that the Jülich blue (RGB 2, 61, 107) is the leading
+%    theme. That + a gray tone are the basic colors in all of your figures,
+%    for shaded boxes e.g. at 70% transparency or so."
+%
+% Each figure used to declare its own \definecolor block, and they drifted:
+% Fig. 1 carried two unrelated light blues plus a teal and an amber, Fig. 2 an
+% amber and a warm amber tint. Declaring the palette ONCE and \input-ing it is
+% what makes "the same colours in every figure" a property of the source
+% rather than a thing to re-check by eye after every edit.
+%
+% ── THE PALETTE ───────────────────────────────────────────────────────────
+% TWO base colours, and nothing else. Every fill in the figures is one of them
+% mixed with white, which is exactly what "70 % transparency over a white
+% page" means and what xcolor's `!nn` suffix computes: fzjbluetint is Jülich
+% blue at 30 % opacity.
+%
+%   fzjblue  #023D6B  Jülich blue, RGB 2/61/107 — the leading theme. It draws
+%                     the core: the tsam package itself, its internal edges,
+%                     all primary text, and every mandatory feature.
+%   fzjgrey  #3F4A55  the one grey — the periphery: external dependencies,
+%                     optional or conditional elements, and legend chrome.
+%
+% ── THE CONSTRAINT THIS PUTS ON THE FIGURES ───────────────────────────────
+% Both figures distinguish more than two things, and with only two hues the
+% rest has to be carried by SHAPE, LINE STYLE or TYPOGRAPHY. That is a feature,
+% not a compromise: all three survive a greyscale print, which a third hue
+% would not. Concretely, what used to be colour is now
+%
+%   Fig. 1  object flow vs. dependency   solid vs. dashed (UML says so anyway)
+%           pipeline phase vs. component round vs. sharp corners (UML Action)
+%           optional stage               italic
+%   Fig. 2  mandatory vs. optional       filled vs. open circle (FODA says so
+%                                        anyway), reinforced by blue vs. grey
+%
+% If a figure ever needs a third colour, the honest fix is to move that
+% distinction onto one of those channels — not to add the colour here.
+%
+% ── USAGE ─────────────────────────────────────────────────────────────────
+% \input{palette} AFTER \usepackage{tikz} (\colorlet needs xcolor, which tikz
+% loads), and compile with the working directory set to this one — which is
+% what every figure's "Regenerate:" note already does.
+
+\definecolor{fzjblue}{HTML}{023D6B}
+\definecolor{fzjgrey}{HTML}{3F4A55}
+
+% The two shaded fills, named so that no figure ever spells a mix inline and
+% the two cannot drift apart again.
+\colorlet{fzjbluetint}{fzjblue!30}
+\colorlet{fzjgreytint}{fzjgrey!20}

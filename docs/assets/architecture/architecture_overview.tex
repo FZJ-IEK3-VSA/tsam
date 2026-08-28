@@ -18,10 +18,10 @@
 % UML already separates structure from behaviour by SHAPE, so no invention is
 % needed. A Classifier is a sharp-cornered rectangle; an Action is a
 % round-cornered one (clause 16). Making the phases round-cornered is therefore
-% the whole fix, and it costs nothing else: colour keeps its existing job
-% (public API / internal / external for the components, amber for optional
-% stages) and shape alone carries structure-versus-behaviour. It also survives
-% a greyscale print, which a colour difference would not.
+% the whole fix, and it costs nothing else: colour keeps its one job (blue =
+% tsam, grey = outside it) and shape alone carries structure-versus-behaviour.
+% It also survives a greyscale print, which a colour difference would not —
+% which is the whole reason the two-colour palette below is affordable.
 %
 % Two consequences follow, and both make the figure MORE conformant than the
 % revision before it:
@@ -53,18 +53,38 @@
 % KEYWORD on the component: both carry \guillemotleft shared\guillemotright, both arrows are gone, and
 % the legend says what the keyword means.
 %
-% Fill colour keeps its existing job (blue = exposes public API, white =
-% internal, grey = external), so the two channels do not collide: Configuration
-% stays blue because ClusterConfig and friends are public, Commons stays white.
+% Fill colour keeps its existing job (blue tint = exposes public API, white =
+% internal, grey tint = external), so the two channels do not collide:
+% Configuration stays blue because ClusterConfig and friends are public,
+% Commons stays white.
 %
 % Each keyword is declared ONCE. \guillemotleft use\guillemotright and \guillemotleft shared\guillemotright live in the legend;
 % \guillemotleft activity\guillemotright appears once in the drawing, on the compartment it names,
 % because that is the position that carries its meaning.
 %
+% ── PALETTE: TWO COLOURS, SHARED WITH THE FEATURE MODEL ───────────────────
+% Jülich blue and one grey, plus a tint of each, all of it declared once in
+% palette.tex and \input by both manuscript figures. See that file for the
+% reviewer request behind it and for the rule it imposes: anything the figure
+% needs to distinguish beyond blue-versus-grey is carried by shape, line style
+% or typography.
+%
+% What this revision spent to get there:
+%   * the phase fill (a second, paler blue) became white — the round corners
+%     already say "action", so the tone was doing nothing a shape wasn't;
+%   * the teal object flows became blue at 0.6 mm, twice the dependency's
+%     weight, and solid-versus-dashed does the telling apart;
+%   * the amber optional stages became grey ITALIC (see below);
+%   * fzjdark (a near-black blue, used for text only) collapsed into fzjblue,
+%     which is dark enough to set \tiny text on white and on fzjbluetint.
+%
 % ── OPTIONAL STAGES ───────────────────────────────────────────────────────
-% Stages that run only when the caller configures them are set in AMBER inside
-% the phase boxes, which is the same optional-means-amber convention the other
-% two figures of this manuscript already use. Verified against
+% Stages that run only when the caller configures them are set in GREY ITALIC
+% inside the phase boxes. Italic, not a hue, is what carries the meaning: the
+% "Phase n" tag on the first line of every box is grey too, so grey alone
+% would be ambiguous, and italic is the one channel left that costs no colour
+% and no space. The legend swatch is the word "italic" set exactly the way an
+% optional stage line is set. Verified against
 % src/tsam/pipeline/orchestrator.py:
 %   Phase 1  prepare_data          normalize, unstack_to_periods,
 %                                  [weights], [period sums]
@@ -76,6 +96,23 @@
 % `prepared.weight_vector is not None` — and `count occurrences` (line 519) is
 % the only unconditional step in Phase 3. An earlier draft of this figure
 % called the whole of Phase 3 optional, which was wrong.
+%
+% ── TOP-ALIGNED PHASE TEXT ────────────────────────────────────────────────
+% Reviewer request: "the text boxes in the pipeline box: I would align them at
+% the top so that all box content starts at the same height and the headers in
+% the respective box 1-4 are in one line."
+%
+% They were not, and the reason is structural rather than a slip. The four
+% boxes are one row and share `minimum height=25mm`, but they hold six, four,
+% seven and five content lines (tag + header + stages). A TikZ node centres
+% its text vertically inside its minimum height and offers no `align=top`, so
+% each header sat at its own height — Phase 2, the shortest, sat ~3 mm below
+% Phase 3, the tallest.
+%
+% The fix is one node per phase for the BOX and a second, `anchor=north`, for
+% the TEXT, placed at a fixed -69.5 for all four. The boxes keep their common
+% height and their common top edge at -68; only the slack moves, to the bottom
+% of the shorter boxes, where it reads as the row being one block.
 %
 % ── PRINT TARGET ──────────────────────────────────────────────────────────
 % US Letter, 1 inch margins, text column 165.1 x 228.6 mm, every figure placed
@@ -95,6 +132,10 @@
 %     four parts 22 mm wide on a 41.67 mm pitch, 19.67 mm gaps, y -68..-93:
 %       6..28 (c 17)          47.7..69.7 (c 58.7)
 %       89.3..111.3 (c 100.3) 131..153 (c 142)
+%     phase TEXT is a separate node anchored north at y -69.5, i.e. 1.5 mm
+%     below the box top, matching the 1.5 mm the 19.5 mm text width leaves on
+%     each side of the 22.5 mm box. The tallest phase (3, seven content lines)
+%     runs ~19 mm, so it ends near -88.5 with 4.5 mm of the box to spare.
 %     object flows run at y -80.5 across the gaps; their labels are
 %     free-standing nodes anchored south at y -76.5, each inside its own
 %     19.67 mm gap. A label node is 16 mm of text width plus 0.6 mm of inner
@@ -134,8 +175,11 @@
 %   * Guillemets as \guillemotleft / \guillemotright — literal UTF-8 renders as
 %     "nsharedz" under T1. \textperiodcentered{} for the middot, --- for the
 %     em dash.
-%   * A TikZ STYLE cannot be applied to part of a node's text; the greyed and
-%     ambered stage lines use \newcommand DECLARATIONS instead.
+%   * A TikZ STYLE cannot be applied to part of a node's text; the phase tags
+%     and the two kinds of stage line use \newcommand DECLARATIONS instead.
+%   * A node's text is ALWAYS vertically centred in its `minimum height`;
+%     there is no `align=top`. Top-aligning content inside a fixed-height box
+%     takes a second node — see TOP-ALIGNED PHASE TEXT.
 %   * MEASURE text, do not estimate it. Widths that matter here, from
 %     _measure.tex (\settowidth, then read out of the PDF — tectonic swallows
 %     \typeout):
@@ -158,9 +202,11 @@
 % `run_pipeline` qualify. This is also what makes them fit — see the
 % measurements above.
 %
-% Regenerate:
+% Regenerate — from THIS directory, because \input{palette} resolves against
+% the working directory:
 %   tectonic architecture_overview.tex
 %   pdftocairo -svg architecture_overview.pdf architecture_overview.svg
+%   pdftocairo -png -r 600 -singlefile architecture_overview.pdf architecture_overview
 
 \documentclass[10pt,border=1mm]{standalone}
 \usepackage[T1]{fontenc}
@@ -168,56 +214,69 @@
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
 
-\definecolor{fzjblue}{HTML}{023D6B}
-\definecolor{fzjdark}{HTML}{012845}
-\definecolor{tintblue}{HTML}{DCE9F2}
-\definecolor{phasefill}{HTML}{F4F8FB}
-\definecolor{teal}{HTML}{21918C}
-\definecolor{amber}{HTML}{A8681A}
-\definecolor{extfill}{HTML}{E6E9EC}
-\definecolor{extline}{HTML}{8A94A0}
-\definecolor{greytext}{HTML}{3F4A55}
+% fzjblue, fzjgrey and their two tints — the whole palette, shared with the
+% feature model so the two figures cannot drift apart. See palette.tex.
+\input{palette}
 
 % DECLARATIONS, not TikZ styles: a style cannot be applied to part of a node's
 % text, which is what the phase tags and the two kinds of stage line need.
-\newcommand{\ph}{\tiny\color{greytext}}
-\newcommand{\stg}{\tiny\color{fzjdark}}
-\newcommand{\opt}{\tiny\color{amber}}
-\newcommand{\kw}{\scriptsize\color{greytext}}
+\newcommand{\ph}{\tiny\color{fzjgrey}}
+\newcommand{\stg}{\tiny\color{fzjblue}}
+% Optional stages are ITALIC, not a second hue. Grey alone would not do it —
+% the "Phase n" tag above the header is grey too — so italic is what carries
+% the meaning and the grey only de-emphasises. See the OPTIONAL STAGES note.
+\newcommand{\opt}{\tiny\itshape\color{fzjgrey}}
+\newcommand{\kw}{\scriptsize\color{fzjgrey}}
 
 \begin{document}
 \begin{tikzpicture}[
   x=1mm, y=1mm,
   api/.style={
-    draw=fzjblue, line width=0.45mm, fill=tintblue, text=fzjdark,
+    draw=fzjblue, line width=0.45mm, fill=fzjbluetint, text=fzjblue,
     align=center, font=\small},
   int/.style={
-    draw=fzjblue, line width=0.45mm, fill=white, text=fzjdark,
+    draw=fzjblue, line width=0.45mm, fill=white, text=fzjblue,
     align=center, font=\small},
   % UML Action: a ROUND-CORNERED rectangle. This is the only thing separating
-  % the pipeline's temporal phases from the components around them.
+  % the pipeline's temporal phases from the components around them — the fill
+  % is plain white, the same as `int`, because shape carries the distinction
+  % and a second light blue would only add a tone.
+  %
+  % The phase BOX is drawn empty and its text placed by `phtxt` below, because
+  % a TikZ node always centres its text vertically inside `minimum height` and
+  % the four phases carry between four and seven content lines each. Centring
+  % put the four headers on four different heights; see TOP-ALIGNED PHASE TEXT.
   phase/.style={
-    draw=fzjblue, line width=0.35mm, fill=phasefill, text=fzjdark,
+    draw=fzjblue, line width=0.35mm, fill=white, text=fzjblue,
     rounded corners=2.2mm,
     minimum width=22.5mm, minimum height=25mm, text width=19.5mm,
     align=center, font=\scriptsize},
+  % The phase CONTENT, anchored to the top edge of its box. `inner sep=0` so
+  % the anchor is the top of the first line's bounding box and not that plus a
+  % default 0.3333em, which would differ from the padding stated in the grid.
+  phtxt/.style={
+    anchor=north, text width=19.5mm, inner sep=0,
+    text=fzjblue, align=center, font=\scriptsize},
   ext/.style={
-    draw=extline, line width=0.4mm, fill=extfill, text=greytext,
+    draw=fzjgrey, line width=0.4mm, fill=fzjgreytint, text=fzjgrey,
     minimum width=40mm, minimum height=15mm, text width=36mm,
     align=center, font=\small},
-  hdr/.style={font=\small, text=fzjdark, align=center},
-  mem/.style={font=\scriptsize, text=fzjdark, align=left, anchor=north west},
+  hdr/.style={font=\small, text=fzjblue, align=center},
+  mem/.style={font=\scriptsize, text=fzjblue, align=left, anchor=north west},
   rule/.style={draw=fzjblue, line width=0.3mm},
   % UML Dependency: dashed line, open arrowhead. Keyword declared in the legend.
   dep/.style={-{Straight Barb[scale=1.6]}, dashed, draw=fzjblue, line width=0.3mm},
-  extdep/.style={dep, draw=extline},
+  extdep/.style={dep, draw=fzjgrey},
   % UML ObjectFlow between Actions: SOLID line, open arrowhead. The label names
-  % the object that flows.
-  conn/.style={-{Straight Barb[scale=2]}, draw=teal, line width=0.5mm},
-  flbl/.style={font=\tiny, text=fzjdark, align=center, anchor=south,
+  % the object that flows. It used to be teal; in Jülich blue it has to earn
+  % its prominence from weight instead, hence 0.6mm against the dependency's
+  % 0.3mm and a barb twice the size. Solid-vs-dashed is what tells the two
+  % edge kinds apart, which is what UML says anyway.
+  conn/.style={-{Straight Barb[scale=2]}, draw=fzjblue, line width=0.6mm},
+  flbl/.style={font=\tiny, text=fzjblue, align=center, anchor=south,
                text width=14mm, inner sep=0.25mm},
-  elbl/.style={font=\scriptsize, text=greytext, inner sep=1.4pt, fill=white},
-  lgd/.style={font=\scriptsize, text=greytext, anchor=west}
+  elbl/.style={font=\scriptsize, text=fzjgrey, inner sep=1.4pt, fill=white},
+  lgd/.style={font=\scriptsize, text=fzjgrey, anchor=west}
 ]
 \hyphenpenalty=10000 \exhyphenpenalty=10000
 
@@ -225,7 +284,7 @@
 \node[circle, draw=fzjblue, line width=0.4mm, fill=white, minimum size=4mm,
       inner sep=0] (iface) at (77,-6) {};
 \draw[draw=fzjblue, line width=0.4mm] (iface.south) -- (77,-16);
-\node[anchor=west, font=\scriptsize, text=fzjdark] at (80.5,-6) {aggregate()};
+\node[anchor=west, font=\scriptsize, text=fzjblue] at (80.5,-6) {aggregate()};
 
 % ══ row A — the three components that expose public API ════════════════════
 % The whole c1 column is left-aligned at x = 9, not x = 2, to open the lane the
@@ -268,19 +327,29 @@
 % which is where UML puts it. It is the one place \guillemotleft activity\guillemotright appears; saying
 % it here rather than in the legend is what tells the reader that the four
 % round-cornered boxes below are steps of a run and not four more parts.
-\node[anchor=north west, font=\tiny, text=greytext, inner sep=0.2mm]
+\node[anchor=north west, font=\tiny, text=fzjgrey, inner sep=0.2mm]
   at (11,-64.5) {\guillemotleft activity\guillemotright{} \texttt{run\_pipeline}};
 
-\node[phase] (p1) at ( 24.25,-80.5)
+% Each phase is TWO nodes: the box, which holds the row's common height, and
+% the text, anchored north 1.5 mm below the box's top edge at -68. See the
+% TOP-ALIGNED PHASE TEXT note — the four boxes carry six, four, seven and five
+% content lines, so vertically centred text put the four headers on four
+% different heights.
+\node[phase] (p1) at ( 24.25,-80.5) {};
+\node[phase] (p2) at ( 63.42,-80.5) {};
+\node[phase] (p3) at (102.58,-80.5) {};
+\node[phase] (p4) at (141.75,-80.5) {};
+
+\node[phtxt] at ( 24.25,-69.5)
   {{\ph Phase 1}\\[0.4mm]\textbf{Prepare data}\\[0.8mm]
    {\stg normalize\\\texttt{unstack\_to\_periods}\\}{\opt apply weights\\add period sums}};
-\node[phase] (p2) at ( 63.42,-80.5)
+\node[phtxt] at ( 63.42,-69.5)
   {{\ph Phase 2}\\[0.4mm]\textbf{Cluster}\\[0.8mm]
    {\stg assign clusters\\representations}};
-\node[phase] (p3) at (102.58,-80.5)
+\node[phtxt] at (102.58,-69.5)
   {{\ph Phase 3}\\[0.4mm]\textbf{Refine}\\[0.8mm]
    {\opt extreme periods\\unweight\\}{\stg count occurrences\\}{\opt rescale\\segment}};
-\node[phase] (p4) at (141.75,-80.5)
+\node[phtxt] at (141.75,-69.5)
   {{\ph Phase 4}\\[0.4mm]\textbf{Build result}\\[0.8mm]
    {\stg denormalize\\reconstruct\\accuracy metrics}};
 
@@ -413,10 +482,13 @@
 \draw[conn] (98,-179) -- (110,-179);
 \node[lgd] at (111.5,-179) {object flow between phases};
 
-\node[lgd, text=amber] at (4,-187) {\textit{amber}};
+% The swatch IS the convention: the word is set exactly as an optional stage
+% line is. "\textit{amber}" used to sit here and named a colour the palette no
+% longer has.
+\node[lgd, text=fzjgrey] at (4,-187) {\textit{italic}};
 \node[lgd] at (17.5,-187) {stage runs only when configured};
 
-\node[lgd, text=greytext] at (72,-187) {\guillemotleft shared\guillemotright};
+\node[lgd, text=fzjgrey] at (72,-187) {\guillemotleft shared\guillemotright};
 \node[lgd] at (85.5,-187) {used by every building block};
 
 \end{tikzpicture}

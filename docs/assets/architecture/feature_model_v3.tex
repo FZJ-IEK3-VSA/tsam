@@ -50,6 +50,25 @@
 % carries its own marker instead. v1/v2 drew the weighting options as an OR
 % group, which was wrong — nothing forces you to set any of them.
 %
+% ── PALETTE: TWO COLOURS, SHARED WITH THE ARCHITECTURE OVERVIEW ───────────
+% Jülich blue and one grey, plus a tint of each, all of it declared once in
+% palette.tex and \input by both manuscript figures. See that file for the
+% reviewer request behind it.
+%
+% Here the two colours carry MANDATORY versus OPTIONAL: a blue column is one
+% you always configure, a grey column one you can leave alone, and the colour
+% runs down the whole subtree so an optional branch reads as optional all the
+% way to its leaves. This is REINFORCEMENT, not the notation — FODA already
+% says it with the filled/open circle on each edge, so the figure survives
+% being printed in greyscale.
+%
+% What this revision spent to get there:
+%   * amber and its warm tint became fzjgrey and fzjgreytint, unchanged in
+%     every other respect (the optional group boxes keep their dashed border);
+%   * the legend's two group arcs, drawn in black because an arc is an arc
+%     regardless of its column, became fzjblue — the palette's neutral;
+%   * fzjdark (a near-black blue, used for text only) collapsed into fzjblue.
+%
 % ── PRINT TARGET ──────────────────────────────────────────────────────────
 % Text column 165.1 x 228.6 mm, figures at full width: ASPECT h/w <= 1.24 and
 % WIDTH <= ~165 mm. Dropping the phase line returns the group boxes to 11 mm
@@ -91,9 +110,11 @@
 %   * NEVER sed this file — a `s/\\wd/.../` pattern once rewrote every bare
 %     "wd", turning \newcommand into \newcommamywd.
 %
-% Regenerate:
+% Regenerate — from THIS directory, because \input{palette} resolves against
+% the working directory:
 %   tectonic feature_model_v3.tex
 %   pdftocairo -svg feature_model_v3.pdf feature_model_v3.svg
+%   pdftocairo -png -r 600 -singlefile feature_model_v3.pdf feature_model_v3
 
 \documentclass[10pt,border=1mm]{standalone}
 \usepackage[T1]{fontenc}
@@ -101,42 +122,39 @@
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
 
-\definecolor{fzjblue}{HTML}{023D6B}
-\definecolor{fzjdark}{HTML}{012845}
-\definecolor{tintblue}{HTML}{DCE9F2}
-\definecolor{amber}{HTML}{A8681A}
-\definecolor{ambertint}{HTML}{FBF1E4}
-\definecolor{greytext}{HTML}{3F4A55}
+% fzjblue, fzjgrey and their two tints — the whole palette, shared with the
+% architecture overview so the two figures cannot drift apart. See palette.tex.
+\input{palette}
 
 % A DECLARATION, not a TikZ style: a style cannot be applied to part of a
 % node's text, which is what the owner tag needs.
-\newcommand{\ow}{\tiny\ttfamily\color{fzjdark}}
+\newcommand{\ow}{\tiny\ttfamily\color{fzjblue}}
 
 \begin{document}
 \begin{tikzpicture}[
   x=1mm, y=1mm,
   root/.style={
-    draw=fzjblue, line width=0.55mm, fill=tintblue, text=fzjdark,
+    draw=fzjblue, line width=0.55mm, fill=fzjbluetint, text=fzjblue,
     minimum width=44mm, minimum height=9mm, text width=40mm,
     align=center, font=\small\bfseries},
   grpm/.style={
-    draw=fzjblue, line width=0.5mm, fill=tintblue, text=fzjdark,
+    draw=fzjblue, line width=0.5mm, fill=fzjbluetint, text=fzjblue,
     minimum width=24.5mm, minimum height=11mm, text width=21.5mm,
     align=center, font=\scriptsize},
   grpo/.style={
-    draw=amber, line width=0.5mm, dash pattern=on 1.6mm off 1.2mm,
-    fill=ambertint, text=fzjdark,
+    draw=fzjgrey, line width=0.5mm, dash pattern=on 1.6mm off 1.2mm,
+    fill=fzjgreytint, text=fzjblue,
     minimum width=24.5mm, minimum height=11mm, text width=21.5mm,
     align=center, font=\scriptsize},
   leaf/.style={
-    draw=fzjblue, line width=0.3mm, fill=white, text=fzjdark,
+    draw=fzjblue, line width=0.3mm, fill=white, text=fzjblue,
     minimum width=21mm, minimum height=8mm, text width=18.5mm,
     align=center, font=\scriptsize},
   leafo/.style={
-    draw=amber, line width=0.3mm, fill=white, text=fzjdark,
+    draw=fzjgrey, line width=0.3mm, fill=white, text=fzjblue,
     minimum width=21mm, minimum height=8mm, text width=18.5mm,
     align=center, font=\scriptsize},
-  leafx/.style={leaf, line width=0.6mm, fill=tintblue},
+  leafx/.style={leaf, line width=0.6mm, fill=fzjbluetint},
   % band 2 sub-groups and leaves
   sgrpm/.style={grpm, minimum width=24mm, text width=21mm},
   sgrpo/.style={grpo, minimum width=24mm, text width=21mm},
@@ -144,16 +162,18 @@
   sleafo/.style={leafo, minimum width=24mm, text width=21mm},
   wleafo/.style={leafo, minimum width=40mm, text width=37mm},
   edge/.style={draw=fzjblue, line width=0.35mm},
-  edgeo/.style={draw=amber, line width=0.35mm},
-  % arcs keep their column's colour in the drawing; black in the legend, where
-  % the two group kinds are colour-independent
+  edgeo/.style={draw=fzjgrey, line width=0.35mm},
+  % arcs keep their column's colour in the drawing. In the legend they are
+  % fzjblue, because the two group kinds are colour-INDEPENDENT — an arc is an
+  % arc whether its column is mandatory or optional — and blue is the palette's
+  % neutral. They used to be black, which was a third colour bought for nothing.
   arc/.style={draw=fzjblue, line width=0.5mm},
-  arco/.style={draw=amber, line width=0.5mm},
-  arck/.style={draw=black, line width=0.5mm},
-  edgek/.style={draw=black, line width=0.35mm},
-  req/.style={-{Straight Barb[scale=1.5]}, dashed, draw=greytext,
+  arco/.style={draw=fzjgrey, line width=0.5mm},
+  arck/.style={draw=fzjblue, line width=0.5mm},
+  edgek/.style={draw=fzjblue, line width=0.35mm},
+  req/.style={-{Straight Barb[scale=1.5]}, dashed, draw=fzjgrey,
               line width=0.35mm},
-  lgd/.style={font=\scriptsize, text=greytext, anchor=west}
+  lgd/.style={font=\scriptsize, text=fzjgrey, anchor=west}
 ]
 \hyphenpenalty=10000 \exhyphenpenalty=10000
 
@@ -171,7 +191,7 @@
 }
 \foreach \x in {17,98,125,152}{
   \draw[edgeo] (\x,-18) -- (\x,-24);
-  \node[circle, draw=amber, fill=white, line width=0.35mm,
+  \node[circle, draw=fzjgrey, fill=white, line width=0.35mm,
         minimum size=3.2mm, inner sep=0] at (\x,-20.7) {};
 }
 
@@ -187,7 +207,7 @@
 \draw[edgeo] (17,-35) -- (17,-38) -- (2,-38) -- (2,-66);
 \foreach \y in {-46,-56,-66}{
   \draw[edgeo] (2,\y) -- (6.5,\y);
-  \node[circle, draw=amber, fill=white, line width=0.3mm,
+  \node[circle, draw=fzjgrey, fill=white, line width=0.3mm,
         minimum size=2.2mm, inner sep=0] at (4.25,\y) {};
 }
 \node[leafo] at (17,-46) {weights};
@@ -221,7 +241,7 @@
 \draw[edgeo] (98,-35) -- (98,-38) -- (83,-38) -- (83,-66);
 \foreach \y in {-46,-56,-66}{
   \draw[edgeo] (83,\y) -- (87.5,\y);
-  \node[circle, draw=amber, fill=white, line width=0.3mm,
+  \node[circle, draw=fzjgrey, fill=white, line width=0.3mm,
         minimum size=2.2mm, inner sep=0] at (85.25,\y) {};
 }
 \node[leafo] at (98,-46) {scale\_by\\column\_means};
@@ -240,7 +260,7 @@
 \draw[edgeo] (152,-35) -- (152,-38) -- (137,-38) -- (137,-56);
 \foreach \y in {-46,-56}{
   \draw[edgeo] (137,\y) -- (141.5,\y);
-  \node[circle, draw=amber, fill=amber, line width=0.3mm,
+  \node[circle, draw=fzjgrey, fill=fzjgrey, line width=0.3mm,
         minimum size=2.2mm, inner sep=0] at (139.25,\y) {};
 }
 \node[leafo] at (152,-46) {n\_segments};
@@ -264,7 +284,7 @@
       minimum size=3.2mm, inner sep=0] at (18,-122.5) {};
 \foreach \x in {50,82}{
   \draw[edgeo] (\x,-120) -- (\x,-125.5);
-  \node[circle, draw=amber, fill=white, line width=0.35mm,
+  \node[circle, draw=fzjgrey, fill=white, line width=0.35mm,
         minimum size=3.2mm, inner sep=0] at (\x,-122.5) {};
 }
 
@@ -295,10 +315,20 @@
 % ── MinMaxMean: an OR group — at least one column list must be given ──────
 % With neither populated MinMaxMean returns plain mean (issue #490), so this is
 % an OR group, not two independent optional features.
+%
+% x radius 2.5mm, NOT 4mm. This is the figure's only FILLED arc, and a filled
+% arc is a lune whose width is the x radius — at 4mm against a y radius of
+% 4.5mm the lune is very nearly a half-DISC, and it read as a solid blob glued
+% to the left edge of the two leaf boxes rather than as an arc across a fan.
+% 2.5mm is what `scope` uses, the other two-leaf group in this figure and the
+% only other one with a 9 mm span; the remaining arcs use 3mm over spans of
+% 20-50mm. The chord stays on the leaf boxes' left edge at x = 116, which is
+% where every other arc here sits, and the endpoints still land on the first
+% and last child edge, which is what FODA asks of them.
 \draw[edgeo] (136,-114.5) -- (136,-118) -- (110,-118) -- (110,-134);
 \foreach \y in {-125,-134}{ \draw[edgeo] (110,\y) -- (116,\y); }
-\filldraw[arco, fill=amber]
-  (116,-125) arc[start angle=90, end angle=270, x radius=4mm, y radius=4.5mm] -- cycle;
+\filldraw[arco, fill=fzjgrey]
+  (116,-125) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=4.5mm] -- cycle;
 \node[wleafo] at (136,-125) {max\_columns};
 \node[wleafo] at (136,-134) {min\_columns};
 
@@ -307,7 +337,7 @@
       minimum size=3.2mm, inner sep=0] at (4,-195) {};
 \node[lgd] at (7.5,-195) {mandatory};
 
-\node[circle, draw=amber, fill=white, line width=0.35mm,
+\node[circle, draw=fzjgrey, fill=white, line width=0.35mm,
       minimum size=3.2mm, inner sep=0] at (40,-195) {};
 \node[lgd] at (43.5,-195) {optional};
 
@@ -320,7 +350,7 @@
 \draw[edgek] (116,-192.5) -- (120,-192.5);
 \draw[edgek] (116,-197.5) -- (120,-197.5);
 \draw[edgek] (116,-197.5) -- (116,-192.5);
-\filldraw[arck, fill=black]
+\filldraw[arck, fill=fzjblue]
   (120,-192.5) arc[start angle=90, end angle=270, x radius=2mm, y radius=2.5mm] -- cycle;
 \node[lgd] at (122,-195) {choose one or more};
 
