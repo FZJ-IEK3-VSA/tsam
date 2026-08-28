@@ -565,9 +565,9 @@ class ExtremeConfig:
             period. Example: ["electricity_demand"] to preserve peak demand hour.
         min_value: Column names where the minimum value should be preserved.
             Example: ["temperature"] to preserve coldest hour.
-        max_period: Column names where the period with maximum total should be
+        max_period: Column names where the period with maximum mean should be
             preserved. Example: ["solar_generation"] to preserve highest solar day.
-        min_period: Column names where the period with minimum total should be
+        min_period: Column names where the period with minimum mean should be
             preserved. Example: ["wind_generation"] to preserve lowest wind day.
     """
 

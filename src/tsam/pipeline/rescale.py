@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import warnings
+from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
 
 from tsam.commons import bounded_water_fill
 from tsam.options import options
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 def rescale_representatives(
@@ -44,7 +47,8 @@ def rescale_representatives(
     Args:
         cluster_periods: Unweighted cluster representatives to rescale.
         cluster_period_no_occur: Occurrence count per cluster (the rescaling
-            weights).
+            weights), keyed by cluster id. A cluster left with no periods may be
+            absent and is weighted 0.
         extreme_cluster_idx: Indices of extreme clusters to leave untouched.
         profiles_df: Normalized period profiles, source of the target column
             means.
@@ -69,8 +73,10 @@ def rescale_representatives(
 
     rescale_deviations: dict = {}
 
-    weighting_vec = pd.Series(cluster_period_no_occur).values
     n_clusters = len(cluster_periods)
+    weighting_vec = np.array(
+        [float(cluster_period_no_occur[cluster_id]) for cluster_id in range(n_clusters)]
+    )
     n_cols = len(columns)
     n_timesteps = n_timesteps_per_period
 

@@ -5,10 +5,38 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from tsam.algorithms.representations import representations
-from tsam.config import DEFAULT_REPRESENTATION
+from tsam.config import DEFAULT_REPRESENTATION, KMedoids
 
 if TYPE_CHECKING:
     from tsam.config import ClusterMethod, Distribution, MinMaxMean
+
+
+def densify_labels(cluster_order: np.ndarray) -> np.ndarray:
+    """Renumber cluster labels onto ``0..n-1``, closing gaps left by empty clusters.
+
+    No clustering method promises to fill every cluster it was asked for.
+    k-maxoids on data with fewer distinct period shapes than clusters is the
+    plainest case: it leaves labels nobody uses, so the assignment comes back as
+    e.g. ``[0, 1, 3]`` for ``n_clusters=8``.
+
+    Cluster ids are positions everywhere downstream — representatives live in a
+    list indexed by id — so an unused label puts every cluster above it out of
+    step with its representative.
+    :func:`~tsam.algorithms.representations.representations` refuses such a
+    label space outright, which is why densifying happens here, before it is
+    called. Nothing is lost by dropping the label: a cluster with no members has
+    no periods to compute a representative from, and contributes nothing to the
+    reconstruction.
+
+    Renumbering preserves order, so a label space that is already dense — every
+    method's normal outcome — comes back with its labels unchanged.
+    """
+    # The labels actually in use, ascending and without duplicates.
+    used_labels = np.unique(cluster_order)
+    # A label's position in that sorted list is its new id: the lowest label
+    # becomes 0, the next becomes 1, and any gap between them closes.
+    new_ids = np.searchsorted(used_labels, cluster_order)
+    return np.asarray(new_ids, dtype=int)
 
 
 def assign_clusters(
@@ -24,11 +52,35 @@ def assign_clusters(
     :func:`cluster_and_represent` for the combined clustering + representation
     step.
 
-    ``cluster_method`` is a method name ('averaging', 'kmeans', 'kmedoids',
-    'kmaxoids', 'hierarchical', 'contiguous') or, for k-medoids, a ``KMedoids``
-    config object carrying the solver options.
+    Valid ``cluster_method`` values: 'averaging', 'kmeans', 'kmedoids',
+    'kmaxoids', 'hierarchical', 'contiguous'.
+
+    Returns:
+        The cluster id of each period, as a dense label space: the ids run
+        ``0..n-1`` with no gaps, where ``n`` is the number of clusters that
+        actually received periods. That can be fewer than *n_clusters* — see
+        :func:`densify_labels` for why the gaps are closed rather than kept.
     """
-    from tsam.config import KMedoids
+    raw_cluster_order = _raw_assignment(
+        candidates,
+        n_clusters,
+        cluster_method,
+        n_iter=n_iter,
+    )
+    # Clustering configuration might yield non-dense cluster indices (e.g., when
+    # fewer clusters are needed due to duplicated periods). We reassign indices
+    # to be contiguous so downstream functions have a clear, well-defined data structure.
+    cluster_order = densify_labels(cluster_order=raw_cluster_order)
+    return cluster_order
+
+
+def _raw_assignment(
+    candidates: np.ndarray,
+    n_clusters: int,
+    cluster_method: ClusterMethod,
+    n_iter: int = 100,
+) -> np.ndarray:
+    """Dispatch to the clustering method, returning its labels as it produced them."""
 
     kmedoids_config = cluster_method if isinstance(cluster_method, KMedoids) else None
     cluster_method = "kmedoids" if kmedoids_config is not None else cluster_method
