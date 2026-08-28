@@ -20,6 +20,7 @@ from typing import cast
 import numpy as np
 import pandas as pd
 
+from tsam.algorithms.clustering import densify_labels
 from tsam.config import Distribution, MinMaxMean
 from tsam.options import options
 from tsam.pipeline.accuracy import reconstruct
@@ -55,14 +56,124 @@ __all__ = [
 ]
 
 
-def _count_occurrences(cluster_order: np.ndarray) -> dict[int, float]:
+def _count_occurrences(cluster_order: np.ndarray, n_clusters: int) -> dict[int, float]:
     """Count how many original periods each cluster represents.
 
-    Returns float values because the partial-period adjustment can produce
-    fractional counts downstream.
+    The result is total over the cluster ids: every id in ``range(n_clusters)``
+    gets an entry, and a cluster that ended up representing no periods is
+    counted 0 rather than left out. Cluster ids are positions downstream —
+    representatives are looked up by id — so no consumer should have to tell
+    "absent" apart from "zero". The counts are floats because the partial-period
+    adjustment can produce fractional values.
+
+    Args:
+        cluster_order: Per-period cluster assignment.
+        n_clusters: Size of the id space, i.e. the number of representatives.
+            Every label in *cluster_order* must fall inside it.
+
+    Returns:
+        Occurrence count per cluster id, one entry per id in
+        ``range(n_clusters)``.
+
+    Raises:
+        ValueError: If *cluster_order* holds a label outside the id space.
+            Labels and representative positions have then gone out of step, and
+            counting them here would silently drop a cluster's periods.
     """
     nums, counts = np.unique(cluster_order, return_counts=True)
-    return {int(num): float(counts[ii]) for ii, num in enumerate(nums)}
+    if nums.size and (nums[0] < 0 or nums[-1] >= n_clusters):
+        outside = [int(num) for num in nums if num < 0 or num >= n_clusters]
+        raise ValueError(
+            f"cluster_order holds labels outside range(0, {n_clusters}): "
+            f"{outside}. Cluster ids index the representatives, so a label "
+            f"without a representative cannot be counted."
+        )
+    occurrences = dict.fromkeys(range(n_clusters), 0.0)
+    occurrences.update({int(num): float(counts[ii]) for ii, num in enumerate(nums)})
+    return occurrences
+
+
+def _drop_empty_clusters(
+    cluster_periods_list: list[np.ndarray],
+    cluster_order: np.ndarray,
+    extreme_cluster_idx: list[int],
+    cluster_center_indices: list[int] | None,
+) -> tuple[list[np.ndarray], np.ndarray, list[int], list[int] | None]:
+    """Remove clusters that ended up representing no periods, and close the gap.
+
+    An id can fall out of use at either end of this phase. Both
+    ``method="append"`` and ``method="new_cluster"`` move every extreme period
+    into a cluster of its own, so a small cluster whose members all turn out
+    extreme is left with nothing; ``new_cluster`` pulls neighbours away on top
+    of that. It takes a computed representation, though: an extreme whose
+    profile equals a center is skipped as redundant, so under ``medoid`` the
+    medoid member always stays behind. And on the transfer path a stored
+    assignment can arrive with an unused id already in it — that path skips
+    `assign_clusters`, so `densify_labels` never runs on it. A result this
+    pipeline produced cannot be holed, so that only happens for a hand-built or
+    hand-edited `ClusteringResult`.
+
+    Cluster ids are positions downstream, so an unused id has to go: an
+    interior one puts every cluster above it out of step with its
+    representative, and a trailing one leaves a center that surfaces as a
+    typical period representing no periods. Nothing is lost by dropping it,
+    though the run then returns fewer typical periods than ``n_clusters``
+    asked for.
+
+    Not sources: ``method="replace"`` edits centers without touching the
+    assignment, and clustering hands back a dense label space already.
+
+    Returns:
+        The inputs with empty clusters removed and every id renumbered, or the
+        inputs unchanged when no cluster is empty.
+    """
+    n_clusters = len(cluster_periods_list)
+
+    # The ids that still hold at least one period, ascending.
+    labels = np.asarray(cluster_order).ravel()
+    kept_ids = sorted({int(label) for label in labels})
+
+    # Every id below indexes cluster_periods_list, so one out of range means
+    # labels and representatives have gone out of step.
+    outside = [old_id for old_id in kept_ids if not 0 <= old_id < n_clusters]
+    if outside:
+        raise ValueError(
+            f"cluster_order holds labels outside range(0, {n_clusters}): "
+            f"{outside}. Every label names a representative by position, so a "
+            f"label without one can be neither kept nor dropped."
+        )
+
+    # Already dense: nothing to drop, so hand the inputs straight back.
+    if kept_ids == list(range(n_clusters)):
+        return (
+            cluster_periods_list,
+            cluster_order,
+            extreme_cluster_idx,
+            cluster_center_indices,
+        )
+
+    # Old id -> new id, for the structures that store ids rather than labels.
+    renumbered = {old_id: new_id for new_id, old_id in enumerate(kept_ids)}
+
+    kept_periods = [cluster_periods_list[old_id] for old_id in kept_ids]
+
+    # Same renumbering rule as the clustering stage, so both close a gap the
+    # same way; the parallel structures are what make this stage different.
+    dense_order = densify_labels(cluster_order)
+
+    dense_extreme_idx = [renumbered[old_id] for old_id in extreme_cluster_idx]
+
+    # Center indices cover only the clusters clustering produced; the extremes
+    # get theirs appended later and always hold their own period.
+    kept_center_indices = None
+    if cluster_center_indices is not None:
+        kept_center_indices = [
+            cluster_center_indices[old_id]
+            for old_id in kept_ids
+            if old_id < len(cluster_center_indices)
+        ]
+
+    return kept_periods, dense_order, dense_extreme_idx, kept_center_indices
 
 
 def _representatives_to_dataframe(
@@ -431,6 +542,20 @@ def cluster_candidates(
         center[: prepared.n_feature_cols] for center in cluster_centers
     ]
 
+    # Clustering does not promise to fill every cluster it was asked for: with
+    # fewer distinct period shapes than clusters, some methods leave one empty.
+    # `assign_clusters` drops those so ids stay usable as positions, which makes
+    # the shortfall invisible unless it is said out loud.
+    if cfg.predef is None and len(cluster_periods_list) < cfg.n_clusters:
+        warnings.warn(
+            f"Clustering produced {len(cluster_periods_list)} non-empty clusters "
+            f"for the requested n_clusters={cfg.n_clusters}: "
+            f"'{cluster.method}' found fewer distinct period shapes than "
+            f"clusters, and empty clusters are dropped rather than kept as "
+            f"typical periods representing no periods. The aggregation is valid "
+            f"but returns fewer typical periods than requested."
+        )
+
     return ClusterAssignment(
         cluster_periods_list=cluster_periods_list,
         cluster_order=cluster_order,
@@ -479,6 +604,7 @@ def refine_representatives(
     period_profiles = prepared.period_profiles
     cluster_periods_list = assignment.cluster_periods_list
     cluster_order = assignment.cluster_order
+    cluster_center_indices = assignment.cluster_center_indices
 
     # Add extreme periods if configured
     # Extremes run in weighted space (matching develop): weighted profiles
@@ -509,6 +635,20 @@ def refine_representatives(
         if cfg.predef is not None and cfg.predef.extreme_cluster_idx is not None:
             extreme_cluster_idx = list(cfg.predef.extreme_cluster_idx)
 
+    # Unconditional: extremes are one way to empty a cluster, not the only one,
+    # and every id below indexes into cluster_periods_list.
+    (
+        cluster_periods_list,
+        cluster_order,
+        extreme_cluster_idx,
+        cluster_center_indices,
+    ) = _drop_empty_clusters(
+        cluster_periods_list,
+        cluster_order,
+        extreme_cluster_idx,
+        cluster_center_indices,
+    )
+
     # Unweight all representatives (regular + extreme) — remove weights
     # before downstream steps (rescale, denorm) which expect unweighted data.
     if prepared.weight_vector is not None:
@@ -516,21 +656,21 @@ def refine_representatives(
         cluster_periods_list = [center * inv_tile for center in cluster_periods_list]
 
     # Compute cluster counts
-    cluster_counts = _count_occurrences(cluster_order)
+    cluster_counts = _count_occurrences(cluster_order, len(cluster_periods_list))
 
     # Rescale if requested
     rescale_deviations: dict[str, dict] = {}
     rescale_exclude = cfg.rescale_exclude_columns or []
     if cfg.rescale_cluster_periods:
         cluster_periods_list, rescale_deviations = rescale_representatives(  # type: ignore[assignment]
-            cluster_periods_list,
-            cluster_counts,
-            extreme_cluster_idx,
-            period_profiles.profiles_dataframe,
-            prepared.original_data,
-            prepared.norm_data.scale_by_column_means,
-            cfg.n_timesteps_per_period,
-            rescale_exclude,
+            cluster_periods=cluster_periods_list,
+            cluster_period_no_occur=cluster_counts,
+            extreme_cluster_idx=extreme_cluster_idx,
+            profiles_df=period_profiles.profiles_dataframe,
+            original_data=prepared.original_data,
+            normalize_column_means=prepared.norm_data.scale_by_column_means,
+            n_timesteps_per_period=cfg.n_timesteps_per_period,
+            exclude_columns=rescale_exclude,
         )
         cluster_periods_list = list(cluster_periods_list)
 
@@ -575,7 +715,7 @@ def refine_representatives(
         normalized_typical_periods=normalized_typical_periods,
         cluster_order=cluster_order,
         cluster_counts=cluster_counts,
-        cluster_center_indices=assignment.cluster_center_indices,
+        cluster_center_indices=cluster_center_indices,
         extreme_cluster_idx=extreme_cluster_idx,
         extreme_periods=extreme_periods,
         rescale_deviations=rescale_deviations,

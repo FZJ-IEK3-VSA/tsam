@@ -2,7 +2,7 @@ name: Publish
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
 
 permissions:
   contents: write
@@ -22,7 +22,7 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
-      - uses: astral-sh/setup-uv@v9.0.0
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
 
@@ -37,6 +37,7 @@ jobs:
 
   github-release:
     name: Create GitHub Release
+    needs: publish
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7

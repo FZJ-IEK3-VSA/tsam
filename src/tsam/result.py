@@ -276,11 +276,11 @@ class AggregationResult:
     def n_clusters(self) -> int:
         """Number of clusters (typical periods).
 
-        Derived from the cluster_representatives DataFrame index,
-        which is the authoritative source. Note: cluster_counts may
-        have more entries than actual cluster IDs due to tsam quirks.
+        Counted from the cluster_representatives index. Empty clusters are
+        dropped when the clustering is built, so this agrees with
+        :attr:`ClusteringResult.n_clusters`.
         """
-        return self.cluster_representatives.index.get_level_values(0).nunique()
+        return int(self.cluster_representatives.index.get_level_values(0).nunique())
 
     @cached_property
     def n_segments(self) -> int | None:
@@ -806,7 +806,7 @@ class ClusteringResult:
                 and extremes_config.method in ("new_cluster", "append")
             ):
                 for extreme in extreme_periods:
-                    center_indices.append(int(extreme.step_no))
+                    center_indices.append(int(extreme.period_row_index))
 
             cluster_centers = tuple(center_indices)
 
