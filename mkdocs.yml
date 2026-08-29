@@ -73,6 +73,7 @@ nav:
     - Control what it preserves:
       - Clustering methods: how-to/clustering_methods.ipynb
       - Representations: how-to/representations.ipynb
+      - Preserving concurrency: how-to/concurrency.ipynb
       - Extreme periods: how-to/extreme_periods.ipynb
     - Make it fast:
       - How long will this take?: how-to/runtime.ipynb
