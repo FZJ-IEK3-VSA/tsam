@@ -47,7 +47,7 @@ dependencies:
   # pyproject.toml counterpart.
   - d2
   # Linting and formatting
-  - ruff <=0.16.4
+  - ruff <=0.16.5
   - mypy <=2.3.1
   - pre-commit <=4.6.2
   - pandas-stubs <=3.0.5.260730
