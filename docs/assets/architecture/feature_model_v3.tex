@@ -13,7 +13,76 @@
 %   filled arc across a fan    = OR group (choose ONE OR MORE)
 %   dashed arrow               = cross-tree constraint (requires)
 %
-% ── WHAT V3 CHANGES, AND WHY ──────────────────────────────────────────────
+% ── FONT SIZES ARE SET HERE, NOT INHERITED FROM THE CLASS ─────────────────
+% Reader request: 11 pt for the ordinary type and 8 pt for the smallest. Both
+% are met, and the sizes are the same ones the architecture overview declares,
+% so the two manuscript figures cannot drift apart.
+%
+%              class 10pt      here        printed (x 165.1/163.7)
+%   \small       9 pt        11 pt        11.09 pt
+%   \scriptsize  7 pt         8 pt         8.07 pt
+%   \tiny        5 pt         8 pt         8.07 pt
+%
+% \scriptsize and \tiny are BOTH 8 pt, which collapses what used to be two
+% levels into one. That is not laziness: 8 pt is the floor the request sets and
+% 8 pt is simultaneously the CEILING this figure's grid allows for its leaves
+% (below), so there is no room between them. What used to separate the owner
+% tag from the leaf text was size; now it is the monospace face and the tag's
+% position under the group name, which is enough and survives greyscale.
+%
+% ── WHY 8 PT IS ALSO THE CEILING ──────────────────────────────────────────
+% The printed size of a glyph is set by the DRAWING'S WIDTH — the figure is
+% placed at the full text width whatever its own width, so
+%
+%       printed pt = source pt x 165.1 / (drawing width in mm)
+%
+% and scaling the drawing up buys nothing. Band 1 is a six-column grid whose
+% width is an identity:
+%
+%       width = 5p + 2h + arc + clearance,   p = 2h + arc + 2 x clearance
+%
+% with h the half-width of a leaf box. At 165 mm and six columns that pins
+% h <= 11.25 mm, i.e. 20 mm of text width per leaf, FULL STOP — there is no
+% arrangement of these six groups that gives a leaf more room. The widest leaf
+% token then decides the font:
+%
+%       column_means   19.85 mm at 8 pt   <- binds every band-1 column
+%       ClusterConfig  19.42 mm at 8 pt   <- the owner tag, \ttfamily, in the
+%                                            group box's identical 20 mm
+%
+% Both land inside 20 mm, `column_means` with 0.15 mm to spare and the owner
+% tag with 0.58 mm. At 8.5 pt `column_means` needs 21.1 mm, hence a 27.8 mm
+% pitch, hence a 168 mm drawing — which the page would scale back DOWN by more
+% than the half point won.
+%
+% ── WHAT PAID FOR IT ──────────────────────────────────────────────────────
+%   * the group boxes went 24.5 -> 22.5 mm. They were the widest thing in each
+%     column and set the drawing's right edge while holding at most a
+%     ten-character bold word. Now the LEAF sets the edge.
+%   * the arc x-radius went 3 -> 2.5 mm and the two clearances 1.5 -> 1.0 mm,
+%     which is 1.5 mm of leaf width per column while the pitch stays at 27.
+%     The arcs read the same: what makes them visible is their HEIGHT.
+%   * band 2's leaves went 8 -> 6.5 mm tall on an 8 mm pitch. All eleven are
+%     single-line, so the 8 mm was air.
+%   * band 2's sub-group boxes went 11 -> 9 mm, for the same reason.
+% Net: the drawing went from 164.7 x 203.6 mm to 163.7 x 200.6 mm — narrower
+% AND shorter — so the type gained on both terms of the quotient at once.
+%
+% ── THE ONE LEAF THAT NEEDED A THIRD LINE ─────────────────────────────────
+% `rescale_exclude_columns` is 23 characters. It used to be the one leaf set a
+% size smaller; with \tiny and \scriptsize both at 8 pt that escape is gone, so
+% it is broken at its underscores into `rescale_` / `exclude_` / `columns`
+% (13.2 / 13.2 / 11.6 mm). Three lines need 12.1 mm of box against the row's
+% 8.75 mm, and `minimum height` is a MINIMUM — the node grows and would have
+% closed the 1.75 mm gap to the row above to 0.075 mm.
+%
+% It is therefore the one leaf placed with `anchor=north`, at the row's TOP
+% edge (-63.125) rather than its centre. Its top lines up with every other
+% row-3 leaf and it grows DOWNWARDS, into column 1's empty space — c1 has only
+% three leaves and nothing below them. Raising the whole band's pitch to 11.5
+% would have cost 5 mm of height for one leaf.
+%
+% ── WHAT V3 CHANGES FROM V2, AND WHY ──────────────────────────────────────
 %  1. THE PHASE TAGS ARE GONE. A feature model describes which configurations
 %     are legal; WHEN a feature takes effect is a runtime concern and belongs to
 %     the architecture figure, which already shows all four phases with their
@@ -62,49 +131,65 @@
 % says it with the filled/open circle on each edge, so the figure survives
 % being printed in greyscale.
 %
-% What this revision spent to get there:
-%   * amber and its warm tint became fzjgrey and fzjgreytint, unchanged in
-%     every other respect (the optional group boxes keep their dashed border);
-%   * the legend's two group arcs, drawn in black because an arc is an arc
-%     regardless of its column, became fzjblue — the palette's neutral;
-%   * fzjdark (a near-black blue, used for text only) collapsed into fzjblue.
-%
 % ── PRINT TARGET ──────────────────────────────────────────────────────────
 % Text column 165.1 x 228.6 mm, figures at full width: ASPECT h/w <= 1.24 and
-% WIDTH <= ~165 mm. Dropping the phase line returns the group boxes to 11 mm
-% and the leaf pitch to 10 mm, which is what pays for MinMaxMean's expansion.
+% WIDTH <= ~165 mm. This file is 163.7 x 200.6 mm, aspect 1.225 — inside on
+% both counts, with ~2.4 mm of height in hand. The aspect is what breaks
+% first, so anything added has to take a row away.
 %
-% ── MEASURED WIDTHS (\settowidth, read out of the PDF) ────────────────────
-% Leaf boxes are 21 mm wide with 18.5 mm of text width; group boxes 24.5 /
-% 21.5 mm. At \scriptsize:
-%   representation 17.43   column_means 18.56   max_columns 17.23
-%   MinMaxMean     17.01   Distribution 14.97   hierarchical 14.16
-%   n_segments     14.64   new_cluster  15.04   independent  14.96
-%   Keyword options 20.72 (breaks at the space)
-% At \tiny: ClusterConfig \ttfamily 12.14, aggregate() \ttfamily 10.27,
-%   rescale_exclude_ 18.31.
-% All inside their boxes. `representation` was suspected of overflowing and
-% does not — 17.43 < 18.5.
+% ── MEASURED WIDTHS (_measure.tex: \settowidth, then TYPESET, because
+%    tectonic swallows \typeout) ────────────────────────────────────────────
+% Band-1 leaf boxes are 22.5 mm wide with 20 mm of text width; group boxes the
+% same. At \scriptsize = 8 pt:
+%   column_means 19.85 <- binds   representation 18.53   MinMaxMean   18.25
+%   use_duration 17.53            period_sums    17.04   new_cluster  16.03
+%   Distribution 15.91            n_segments     15.63   hierarchical 15.03
+%   contiguous   13.88            preserve_      12.88   averaging    12.37
+%   kmedoids     12.22            include_       11.53   _curves      10.39
+%   scale_by     11.55
+% At \scriptsize = 8 pt bold, group names:
+%   Clustering 17.8   Represen- 15.06   Grouping 14.27   Extreme 12.86
+%   Segmen-    12.72  Keyword   12.5    periods  11.06
+% At \tiny = 8 pt \ttfamily (monospace, 1.494 mm/char), owner tags:
+%   ClusterConfig / SegmentConfig / ExtremeConfig  19.42 (13 chars) <- binds
+%   aggregate()                                    16.43 (11 chars)
+%   rescale_ / exclude_ / columns                  13.2 / 13.2 / 11.6
+% Band 2 (24 mm sub-boxes, 21 mm text; 40 mm wide leaves, 37 mm text):
+%   concurrency 18.30 bold   independent 15.93   assignment 14.39
+% Legend, longest run ends at x 150.4; the drawing ends at 163.4.
 %
 % ── LAYOUT GRID (millimetres, y negative downwards) ───────────────────────
-% BAND 1 — six columns, pitch 27, boxes 24.5 mm:
+% BAND 1 — six columns, pitch 27, leaf and group boxes both 22.5 mm:
 %   c1 = 17 Keyword options  c2 = 44 Grouping       c3 = 71 Representation
 %   c4 = 98 Clustering input c5 = 125 Extreme       c6 = 152 Segmentation
-%   root (84.5,-8) 44x9   bar -18   markers -20.7   groups -24..-35
-%   leaf bus ci-15, elbow -40 -> -38, stub ci-15 -> ci-10.5
-%   leaves 21 mm (ci +/- 10.5), rows -46 -56 -66 -76 -86 -96
+%   root (84.5,-8) 44x9   bar -17.5   markers -20.2   groups -23.5..-35.5
+%   leaf bus ci-14.75, elbow -38.5, stub ci-14.75 -> ci-11.25
+%   leaves 22.5 mm (ci +/- 11.25), 8.75 mm tall,
+%     rows -46.5 -57 -67.5 -78 -88.5 -99 (pitch 10.5)
+%   arcs: x radius 2.5 at (ci-11.25, first row), y radius = half the row span,
+%     so 26.25 (c2, 6 leaves), 21 (c3, 5), 10.5 (c5, 3). c1, c4 and c6 have no
+%     arc — see WHY SOME GROUPS HAVE NO ARC.
+%   The 2.5 mm bulge reaches ci-13.75 and the bus is at ci-14.75: 1 mm of
+%   clearance, and 1 mm again between one column's leaf (ci+11.25) and the
+%   next column's bus (ci+12.25).
 % BAND 2 — two expansions side by side, so MinMaxMean costs no extra height:
-%   Distribution root (50,-110) 44x9;  MinMaxMean root (136,-110) 44x9
+%   Distribution root (50,-115) 44x9;  MinMaxMean root (136,-115) 44x9
 %   Distribution sub-columns pitch 32: 18, 50, 82; boxes and leaves 24 mm;
-%     sub-bus ci-16, elbow -140, leaves rows -147 -156 -165 -174 -183
-%   MinMaxMean bus x 110, leaves 40 mm at (136,-125) and (136,-134)
-%   Lanes: Distribution connector x 86 (y -76..-104), MinMaxMean connector
-%     x 89 (y -86..-98) then y -98 eastwards — starts right of 86, so the two
-%     never cross. Constraint lane x 32: 2 mm from scope's leaves (end 30) and
-%     2 mm from concurrency's bus (34).
+%     sub-bus ci-16, elbow -142.5, leaves 6.5 mm tall,
+%     rows -149 -157 -165 -173 -181 (pitch 8)
+%   MinMaxMean bus x 110, leaves 40 mm at (136,-128) and (136,-137) — a 9 mm
+%     pitch, not 8, so its filled arc stays legible; see the note there
+%   Lanes: Distribution connector x 85 (y -78..-108) then west; MinMaxMean
+%     connector x 88 (y -88.5..-102) then east. 85 < 88, so the two never
+%     cross, and both clear c4's leaves (86.75..109.25) in y.
+%     Constraint lane x 32: 2 mm from scope's leaves (end 30) and 2 mm from
+%     concurrency's bus (34).
+% LEGEND rows -191 and -199.
 %
 % ── TRAPS ─────────────────────────────────────────────────────────────────
 %   * A TikZ node CLIPS NOTHING and LaTeX will not break at `\_`.
+%   * `minimum height` is a MINIMUM — see THE ONE LEAF THAT NEEDED A THIRD
+%     LINE for what that costs and how it is paid.
 %   * A TikZ STYLE cannot be applied to part of a node's text; the owner tag
 %     uses a \newcommand DECLARATION.
 %   * NEVER sed this file — a `s/\\wd/.../` pattern once rewrote every bare
@@ -122,12 +207,24 @@
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
 
+% THE FONT SIZES OF THIS FIGURE, and the same three the architecture overview
+% declares. See FONT SIZES and WHY 8 PT IS ALSO THE CEILING in the header:
+% \scriptsize and \tiny are both 8 pt because the request's floor and this
+% grid's ceiling meet there. lmodern is scalable, so these are real design
+% sizes, not scaled ones.
+\makeatletter
+\renewcommand{\tiny}      {\@setfontsize\tiny       {8}{9.5}}
+\renewcommand{\scriptsize}{\@setfontsize\scriptsize {8}{9.5}}
+\renewcommand{\small}     {\@setfontsize\small     {11}{13}}
+\makeatother
+
 % fzjblue, fzjgrey and their two tints — the whole palette, shared with the
 % architecture overview so the two figures cannot drift apart. See palette.tex.
 \input{palette}
 
 % A DECLARATION, not a TikZ style: a style cannot be applied to part of a
-% node's text, which is what the owner tag needs.
+% node's text, which is what the owner tag needs. It is the monospace face,
+% not a smaller size, that now separates the tag from the group name.
 \newcommand{\ow}{\tiny\ttfamily\color{fzjblue}}
 
 \begin{document}
@@ -137,30 +234,38 @@
     draw=fzjblue, line width=0.55mm, fill=fzjbluetint, text=fzjblue,
     minimum width=44mm, minimum height=9mm, text width=40mm,
     align=center, font=\small\bfseries},
+  % 22.5 mm, not the 24.5 of the previous revision: the group box used to be
+  % the widest thing in a column and therefore set the drawing's right edge,
+  % while holding a bold word no longer than 17.8 mm. Handing those 2 mm to the
+  % leaf is part of what bought the leaf font its extra size.
   grpm/.style={
     draw=fzjblue, line width=0.5mm, fill=fzjbluetint, text=fzjblue,
-    minimum width=24.5mm, minimum height=11mm, text width=21.5mm,
+    minimum width=22.5mm, minimum height=12mm, text width=20mm,
     align=center, font=\scriptsize},
   grpo/.style={
     draw=fzjgrey, line width=0.5mm, dash pattern=on 1.6mm off 1.2mm,
     fill=fzjgreytint, text=fzjblue,
-    minimum width=24.5mm, minimum height=11mm, text width=21.5mm,
+    minimum width=22.5mm, minimum height=12mm, text width=20mm,
     align=center, font=\scriptsize},
+  % 20 mm of text width is the whole budget a six-column grid has at this page
+  % width — see WHY 8 PT IS ALSO THE CEILING. `column_means` sets 19.85 mm of it.
   leaf/.style={
     draw=fzjblue, line width=0.3mm, fill=white, text=fzjblue,
-    minimum width=21mm, minimum height=8mm, text width=18.5mm,
+    minimum width=22.5mm, minimum height=8.75mm, text width=20mm,
     align=center, font=\scriptsize},
   leafo/.style={
     draw=fzjgrey, line width=0.3mm, fill=white, text=fzjblue,
-    minimum width=21mm, minimum height=8mm, text width=18.5mm,
+    minimum width=22.5mm, minimum height=8.75mm, text width=20mm,
     align=center, font=\scriptsize},
   leafx/.style={leaf, line width=0.6mm, fill=fzjbluetint},
-  % band 2 sub-groups and leaves
-  sgrpm/.style={grpm, minimum width=24mm, text width=21mm},
-  sgrpo/.style={grpo, minimum width=24mm, text width=21mm},
-  sleaf/.style={leaf, minimum width=24mm, text width=21mm},
-  sleafo/.style={leafo, minimum width=24mm, text width=21mm},
-  wleafo/.style={leafo, minimum width=40mm, text width=37mm},
+  % band 2 sub-groups and leaves. Every one of them is single-line, so 9 mm and
+  % 6.5 mm are what the text asks for; the 11 mm and 8 mm they used to carry
+  % were air, and that air is what band 1's taller rows are paid for with.
+  sgrpm/.style={grpm, minimum width=24mm, minimum height=9mm, text width=21mm},
+  sgrpo/.style={grpo, minimum width=24mm, minimum height=9mm, text width=21mm},
+  sleaf/.style={leaf, minimum width=24mm, minimum height=6.5mm, text width=21mm},
+  sleafo/.style={leafo, minimum width=24mm, minimum height=6.5mm, text width=21mm},
+  wleafo/.style={leafo, minimum width=40mm, minimum height=6.5mm, text width=37mm},
   edge/.style={draw=fzjblue, line width=0.35mm},
   edgeo/.style={draw=fzjgrey, line width=0.35mm},
   % arcs keep their column's colour in the drawing. In the legend they are
@@ -181,18 +286,18 @@
 % BAND 1 — six columns, ONE owning object each, in pipeline order
 % ══════════════════════════════════════════════════════════════════════════
 \node[root] (root) at (84.5,-8) {aggregate()};
-\draw[edge] (84.5,-12.5) -- (84.5,-18);
-\draw[edge] (17,-18) -- (152,-18);
+\draw[edge] (84.5,-12.5) -- (84.5,-17.5);
+\draw[edge] (17,-17.5) -- (152,-17.5);
 
 \foreach \x in {44,71}{
-  \draw[edge] (\x,-18) -- (\x,-24);
+  \draw[edge] (\x,-17.5) -- (\x,-23.5);
   \node[circle, draw=fzjblue, fill=fzjblue, line width=0.3mm,
-        minimum size=3.2mm, inner sep=0] at (\x,-20.7) {};
+        minimum size=3.2mm, inner sep=0] at (\x,-20.2) {};
 }
 \foreach \x in {17,98,125,152}{
-  \draw[edgeo] (\x,-18) -- (\x,-24);
+  \draw[edgeo] (\x,-17.5) -- (\x,-23.5);
   \node[circle, draw=fzjgrey, fill=white, line width=0.35mm,
-        minimum size=3.2mm, inner sep=0] at (\x,-20.7) {};
+        minimum size=3.2mm, inner sep=0] at (\x,-20.2) {};
 }
 
 \node[grpo] at ( 17,-29.5) {\textbf{Keyword}\\\textbf{options}\\{\ow aggregate()}};
@@ -204,163 +309,175 @@
 
 % ── c1 aggregate() keywords — three INDEPENDENT optional features ─────────
 % No arc: nothing forces you to set any of them.
-\draw[edgeo] (17,-35) -- (17,-38) -- (2,-38) -- (2,-66);
-\foreach \y in {-46,-56,-66}{
-  \draw[edgeo] (2,\y) -- (6.5,\y);
+% The third leaf is the figure's only three-line one and is the only node
+% placed by its TOP edge — see THE ONE LEAF THAT NEEDED A THIRD LINE.
+\draw[edgeo] (17,-35.5) -- (17,-38.5) -- (2.25,-38.5) -- (2.25,-67.5);
+\foreach \y in {-46.5,-57,-67.5}{
+  \draw[edgeo] (2.25,\y) -- (5.75,\y);
   \node[circle, draw=fzjgrey, fill=white, line width=0.3mm,
-        minimum size=2.2mm, inner sep=0] at (4.25,\y) {};
+        minimum size=2.2mm, inner sep=0] at (4,\y) {};
 }
-\node[leafo] at (17,-46) {weights};
-\node[leafo] at (17,-56) {preserve\_\\column\_means};
-\node[leafo] at (17,-66) {\tiny rescale\_exclude\_\\columns};
+\node[leafo] at (17,-46.5) {weights};
+\node[leafo] at (17,-57)   {preserve\_\\column\_means};
+\node[leafo, anchor=north] at (17,-63.125) {rescale\_\\exclude\_\\columns};
 
 % ── c2 Grouping — ALTERNATIVE group, 6 leaves ─────────────────────────────
-\draw[edge] (44,-35) -- (44,-38) -- (29,-38) -- (29,-96);
-\foreach \y in {-46,-56,-66,-76,-86,-96}{ \draw[edge] (29,\y) -- (33.5,\y); }
-\draw[arc] (33.5,-46) arc[start angle=90, end angle=270, x radius=3mm, y radius=25mm];
-\node[leaf] at (44,-46) {averaging};
-\node[leaf] at (44,-56) {kmeans};
-\node[leaf] at (44,-66) {kmedoids};
-\node[leaf] at (44,-76) {kmaxoids};
-\node[leaf] at (44,-86) {hierarchical};
-\node[leaf] at (44,-96) {contiguous};
+\draw[edge] (44,-35.5) -- (44,-38.5) -- (29.25,-38.5) -- (29.25,-99);
+\foreach \y in {-46.5,-57,-67.5,-78,-88.5,-99}{ \draw[edge] (29.25,\y) -- (32.75,\y); }
+\draw[arc] (32.75,-46.5) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=26.25mm];
+\node[leaf] at (44,-46.5) {averaging};
+\node[leaf] at (44,-57)   {kmeans};
+\node[leaf] at (44,-67.5) {kmedoids};
+\node[leaf] at (44,-78)   {kmaxoids};
+\node[leaf] at (44,-88.5) {hierarchical};
+\node[leaf] at (44,-99)   {contiguous};
 
 % ── c3 Representation — ALTERNATIVE group, 5 leaves ───────────────────────
 % Distribution and MinMaxMean are drawn heavier and tinted: both are classes,
 % both are expanded in band 2.
-\draw[edge] (71,-35) -- (71,-38) -- (56,-38) -- (56,-86);
-\foreach \y in {-46,-56,-66,-76,-86}{ \draw[edge] (56,\y) -- (60.5,\y); }
-\draw[arc] (60.5,-46) arc[start angle=90, end angle=270, x radius=3mm, y radius=20mm];
-\node[leaf]  at (71,-46) {mean};
-\node[leaf]  at (71,-56) {medoid};
-\node[leaf]  at (71,-66) {maxoid};
-\node[leafx] at (71,-76) {Distribution};
-\node[leafx] at (71,-86) {MinMaxMean};
+\draw[edge] (71,-35.5) -- (71,-38.5) -- (56.25,-38.5) -- (56.25,-88.5);
+\foreach \y in {-46.5,-57,-67.5,-78,-88.5}{ \draw[edge] (56.25,\y) -- (59.75,\y); }
+\draw[arc] (59.75,-46.5) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=21mm];
+\node[leaf]  at (71,-46.5) {mean};
+\node[leaf]  at (71,-57)   {medoid};
+\node[leaf]  at (71,-67.5) {maxoid};
+\node[leafx] at (71,-78)   {Distribution};
+\node[leafx] at (71,-88.5) {MinMaxMean};
 
 % ── c4 Clustering input — three INDEPENDENT optional flags ────────────────
-\draw[edgeo] (98,-35) -- (98,-38) -- (83,-38) -- (83,-66);
-\foreach \y in {-46,-56,-66}{
-  \draw[edgeo] (83,\y) -- (87.5,\y);
+\draw[edgeo] (98,-35.5) -- (98,-38.5) -- (83.25,-38.5) -- (83.25,-67.5);
+\foreach \y in {-46.5,-57,-67.5}{
+  \draw[edgeo] (83.25,\y) -- (86.75,\y);
   \node[circle, draw=fzjgrey, fill=white, line width=0.3mm,
-        minimum size=2.2mm, inner sep=0] at (85.25,\y) {};
+        minimum size=2.2mm, inner sep=0] at (85,\y) {};
 }
-\node[leafo] at (98,-46) {scale\_by\\column\_means};
-\node[leafo] at (98,-56) {use\_duration\\\_curves};
-\node[leafo] at (98,-66) {include\_\\period\_sums};
+\node[leafo] at (98,-46.5) {scale\_by\\column\_means};
+\node[leafo] at (98,-57)   {use\_duration\\\_curves};
+\node[leafo] at (98,-67.5) {include\_\\period\_sums};
 
 % ── c5 Extreme periods — ALTERNATIVE group, 3 leaves ──────────────────────
-\draw[edgeo] (125,-35) -- (125,-38) -- (110,-38) -- (110,-66);
-\foreach \y in {-46,-56,-66}{ \draw[edgeo] (110,\y) -- (114.5,\y); }
-\draw[arco] (114.5,-46) arc[start angle=90, end angle=270, x radius=3mm, y radius=10mm];
-\node[leafo] at (125,-46) {append};
-\node[leafo] at (125,-56) {replace};
-\node[leafo] at (125,-66) {new\_cluster};
+\draw[edgeo] (125,-35.5) -- (125,-38.5) -- (110.25,-38.5) -- (110.25,-67.5);
+\foreach \y in {-46.5,-57,-67.5}{ \draw[edgeo] (110.25,\y) -- (113.75,\y); }
+\draw[arco] (113.75,-46.5) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=10.5mm];
+\node[leafo] at (125,-46.5) {append};
+\node[leafo] at (125,-57)   {replace};
+\node[leafo] at (125,-67.5) {new\_cluster};
 
 % ── c6 Segmentation — both fields required once it is on ──────────────────
-\draw[edgeo] (152,-35) -- (152,-38) -- (137,-38) -- (137,-56);
-\foreach \y in {-46,-56}{
-  \draw[edgeo] (137,\y) -- (141.5,\y);
+\draw[edgeo] (152,-35.5) -- (152,-38.5) -- (137.25,-38.5) -- (137.25,-57);
+\foreach \y in {-46.5,-57}{
+  \draw[edgeo] (137.25,\y) -- (140.75,\y);
   \node[circle, draw=fzjgrey, fill=fzjgrey, line width=0.3mm,
-        minimum size=2.2mm, inner sep=0] at (139.25,\y) {};
+        minimum size=2.2mm, inner sep=0] at (139,\y) {};
 }
-\node[leafo] at (152,-46) {n\_segments};
-\node[leafo] at (152,-56) {representation};
+\node[leafo] at (152,-46.5) {n\_segments};
+\node[leafo] at (152,-57)   {representation};
 
 % ══════════════════════════════════════════════════════════════════════════
 % BAND 2 — the two representation classes, expanded side by side
 % ══════════════════════════════════════════════════════════════════════════
-\draw[edge] (81.5,-76) -- (86,-76) -- (86,-104) -- (50,-104) -- (50,-105.5);
-\draw[edge] (81.5,-86) -- (89,-86) -- (89,-98) -- (136,-98) -- (136,-105.5);
+% The Distribution lane leaves at x 85 and turns WEST; the MinMaxMean lane
+% leaves at x 88 and turns EAST. 85 < 88, so they cannot cross, and both clear
+% c4's leaves (86.75..109.25), which stop at y -71.9.
+\draw[edge] (82.25,-78)   -- (85,-78)   -- (85,-108) -- (50,-108) -- (50,-110.5);
+\draw[edge] (82.25,-88.5) -- (88,-88.5) -- (88,-102) -- (136,-102) -- (136,-110.5);
 
-\node[root] (dist) at ( 50,-110) {Distribution};
-\node[root] (mmm)  at (136,-110) {MinMaxMean};
+\node[root] (dist) at ( 50,-115) {Distribution};
+\node[root] (mmm)  at (136,-115) {MinMaxMean};
 
 % ── Distribution: three independent parameters ────────────────────────────
-\draw[edge] (50,-114.5) -- (50,-120);
-\draw[edge] (18,-120) -- (82,-120);
+\draw[edge] (50,-119.5) -- (50,-124.5);
+\draw[edge] (18,-124.5) -- (82,-124.5);
 
-\draw[edge] (18,-120) -- (18,-125.5);
+\draw[edge] (18,-124.5) -- (18,-130.5);
 \node[circle, draw=fzjblue, fill=fzjblue, line width=0.3mm,
-      minimum size=3.2mm, inner sep=0] at (18,-122.5) {};
+      minimum size=3.2mm, inner sep=0] at (18,-127) {};
 \foreach \x in {50,82}{
-  \draw[edgeo] (\x,-120) -- (\x,-125.5);
+  \draw[edgeo] (\x,-124.5) -- (\x,-130.5);
   \node[circle, draw=fzjgrey, fill=white, line width=0.35mm,
-        minimum size=3.2mm, inner sep=0] at (\x,-122.5) {};
+        minimum size=3.2mm, inner sep=0] at (\x,-127) {};
 }
 
-\node[sgrpm] at (18,-131) {\textbf{scope}};
-\node[sgrpo] at (50,-131) {\textbf{concurrency}};
-\node[sgrpo] at (82,-131) {\textbf{preserve\_}\\\textbf{minmax}};
+\node[sgrpm] at (18,-135) {\textbf{scope}};
+\node[sgrpo] at (50,-135) {\textbf{concurrency}};
+\node[sgrpo] at (82,-135) {\textbf{preserve\_}\\\textbf{minmax}};
 
 % scope — ALTERNATIVE group, 2 leaves
-\draw[edge] (18,-136.5) -- (18,-140) -- (2,-140) -- (2,-156);
-\foreach \y in {-147,-156}{ \draw[edge] (2,\y) -- (6,\y); }
-\draw[arc] (6,-147) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=4.5mm];
-\node[sleaf] at (18,-147) {local};
-\node[sleaf] at (18,-156) {global};
+\draw[edge] (18,-139.5) -- (18,-142.5) -- (2,-142.5) -- (2,-157);
+\foreach \y in {-149,-157}{ \draw[edge] (2,\y) -- (6,\y); }
+\draw[arc] (6,-149) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=4mm];
+\node[sleaf] at (18,-149) {local};
+\node[sleaf] at (18,-157) {global};
 
 % concurrency — ALTERNATIVE group, 5 leaves
-\draw[edgeo] (50,-136.5) -- (50,-140) -- (34,-140) -- (34,-183);
-\foreach \y in {-147,-156,-165,-174,-183}{ \draw[edgeo] (34,\y) -- (38,\y); }
-\draw[arco] (38,-147) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=18mm];
-\node[sleafo] at (50,-147) {independent};
-\node[sleafo] at (50,-156) {reference};
+\draw[edgeo] (50,-139.5) -- (50,-142.5) -- (34,-142.5) -- (34,-181);
+\foreach \y in {-149,-157,-165,-173,-181}{ \draw[edgeo] (34,\y) -- (38,\y); }
+\draw[arco] (38,-149) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=16mm];
+\node[sleafo] at (50,-149) {independent};
+\node[sleafo] at (50,-157) {reference};
 \node[sleafo] at (50,-165) {medoid};
-\node[sleafo] at (50,-174) {consensus};
-\node[sleafo] at (50,-183) {assignment};
+\node[sleafo] at (50,-173) {consensus};
+\node[sleafo] at (50,-181) {assignment};
 
 % cross-tree constraint: concurrency is only valid with scope = local
-\draw[req] (38,-131) -- (32,-131) -- (32,-147) -- (30,-147);
+\draw[req] (38,-135) -- (32,-135) -- (32,-149) -- (30,-149);
 
 % ── MinMaxMean: an OR group — at least one column list must be given ──────
 % With neither populated MinMaxMean returns plain mean (issue #490), so this is
 % an OR group, not two independent optional features.
 %
 % x radius 2.5mm, NOT 4mm. This is the figure's only FILLED arc, and a filled
-% arc is a lune whose width is the x radius — at 4mm against a y radius of
-% 4.5mm the lune is very nearly a half-DISC, and it read as a solid blob glued
-% to the left edge of the two leaf boxes rather than as an arc across a fan.
-% 2.5mm is what `scope` uses, the other two-leaf group in this figure and the
-% only other one with a 9 mm span; the remaining arcs use 3mm over spans of
-% 20-50mm. The chord stays on the leaf boxes' left edge at x = 116, which is
-% where every other arc here sits, and the endpoints still land on the first
-% and last child edge, which is what FODA asks of them.
-\draw[edgeo] (136,-114.5) -- (136,-118) -- (110,-118) -- (110,-134);
-\foreach \y in {-125,-134}{ \draw[edgeo] (110,\y) -- (116,\y); }
+% arc is a lune whose width is the x radius — at 4mm the lune is very nearly a
+% half-DISC, and it read as a solid blob glued to the left edge of the two leaf
+% boxes rather than as an arc across a fan. 2.5mm is what `scope` uses, the
+% other two-leaf group in this figure; the remaining arcs use the same 2.5mm
+% over spans of 21-52mm. The chord stays on the leaf boxes' left edge at
+% x = 116, which is where every other arc here sits, and the endpoints still
+% land on the first and last child edge, which is what FODA asks of them.
+%
+% These two leaves keep a 9 mm pitch where the rest of band 2 went to 8 — the
+% one place the tightening was NOT taken. A lune is only legible in the gap
+% BETWEEN the two boxes it spans, because the boxes are opaque white and paint
+% over the rest of it; at an 8 mm pitch that gap is 1.5 mm and the arc reads as
+% a blob. At 9 mm it is 2.5 mm, which is more than the previous revision showed.
+% MinMaxMean's half of band 2 has only two leaves against concurrency's five,
+% so the extra millimetre is free — it costs no height at all.
+\draw[edgeo] (136,-119.5) -- (136,-123) -- (110,-123) -- (110,-137);
+\foreach \y in {-128,-137}{ \draw[edgeo] (110,\y) -- (116,\y); }
 \filldraw[arco, fill=fzjgrey]
-  (116,-125) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=4.5mm] -- cycle;
-\node[wleafo] at (136,-125) {max\_columns};
-\node[wleafo] at (136,-134) {min\_columns};
+  (116,-128) arc[start angle=90, end angle=270, x radius=2.5mm, y radius=4.5mm] -- cycle;
+\node[wleafo] at (136,-128) {max\_columns};
+\node[wleafo] at (136,-137) {min\_columns};
 
 % ══ key ═══════════════════════════════════════════════════════════════════
 \node[circle, draw=fzjblue, fill=fzjblue, line width=0.3mm,
-      minimum size=3.2mm, inner sep=0] at (4,-195) {};
-\node[lgd] at (7.5,-195) {mandatory};
+      minimum size=3.2mm, inner sep=0] at (4,-191) {};
+\node[lgd] at (7.5,-191) {mandatory};
 
 \node[circle, draw=fzjgrey, fill=white, line width=0.35mm,
-      minimum size=3.2mm, inner sep=0] at (40,-195) {};
-\node[lgd] at (43.5,-195) {optional};
+      minimum size=3.2mm, inner sep=0] at (40,-191) {};
+\node[lgd] at (43.5,-191) {optional};
 
-\draw[edgek] (72,-192.5) -- (76,-192.5);
-\draw[edgek] (72,-197.5) -- (76,-197.5);
-\draw[edgek] (72,-197.5) -- (72,-192.5);
-\draw[arck] (76,-192.5) arc[start angle=90, end angle=270, x radius=2mm, y radius=2.5mm];
-\node[lgd] at (78,-195) {choose exactly one};
+\draw[edgek] (72,-188.5) -- (76,-188.5);
+\draw[edgek] (72,-193.5) -- (76,-193.5);
+\draw[edgek] (72,-193.5) -- (72,-188.5);
+\draw[arck] (76,-188.5) arc[start angle=90, end angle=270, x radius=2mm, y radius=2.5mm];
+\node[lgd] at (78,-191) {choose exactly one};
 
-\draw[edgek] (116,-192.5) -- (120,-192.5);
-\draw[edgek] (116,-197.5) -- (120,-197.5);
-\draw[edgek] (116,-197.5) -- (116,-192.5);
+\draw[edgek] (116,-188.5) -- (120,-188.5);
+\draw[edgek] (116,-193.5) -- (120,-193.5);
+\draw[edgek] (116,-193.5) -- (116,-188.5);
 \filldraw[arck, fill=fzjblue]
-  (120,-192.5) arc[start angle=90, end angle=270, x radius=2mm, y radius=2.5mm] -- cycle;
-\node[lgd] at (122,-195) {choose one or more};
+  (120,-188.5) arc[start angle=90, end angle=270, x radius=2mm, y radius=2.5mm] -- cycle;
+\node[lgd] at (122,-191) {choose one or more};
 
-\draw[req] (4,-202) -- (16,-202);
-\node[lgd] at (17.5,-202) {requires};
+\draw[req] (4,-199) -- (16,-199);
+\node[lgd] at (17.5,-199) {requires};
 
-\node[leafx, minimum width=12mm, minimum height=5mm, text width=8mm] at (46,-202) {};
-\node[lgd] at (53.5,-202) {expanded below};
+\node[leafx, minimum width=12mm, minimum height=5mm, text width=8mm] at (46,-199) {};
+\node[lgd] at (53.5,-199) {expanded below};
 
-\node[lgd] at (100,-202) {{\ow ClusterConfig}\ \ object you construct};
+\node[lgd] at (100,-199) {{\ow ClusterConfig}\ \ object you construct};
 
 \end{tikzpicture}
 \end{document}

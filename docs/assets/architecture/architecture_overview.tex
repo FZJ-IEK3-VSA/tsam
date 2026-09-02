@@ -9,6 +9,84 @@
 %   * ObjectFlow (solid line, open arrowhead): clause 15, Activities.
 %   * Activity name in the upper left of the region that frames it: clause 15.
 %
+% ── FONT SIZES ARE SET HERE, NOT INHERITED FROM THE CLASS ─────────────────
+% Reader request: 11 pt for the figure's ordinary type and 8 pt for the
+% smallest. Both are met.
+%
+% The thing that makes that hard is that the printed size of a glyph is NOT
+% the source size: the figure is placed at the full text width (165.1 mm)
+% whatever its own width, so what reaches the page is
+%
+%       printed pt = source pt x 165.1 / (drawing width in mm)
+%
+% Scaling the whole drawing up therefore buys NOTHING — the fonts and the
+% millimetres grow together and the quotient is unchanged. Type can only get
+% bigger RELATIVE TO THE DRAWING, which means it is paid for out of the
+% layout.
+%
+%              class 10pt      here        printed (x 165.1/162.1)
+%   \small       9 pt        11 pt        11.22 pt
+%   \scriptsize  7 pt         9 pt         9.18 pt
+%   \tiny        5 pt         8 pt         8.16 pt
+%
+% ── WHAT THE PHASE ROW COST, AND WHY FIVE STRINGS ARE BROKEN ──────────────
+% \tiny is the size that carries the stage names inside the four phase boxes,
+% and the phase row is where the whole figure's width is decided. The row has
+% 144 mm to spend (x 11..155, inside a 148 mm Pipeline whitebox) on
+%
+%       4 boxes + 3 gaps,
+%
+% the boxes sized by their longest stage name and the gaps by the widest line
+% of the object-flow label that sits in them. At \tiny = 8 pt, taking every
+% string as it stood, that is
+%
+%       4 x (26.89 + 3)  +  3 x (15.13 + 0.5)   =  166.5 mm     -> 22.5 over
+%        `unstack_to_periods'    `Assignment'
+%
+% and there is no 22.5 mm to be had: the drawing is 162.1 mm against a ~165 mm
+% budget, and every other row is already sized to its contents. So five strings
+% are broken instead, each at a natural point, which brings the row to
+%
+%       4 x (22 + 3)  +  3 x (12.84 + 0.5 + 1.33)  =  144 mm    -> exact
+%        `extreme_periods'       `Represen-'
+%
+% Four are stage names, and all four break at an UNDERSCORE with the underscore
+% LEADING the continuation line, which is how the feature model already breaks
+% `use_duration' / `_curves'. That is what keeps a wrapped name readable as one
+% token — see UNDERSCORES AND MONOSPACE.
+%
+%   * `unstack_to_periods' -> `unstack_to' / `_periods'    26.89 mm
+%   * `count_occurrences'  -> `count' / `_occurrences'     24.50 mm
+%   * `add_period_sums'    -> `add_period' / `_sums'       23.57 mm  (italic)
+%   * `accuracy_metrics'   -> `accuracy' / `_metrics'      23.09 mm
+%   * `Assignment'         -> `Assign-' / `ment'           15.13 mm
+%
+% The last is the only NEW hyphen in the figure — `Representatives' was already
+% hyphenated — and it is what lets the gaps come down from 15.63 to 14.67 mm,
+% which is 4 mm of phase box.
+%
+% Breaking the four stage names costs NO height: Phase 3 was already the
+% tallest at eight lines, and Phase 1 joins it there rather than passing it.
+%
+% Everything else fits whole, with the binding items at:
+%       extreme_periods   21.52 mm  in 22 mm     (italic, the optional form)
+%       assign_clusters   19.90 mm  in 22 mm     (roman)
+%       Prepare data      21.40 mm  in 22 mm     (\scriptsize bold, the header)
+% Those three are what stop \tiny going past 8 pt. A 9 pt \tiny needs 24.2 mm
+% of text width, hence 27.2 mm boxes, hence a 153 mm phase row inside a 157 mm
+% Pipeline — 9 mm more drawing than the page will take, which would scale the
+% type back down further than the extra point raised it.
+%
+% ── WHERE THE HEIGHT CAME FROM ────────────────────────────────────────────
+% The phase boxes went 24 -> 31.5 mm (Phase 3 now runs to eight lines) and the
+% Pipeline whitebox 41 -> 48 mm, and yet the drawing grew only 4.9 mm, to
+% 162.1 x 199.2 mm, aspect 1.229. Every box in the figure is sized to its
+% contents plus a stated padding, so the 7 mm came back out of:
+%   row A's top edge (-16 -> -14) and its three boxes, each now as tall as its
+%   own member list; the row A -> Pipeline gap (12 -> 8 mm); row C and the
+%   Configuration compartment; the externals stack; and the legend's row
+%   pitch. None of it is arbitrary — see HOW THE BOXES ARE SIZED.
+%
 % ── WHY THE PHASES ARE ROUND-CORNERED AND THE COMPONENTS ARE NOT ──────────
 % The four phases are not components. They are the temporal steps of one run,
 % and an earlier revision drew them as sharp-cornered boxes with the same
@@ -26,9 +104,9 @@
 % Two consequences follow, and both make the figure MORE conformant than the
 % revision before it:
 %
-%   * The chain between the phases is now an ObjectFlow — an activity edge,
-%     solid with an open arrowhead (clause 15) — and its labels name the object
-%     that flows. The previous revision had to draw it as a Connector between
+%   * The chain between the phases is an ObjectFlow — an activity edge, solid
+%     with an open arrowhead (clause 15) — and its labels name the object that
+%     flows. The previous revision had to draw it as a Connector between
 %     nested parts (clause 11.4) and lean on §11.7 to let that Connector
 %     realize an InformationFlow, purely to win a solid line that a dashed
 %     Dependency could not be told apart from. That liberty is gone: an
@@ -38,11 +116,6 @@
 %     (src/tsam/pipeline/orchestrator.py:697). That is where UML puts an
 %     Activity's name, and it tells the reader in one line that what follows is
 %     a run, not a parts list.
-%
-% The legend gains one row for the round-cornered swatch. It is paid for by
-% giving the middle legend row three columns instead of two, so the figure's
-% height does not move — see the PRINT TARGET note, there was ~1.6 mm of slack
-% and a fourth row needs 8.
 %
 % ── WHY CONFIGURATION AND COMMONS HAVE NO ARROWS ──────────────────────────
 % Both are used by EVERY building block. An earlier revision drew one arrow
@@ -67,16 +140,11 @@
 % palette.tex and \input by both manuscript figures. See that file for the
 % reviewer request behind it and for the rule it imposes: anything the figure
 % needs to distinguish beyond blue-versus-grey is carried by shape, line style
-% or typography.
-%
-% What this revision spent to get there:
-%   * the phase fill (a second, paler blue) became white — the round corners
-%     already say "action", so the tone was doing nothing a shape wasn't;
-%   * the teal object flows became blue at 0.6 mm, twice the dependency's
-%     weight, and solid-versus-dashed does the telling apart;
-%   * the amber optional stages became grey ITALIC (see below);
-%   * fzjdark (a near-black blue, used for text only) collapsed into fzjblue,
-%     which is dark enough to set \tiny text on white and on fzjbluetint.
+% or typography. Concretely:
+%   * the phase fill is white — the round corners already say "action";
+%   * the object flows are blue at 0.6 mm, twice the dependency's weight, and
+%     solid-versus-dashed does the telling apart;
+%   * optional stages are grey ITALIC (see below).
 %
 % ── OPTIONAL STAGES ───────────────────────────────────────────────────────
 % Stages that run only when the caller configures them are set in GREY ITALIC
@@ -103,70 +171,97 @@
 % the respective box 1-4 are in one line."
 %
 % They were not, and the reason is structural rather than a slip. The four
-% boxes are one row and share `minimum height=25mm`, but they hold six, four,
-% seven and five content lines (tag + header + stages). A TikZ node centres
+% boxes are one row and share one `minimum height`, but they hold seven, four,
+% eight and five content lines (tag + header + stages). A TikZ node centres
 % its text vertically inside its minimum height and offers no `align=top`, so
-% each header sat at its own height — Phase 2, the shortest, sat ~3 mm below
-% Phase 3, the tallest.
+% each header sat at its own height.
 %
 % The fix is one node per phase for the BOX and a second, `anchor=north`, for
-% the TEXT, placed at a fixed -69.5 for all four. The boxes keep their common
-% height and their common top edge at -68; only the slack moves, to the bottom
+% the TEXT, placed at a fixed -65.5 for all four. The boxes keep their common
+% height and their common top edge at -64; only the slack moves, to the bottom
 % of the shorter boxes, where it reads as the row being one block.
+%
+% ── HOW THE BOXES ARE SIZED ───────────────────────────────────────────────
+% Every box is its content plus a stated padding, not a round number. That is
+% where the type's extra size came from, so any box that is edited has to be
+% RE-MEASURED rather than nudged. The paddings are:
+%
+%   row A / row C boxes   members start 1 mm below the compartment rule and
+%                         the box ends 1.5-1.9 mm below the last line
+%   phase boxes           text anchored 1.5 mm below the top edge, 1.64 mm of
+%                         box below the tallest phase (3)
+%   external boxes        content centred, box height rounded up to the mm
+%
+% The phase row is centred on -79.75, which is also the height at which the
+% object flows run. Keeping the CENTRE fixed rather than the top edge is what
+% lets the box height change without moving the flows or their labels.
 %
 % ── PRINT TARGET ──────────────────────────────────────────────────────────
 % US Letter, 1 inch margins, text column 165.1 x 228.6 mm, every figure placed
 % at full text width (wp:extent cx="5943600" EMU = 6.5 in).
-%   * ASPECT h/w <= 1.24, or the scaled figure outgrows the page.
+%   * ASPECT h/w <= 1.24, or the scaled figure leaves no room for a caption.
 %   * WIDTH <= ~165 mm, or Word scales the drawing DOWN and every font with it.
-% The drawing measures 162.1 x 199.4 mm, aspect 1.230 — about 1.6 mm of height
-% to spare. Anything that adds a row has to take one away somewhere else.
+% The drawing measures 162.1 x 199.2 mm, aspect 1.229 — 1.8 mm of height to
+% spare, and 3 mm of width that is deliberately NOT spent (spending it would
+% shrink the type, see FONT SIZES). The aspect is what breaks first now.
 %
 % ── LAYOUT GRID (millimetres, y negative downwards) ───────────────────────
-%   columns  c1 = 24 (2..46)   c2 = 77 (55..99)   c3 = 133 (109..157)
-%   row A    y -16..-48    Tools (c1)  API (c2)  Results (c3)
-%   Pipeline y -56..-97    whitebox, x 2..157; header -60, compartment rule -64
-%     the activity name sits in the compartment's upper left at (11,-64.5),
-%     anchored north west; it is \tiny, ~2.4 mm tall, so it clears the phase
-%     tops at -68 by ~1.1 mm. That 4 mm band is the only space it has.
-%     four parts 22 mm wide on a 41.67 mm pitch, 19.67 mm gaps, y -68..-93:
-%       6..28 (c 17)          47.7..69.7 (c 58.7)
-%       89.3..111.3 (c 100.3) 131..153 (c 142)
-%     phase TEXT is a separate node anchored north at y -69.5, i.e. 1.5 mm
-%     below the box top, matching the 1.5 mm the 19.5 mm text width leaves on
-%     each side of the 22.5 mm box. The tallest phase (3, seven content lines)
-%     runs ~19 mm, so it ends near -88.5 with 4.5 mm of the box to spare.
-%     object flows run at y -80.5 across the gaps; their labels are
-%     free-standing nodes anchored south at y -76.5, each inside its own
-%     19.67 mm gap. A label node is 16 mm of text width plus 0.6 mm of inner
-%     sep a side = 17.2 mm, so it clears the phase boxes by ~1.2 mm a side. The
-%     first attempt used 24.45 mm parts and 16.4 mm gaps, where 17.2 mm did not
-%     fit at all and "Refined Representatives" overlapped the Phase 4 box.
+%   columns  c1 = 27.25 (9..45.5)   c2 = 76 (51..101)   c3 = 132.5 (108..157)
+%     Column widths follow their longest member line at \scriptsize = 9 pt:
+%     32.55 mm in c1, 45.79 in c2, 44.78 in c3. The member lists indent with
+%     \hspace{2mm} rather than \quad, which at 9 pt is 3.17 mm — the 1.2 mm
+%     that buys the 7 mm c2/c3 gap the Algorithms -> Pyomo lane needs.
+%   row A    top edge -14 for all three; heights are per-box
+%            Tools   -14..-35.5   (3 member lines, 10.75 mm)
+%            API     -14..-43     (5 member lines, 18.51 mm)
+%            Results -14..-39.5   (4 member lines, 14.63 mm)
+%            header centred at -18.3, compartment rule -22, members from -23
+%   Pipeline y -51..-99    whitebox, x 9..157; header -55.3, rule -59
+%     the activity name sits in the compartment's upper left at (11,-59.5),
+%     anchored north west; it is \tiny, 2.65 mm tall, so it clears the phase
+%     tops at -64 by 1.85 mm.
+%     four parts 25 mm wide with 14.67 mm gaps, spanning 11..155,
+%     y -64..-95.5:
+%       11..36        (c  23.50)     50.67..75.67  (c  63.17)
+%       90.33..115.33 (c 102.83)    130..155       (c 142.50)
+%     2 mm of pipeline box is left either side of the row.
+%     phase TEXT is a separate node anchored north at y -65.5. Phases 1 and 3
+%     are the tallest at eight content lines, 28.36 mm, so they end at -93.86
+%     with 1.64 mm of the box to spare.
+%     object flows run at y -79.75 across the gaps; their labels are
+%     free-standing nodes anchored south at y -74.75, each inside its own
+%     14.67 mm gap. The widest label line is "Represen-" at 12.84 mm, and the
+%     nodes carry NO `text width` — every break is by hand — so the widest node
+%     is 13.34 mm and clears the phase boxes by 0.665 mm a side. The 5 mm from
+%     the flow to the label is set by the ARROWHEAD, not the line: a Straight
+%     Barb at scale 2 on a 0.6 mm line reaches ~1.7 mm above it, and at the
+%     previous 3 mm a descender came within ~1.3 mm of the barb and read as
+%     touching it.
 %     They are NOT `pos=` labels: pos on a multi-segment path applies to the
 %     last segment only, and a white-filled label centred on the flow would
 %     leave only a stub of visible line at each end.
-%   row C    y -105..-131  Commons (c1)  Algorithms (c2)  Configuration (c3)
-%   externals y -143..-158  scikit-learn (c2)  Pyomo (c3)
-%   legend rows y -171, -179, -187; row 2 has THREE columns (swatch at x 8,
-%     dependency arrow 53..65, object flow arrow 98..110), which is what lets
-%     the new shape swatch in without a fourth row. Measured label widths at
-%     \scriptsize: "pipeline phase (action)" 28.08 mm ends at 43.6,
-%     "\guillemotleft use\guillemotright dependency" 22.28 ends at 88.8, "object flow between phases"
-%     33.13 ends at 144.6 — all inside the 157 right edge, so the drawing's
-%     width is still set by the package boundary and does not move.
+%   row C    top edge -106   Commons/Algorithms -106..-120 (one line of text)
+%            Configuration -106..-137.5 (header pair + 5 member lines)
+%   externals c1 Plotly -144..-153 and pandas/NumPy -154..-164.5;
+%             c2 scikit-learn -148.25..-160.25, c3 Pyomo -147.5..-161.
+%             All four are centred on -154.25, which is what makes the row
+%             read as one row.
+%   legend rows y -169, -177, -185; row 2 has THREE columns (swatch at x 8,
+%     dependency arrow 55..67, object flow arrow 100..112), which is what lets
+%     the shape swatch in without a fourth row. The longest legend run,
+%     "object flow between phases", ends at 151.83 — outside the c3 column but
+%     inside the package boundary at 160.5, so it does not set the width.
 %   Lanes, each checked against every other line sharing it:
-%     x = 150   Pipeline -> Results        (y -56 .. -42)
-%     x = 104   Algorithms -> Pyomo        (y -114 .. -150.5); clear of
-%               Configuration, which starts at x 109
-%     x =  77   API -> Pipeline (-48..-56), Pipeline -> Algorithms (-97..-105),
-%               Algorithms -> scikit-learn (-123..-143); disjoint y-ranges
-%   The "exact kmedoids" label hangs off the RIGHT side of the x = 104 lane,
-%   anchored west at (105.5,-143.5), so it touches the edge it names and only
-%   that one. Anchored east at (102,-142) it ran leftwards to x 82.6, which put
-%   it 5.6 mm from the Algorithms -> scikit-learn lane at x = 77 and 1.5 mm
-%   from its own: near enough to both to be read as labelling either. On the
-%   right of the lane it is 28 mm clear of x = 77, 3.5 mm below the package
-%   boundary at -138.5 and 2 mm above the Pyomo box at -147.
+%     x = 150   Pipeline -> Results        (y -51 .. -39.5)
+%     x = 104.5 Algorithms -> Pyomo        (y -113 .. -154.25); clear of
+%               Configuration, which starts at x 108
+%     x =  76   API -> Pipeline (-43..-51), Pipeline -> Algorithms (-99..-106),
+%               Algorithms -> scikit-learn (-120..-148.25); disjoint y-ranges
+%     x =   1   Tools -> Plotly, outside the package boundary at 5.5
+%   The "exact kmedoids" label hangs off the RIGHT side of the x = 104.5 lane,
+%   anchored west at (106,-144.3), so it touches the edge it names and only
+%   that one. It sits 3.3 mm below the package boundary at -141 and 3.2 mm
+%   above the Pyomo box at -147.5.
 %
 % ── TRAPS RE-CHECKED HERE (see the project notes) ─────────────────────────
 %   * A TikZ node CLIPS NOTHING: an over-long line spills across its border and
@@ -180,27 +275,82 @@
 %   * A node's text is ALWAYS vertically centred in its `minimum height`;
 %     there is no `align=top`. Top-aligning content inside a fixed-height box
 %     takes a second node — see TOP-ALIGNED PHASE TEXT.
-%   * MEASURE text, do not estimate it. Widths that matter here, from
-%     _measure.tex (\settowidth, then read out of the PDF — tectonic swallows
-%     \typeout):
-%         unstack_to_periods   \tiny roman   21.26 mm
-%         unstack_to_periods   \tiny \texttt 16.80 mm
-%         count occurrences    \tiny roman   18.76 mm
-%         Representatives      \tiny roman   16.46 mm
-%         exact kmedoids       \scriptsize   18.87 mm
-%     A phase box is 22.5 mm wide with 19.5 mm of text width, so the roman form
-%     overflowed the text box by 1.76 mm and cleared the border by ~0.6 mm,
-%     which prints as touching it.
+%   * ITALIC IS NOT ROMAN. The optional stage lines are italic and measure
+%     ~2 % NARROWER than the roman form; measuring `add period sums` in roman
+%     (21.61 mm) and fitting it to a 22 mm box would have been luck, not
+%     design. Both forms are listed below.
+%   * MEASURE text, do not estimate it. `_measure.tex` is the harness: it
+%     \settowidth's a string at a given size and TYPESETS the result, because
+%     tectonic swallows \typeout. Widths that bind this layout:
+%
+%     \tiny = 8 pt, stage names, against the phase boxes' 22 mm text width.
+%     Every one is snake_case, so these are the UNDERSCORED forms — an
+%     underscore is wider than the space it replaced (`accuracy_metrics' is
+%     1.24 mm wider than `accuracy metrics'), which is what pushed three of
+%     them over the box and made them break.
+%         \texttt{unstack_to_periods}  26.89   BROKEN -> 14.94 / 11.95
+%                                              (\texttt is monospace at
+%                                               1.494 mm/char, so 10 + 8)
+%         count_occurrences            24.50   BROKEN -> 7.22 / 17.28
+%         add_period_sums              23.57 i BROKEN -> 14.77 / 8.79
+%         accuracy_metrics             23.09   BROKEN -> 11.37 / 11.72
+%         extreme_periods              21.52 i <- binds the box
+%         assign_clusters              19.90      representations 19.71
+%         apply_weights                18.59 i
+%         denormalize                  15.60      reconstruct     14.63
+%         normalize                    12.62      unweight        11.57 i
+%         segment                      10.41 i    rescale          8.68 i
+%         Phase 1 (tag)                10.18      i = italic (optional stage)
+%     \tiny = 8 pt, elsewhere
+%         \guillemotleft activity\guillemotright{} \texttt{run_pipeline}  32.11   ends at x 43.1
+%         .representation takes        27.01   Config, tw 45 with a 2 mm indent
+%         HiGHS ... CPLEX              48.16   Pyomo, tw 45 -> wraps to 2 lines
+%     \tiny = 8 pt, object-flow labels, against a 14.17 mm node budget
+%         Assignment    15.13  BROKEN -> Assign- 9.57 / ment 6.56
+%         Represen-     12.84  <- binds the gap        tatives 8.65
+%         Prepared      11.83      Refined 9.83   Cluster 9.48   Data 6.43
+%     \scriptsize = 9 pt
+%         extremes: ExtremeConfig, ...)   43.79 + 2 mm indent = 45.79  c2, tw 46
+%         + aggregate(data, n_clusters,   42.59                        c2, tw 46
+%         + Distribution, MinMaxMean      42.78 + 2 mm indent = 44.78  c3, tw 45
+%         + unstack_to_periods            32.55                        c1, tw 33.5
+%         + ConcurrencyMetrics            32.19
+%         Prepare data (phase header)     21.40   bold, in the 22 mm phase box
+%         stage runs only when configured 45.84   legend row 3, ends 60.84
+%         object flow between phases      38.33   legend row 2, ends 151.83
+%         exact kmedoids                  21.87   edge label
+%     \small = 11 pt
+%         pandas \textperiodcentered{} NumPy  29.72   external, tw 33.5
+%         Configuration                       22.71   c3 header
+%
 %   * The legend swatch takes `rounded corners=1.5mm`, not the phases' 2.2 mm.
 %     A 2.2 mm radius on a 6 mm-tall swatch eats three quarters of its height
 %     and reads as a lozenge rather than as the same shape, smaller.
 %
-% ── WHEN A STAGE NAME IS SET IN MONOSPACE ─────────────────────────────────
-% The rule is: a stage written as a snake_case IDENTIFIER is set in \texttt,
-% because it names a function; a stage written as prose is not, because it
-% describes a step. `unstack_to_periods` and the activity's own name
-% `run_pipeline` qualify. This is also what makes them fit — see the
-% measurements above.
+% ── UNDERSCORES AND MONOSPACE ─────────────────────────────────────────────
+% Two separate conventions, and they used to be confused with each other.
+%
+% THE UNDERSCORE says which words are one stage. Every stage name in the phase
+% boxes is one snake_case token — `assign_clusters`, `add_period_sums`,
+% `count_occurrences` — because a space could not carry that once the row's
+% width forced the longest of them onto two lines: `count' above `occurrences'
+% read as two stages, not one. An underscore leading the continuation line
+% (`count' / `_occurrences') keeps a wrapped name legible as a single token.
+% This is the whole of what the underscore claims; it does not claim that the
+% string is copy-pasteable.
+%
+% MONOSPACE says the string is the LITERAL identifier, spelled as the code
+% spells it. Only two qualify: `unstack_to_periods`, which is in tsam.__all__,
+% and the activity's own name `run_pipeline`. The rest are shortened stage
+% names, not exported symbols — the code calls them `_apply_weights_df`,
+% `add_period_sum_features`, `_count_occurrences`, `rescale_representatives`
+% and `segment_typical_periods` (orchestrator.py), every one of which is
+% 19-23 characters and would need a 29-34 mm box at \tiny = 8 pt against the
+% 22 mm the row can afford. Setting shortened names in monospace would promise
+% a literalness they do not have, so they stay in the text face.
+%
+% This is also what makes them fit: monospace is 1.494 mm/char at 8 pt, half
+% again as wide as the text face for these strings.
 %
 % Regenerate — from THIS directory, because \input{palette} resolves against
 % the working directory:
@@ -213,6 +363,17 @@
 \usepackage{lmodern}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
+
+% THE FONT SIZES OF THIS FIGURE. Redeclared rather than passed through ~60
+% `font=` keys so there is one place to change them, and so every call site
+% still reads as what it means. See FONT SIZES in the header for what each one
+% is worth on the page and what stops it going higher. lmodern is scalable, so
+% these are real design sizes, not scaled ones.
+\makeatletter
+\renewcommand{\tiny}      {\@setfontsize\tiny       {8}{9.5}}
+\renewcommand{\scriptsize}{\@setfontsize\scriptsize {9}{11}}
+\renewcommand{\small}     {\@setfontsize\small     {11}{13}}
+\makeatother
 
 % fzjblue, fzjgrey and their two tints — the whole palette, shared with the
 % feature model so the two figures cannot drift apart. See palette.tex.
@@ -227,6 +388,10 @@
 % the meaning and the grey only de-emphasises. See the OPTIONAL STAGES note.
 \newcommand{\opt}{\tiny\itshape\color{fzjgrey}}
 \newcommand{\kw}{\scriptsize\color{fzjgrey}}
+% The member-list indent. \quad is 1 em = 3.17 mm at \scriptsize = 9 pt, and
+% the API box's longest line is within 1.2 mm of its text width, so the indent
+% is spelled explicitly and kept at 2 mm. See the LAYOUT GRID note on columns.
+\newcommand{\ind}{\hspace{2mm}}
 
 \begin{document}
 \begin{tikzpicture}[
@@ -242,24 +407,30 @@
   % is plain white, the same as `int`, because shape carries the distinction
   % and a second light blue would only add a tone.
   %
+  % 25 mm wide with 22 mm of text width is the largest box the row can afford
+  % once the three object-flow labels have their gaps; it is also the smallest
+  % that holds `accuracy metrics` (21.85 mm) at \tiny = 8 pt. Both bounds are
+  % tight, which is why two stage names are broken by hand — see WHAT THE
+  % PHASE ROW COST in the header.
+  %
   % The phase BOX is drawn empty and its text placed by `phtxt` below, because
   % a TikZ node always centres its text vertically inside `minimum height` and
-  % the four phases carry between four and seven content lines each. Centring
+  % the four phases carry between four and eight content lines each. Centring
   % put the four headers on four different heights; see TOP-ALIGNED PHASE TEXT.
   phase/.style={
     draw=fzjblue, line width=0.35mm, fill=white, text=fzjblue,
     rounded corners=2.2mm,
-    minimum width=22.5mm, minimum height=25mm, text width=19.5mm,
+    minimum width=25mm, minimum height=31.5mm, text width=22mm,
     align=center, font=\scriptsize},
   % The phase CONTENT, anchored to the top edge of its box. `inner sep=0` so
   % the anchor is the top of the first line's bounding box and not that plus a
   % default 0.3333em, which would differ from the padding stated in the grid.
   phtxt/.style={
-    anchor=north, text width=19.5mm, inner sep=0,
+    anchor=north, text width=22mm, inner sep=0,
     text=fzjblue, align=center, font=\scriptsize},
   ext/.style={
     draw=fzjgrey, line width=0.4mm, fill=fzjgreytint, text=fzjgrey,
-    minimum width=40mm, minimum height=15mm, text width=36mm,
+    minimum width=49mm, minimum height=13.5mm, text width=45mm,
     align=center, font=\small},
   hdr/.style={font=\small, text=fzjblue, align=center},
   mem/.style={font=\scriptsize, text=fzjblue, align=left, anchor=north west},
@@ -273,8 +444,11 @@
   % 0.3mm and a barb twice the size. Solid-vs-dashed is what tells the two
   % edge kinds apart, which is what UML says anyway.
   conn/.style={-{Straight Barb[scale=2]}, draw=fzjblue, line width=0.6mm},
+  % NO `text width`: every line is broken by hand, so the node is exactly as
+  % wide as its widest line ("Represen-", 12.84 mm) plus 0.25 mm of inner sep
+  % a side. A fixed text width would have to be at least that anyway.
   flbl/.style={font=\tiny, text=fzjblue, align=center, anchor=south,
-               text width=14mm, inner sep=0.25mm},
+               inner sep=0.25mm},
   elbl/.style={font=\scriptsize, text=fzjgrey, inner sep=1.4pt, fill=white},
   lgd/.style={font=\scriptsize, text=fzjgrey, anchor=west}
 ]
@@ -282,118 +456,136 @@
 
 % ══ provided interface: the entry point, in UML ball notation ══════════════
 \node[circle, draw=fzjblue, line width=0.4mm, fill=white, minimum size=4mm,
-      inner sep=0] (iface) at (77,-6) {};
-\draw[draw=fzjblue, line width=0.4mm] (iface.south) -- (77,-16);
-\node[anchor=west, font=\scriptsize, text=fzjblue] at (80.5,-6) {aggregate()};
+      inner sep=0] (iface) at (76,-4.5) {};
+\draw[draw=fzjblue, line width=0.4mm] (iface.south) -- (76,-14);
+\node[anchor=west, font=\scriptsize, text=fzjblue] at (79.5,-4.5) {aggregate()};
 
 % ══ row A — the three components that expose public API ════════════════════
-% The whole c1 column is left-aligned at x = 9, not x = 2, to open the lane the
-% Tools -> Plotly dependency needs. See the LANE note in the header.
+% All three share the top edge -14 and are as tall as their contents: three,
+% five and four member lines at \scriptsize (10.75, 18.51 and 14.63 mm), each
+% starting 1 mm below the compartment rule.
+% The whole c1 column is left-aligned at x = 9, not at the package boundary,
+% to open the lane the Tools -> Plotly dependency needs.
 % unstack_to_periods sits here rather than in API. It IS public API
 % (tsam.__all__), but its documented job is reshaping a series for a plotly
 % heatmap (api.py:282) — it is never part of an aggregate() call. Grouping it
 % with the other user-facing helpers says that; the cost is that the box is a
 % purpose grouping here, since the function's module is api.py. Written without
-% "(...)": at \scriptsize the parenthesised form sets 38.9 mm and would spill
-% the 37 mm box, and `tuning` / `plot` carry no parens either.
-\node[api, minimum width=41mm, minimum height=24mm] (tools) at (29.5,-28) {};
-\node[hdr] at (29.5,-20) {Tools};
-\draw[rule] (9,-24) -- (50,-24);
-\node[mem, text width=37mm] at (11,-25)
+% "(...)": the parenthesised form does not fit the 33.5 mm text width, and
+% `tuning` / `plot` carry no parens either.
+\node[api, minimum width=36.5mm, minimum height=21.5mm] (tools) at (27.25,-24.75) {};
+\node[hdr] at (27.25,-18.3) {Tools};
+\draw[rule] (9,-22) -- (45.5,-22);
+\node[mem, text width=33.5mm] at (11,-23)
   {+ tuning\\+ plot\\+ unstack\_to\_periods};
 
-\node[api, minimum width=44mm, minimum height=28mm] (apic) at (77,-30) {};
-\node[hdr] at (77,-20) {API};
-\draw[rule] (55,-24) -- (99,-24);
-\node[mem, text width=40mm] at (57,-25)
+\node[api, minimum width=50mm, minimum height=29mm] (apic) at (76,-28.5) {};
+\node[hdr] at (76,-18.3) {API};
+\draw[rule] (51,-22) -- (101,-22);
+\node[mem, text width=46mm] at (53,-23)
   {+ aggregate(data, n\_clusters,\\
-   \quad cluster: ClusterConfig,\\
-   \quad segments: SegmentConfig,\\
-   \quad extremes: ExtremeConfig, \ldots)\\
-   \quad $\rightarrow$ AggregationResult};
+   \ind cluster: ClusterConfig,\\
+   \ind segments: SegmentConfig,\\
+   \ind extremes: ExtremeConfig, \ldots)\\
+   \ind $\rightarrow$ AggregationResult};
 
-\node[api, minimum width=48mm, minimum height=26mm] (results) at (133,-29) {};
-\node[hdr] at (133,-20) {Results};
-\draw[rule] (109,-24) -- (157,-24);
-\node[mem, text width=44mm] at (111,-25)
+\node[api, minimum width=49mm, minimum height=25.5mm] (results) at (132.5,-26.75) {};
+\node[hdr] at (132.5,-18.3) {Results};
+\draw[rule] (108,-22) -- (157,-22);
+\node[mem, text width=45mm] at (110,-23)
   {+ AggregationResult\\+ ClusteringResult\\+ AccuracyMetrics\\+ ConcurrencyMetrics};
 
 % ══ Pipeline — a component whose second compartment holds the ACTIVITY ═════
-\node[int, minimum width=148mm, minimum height=41mm] (pipeline) at (83,-76.5) {};
-\node[hdr] at (83,-60) {Pipeline};
-\draw[rule] (9,-64) -- (157,-64);
+\node[int, minimum width=148mm, minimum height=48mm] (pipeline) at (83,-75) {};
+\node[hdr] at (83,-55.3) {Pipeline};
+\draw[rule] (9,-59) -- (157,-59);
 
 % The activity's name, in the upper left of the compartment that frames it —
 % which is where UML puts it. It is the one place \guillemotleft activity\guillemotright appears; saying
 % it here rather than in the legend is what tells the reader that the four
 % round-cornered boxes below are steps of a run and not four more parts.
 \node[anchor=north west, font=\tiny, text=fzjgrey, inner sep=0.2mm]
-  at (11,-64.5) {\guillemotleft activity\guillemotright{} \texttt{run\_pipeline}};
+  at (11,-59.5) {\guillemotleft activity\guillemotright{} \texttt{run\_pipeline}};
 
 % Each phase is TWO nodes: the box, which holds the row's common height, and
-% the text, anchored north 1.5 mm below the box's top edge at -68. See the
-% TOP-ALIGNED PHASE TEXT note — the four boxes carry six, four, seven and five
-% content lines, so vertically centred text put the four headers on four
+% the text, anchored north 1.5 mm below the box's top edge at -64. See the
+% TOP-ALIGNED PHASE TEXT note — the four boxes carry seven, four, eight and
+% five content lines, so vertically centred text put the four headers on four
 % different heights.
-\node[phase] (p1) at ( 24.25,-80.5) {};
-\node[phase] (p2) at ( 63.42,-80.5) {};
-\node[phase] (p3) at (102.58,-80.5) {};
-\node[phase] (p4) at (141.75,-80.5) {};
+% The boxes are positioned by their CENTRE, not their top edge, because -79.75
+% is what the object flows and their labels are pinned to; that is what lets
+% the height follow the text without moving anything else in the figure.
+\node[phase] (p1) at ( 23.50,-79.75) {};
+\node[phase] (p2) at ( 63.17,-79.75) {};
+\node[phase] (p3) at (102.83,-79.75) {};
+\node[phase] (p4) at (142.50,-79.75) {};
 
-\node[phtxt] at ( 24.25,-69.5)
+% Every stage name is one snake_case token: the underscore is what says which
+% words belong to the same step, which a space could not once the row's width
+% forced two of them onto two lines. See UNDERSCORES AND MONOSPACE.
+% Four of them are wider than the 22 mm box and are broken by hand, always at
+% an underscore and always with the underscore LEADING the continuation line,
+% so a wrapped name still reads as one token. \hyphenpenalty is off and LaTeX
+% will not break at `\_` on its own, so nothing here breaks by accident.
+\node[phtxt] at ( 23.50,-65.5)
   {{\ph Phase 1}\\[0.4mm]\textbf{Prepare data}\\[0.8mm]
-   {\stg normalize\\\texttt{unstack\_to\_periods}\\}{\opt apply weights\\add period sums}};
-\node[phtxt] at ( 63.42,-69.5)
+   {\stg normalize\\\texttt{unstack\_to}\\\texttt{\_periods}\\}%
+   {\opt apply\_weights\\add\_period\\\_sums}};
+\node[phtxt] at ( 63.17,-65.5)
   {{\ph Phase 2}\\[0.4mm]\textbf{Cluster}\\[0.8mm]
-   {\stg assign clusters\\representations}};
-\node[phtxt] at (102.58,-69.5)
+   {\stg assign\_clusters\\representations}};
+\node[phtxt] at (102.83,-65.5)
   {{\ph Phase 3}\\[0.4mm]\textbf{Refine}\\[0.8mm]
-   {\opt extreme periods\\unweight\\}{\stg count occurrences\\}{\opt rescale\\segment}};
-\node[phtxt] at (141.75,-69.5)
+   {\opt extreme\_periods\\unweight\\}{\stg count\\\_occurrences\\}%
+   {\opt rescale\\segment}};
+\node[phtxt] at (142.50,-65.5)
   {{\ph Phase 4}\\[0.4mm]\textbf{Build result}\\[0.8mm]
-   {\stg denormalize\\reconstruct\\accuracy metrics}};
+   {\stg denormalize\\reconstruct\\accuracy\\\_metrics}};
 
 % Object flows between the actions, labelled with the object each conveys. The
-% labels are free-standing nodes in the gaps, NOT pos= labels on the paths.
-% A label node is 16 mm of text width plus 0.6 mm of inner sep a side = 17.2 mm,
-% so the gap must exceed that: at the previous 24.45 mm parts the gap was
-% 16.4 mm and "Refined Representatives" overlapped the Phase 4 box.
-\draw[conn] ( 35.50,-80.5) -- ( 52.17,-80.5);
-\draw[conn] ( 74.67,-80.5) -- ( 91.33,-80.5);
-\draw[conn] (113.83,-80.5) -- (130.50,-80.5);
-% Anchored south at -76.5, not -79: the flow sits at -80.5 and its Straight
-% Barb at scale 2 reaches ~1.5 mm above the line, which was touching the
-% descenders of the two-line labels. All three move together so the row stays
-% level.
-\node[flbl] at ( 43.83,-76.5)  {Prepared\\Data};
-\node[flbl] at ( 83.00,-76.5) {Cluster\\Assignment};
-% "Representatives" sets 17.4 mm at \tiny, wider than the 16.67 mm gap, so it
-% overran the Phase 4 border. Hyphenation is off globally (\hyphenpenalty),
-% so the break is made by hand.
-\node[flbl] at (122.17,-76.5)  {Refined\\Represen-\\tatives};
+% labels are free-standing nodes in the 14.67 mm gaps, NOT pos= labels on the
+% paths. The widest label line is "Represen-" at 12.84 mm, so the widest node
+% is 13.34 mm and clears the phase boxes by 0.665 mm a side.
+\draw[conn] ( 36.00,-79.75) -- ( 50.67,-79.75);
+\draw[conn] ( 75.67,-79.75) -- ( 90.33,-79.75);
+\draw[conn] (115.33,-79.75) -- (130.00,-79.75);
+% Anchored south at -74.75, not -76.75. The flow sits at -79.75 and its
+% Straight Barb at scale 2 on a 0.6 mm line reaches ~1.7 mm above it, so at
+% -76.75 a descender ("g" in Assign-, "p" in Prepared) came within ~1.3 mm of
+% the arrowhead and read as touching it. 5 mm above the flow leaves ~3.3 mm of
+% daylight. The tallest label is three lines = 9.35 mm, so its top lands at
+% -65.4, still 1.4 mm inside the phase boxes' top edge at -64 and well clear of
+% the activity name, which ends at -62.15. All three move together so the row
+% stays level.
+% "Assignment" sets 15.13 mm against a 14.17 mm node budget and is hyphenated;
+% "Representatives" already was. Hyphenation is off globally (\hyphenpenalty),
+% so both breaks are made by hand.
+\node[flbl] at ( 43.33,-74.75) {Prepared\\Data};
+\node[flbl] at ( 83.00,-74.75) {Cluster\\Assign-\\ment};
+\node[flbl] at (122.67,-74.75) {Refined\\Represen-\\tatives};
 
 % ══ row C ══════════════════════════════════════════════════════════════════
 % Commons and Configuration carry \guillemotleft shared\guillemotright and NO arrows: they are used by
 % every building block, and one arrow each would assert the wrong relationship.
 % Commons has no API compartment, so the keyword rides in the node's own text
 % and centres itself; a separate \node[hdr] sat visibly high in the box.
-\node[int, minimum width=41mm, minimum height=18mm, text width=37mm]
-  (commons) at (29.5,-114) {{\kw \guillemotleft shared\guillemotright}\\[0.3mm]Commons};
+\node[int, minimum width=36.5mm, minimum height=14mm, text width=33.5mm]
+  (commons) at (27.25,-113) {{\kw \guillemotleft shared\guillemotright}\\[0.3mm]Commons};
 
-\node[int, minimum width=44mm, minimum height=18mm] (algorithms) at (77,-114) {Algorithms};
+\node[int, minimum width=50mm, minimum height=14mm] (algorithms) at (76,-113) {Algorithms};
 
 % Distribution and MinMaxMean are in tsam.__all__ too, so the "+ = public API"
 % convention was incomplete without them. They are not peers of the three
 % configs — they are the values the `representation` attribute of ClusterConfig
 % and SegmentConfig takes — hence the indented run-in line rather than two more
 % "+" entries.
-\node[api, minimum width=48mm, minimum height=30mm] (config) at (133,-120) {};
-\node[hdr] at (133,-109.5) {{\kw \guillemotleft shared\guillemotright}\\[0.3mm]Configuration};
-\draw[rule] (109,-114.5) -- (157,-114.5);
-\node[mem, text width=44mm] at (111,-115.5)
+\node[api, minimum width=49mm, minimum height=31.5mm] (config) at (132.5,-121.75) {};
+\node[hdr] at (132.5,-111.3) {{\kw \guillemotleft shared\guillemotright}\\[0.3mm]Configuration};
+\draw[rule] (108,-116.5) -- (157,-116.5);
+\node[mem, text width=45mm] at (110,-117.5)
   {+ ClusterConfig\\+ SegmentConfig\\+ ExtremeConfig\\
-   \quad{\tiny .representation takes}\\
-   \quad + Distribution, MinMaxMean};
+   \ind{\tiny .representation takes}\\
+   \ind + Distribution, MinMaxMean};
 
 % ══ the tsam package: UML package notation (body + folder tab) ═════════════
 \begin{scope}[on background layer]
@@ -415,29 +607,31 @@
 % be given an honest edge either; it is named here with its user instead.
 % Two boxes, not one: NumPy and pandas are \guillemotleft shared\guillemotright and Plotly is not, so
 % putting them in a single box made the keyword claim something false about
-% Plotly. The pocket below Tools (x 2..46, y -36..-56) is free but unusable —
-% it is INSIDE the package rectangle, and an external dependency drawn there
-% would read as part of tsam. A UML package is a rectangle; it cannot be
-% notched around the box.
+% Plotly. The pocket below Tools is free but unusable — it is INSIDE the
+% package rectangle, and an external dependency drawn there would read as part
+% of tsam. A UML package is a rectangle; it cannot be notched around the box.
 % Plotly is the UPPER box so the lane can reach its west edge without the
 % vertical passing through the other box.
-\node[ext, minimum width=41mm, minimum height=9mm, text width=37mm]
-  (plotly) at ( 29.5,-150) {Plotly};
-\node[ext, minimum width=41mm, minimum height=8mm, text width=37mm]
-  (pydata) at ( 29.5,-160.5)
+% All four boxes are centred on -154.25, which is what makes them read as one
+% row even though the c1 slot holds two of them.
+\node[ext, minimum width=36.5mm, minimum height=9mm, text width=33.5mm]
+  (plotly) at ( 27.25,-148.5) {Plotly};
+\node[ext, minimum width=36.5mm, minimum height=10.5mm, text width=33.5mm]
+  (pydata) at ( 27.25,-159.25)
   {{\kw \guillemotleft shared\guillemotright}\\pandas \textperiodcentered{} NumPy};
 
-\node[ext] (sklearn) at ( 77,-154.5) {scikit-learn};
-\node[ext] (pyomo)   at (133,-154.5)
+\node[ext, minimum width=50mm, minimum height=12mm, text width=46mm]
+  (sklearn) at ( 76,-154.25) {scikit-learn};
+\node[ext] (pyomo) at (132.5,-154.25)
   {Pyomo\\{\tiny HiGHS \textperiodcentered{} CBC \textperiodcentered{} Gurobi
    \textperiodcentered{} CPLEX}};
 
 % ══ dependencies — all orthogonal ══════════════════════════════════════════
-\draw[dep] ( 50,-26)  -- ( 55,-26);                 % Tools -> API
-\draw[dep] ( 99,-26)  -- (109,-26);                 % API -> Results
-\draw[dep] ( 77,-44)  -- ( 77,-56);                 % API -> Pipeline
-\draw[dep] (150,-56)  -- (150,-42);                 % Pipeline -> Results
-\draw[dep] ( 77,-97)  -- ( 77,-105);                % Pipeline -> Algorithms
+\draw[dep] ( 45.5,-28)   -- ( 51,-28);                % Tools -> API
+\draw[dep] (101,-28)     -- (108,-28);                % API -> Results
+\draw[dep] ( 76,-43)     -- ( 76,-51);                % API -> Pipeline
+\draw[dep] (150,-51)     -- (150,-39.5);              % Pipeline -> Results
+\draw[dep] ( 76,-99)     -- ( 76,-106);               % Pipeline -> Algorithms
 
 % Tools -> Plotly, down the only corridor that exists. Every column is
 % left-aligned at x = 9 and the package boundary lands at 5.5, so the lane at
@@ -445,51 +639,49 @@
 % as a second border. It leaves Tools' west edge, so it crosses the boundary
 % once, at the top, which is exactly what a dependency leaving the package
 % should do.
-\draw[extdep] (  9,-26) -- (  1,-26) -- (  1,-150) -- (  9,-150);
+\draw[extdep] (  9,-28) -- (  1,-28) -- (  1,-148.5) -- (  9,-148.5);
 
-\draw[extdep] ( 77,-123) -- ( 77,-147);             % Algorithms -> scikit-learn
-\draw[extdep] ( 99,-114) -- (104,-114) -- (104,-154.5) -- (113,-154.5);
-% On the RIGHT of its own lane, not the left. Anchored east at (102,-142) the
-% label reached back to x 82.6, close enough to the scikit-learn lane at x = 77
-% to be read as labelling that edge instead. Here it touches x = 104 with 1 mm
-% of daylight and is 28 mm clear of x = 77.
-\node[elbl, anchor=west] at (105.5,-143.5) {exact kmedoids};
+\draw[extdep] ( 76,-120) -- ( 76,-148.25);            % Algorithms -> scikit-learn
+\draw[extdep] (101,-113) -- (104.5,-113) -- (104.5,-154.25) -- (108,-154.25);
+% On the RIGHT of its own lane, not the left. Anchored east the label would run
+% back towards the scikit-learn lane at x = 76 and be read as labelling that
+% edge instead. Here it touches x = 104.5 with 1.5 mm of daylight, sits 3.3 mm
+% below the package boundary at -141 and 3.2 mm above the Pyomo box.
+\node[elbl, anchor=west] at (106,-144.3) {exact kmedoids};
 
 % ══ key ════════════════════════════════════════════════════════════════════
 % Row 1 colour swatches (what kind of component), row 2 shape and edge kinds
 % (what kind of element), row 3 the two text conventions. Row 2 runs THREE
-% columns so the round-cornered swatch fits without a fourth row, which the
-% aspect budget cannot pay for.
-\node[api, minimum width=12mm, minimum height=6mm] at ( 8,-171) {};
-\node[lgd] at (15.5,-171) {exposes public API};
+% columns so the round-cornered swatch fits without a fourth row.
+\node[api, minimum width=12mm, minimum height=6mm] at ( 8,-169) {};
+\node[lgd] at (15.5,-169) {exposes public API};
 
-\node[int, minimum width=12mm, minimum height=6mm] at (52,-171) {};
-\node[lgd] at (59.5,-171) {internal to tsam};
+\node[int, minimum width=12mm, minimum height=6mm] at (54,-169) {};
+\node[lgd] at (61.5,-169) {internal to tsam};
 
-\node[ext, minimum width=12mm, minimum height=6mm, text width=8mm] at (95,-171) {};
-\node[lgd] at (102.5,-171) {external dependency};
+\node[ext, minimum width=12mm, minimum height=6mm, text width=8mm] at (96,-169) {};
+\node[lgd] at (103.5,-169) {external dependency};
 
 % The shape swatch. 1.5 mm of radius, not the phases' 2.2, because the swatch
 % is 6 mm tall and 2.2 would round it into a lozenge.
 \node[phase, rounded corners=1.5mm, minimum width=12mm, minimum height=6mm,
-      text width=8mm] at (8,-179) {};
-\node[lgd] at (15.5,-179) {pipeline phase (action)};
+      text width=8mm] at (8,-177) {};
+\node[lgd] at (15.5,-177) {pipeline phase (action)};
 
-\draw[dep] (53,-179) -- (65,-179);
-\node[lgd] at (66.5,-179)
+\draw[dep] (55,-177) -- (67,-177);
+\node[lgd] at (68.5,-177)
   {\guillemotleft use\guillemotright{} dependency};
 
-\draw[conn] (98,-179) -- (110,-179);
-\node[lgd] at (111.5,-179) {object flow between phases};
+\draw[conn] (100,-177) -- (112,-177);
+\node[lgd] at (113.5,-177) {object flow between phases};
 
 % The swatch IS the convention: the word is set exactly as an optional stage
-% line is. "\textit{amber}" used to sit here and named a colour the palette no
-% longer has.
-\node[lgd, text=fzjgrey] at (4,-187) {\textit{italic}};
-\node[lgd] at (17.5,-187) {stage runs only when configured};
+% line is.
+\node[lgd, text=fzjgrey] at (4,-185) {\textit{italic}};
+\node[lgd] at (15,-185) {stage runs only when configured};
 
-\node[lgd, text=fzjgrey] at (72,-187) {\guillemotleft shared\guillemotright};
-\node[lgd] at (85.5,-187) {used by every building block};
+\node[lgd, text=fzjgrey] at (72,-185) {\guillemotleft shared\guillemotright};
+\node[lgd] at (88,-185) {used by every building block};
 
 \end{tikzpicture}
 \end{document}
