@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 New entries are automatically added by [release-please](https://github.com/googleapis/release-please) from conventional commit messages.
 
+## [4.1.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v4.0.0...v4.1.0) (2026-09-03)
+
+
+### Features
+
+* **clustering:** KMeans method config exposing restarts and a seed ([#454](https://github.com/FZJ-IEK3-VSA/tsam/issues/454)) ([059707a](https://github.com/FZJ-IEK3-VSA/tsam/commit/059707aad209d964bd1fdf4a241c933d6dcb6777))
+* **clustering:** KMedoids method config forwarding solver options ([#365](https://github.com/FZJ-IEK3-VSA/tsam/issues/365)) ([#418](https://github.com/FZJ-IEK3-VSA/tsam/issues/418)) ([4a77153](https://github.com/FZJ-IEK3-VSA/tsam/commit/4a771530e9222f2608da33241495376786fd2010))
+
+
+### Bug Fixes
+
+* **rescale:** weight cluster occurrences by id, not position ([#479](https://github.com/FZJ-IEK3-VSA/tsam/issues/479)) ([57477f4](https://github.com/FZJ-IEK3-VSA/tsam/commit/57477f43da0cac1adab964c253d628ba78460794)), closes [#478](https://github.com/FZJ-IEK3-VSA/tsam/issues/478)
+
+
+### Performance
+
+* cache the cluster id set for disaggregate validation ([#451](https://github.com/FZJ-IEK3-VSA/tsam/issues/451)) ([7d11a23](https://github.com/FZJ-IEK3-VSA/tsam/commit/7d11a23510d5a87e1df7df080bc04ad671d0e7d0))
+* compute accuracy metrics on the whole frame ([#449](https://github.com/FZJ-IEK3-VSA/tsam/issues/449)) ([508beea](https://github.com/FZJ-IEK3-VSA/tsam/commit/508beeaeb0ba3fc4771b98a596f4cd8c15b2c896))
+* Fix legend colors not properly matching shaded cluster regions - [#462](https://github.com/FZJ-IEK3-VSA/tsam/issues/462) ([#463](https://github.com/FZJ-IEK3-VSA/tsam/issues/463)) ([56134b0](https://github.com/FZJ-IEK3-VSA/tsam/commit/56134b00feb589a76dca3228106706fc0dc54b79))
+* **segmentation:** build the segment frame once, from a stacked array ([#455](https://github.com/FZJ-IEK3-VSA/tsam/issues/455)) ([454c1e8](https://github.com/FZJ-IEK3-VSA/tsam/commit/454c1e81aff7975e7a3eac6aadb70b1468494c2b))
+
+
+### Documentation
+
+* add AGENTS.md and CLAUDE.md contributor/agent guidance ([#411](https://github.com/FZJ-IEK3-VSA/tsam/issues/411)) ([8a62e54](https://github.com/FZJ-IEK3-VSA/tsam/commit/8a62e54c2e974f27dee2e92d60e9684484a29c06))
+
 ## [4.0.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v3.4.2...v4.0.0) (2026-08-02)
 
 tsam v4 is a rewrite of the internals: aggregation is now a chain of stateless functions in `src/tsam/pipeline/`, the class-based `TimeSeriesAggregation` API has been removed — `tsam.aggregate()` is the single entry point — and every internal identifier moved from camelCase to snake_case. For the overwhelming majority of configurations the results are bit-identical to 3.4.2; the exceptions are listed below and in the [migration guide](https://tsam.readthedocs.io/en/latest/migration/v3-to-v4/), which says for each change whether — and what — you need to do.
