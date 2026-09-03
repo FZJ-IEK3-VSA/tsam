@@ -19,24 +19,27 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
-    """k-medoids class.
+class ExactKMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
+    """Exact k-medoids clustering (MILP).
+
+    Internal solver-backed estimator. The public, user-facing configuration
+    object is [`KMedoids`][tsam.config.KMedoids].
 
     Args:
         n_clusters: How many medoids. Must be positive.
         distance_metric: What distance metric to use.
-        timelimit: The time limit of the solver.
-        threads: Threads to use by the optimization solver.
         solver: The solver to use.
+        options: Solver options forwarded verbatim to the solver, e.g.
+            ``{"time_limit": 300}`` for HiGHS. ``None`` leaves the solver's
+            own defaults in place.
     """
 
     def __init__(
         self,
         n_clusters: int = 8,
         distance_metric: str | Callable = "euclidean",
-        timelimit: int = 100,
-        threads: int = 7,
         solver: str = "highs",
+        options: dict | None = None,
     ) -> None:
         self.n_clusters = n_clusters
 
@@ -44,9 +47,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 
         self.solver = solver
 
-        self.timelimit = timelimit
-
-        self.threads = threads
+        self.options = options
 
     def _check_init_args(self) -> None:
         # Check n_clusters
@@ -72,7 +73,7 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
                 + "was given."
             )
 
-    def fit(self, X: np.ndarray, y: object = None) -> KMedoids:
+    def fit(self, X: np.ndarray, y: object = None) -> ExactKMedoids:
         """Fit K-Medoids to the provided data.
 
         Args:
@@ -156,7 +157,11 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
         M = _setup_k_medoids(distances, n_clusters)
 
         # And solve
-        r_x, r_y, r_obj = _solve_given_pyomo_model(M, solver=self.solver)
+        r_x, r_y, r_obj = _solve_given_pyomo_model(
+            M,
+            solver=self.solver,
+            options=self.options,
+        )
 
         return (r_y, r_x.T, r_obj)
 
@@ -219,23 +224,29 @@ def _setup_k_medoids(distances: np.ndarray, n_clusters: int) -> pyomo.ConcreteMo
 
 
 def _solve_given_pyomo_model(
-    M: pyomo.ConcreteModel, solver: str = "highs"
+    M: pyomo.ConcreteModel, solver: str = "highs", options: dict | None = None
 ) -> tuple[np.ndarray, np.ndarray, float]:
     """Solve a given pyomo clustering model and return the clusters.
 
     Args:
         M: Concrete model instance that gets solved.
         solver: Defines the solver for the pyomo model.
+        options: Solver options forwarded verbatim to the solver (option names
+            are solver-specific). ``None`` leaves the solver defaults in place.
 
     Returns:
         A tuple ``(r_x, r_y, r_obj)`` of the assignment matrix, the medoid
         selection vector, and the objective value.
     """
+    options = options or {}
     # create optimization problem
     if solver == "highs":
         solver_instance = appsi.solvers.Highs()
+        if options:
+            solver_instance.highs_options = dict(options)
     else:
         solver_instance = opt.SolverFactory(solver)
+        solver_instance.options.update(options)
     _results = solver_instance.solve(M)  # results checked via model state
 
     # Get results

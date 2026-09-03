@@ -41,12 +41,12 @@
         },
         {
             "customType": "regex",
-            "description": "Match deps in pyproject.toml that are also pinned in environment.yml; resolve via conda-forge so PRs only open once a release is on both channels. IMPORTANT: this list of package names must mirror the matchPackageNames list in the pep621-disable packageRule below — both are derived from the deps shared between pyproject.toml and environment.yml. The optional `(?:[<>=,\"][^\"]*?)?` group after depName forces a constraint separator (`<`, `>`, `=`, `,`, or the closing quote) to follow, preventing prefix-matches against longer package names that are NOT in the alternation (e.g. pytest-benchmark, mkdocstrings, pandas-stubs — PyPI-only deps handled by the pep621 manager). Lookaheads can't be used here because Renovate's regex engine (re2) rejects them with `invalid perl operator: (?!`. Longer names that ARE in the alternation must still precede their prefixes (e.g. pytest-cov before pytest) so left-to-right alternation picks them first.",
+            "description": "Match deps in pyproject.toml that are also pinned in environment.yml; resolve via conda-forge so PRs only open once a release is on both channels. Every pinned dep in pyproject.toml is mirrored in environment.yml, so this alternation lists them all — and must mirror the matchPackageNames list in the pep621-disable packageRule below. The optional `(?:[<>=,\"][^\"]*?)?` group after depName forces a constraint separator (`<`, `>`, `=`, `,`, or the closing quote) to follow, so a short name cannot prefix-match a longer package name. Lookaheads can't be used here because Renovate's regex engine (re2) rejects them with `invalid perl operator: (?!`. The alternation is ordered longest name first (so pytest-benchmark and pytest-cov precede pytest, mkdocstrings-python precedes mkdocs, pandas-stubs precedes pandas) and left-to-right alternation therefore never picks a prefix over the full name; keep that ordering when adding entries.",
             "managerFilePatterns": [
                 "/(^|/)pyproject\\.toml$/"
             ],
             "matchStrings": [
-                "\"(?<depName>scikit-learn|mkdocs-literate-nav|mkdocs-gen-files|mkdocs-jupyter|mkdocs-material|pytest-xdist|pytest-cov|pre-commit|networkx|highspy|codecov|plotly|mkdocs|pytest|pyomo|pandas|numpy|nbval|ruff|mypy|tqdm)(?:[<>=,\"][^\"]*?)?(?<currentValue><=?\\d[^\",]*)"
+                "\"(?<depName>mkdocs-literate-nav|mkdocstrings-python|mkdocs-gen-files|pytest-benchmark|mkdocs-material|mkdocs-jupyter|pandas-stubs|pytest-xdist|scikit-learn|pre-commit|pytest-cov|nbclient|nbformat|notebook|codecov|highspy|mkdocs|pandas|plotly|pytest|nbval|numpy|pyomo|scipy|mypy|ruff|tqdm)(?:[<>=,\"][^\"]*?)?(?<currentValue><=?\\d[^\",]*)"
             ],
             "packageNameTemplate": "conda-forge/{{{depName}}}",
             "datasourceTemplate": "conda",
@@ -77,30 +77,36 @@
             "rangeStrategy": "replace"
         },
         {
-            "description": "Disable pep621 for deps that are also tracked in environment.yml; the custom.regex manager above handles them via conda-forge so PRs only open once the new version is on both PyPI and conda-forge. IMPORTANT: keep this list in sync with the regex alternation in the pyproject.toml customManager above.",
+            "description": "Disable pep621 for deps that are also tracked in environment.yml; the custom.regex manager above handles them via conda-forge so PRs only open once the new version is on both PyPI and conda-forge. This covers every pinned dep in pyproject.toml — pep621 stays enabled only as a fallback for a dep that has not been mirrored into environment.yml yet. IMPORTANT: keep this list in sync with the regex alternation in the pyproject.toml customManager above.",
             "matchManagers": ["pep621"],
             "matchPackageNames": [
                 "scikit-learn",
+                "scipy",
                 "pandas",
                 "numpy",
                 "pyomo",
-                "networkx",
                 "tqdm",
                 "highspy",
+                "plotly",
+                "notebook",
                 "pytest",
                 "pytest-cov",
                 "pytest-xdist",
+                "pytest-benchmark",
                 "codecov",
                 "nbval",
+                "nbclient",
+                "nbformat",
                 "mkdocs",
                 "mkdocs-material",
+                "mkdocstrings-python",
                 "mkdocs-jupyter",
                 "mkdocs-gen-files",
                 "mkdocs-literate-nav",
-                "plotly",
                 "ruff",
                 "mypy",
-                "pre-commit"
+                "pre-commit",
+                "pandas-stubs"
             ],
             "enabled": false
         },
