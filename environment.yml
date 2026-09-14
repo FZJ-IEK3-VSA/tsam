@@ -21,7 +21,7 @@ dependencies:
   - pyomo >=6.4.3,<=6.10.1
   - tqdm >=4.21.0,<=4.70.0
   - highspy >=1.7.2,<=1.15.1
-  - plotly >=5.0.0,<=6.9.0
+  - plotly >=5.0.0,<=7.0.0
   - notebook >=7.5.0,<=7.6.2
   # Testing
   - pytest <=9.1.1
