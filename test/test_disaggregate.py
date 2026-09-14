@@ -12,6 +12,8 @@ from tsam.result import (
     _expand_periods,
     _expand_periods_fast,
     _expand_periods_pandas,
+    _expand_segments_fast,
+    _expand_segments_pandas,
 )
 
 
@@ -553,3 +555,88 @@ class TestExpandPeriodsFallback:
                 [data.loc[1].to_numpy(dtype=float), data.loc[0].to_numpy(dtype=float)]
             ),
         )
+
+
+def _segment_grid(clusters, durations, n_columns=3, seed=0):
+    """Build a segment-level frame plus its matching durations, sorted-ID keyed."""
+    rng = np.random.default_rng(seed)
+    n_segments = len(durations[0])
+    index = pd.MultiIndex.from_product([clusters, range(n_segments)])
+    values = rng.random((len(index), n_columns))
+    data = pd.DataFrame(
+        values, index=index, columns=[f"c{i}" for i in range(n_columns)]
+    )
+    return data, tuple(durations)
+
+
+class TestExpandSegmentsFastPath:
+    """The scatter must match the per-cluster pandas loop exactly."""
+
+    @pytest.mark.parametrize(
+        ("clusters", "durations"),
+        [
+            ((0, 1), ((2, 3), (1, 4))),
+            ((0,), ((5,),)),
+            ((0, 4, 9), ((1, 1, 3), (2, 2, 1), (3, 1, 1))),
+            ((2, 0, 1), ((1, 4), (3, 2), (2, 3))),
+        ],
+        ids=["two-clusters", "single-segment", "gapped-labels", "unsorted-labels"],
+    )
+    def test_matches_pandas_path(self, clusters, durations):
+        data, durations = _segment_grid(clusters, durations)
+        fast = _expand_segments_fast(data, durations)
+        assert fast is not None
+        pd.testing.assert_frame_equal(fast, _expand_segments_pandas(data, durations))
+
+    def test_durations_are_keyed_by_sorted_cluster_id(self):
+        """Unsorted index labels must still pick each cluster's own durations."""
+        data, durations = _segment_grid((2, 0, 1), ((1, 4), (3, 2), (2, 3)))
+        fast = _expand_segments_fast(data, durations)
+        assert fast is not None
+        # Cluster 0 is first in sorted order, so it gets durations (1, 4):
+        # values land at timesteps 0 and 1, and nowhere else.
+        cluster_0 = fast.loc[0]
+        assert cluster_0.notna().all(axis=1).tolist() == [
+            True,
+            True,
+            False,
+            False,
+            False,
+        ]
+
+    def test_zero_duration_segment_is_overwritten(self):
+        """A zero-length segment shares a start; the later value wins, as in the loop."""
+        data, durations = _segment_grid((0, 1), ((0, 3), (1, 2)))
+        fast = _expand_segments_fast(data, durations)
+        assert fast is not None
+        pd.testing.assert_frame_equal(fast, _expand_segments_pandas(data, durations))
+
+
+class TestExpandSegmentsFallback:
+    """Inputs the segment fast path must decline."""
+
+    def test_mixed_dtypes(self):
+        data, durations = _segment_grid((0, 1), ((2, 3), (1, 4)))
+        data["c0"] = data["c0"].astype("float32")
+        assert _expand_segments_fast(data, durations) is None
+
+    def test_extension_dtype(self):
+        data, durations = _segment_grid((0, 1), ((2, 3), (1, 4)))
+        assert _expand_segments_fast(data.astype("Float64"), durations) is None
+
+    def test_uneven_period_lengths(self):
+        """Clusters whose segments sum to different period lengths."""
+        data, durations = _segment_grid((0, 1), ((2, 3), (1, 1)))
+        assert _expand_segments_fast(data, durations) is None
+
+    def test_duration_count_mismatch(self):
+        data, _ = _segment_grid((0, 1), ((2, 3), (1, 4)))
+        assert _expand_segments_fast(data, ((2, 3),)) is None
+
+    def test_ragged_durations(self):
+        data, _ = _segment_grid((0, 1), ((2, 3), (1, 4)))
+        assert _expand_segments_fast(data, ((5,), (1, 4))) is None
+
+    def test_irregular_index(self):
+        data, durations = _segment_grid((0, 1), ((2, 3), (1, 4)))
+        assert _expand_segments_fast(data.iloc[[0, 2, 1, 3]], durations) is None
