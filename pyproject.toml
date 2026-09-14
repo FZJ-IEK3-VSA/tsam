@@ -43,7 +43,7 @@ classifiers = [
 # Upper bounds are the highest version CI has tested; they track conda-forge,
 # which occasionally lags PyPI.
 dependencies = [
-  "scikit-learn>=1.3.0,<=1.9.0",
+  "scikit-learn>=1.3.0,<=1.9.1",
   "scipy>=1.9.0,<=1.18.0",
   "pandas>=2.2.0,<=3.0.5",
   "numpy>=1.22.4,<=2.4.6",
