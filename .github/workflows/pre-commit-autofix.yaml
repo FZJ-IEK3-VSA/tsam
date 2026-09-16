@@ -45,8 +45,11 @@ jobs:
           base: ${{ inputs.target_branch }}
           branch: pre-commit-autofix/${{ inputs.target_branch }}
           delete-branch: true
-          commit-message: "style: apply pre-commit auto-fixes"
-          title: "style: apply pre-commit auto-fixes to ${{ inputs.target_branch }}"
+          # `style` is not an accepted type in pr-title.yaml (nor a known
+          # release-please changelog section), so a `style:` title fails the
+          # "Validate conventional commit format" check. Use `chore`.
+          commit-message: "chore: apply pre-commit auto-fixes"
+          title: "chore: apply pre-commit auto-fixes to ${{ inputs.target_branch }}"
           body: |
             Automated pre-commit auto-fixes for `${{ inputs.target_branch }}`,
             triggered via `workflow_dispatch` by @${{ github.actor }}.

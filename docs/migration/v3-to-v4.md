@@ -43,7 +43,9 @@ tsam.aggregate(
     data,
     n_clusters=8,
     cluster=ClusterConfig(representation=MinMaxMean(max_columns=["GHI"])),
-    segments=SegmentConfig(n_segments=6, representation=MinMaxMean(min_columns=["Load"])),
+    segments=SegmentConfig(
+        n_segments=6, representation=MinMaxMean(min_columns=["Load"])
+    ),
 )
 # v3: BOTH stages used {Load: min}; the cluster's {GHI: max} was discarded.
 # v4: the cluster stage uses {GHI: max}, the segment stage uses {Load: min}.

@@ -314,6 +314,7 @@ providing **35--77x** end-to-end speedups over v2.3.9 for most configurations.
     ```python
     import warnings
     from tsam import LegacyAPIWarning
+
     warnings.filterwarnings("ignore", category=LegacyAPIWarning)
     ```
 
@@ -328,7 +329,7 @@ aggregation = tsam_legacy.TimeSeriesAggregation(
     raw,
     noTypicalPeriods=8,
     hoursPerPeriod=24,
-    clusterMethod='hierarchical',
+    clusterMethod="hierarchical",
 )
 typical_periods = aggregation.createTypicalPeriods()
 ```
