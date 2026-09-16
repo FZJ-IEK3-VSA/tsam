@@ -20,12 +20,12 @@ This guide covers every change you need to make.
         n_clusters=8,
         period_duration=24,
         cluster=ClusterConfig(
-            method='hierarchical',
-            representation='distribution_minmax',
+            method="hierarchical",
+            representation="distribution_minmax",
         ),
         segments=SegmentConfig(n_segments=12),
         preserve_column_means=True,
-        extremes=ExtremeConfig(max_value=['demand']),
+        extremes=ExtremeConfig(max_value=["demand"]),
     )
     representatives = result.cluster_representatives
     reconstructed = result.reconstructed
@@ -41,12 +41,12 @@ This guide covers every change you need to make.
         df,
         noTypicalPeriods=8,
         hoursPerPeriod=24,
-        clusterMethod='hierarchical',
-        representationMethod='distributionAndMinMaxRepresentation',
+        clusterMethod="hierarchical",
+        representationMethod="distributionAndMinMaxRepresentation",
         segmentation=True,
         noSegments=12,
         rescaleClusterPeriods=True,
-        addPeakMax=['demand'],
+        addPeakMax=["demand"],
     )
     representatives = agg.createTypicalPeriods()
     reconstructed = agg.predictOriginalData()
@@ -138,7 +138,7 @@ common cases.
     agg = tsam.TimeSeriesAggregation(
         df,
         noTypicalPeriods=8,
-        representationMethod='distributionRepresentation',
+        representationMethod="distributionRepresentation",
         distributionPeriodWise=False,
     )
     ```
@@ -165,7 +165,7 @@ common cases.
     agg = tsam.TimeSeriesAggregation(
         df,
         noTypicalPeriods=8,
-        representationMethod='distributionAndMinMaxRepresentation',
+        representationMethod="distributionAndMinMaxRepresentation",
         distributionPeriodWise=False,
     )
     ```
@@ -182,8 +182,8 @@ common cases.
         n_clusters=8,
         cluster=ClusterConfig(
             representation=MinMaxMean(
-                max_columns=['GHI'],
-                min_columns=['T', 'Load'],
+                max_columns=["GHI"],
+                min_columns=["T", "Load"],
             ),
         ),
     )
@@ -195,8 +195,8 @@ common cases.
     agg = tsam.TimeSeriesAggregation(
         df,
         noTypicalPeriods=8,
-        representationMethod='minmaxmeanRepresentation',
-        representationDict={'GHI': 'max', 'T': 'min', 'Wind': 'mean', 'Load': 'min'},
+        representationMethod="minmaxmeanRepresentation",
+        representationDict={"GHI": "max", "T": "min", "Wind": "mean", "Load": "min"},
     )
     ```
 
@@ -294,6 +294,7 @@ In v3 this is a single method call:
     result.clustering.to_json("clustering.json")
 
     from tsam import ClusteringResult
+
     clustering = ClusteringResult.from_json("clustering.json")
     result = clustering.apply(df)
     ```
@@ -316,12 +317,12 @@ Plotting has moved from `matplotlib` to `plotly`.
 Instead of calling separate functions, use the `result.plot` accessor:
 
 ```python
-result.plot.compare()               # Duration curves: original vs reconstructed
-result.plot.residuals()             # Reconstruction errors
-result.plot.heatmap()               # Heatmap of cluster representatives
-result.plot.cluster_assignments()   # Period-to-cluster mapping
-result.plot.cluster_counts()       # Cluster occurrence counts
-result.plot.accuracy()              # Accuracy metrics bar chart
+result.plot.compare()  # Duration curves: original vs reconstructed
+result.plot.residuals()  # Reconstruction errors
+result.plot.heatmap()  # Heatmap of cluster representatives
+result.plot.cluster_assignments()  # Period-to-cluster mapping
+result.plot.cluster_counts()  # Cluster occurrence counts
+result.plot.accuracy()  # Accuracy metrics bar chart
 ```
 
 ## Hyperparameter tuning
@@ -347,7 +348,7 @@ The `HyperTunedAggregations` class is replaced by two functions in
     segments = result.n_segments
     periods = result.n_clusters
     rmse = result.rmse
-    best = result.best_result          # AggregationResult
+    best = result.best_result  # AggregationResult
     ```
 
 === "v2 (old)"
@@ -382,8 +383,8 @@ The `HyperTunedAggregations` class is replaced by two functions in
         cluster=ClusterConfig(method="hierarchical"),
         segment_representation="mean",
     )
-    print(pareto.summary)              # DataFrame of all tested configs
-    pareto.plot()                      # Interactive Plotly visualization
+    print(pareto.summary)  # DataFrame of all tested configs
+    pareto.plot()  # Interactive Plotly visualization
     ```
 
 === "v2 (old)"
