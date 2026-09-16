@@ -49,8 +49,8 @@ repos:
   # rather than pre-commit's isolated venv. This keeps mypy, pandas-stubs and
   # numpy on the single versions pinned in pyproject.toml (the [develop] extra
   # and runtime deps) — no duplicated pins, no rev to bump. The isolated-venv
-  # approach previously installed an unconstrained numpy (2.5.x) whose PEP 695
-  # stubs broke mypy under our python_version = "3.10" target.
+  # approach previously installed an unconstrained numpy whose PEP 695 stubs
+  # broke mypy; see the note on python_version in pyproject.toml.
   #
   # Requires `.[develop]` in the active env: CI installs it before running
   # pre-commit, and pre-commit.ci skips this hook (see `ci.skip` above).

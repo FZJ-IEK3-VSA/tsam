@@ -621,8 +621,8 @@ class ResultPlotAccessor:
             rep = representatives.loc[cluster_id]
             if result.n_segments is not None:
                 durations = rep.index.get_level_values("Segment Duration").astype(int)
-                return np.repeat(rep[col].values, durations)
-            return rep[col].values  # type: ignore[no-any-return]
+                return np.repeat(np.asarray(rep[col].values), durations)
+            return np.asarray(rep[col].values)
 
         if _slider not in ("cluster", "column"):
             raise ValueError(f"slider must be 'cluster' or 'column', got {slider!r}")

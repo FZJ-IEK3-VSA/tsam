@@ -153,7 +153,19 @@ known-first-party = ["tsam"]
 ] # pandas/numpy needed at runtime for dataclass fields
 
 [tool.mypy]
-python_version = "3.10"
+# Deliberately ABOVE the 3.10 floor in requires-python. mypy applies
+# python_version as the parse grammar for everything it reads, including
+# dependency stubs, so a 3.10 target cannot parse numpy >=2.5, whose bundled
+# stubs use PEP 695 `type` statements (numpy 2.5 itself requires >=3.12).
+# That is a blocking [syntax] error which mypy refuses to let you ignore.
+# This setting affects static analysis only: it does not change
+# requires-python, what gets installed, or runtime support for 3.10/3.11.
+# The cost is that mypy no longer flags 3.11+/3.12+ stdlib APIs; ruff's
+# target-version = "py310" still rejects 3.10-incompatible syntax, and the
+# "Test (Python 3.10, self-hosted)" CI job backstops import-time breakage.
+# Revisit once mypy >=2.4.0 ships python/mypy#21883, which fixes the
+# underlying stub-parsing wart.
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
