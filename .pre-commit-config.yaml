@@ -1,15 +1,5 @@
-# pre-commit.ci is enabled on this repo; Renovate also manages hook revs via the
-# pre-commit manager (see .github/renovate.json). `autoupdate_schedule: quarterly`
-# is the longest interval pre-commit.ci accepts and makes it effectively a safety
-# net behind Renovate's weekly run. To disable pre-commit.ci autoupdates entirely,
-# toggle it off in the pre-commit.ci dashboard (no config-only option exists).
-ci:
-  autoupdate_schedule: quarterly
-  # The mypy hook below runs as a `repo: local` / system hook against the
-  # project's own environment, which pre-commit.ci cannot install. Skip it
-  # there; the "Pre-commit" GitHub Actions job runs mypy with `.[develop]`
-  # installed instead.
-  skip: [mypy]
+# Renovate manages the hook revs below via its pre-commit manager
+# (see .github/renovate.json).
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -52,8 +42,8 @@ repos:
   # approach previously installed an unconstrained numpy whose PEP 695 stubs
   # broke mypy; see the note on python_version in pyproject.toml.
   #
-  # Requires `.[develop]` in the active env: CI installs it before running
-  # pre-commit, and pre-commit.ci skips this hook (see `ci.skip` above).
+  # Requires `.[develop]` in the active env; the "Pre-commit" CI job installs
+  # it before running pre-commit.
   - repo: local
     hooks:
       - id: mypy
