@@ -661,7 +661,7 @@ def _expand_periods(
     """
     unstacked = data.unstack(level=1)  # rows=cluster, cols=(col, timestep)
     expanded = unstacked.loc[list(cluster_assignments)]
-    expanded.index = range(len(cluster_assignments))
+    expanded.index = pd.RangeIndex(len(cluster_assignments))
     # Use level=-1 to always stack the timestep level (last), which is correct
     # even when the original columns are a MultiIndex.
     result: pd.DataFrame = expanded.stack(future_stack=True, level=-1)  # type: ignore[assignment]

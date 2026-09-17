@@ -51,6 +51,23 @@
             "packageNameTemplate": "conda-forge/{{{depName}}}",
             "datasourceTemplate": "conda",
             "versioningTemplate": "pep440"
+        },
+        {
+            "customType": "regex",
+            "description": "Keep mypy's static-analysis target ([tool.mypy] python_version) on the newest CPython minor release. Resolved via conda-forge like every other pinned dep, so the `{{depName}}` group rule below lands it in the same PR as the `python` bump in environment.yml. `matchStringsStrategy: recursive` first isolates the [tool.mypy] section and only then matches the key, so the string Renovate rewrites is the key line alone — a comment inside that section that mentions a version number can never be rewritten by the bump. `extractVersionTemplate` trims a conda release (3.14.7) down to the MAJOR.MINOR form mypy expects (3.14); requiring exactly three numeric components also drops prereleases, which matters because conda-forge publishes 3.15.0rc1 and friends — truncated naively those would look like a stable `3.15` and move the target before the release exists. A patch release therefore only touches environment.yml; this line moves on a minor bump.",
+            "managerFilePatterns": [
+                "/(^|/)pyproject\\.toml$/"
+            ],
+            "matchStringsStrategy": "recursive",
+            "matchStrings": [
+                "\\[tool\\.mypy\\]\\n(?:[^\\[\\n][^\\n]*\\n|\\n)*",
+                "python_version = \"(?<currentValue>\\d+\\.\\d+)\""
+            ],
+            "depNameTemplate": "python",
+            "packageNameTemplate": "conda-forge/python",
+            "datasourceTemplate": "conda",
+            "versioningTemplate": "pep440",
+            "extractVersionTemplate": "^(?<version>\\d+\\.\\d+)\\.\\d+$"
         }
     ],
     "packageRules": [

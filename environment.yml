@@ -9,7 +9,9 @@ channels:
 # update the package list in .github/renovate.json (regex alternation +
 # pep621 disable rule).
 # The only intentional exceptions are `python`, `pip` and `d2` (see below),
-# which have no pyproject.toml counterpart.
+# which are not pyproject.toml dependencies. `python` is still kept in step with
+# pyproject.toml: Renovate reads `[tool.mypy] python_version` from the same
+# conda-forge release and groups both changes into a single PR.
 dependencies:
   - python>=3.10,<=3.14.7
   - pip
