@@ -9,7 +9,7 @@ New entries are automatically added by [release-please](https://github.com/googl
 
 ### Bug Fixes
 
-* raise the mypy target to 3.14 so numpy &gt;=2.5 stubs parse ([#512](https://github.com/FZJ-IEK3-VSA/tsam/issues/512)) ([c7e7e57](https://github.com/FZJ-IEK3-VSA/tsam/commit/c7e7e57c95817a560603e1cce2dd464859e2a77d))
+* raise the mypy target to 3.14 so numpy=2.5 stubs parse ([#512](https://github.com/FZJ-IEK3-VSA/tsam/issues/512)) ([c7e7e57](https://github.com/FZJ-IEK3-VSA/tsam/commit/c7e7e57c95817a560603e1cce2dd464859e2a77d))
 
 ## [4.1.0](https://github.com/FZJ-IEK3-VSA/tsam/compare/v4.0.0...v4.1.0) (2026-09-03)
 
