@@ -1,7 +1,7 @@
 # Tutorials
 
-Learning-oriented lessons. Each one is a guided walk you can follow start to finish, on data small
-enough to check by eye. If you want to *understand by doing*, start here; if you already know what
+Learning-oriented lessons. Each one is a guided walk you can follow start to finish, from small
+examples you can check by eye to comparisons on a full hourly year. If you want to *understand by doing*, start here; if you already know what
 you need and want a recipe, go to the [how-to guides](../how-to/index.md).
 
 ## Start here
@@ -12,7 +12,7 @@ cost you. Assumes nothing.
 
 **[Choosing a method](choosing_a_method.ipynb)** — the four levers `aggregate()` sets for you, what
 each one throws away, and how to read a configuration off what you are modelling. Read this second:
-it is the map of every decision, and the two tutorials below are the detailed tours of the first
+it is the map of every decision, and the tutorials below are the detailed tours of the first
 two levers.
 
 ## Going deeper
@@ -21,10 +21,13 @@ two levers.
 clustering methods the same twelve days and the same budget, and watch them disagree. Explains *why*
 each carves the data differently, and what each one costs to run.
 
-**[Comparing representations](comparing_representations.ipynb)** — lever 2 in depth. Put all six
-representations on the *same* cluster and read off what each keeps: a real day, the peak, or the
-average. Then compare all five distribution concurrency orderings: the duration curves stay
-fixed while timing and cross-attribute relationships change.
+**[Comparing representations](comparing_representations.ipynb)** — lever 2, starting with four
+basic rules on one small cluster. See which rules select whole days and which calculate values
+at individual timesteps, then compare their means, extremes, and paths.
+
+**[Duration representations](duration_representations.ipynb)** — lever 2 on a full year of hourly
+data. Compare distribution fitting with the basic rules, distinguish local/global scope and
+min/max preservation, then hold duration curves fixed while comparing five concurrency orderings.
 
 ---
 
