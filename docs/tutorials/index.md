@@ -23,7 +23,8 @@ each carves the data differently, and what each one costs to run.
 
 **[Comparing representations](comparing_representations.ipynb)** — lever 2 in depth. Put all six
 representations on the *same* cluster and read off what each keeps: a real day, the peak, or the
-average. No rule keeps all three, and the table shows which trade you are making.
+average. Then compare all five distribution concurrency orderings: the duration curves stay
+fixed while timing and cross-attribute relationships change.
 
 ---
 
