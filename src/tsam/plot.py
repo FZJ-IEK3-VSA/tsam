@@ -17,6 +17,12 @@ To ask whether two configurations grouped the periods the same way, compare
 their partitions side by side:
     >>> tsam.plot.compare_partitions({"kmeans": a, "kmedoids": b})
 
+To compare chronological paths with consistent colours and shared axes:
+    >>> tsam.plot.path_panels(days, "solar", "load", background=days)
+
+To compare full series or their duration curves across several runs:
+    >>> tsam.plot.compare_series(series, mode="duration_curve", reference="original")
+
 For exploring raw data before aggregation, use plotly directly with
 ``tsam.unstack_to_periods()`` to reshape data for heatmaps:
     >>> import plotly.express as px
@@ -451,6 +457,327 @@ class AttributeSpace:
     def show(self, **kwargs) -> None:
         """Display the figure."""
         self._fig.show(**kwargs)
+
+
+def path_panels(
+    paths: dict[str, pd.DataFrame],
+    x_attr: str,
+    y_attr: str,
+    *,
+    background: dict[str, pd.DataFrame] | None = None,
+    units: dict[str, str] | None = None,
+    colors: dict[str, str] | None = None,
+    path_color: str | None = None,
+    path_label: str = "highlighted path",
+    dash: str = "solid",
+    label_steps: bool = True,
+    n_cols: int = 2,
+    title: str | None = None,
+) -> go.Figure:
+    """Compare chronological paths in separate panels with shared axis limits.
+
+    Each panel highlights one path, retaining the reference paths as faint
+    coloured lines and open markers. Arrows and timestep labels preserve the
+    order of each highlighted path. The legend toggles a named path in every
+    panel, including its arrows. No data points are displaced.
+
+    Args:
+        paths: Named data frames, one panel each in insertion order. Rows must
+            be in chronological order; paths may have different lengths.
+        x_attr: Column plotted on the horizontal axis.
+        y_attr: Column plotted on the vertical axis.
+        background: Named reference paths repeated in every panel.
+        units: Optional units for axis and hover labels, keyed by attribute.
+        colors: Colours keyed by path name, used for both references and
+            highlights. Reuse this mapping across figures to keep identities
+            consistent. Unspecified names use the Plotly qualitative palette.
+        path_color: Override the colour of every highlighted path. Useful when
+            colour identifies reference days and highlights represent methods.
+        path_label: Shared legend label for highlights when ``path_color`` is
+            set. Panel headings and hover labels still identify each path.
+        dash: Line style for highlighted paths, such as ``"solid"`` or ``"dash"``.
+        label_steps: Print timestep labels beside highlighted markers. Disable
+            for longer paths; timestep labels remain available on hover.
+        n_cols: Maximum number of panels per row.
+        title: Optional figure title.
+
+    Returns:
+        A Plotly figure with matching axes and one legend entry per identity.
+
+    Raises:
+        ValueError: If paths is empty, n_cols is not positive, or a path is
+            empty, lacks either attribute, or contains non-finite values.
+
+    Examples:
+        >>> days = {"day1": pd.DataFrame({"solar": [0, 3, 0], "load": [4, 5, 6]})}
+        >>> fig = path_panels(days, "solar", "load", background=days)
+        >>> fig = path_panels(
+        ...     {"mean": days["day1"]}, "solar", "load", background=days,
+        ...     colors={"day1": "#0072B2"}, path_color="#222222",
+        ...     path_label="representative", dash="dash",
+        ... )
+    """
+    from plotly.subplots import make_subplots
+
+    if not paths:
+        raise ValueError("paths is empty — pass at least one path.")
+    if n_cols < 1:
+        raise ValueError("n_cols must be positive.")
+    background = background or {}
+    units = units or {}
+    frames = []
+    for name, frame in [*background.items(), *paths.items()]:
+        if frame.empty or x_attr not in frame or y_attr not in frame:
+            raise ValueError(
+                f"Path {name!r} must have rows and columns {x_attr!r}, {y_attr!r}."
+            )
+        values = frame[[x_attr, y_attr]].to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise ValueError(f"Path {name!r} contains non-finite values.")
+        frames.append(values)
+
+    names = list(dict.fromkeys([*background, *paths]))
+    palette = px.colors.qualitative.Plotly
+    color_map = {name: palette[i % len(palette)] for i, name in enumerate(names)}
+    color_map.update(colors or {})
+    n_cols = min(n_cols, len(paths))
+    n_rows = (len(paths) + n_cols - 1) // n_cols
+    fig = make_subplots(
+        rows=n_rows,
+        cols=n_cols,
+        specs=[
+            [{} if row * n_cols + col < len(paths) else None for col in range(n_cols)]
+            for row in range(n_rows)
+        ],
+        shared_xaxes="all",
+        shared_yaxes="all",
+        subplot_titles=list(paths),
+        horizontal_spacing=0.25 / n_cols,
+        vertical_spacing=0.4 / n_rows,
+    )
+    for panel, (name, profile) in enumerate(paths.items()):
+        row, col = panel // n_cols + 1, panel % n_cols + 1
+        space = AttributeSpace(x_attr, y_attr, units=units)
+        for member, block in background.items():
+            space.add_path(
+                block[x_attr],
+                block[y_attr],
+                name=member,
+                color=color_map[member],
+                symbol="circle-open",
+                width=2,
+                label_steps=False,
+                arrows=False,
+            )
+        space.figure.update_traces(marker_size=12, opacity=0.3)
+        space.add_path(
+            profile[x_attr],
+            profile[y_attr],
+            name=name,
+            color=path_color or color_map[name],
+            symbol="circle",
+            width=3,
+            dash=dash,
+            label_steps=label_steps,
+            legendgroup="highlight" if path_color else name,
+        )
+        # The arrow trace is absent for a single-timestep path.
+        highlight = space.figure.data[len(background)]
+        highlight.update(textfont_size=12, textposition="top right")
+        if len(profile) > 1:
+            space.figure.data[-1].update(
+                marker_size=[0] + [13] * (len(profile) - 1),
+                marker_standoff=6,
+            )
+        for trace in space.figure.data:
+            if trace.hoverinfo != "skip":
+                trace.hovertemplate = (
+                    f"{trace.name}<br>%{{customdata}}<br>"
+                    f"{space._axis_label(x_attr)} = %{{x:.3g}}<br>"
+                    f"{space._axis_label(y_attr)} = %{{y:.3g}}<extra></extra>"
+                )
+            trace.showlegend = False
+            fig.add_trace(trace, row=row, col=col)
+
+    # Full-opacity legend samples identify even the faint reference paths.
+    for name in names if path_color is None else background:
+        fig.add_trace(
+            go.Scatter(
+                x=[None],
+                y=[None],
+                name=name,
+                legendgroup=name,
+                mode="lines+markers",
+                hoverinfo="skip",
+                line={
+                    "color": color_map[name],
+                    "dash": dash if name in paths else "solid",
+                },
+                marker={"color": color_map[name], "symbol": "circle-open", "size": 10},
+            )
+        )
+    if path_color is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[None],
+                y=[None],
+                name=path_label,
+                legendgroup="highlight",
+                mode="lines+markers",
+                hoverinfo="skip",
+                line={"color": path_color, "dash": dash, "width": 3},
+                marker={"color": path_color, "size": 9},
+            )
+        )
+
+    all_values = np.concatenate(frames)
+    for index, (attr, update_axis) in enumerate(
+        [(x_attr, fig.update_xaxes), (y_attr, fig.update_yaxes)]
+    ):
+        lower, upper = all_values[:, index].min(), all_values[:, index].max()
+        padding = 0.15 * (upper - lower or max(abs(lower), 1.0))
+        label = f"{attr} [{units[attr]}]" if attr in units else attr
+        update_axis(
+            range=[lower - padding, upper + padding],
+            title_text=label,
+            showticklabels=True,
+            zeroline=False,
+            nticks=5,
+        )
+    fig.update_layout(
+        title={"text": title, "font": {"size": 17}},
+        template="plotly_white",
+        height=300 * n_rows + 130,
+        legend={"orientation": "h", "y": -0.14, "groupclick": "togglegroup"},
+        margin={"l": 55, "r": 35, "t": 95, "b": 125},
+    )
+    return fig
+
+
+def compare_series(
+    series: dict[str, pd.DataFrame],
+    *,
+    mode: Literal["time_series", "duration_curve"] = "time_series",
+    columns: list[str] | None = None,
+    units: dict[str, str] | None = None,
+    colors: dict[str, str] | None = None,
+    reference: str | None = None,
+    duration_range: tuple[float, float] | None = None,
+    title: str | None = None,
+) -> go.Figure:
+    """Compare named series or profiles, one subplot per attribute.
+
+    Args:
+        series: Named data frames. In time-series mode their existing indices
+            define the horizontal positions. In duration-curve mode each row
+            has equal duration and the index is ignored. Pass reconstructed
+            series to account for unequal typical-period occurrence counts.
+        mode: ``"time_series"`` preserves chronology; ``"duration_curve"``
+            sorts each attribute independently, descending, and draws exact
+            steps over 0–100% of time. This permits different-length inputs.
+        columns: Attributes to plot, taken from the first frame if omitted.
+        units: Optional attribute units for axes and hover labels.
+        colors: Stable colours keyed by series name.
+        reference: Name of an input series to draw as a thicker grey line.
+            An explicit entry in ``colors`` overrides its colour.
+        duration_range: Optional percentage interval, such as ``(0, 5)`` for
+            the highest 5% of values. Only valid in duration-curve mode. Both
+            axes focus on this part of the already fitted curves; values are
+            neither filtered before sorting nor fitted again.
+        title: Optional figure title.
+
+    Returns:
+        A Plotly figure with one shared legend and separate physical scales
+        for the attributes. Legend entries toggle a series in every subplot.
+
+    Raises:
+        ValueError: If mode or reference is invalid, or inputs are empty,
+            lack a requested attribute, or contain non-finite values.
+
+    Examples:
+        >>> fig = compare_series(
+        ...     {"original": data, "mean": result.reconstructed},
+        ...     mode="duration_curve", reference="original",
+        ... )
+    """
+    from plotly.subplots import make_subplots
+
+    from tsam.metrics import _comparison_columns
+
+    if mode not in ("time_series", "duration_curve"):
+        raise ValueError("mode must be 'time_series' or 'duration_curve'.")
+    if reference is not None and reference not in series:
+        raise ValueError(f"Reference {reference!r} is not in series.")
+    if duration_range is not None and (
+        mode != "duration_curve"
+        or not 0 <= duration_range[0] < duration_range[1] <= 100
+    ):
+        raise ValueError(
+            "duration_range requires duration-curve mode and 0 <= start < end <= 100."
+        )
+    columns = _comparison_columns(series, columns)
+    units = units or {}
+    palette = px.colors.qualitative.Plotly
+    color_map = {name: palette[i % len(palette)] for i, name in enumerate(series)}
+    if reference is not None:
+        color_map[reference] = "#7b8490"
+    color_map.update(colors or {})
+    fig = make_subplots(rows=len(columns), cols=1, shared_xaxes=True)
+    for row, column in enumerate(columns, start=1):
+        label = f"{column} [{units[column]}]" if column in units else column
+        visible_values = []
+        for name, frame in series.items():
+            values = frame[column].to_numpy(dtype=float)
+            x: np.ndarray | pd.Index
+            if mode == "duration_curve":
+                values = np.sort(values)[::-1]
+                x = np.linspace(0, 100, len(values) + 1)
+                values = np.r_[values, values[-1]]
+                x_hover = "sorted time = %{x:.2f}%"
+                start, end = duration_range or (0, 100)
+                visible_values.append(values[:-1][(x[:-1] <= end) & (x[1:] >= start)])
+            else:
+                x = frame.index
+                x_hover = "%{x}"
+                visible_values.append(values)
+            fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=values,
+                    name=name,
+                    legendgroup=name,
+                    showlegend=row == 1,
+                    mode="lines",
+                    line={
+                        "color": color_map[name],
+                        "width": 3 if name == reference else 2,
+                        "shape": "hv" if mode == "duration_curve" else "linear",
+                    },
+                    hovertemplate=f"{name}<br>{x_hover}<br>{label} = %{{y:.4g}}<extra></extra>",
+                ),
+                row=row,
+                col=1,
+            )
+        values = np.concatenate(visible_values)
+        lower, upper = values.min(), values.max()
+        padding = 0.08 * (upper - lower or max(abs(lower), 1.0))
+        fig.update_yaxes(
+            title_text=label, range=[lower - padding, upper + padding], row=row, col=1
+        )
+    if mode == "duration_curve":
+        fig.update_xaxes(range=list(duration_range or (0, 100)), nticks=6)
+        x_title = "Share of time [%], sorted descending"
+    else:
+        x_title = "time / timestep"
+    fig.update_xaxes(title_text=x_title, row=len(columns), col=1)
+    fig.update_layout(
+        title=title,
+        template="plotly_white",
+        height=270 * len(columns) + 120,
+        legend={"orientation": "h", "y": -0.16, "groupclick": "togglegroup"},
+        margin={"l": 65, "r": 35, "t": 65, "b": 115},
+    )
+    return fig
 
 
 class ResultPlotAccessor:
