@@ -153,6 +153,15 @@ known-first-party = ["tsam"]
 ] # pandas/numpy needed at runtime for dataclass fields
 
 [tool.mypy]
+# Static-analysis target only: this does not change `requires-python`, what pip
+# or conda installs, or runtime support for 3.10. It is deliberately the newest
+# supported Python rather than the oldest, because mypy applies `python_version`
+# as the parse grammar for everything it reads, dependency stubs included, and
+# numpy >= 2.5 ships a `numpy/__init__.pyi` that uses PEP 695 `type` statements
+# (numpy 2.5 itself requires Python >= 3.12). Under a lower target that file
+# fails to parse, and a parse error is a blocker that mypy refuses to let be
+# silenced. Renovate keeps this in sync with the newest CPython minor release on
+# conda-forge; see the matching customManager in .github/renovate.json.
 python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
