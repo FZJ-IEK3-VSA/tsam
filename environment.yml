@@ -9,19 +9,21 @@ channels:
 # update the package list in .github/renovate.json (regex alternation +
 # pep621 disable rule).
 # The only intentional exceptions are `python`, `pip` and `d2` (see below),
-# which have no pyproject.toml counterpart.
+# which are not pyproject.toml dependencies. `python` is still kept in step with
+# pyproject.toml: Renovate reads `[tool.mypy] python_version` from the same
+# conda-forge release and groups both changes into a single PR.
 dependencies:
   - python>=3.10,<=3.14.7
   - pip
   # Core dependencies
-  - scikit-learn >=1.3.0,<=1.9.0
-  - scipy >=1.9.0,<=1.18.0
+  - scikit-learn >=1.3.0,<=1.9.1
+  - scipy >=1.9.0,<=1.18.1
   - pandas >=2.2.0,<=3.0.5
   - numpy >=1.22.4,<=2.4.6
   - pyomo >=6.4.3,<=6.10.1
-  - tqdm >=4.21.0,<=4.70.0
+  - tqdm >=4.21.0,<=4.70.1
   - highspy >=1.7.2,<=1.15.1
-  - plotly >=5.0.0,<=6.9.0
+  - plotly >=5.0.0,<=7.0.0
   - notebook >=7.5.0,<=7.6.2
   # Testing
   - pytest <=9.1.1
@@ -38,8 +40,8 @@ dependencies:
   # Documentation
   - mkdocs >=1.6,<=1.6.1
   - mkdocs-material >=9.5,<=9.7.7
-  - mkdocstrings-python >=0.27,<=2.0.7
-  - mkdocs-jupyter >=0.25,<=0.25.1
+  - mkdocstrings-python >=0.27,<=2.0.8
+  - mkdocs-jupyter >=0.25,<=0.26.3
   - mkdocs-gen-files >=0.5,<=0.6.1
   - mkdocs-literate-nav >=0.6,<=0.6.3
   # d2 renders the architecture diagrams in docs/assets/architecture. It is a
@@ -47,7 +49,7 @@ dependencies:
   # pyproject.toml counterpart.
   - d2
   # Linting and formatting
-  - ruff <=0.16.5
+  - ruff <=0.16.7
   - mypy <=2.3.1
   - pre-commit <=4.6.2
   - pandas-stubs <=3.0.5.260730

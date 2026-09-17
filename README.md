@@ -114,7 +114,7 @@ import tsam
 
 Read in the time series data set with pandas
 ```python
-raw = pd.read_csv('testdata.csv', index_col=0, parse_dates=True)
+raw = pd.read_csv("testdata.csv", index_col=0, parse_dates=True)
 ```
 
 Run the aggregation - specify the number of typical periods and configure clustering/segmentation options:
@@ -124,10 +124,10 @@ from tsam import aggregate, ClusterConfig, SegmentConfig
 result = tsam.aggregate(
     raw,
     n_clusters=8,
-    period_duration='24h',  # or 24, '1d'
+    period_duration="24h",  # or 24, '1d'
     cluster=ClusterConfig(
-        method='hierarchical',
-        representation='distribution_minmax',
+        method="hierarchical",
+        representation="distribution_minmax",
     ),
     segments=SegmentConfig(n_segments=8),
 )
@@ -145,7 +145,7 @@ print(f"RMSE: {result.accuracy.rmse.mean():.4f}")
 reconstructed = result.reconstructed
 
 # Save results
-cluster_representatives.to_csv('cluster_representatives.csv')
+cluster_representatives.to_csv("cluster_representatives.csv")
 ```
 
 ### Coming from version 2 or 3?
