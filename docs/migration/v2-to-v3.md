@@ -106,7 +106,7 @@ The table below maps every old parameter to its v3 equivalent.
 | `'distributionRepresentation'` | `'distribution'` |
 | `'durationRepresentation'` | `'distribution'` (both old parameters meant the same) |
 | `'distributionAndMinMaxRepresentation'` | `'distribution_minmax'` |
-| `'minmaxmeanRepresentation'` | `'minmax_mean'` |
+| `'minmaxmeanRepresentation'` | `MinMaxMean(...)`, see [typed representation objects](#typed-representation-objects) |
 
 ### Typed representation objects { #typed-representation-objects }
 
@@ -203,12 +203,15 @@ common cases.
 Columns not listed in `max_columns` or `min_columns` default to mean.
 
 !!! note
-    The string shortcuts `"distribution"`, `"distribution_minmax"`, and
-    `"minmax_mean"` remain valid and are equivalent to:
+    The string shortcuts `"distribution"` and `"distribution_minmax"` remain
+    valid and are equivalent to:
 
     - `"distribution"` -> `Distribution()`
     - `"distribution_minmax"` -> `Distribution(preserve_minmax=True)`
-    - `"minmax_mean"` -> `MinMaxMean()` (all columns default to mean)
+
+    The `"minmax_mean"` string raises a `ValueError`: it cannot name the
+    columns that keep their min or max, and it used to fall back to the plain
+    mean. Use `MinMaxMean(...)` instead.
 
 ### Extreme method values { #extreme-method-values }
 

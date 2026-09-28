@@ -183,6 +183,7 @@ which case it was never reproducible anyway.
 |---|---|---|
 | Column in both `MinMaxMean.max_columns` and `min_columns` | silently `max` | `ValueError` |
 | `MinMaxMean` naming a column not in the data | silently ignored | `ValueError` |
+| `representation="minmax_mean"` as a bare string | silently `mean` | `ValueError`; pass `MinMaxMean(...)` |
 | `ClusterConfig.representation` with `use_duration_curves=True` | silently ignored | `UserWarning` |
 | Series length not a whole number of periods | padded silently | padded, with a `UserWarning` |
 
