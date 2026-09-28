@@ -13,7 +13,7 @@ jobs:
   pre-commit:
     name: Pre-commit
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
@@ -119,7 +119,7 @@ jobs:
   docs:
     name: Build docs
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -146,7 +146,7 @@ jobs:
     name: CI Success
     if: ${{ always() && !startsWith(github.head_ref, 'release-please--') }}
     needs: [pre-commit, test, docs]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: exit 1

@@ -12,7 +12,7 @@ concurrency:
 jobs:
   pre-commit:
     name: Pre-commit
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
@@ -100,7 +100,7 @@ jobs:
 
   docs:
     name: Build docs
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -127,7 +127,7 @@ jobs:
     name: CI Success
     if: always()
     needs: [pre-commit, test, docs]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: exit 1
