@@ -99,7 +99,7 @@ them against the cap. This is two independent changes with different scopes:
 1. **Min/max representation** (`distribution_minmax`, i.e.
    `Distribution(preserve_minmax=True)`). By code path, this affects **only**
    representations that preserve min/max — `mean`, `medoid`, `maxoid`,
-   `minmax_mean`, and plain `distribution` never execute this code. Changes:
+   `MinMaxMean(...)`, and plain `distribution` never execute this code. Changes:
     - The integral is now preserved when pinning the per-cluster min/max
       (previously it could drift by a few percent, especially without rescaling).
     - Single-value segments (`distribution_minmax` with `n_segments`) keep the

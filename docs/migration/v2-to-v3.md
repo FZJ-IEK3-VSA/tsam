@@ -110,11 +110,12 @@ The table below maps every old parameter to its v3 equivalent.
 
 ### Typed representation objects { #typed-representation-objects }
 
-For `distribution`, `distribution_minmax`, and `minmax_mean`
-representations, v3 offers typed objects that expose options previously
-controlled by separate parameters (`distributionPeriodWise`,
-`representationDict`). Plain string shortcuts still work for the
-common cases.
+For the distribution and min/max/mean representations, v3 offers typed objects
+that expose options previously controlled by separate parameters
+(`distributionPeriodWise`, `representationDict`). The `distribution` and
+`distribution_minmax` string shortcuts still work for the common cases;
+min/max/mean is only available as `MinMaxMean(...)`, because the columns have
+to be named.
 
 **Distribution with global scope** (`distributionPeriodWise=False`):
 
