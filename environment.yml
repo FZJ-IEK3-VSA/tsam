@@ -24,7 +24,7 @@ dependencies:
   - tqdm >=4.21.0,<=4.70.1
   - highspy >=1.7.2,<=1.15.1
   - plotly >=5.0.0,<=7.1.0
-  - notebook >=7.5.0,<=7.6.2
+  - notebook >=7.5.0,<=7.6.3
   # Testing
   - pytest <=9.1.1
   - pytest-cov <=7.1.0
