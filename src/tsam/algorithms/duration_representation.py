@@ -5,7 +5,6 @@ from __future__ import annotations
 import warnings
 
 import numpy as np
-import pandas as pd
 
 from tsam.algorithms.concurrency import compute_ordering
 from tsam.commons import bounded_water_fill
@@ -59,16 +58,7 @@ def duration_representation(
         The cluster centers as rows of time steps × attributes.
     """
 
-    # make pd.DataFrame each row represents a candidate, and the columns are defined by two levels: the attributes and
-    # the time steps inside the candidates.
-    column_tuples = []
     num_attributes = int(candidates.shape[1] / n_timesteps_per_period)
-    for i in range(num_attributes):
-        for j in range(n_timesteps_per_period):
-            column_tuples.append((i, j))
-    candidates_df = pd.DataFrame(
-        candidates, columns=pd.MultiIndex.from_tuples(column_tuples)
-    )
 
     # There are two options for the duration representation. Either, the distribution of each cluster is preserved
     # (period_wise = True) or the distribution of the total time series is preserved only. In the latter case, the
@@ -128,53 +118,32 @@ def duration_representation(
                 f"(concurrency_method={concurrency_method!r}) is only supported "
                 "with distribution_period_wise=True (scope='cluster')."
             )
-        cluster_centers_list = []
-        for a in candidates_df.columns.get_level_values(0).unique():
-            mean_vals = []
-            cluster_lengths = []
-            for cluster_num in np.unique(cluster_order):
-                positions = np.where(cluster_order == cluster_num)
-                n_candidates = len(positions[0])
-                # get all the values of a certain attribute and cluster
-                candidate_values = candidates_df.loc[positions[0], a]
-                # calculate centroid of each cluster and append to list
-                mean_vals.append(np.round(candidate_values.mean(), 10))
-                # make a list of weights of each cluster for each time step within the period
-                cluster_lengths.append(np.repeat(n_candidates, n_timesteps_per_period))
-            # concat centroid values and cluster weights for all clusters
-            means_and_weights = pd.concat(
-                [
-                    pd.DataFrame(np.array(mean_vals)).stack(
-                        future_stack=True,
-                    ),
-                    pd.DataFrame(np.array(cluster_lengths)).stack(
-                        future_stack=True,
-                    ),
-                ],
-                axis=1,
+        candidates_3d = candidates.reshape(-1, num_attributes, n_timesteps_per_period)
+        unique_clusters = np.unique(cluster_order)
+        n_clusters = len(unique_clusters)
+        member_masks = [cluster_order == c for c in unique_clusters]
+        # each cluster's size, once per time step within the period
+        weights = np.repeat(
+            [int(mask.sum()) for mask in member_masks], n_timesteps_per_period
+        )
+
+        centers = np.empty((n_clusters, num_attributes, n_timesteps_per_period))
+        for a in range(num_attributes):
+            attr_values = candidates_3d[:, a, :]
+            # per-cluster centroid value of every time step, flattened row-major
+            cluster_means = np.concatenate(
+                [np.round(attr_values[mask].mean(axis=0), 10) for mask in member_masks]
             )
-            # sort all values of all clusters according to the centroid values
-            # (column label 0 is an int; pandas-stubs only type str labels)
-            means_and_weights_sorted = means_and_weights.sort_values(
-                0,  # type: ignore[call-overload]
-                kind="stable",
-            )
-            # save order of the sorted centroid values across all clusters
-            order = means_and_weights_sorted.index
+            # sort all (cluster, time step) slots by centroid value
+            order = np.argsort(cluster_means, kind="stable")
+            sorted_weights = weights[order]
             # sort all values of the original time series
-            sorted_attr = (
-                candidates_df.loc[:, a]
-                .stack(
-                    future_stack=True,
-                )
-                .sort_values(kind="stable")
-                .values
-            )
-            # take mean of sections of the original duration curve according to the cluster and its weight the
-            # respective section is assigned to
+            sorted_attr = np.sort(attr_values.ravel(), kind="stable")
+            # take mean of sections of the original duration curve according to
+            # the cluster and its weight the respective section is assigned to
             representation_values = []
             counter = 0
-            for i, j in enumerate(means_and_weights_sorted[1]):
+            for j in sorted_weights:
                 representation_values.append(sorted_attr[counter : counter + j].mean())
                 counter += j
             # respect max and min of the attributes
@@ -182,21 +151,17 @@ def duration_representation(
                 representation_values = _represent_min_max(
                     representation_values,
                     sorted_attr,
-                    means_and_weights_sorted,
+                    sorted_weights,
                     options.minmax_max_passes,
                     options.minmax_tolerance,
                 )
 
-            # transform all representation values to a data frame and arrange it
-            # according to the order of the sorted centroid values
-            representation_df = pd.DataFrame(np.array(representation_values))
-            representation_df.index = order
-            representation_df.sort_index(inplace=True)
-            # append all cluster values attribute-wise to a list
-            cluster_centers_list.append(representation_df.unstack())
-        # rearrange so that rows are the cluster centers and columns are time steps x attributes
-        stacked = np.array(pd.concat(cluster_centers_list, axis=1))
-        return list(stacked)
+            # arrange the representation values back into (cluster, time step) slots
+            slots = np.empty(n_clusters * n_timesteps_per_period)
+            slots[order] = representation_values
+            centers[:, a, :] = slots.reshape(n_clusters, n_timesteps_per_period)
+
+        return list(centers.reshape(n_clusters, -1))
 
 
 def _pin_min_max_preserve_sum(
@@ -269,7 +234,7 @@ def _pin_min_max_preserve_sum(
 def _represent_min_max(
     representation_values: list[float],
     sorted_attr: np.ndarray,
-    means_and_weights_sorted: pd.DataFrame,
+    sorted_weights: np.ndarray,
     max_passes: int,
     rel_tolerance: float,
 ) -> list[float]:
@@ -283,8 +248,8 @@ def _represent_min_max(
     Args:
         representation_values: Duration-curve representation values, ascending.
         sorted_attr: The sorted original attribute values.
-        means_and_weights_sorted: Per-section occurrence counts of the original
-            series (the section weights).
+        sorted_weights: Per-section occurrence counts of the original series
+            (the section weights).
         max_passes: Max water-fill passes.
         rel_tolerance: Relative tolerance for sum preservation.
 
@@ -296,16 +261,16 @@ def _represent_min_max(
         raise ValueError("Negative values in the duration curve representation")
 
     delta_max = sorted_attr.max() - representation_values[-1]
-    appearance_max = means_and_weights_sorted[1].iloc[-1]
+    appearance_max = sorted_weights[-1]
     delta_min = sorted_attr.min() - representation_values[0]
-    appearance_min = means_and_weights_sorted[1].iloc[0]
+    appearance_min = sorted_weights[0]
 
     if delta_min == 0 and delta_max == 0:
         return representation_values
 
     delta_sum = delta_max * appearance_max + delta_min * appearance_min
 
-    mid_weights = np.asarray(means_and_weights_sorted[1].iloc[1:-1].values, dtype=float)
+    mid_weights = np.asarray(sorted_weights[1:-1], dtype=float)
     mid_orig = np.asarray(representation_values[1:-1], dtype=float)
     weighted_mid_sum = float(np.sum(mid_weights * mid_orig))
     correction_factor = -delta_sum / weighted_mid_sum if weighted_mid_sum != 0 else 0.0
