@@ -22,7 +22,6 @@ RepresentationMethod = Literal[
     "maxoid",
     "distribution",
     "distribution_minmax",
-    "minmax_mean",
 ]
 
 # Representation each clustering method falls back to when
@@ -301,6 +300,19 @@ class MinMaxMean:
 Representation = RepresentationMethod | Distribution | MinMaxMean
 
 
+def _reject_minmax_mean_string(representation: object) -> None:
+    """Reject the bare ``"minmax_mean"`` string.
+
+    The string cannot say which columns keep their min or max, so it used to
+    fall back to ``"mean"`` for every column without any signal (#490).
+    """
+    if representation == "minmax_mean":
+        raise ValueError(
+            'representation="minmax_mean" cannot specify which columns use min '
+            "or max. Pass MinMaxMean(max_columns=[...], min_columns=[...]) instead."
+        )
+
+
 # The clustering method: a string name (backward compat) or a typed object
 # carrying that method's options (currently ``KMedoids`` and ``KMeans``;
 # more may follow).
@@ -387,7 +399,6 @@ class ClusterConfig:
             - "maxoid": Actual period most dissimilar to others
             - "distribution": Preserve value distribution (duration curve)
             - "distribution_minmax": Distribution + preserve min/max values
-            - "minmax_mean": Combine min/max/mean per timestep
 
             Typed objects (for additional options):
             - ``Distribution(scope="local"|"global", preserve_minmax=False)``:
@@ -448,6 +459,8 @@ class ClusterConfig:
             elif method == "kmedoids":
                 method = KMedoids(solver=solver)
             # solver has no effect for non-kmedoids methods (it never did); ignored.
+
+        _reject_minmax_mean_string(representation)
 
         object.__setattr__(self, "method", method)
         object.__setattr__(self, "representation", representation)
@@ -586,6 +599,7 @@ class SegmentConfig:
             raise ValueError(f"n_segments must be positive, got {self.n_segments}")
         # Note: Upper bound validation (n_segments <= timesteps_per_period)
         # is performed in api.aggregate() when period_duration is known.
+        _reject_minmax_mean_string(self.representation)
         if (
             isinstance(self.representation, Distribution)
             and self.representation.preserve_minmax

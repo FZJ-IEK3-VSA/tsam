@@ -1259,7 +1259,7 @@ class ClusteringResult:
               without that injection.
             - **`method="append"` or `"new_cluster"` with a representation that
               is *computed* rather than *selected*** (`"mean"`, `"distribution"`,
-              `"minmax_mean"`, …). These methods move a period into its own
+              `MinMaxMean(...)`, …). These methods move a period into its own
               cluster after that period's original cluster was represented. A
               selected representation (`"medoid"`, `"maxoid"`) stores the chosen
               period's index and replays exactly; a computed one is recomputed
