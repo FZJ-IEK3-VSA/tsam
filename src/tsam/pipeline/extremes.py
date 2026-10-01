@@ -171,6 +171,19 @@ def add_extreme_periods(
             extreme.period_row_index: extreme for extreme in extreme_periods
         }
 
+        # Baseline for reassignment: the centroid of each incumbent cluster,
+        # i.e. what clustering minimised the distance to. The representation in
+        # ``cluster_centers`` is not a fair baseline — e.g. a duration-curve
+        # representation (``distribution*``) is not chronologically aligned
+        # with real periods, so every member looks far from it and too many
+        # periods flip to the extreme clusters (see #492).
+        profile_values = np.asarray(profiles_df.values, dtype=float)
+        labels = np.asarray(cluster_order).ravel()
+        centroids = {
+            int(label): profile_values[labels == label].mean(axis=0)
+            for label in np.unique(labels)
+        }
+
         for current_index, cluster_period in enumerate(new_cluster_order):
             # A period that is itself an extreme joins its own new cluster.
             own_extreme = extreme_by_step.get(current_index)
@@ -178,12 +191,12 @@ def add_extreme_periods(
                 new_cluster_order[current_index] = own_extreme.new_cluster_no
                 continue
 
-            period_profile = profiles_df.iloc[current_index].values
+            period_profile = profile_values[current_index]
             # Find the closest extreme period (deterministic: first match with smallest distance)
             best_extreme = None
-            best_dist = sum((period_profile - cluster_centers[cluster_period]) ** 2)
+            best_dist = np.sum((period_profile - centroids[int(cluster_period)]) ** 2)
             for extreme in extreme_periods:
-                extreme_dist = sum((period_profile - extreme.profile) ** 2)
+                extreme_dist = np.sum((period_profile - extreme.profile) ** 2)
                 if extreme_dist < best_dist:
                     best_dist = extreme_dist
                     best_extreme = extreme
