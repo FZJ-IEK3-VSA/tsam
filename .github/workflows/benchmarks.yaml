@@ -1,0 +1,48 @@
+# The benchmark suite is excluded from the normal test run (testpaths = ["test"])
+# and produces numbers nobody reads on a schedule, so nothing would notice it
+# breaking until someone needed a measurement. This job runs every benchmark
+# once with --benchmark-disable: no timing, no comparison, just proof that the
+# suite still executes against the current API. Every tier is included — the
+# slow and large ones reach code the quick tier does not (exact k-medoids,
+# global-scope duration curves, production disaggregation) and cost about ten
+# extra seconds when nothing is being timed.
+#
+# It installs only `.[develop]` — not the optional `bench` extra — so it also
+# holds the line that running the suite needs nothing beyond pytest-benchmark,
+# and it runs on the lowest supported Python, which pytest-benchmem does not
+# support.
+name: Benchmarks (smoke)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "benchmarks/**"
+      - "src/tsam/**"
+      - "pyproject.toml"
+      - ".github/workflows/benchmarks.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Run benchmarks once (no timing)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.10"
+
+      - name: Install
+        run: uv pip install --system ".[develop]"
+
+      - name: Execute every benchmark once
+        run: pytest benchmarks/ --benchmark-disable --slow --large -q

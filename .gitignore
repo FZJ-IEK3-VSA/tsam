@@ -76,3 +76,4 @@ docs/**/clustering.json
 
 # uv resolves this on demand; do not track it
 uv.lock
+benchmarks/reports/
