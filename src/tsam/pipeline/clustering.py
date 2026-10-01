@@ -78,7 +78,7 @@ def cluster_periods(
         cluster: Clustering configuration: ``method``, ``representation``,
             ``solver``.
         representation_dict: Per-column representation overrides (e.g. for
-            ``minmax_mean``).
+            ``MinMaxMean``).
         n_timesteps_per_period: Timesteps per period, needed by
             distribution-style representations.
         representation_candidates: Alternative columns to compute representatives
