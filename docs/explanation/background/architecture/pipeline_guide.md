@@ -187,6 +187,6 @@ above link straight into it). The source-tree module map is below.
     | `pipeline/types.py` | Internal dataclasses: `PipelineConfig`, the phase milestones, `PipelineResult`. |
     | `algorithms/clustering.py` · `algorithms/representations.py` | Clustering dispatch — to scikit-learn or the `algorithms/` k-medoids/k-maxoids solvers — and representative computation (shared by clustering and segmentation). |
     | `algorithms/k_medoids_exact.py` · `algorithms/k_maxoids.py` | k-medoids (MILP) / k-maxoids solvers. |
-    | `algorithms/duration_representation.py` | Duration-curve representation (for `distribution`). |
+    | `algorithms/duration_representation.py` | Duration-curve representation (for `Distribution(...)`). |
     | `algorithms/segmentation.py` | Constrained agglomerative segmentation. |
     | `weights.py` · `exceptions.py` | Weight validation; custom warnings. |
