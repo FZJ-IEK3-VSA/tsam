@@ -13,7 +13,7 @@ This guide covers every change you need to make.
 
     ```python
     import tsam
-    from tsam import ClusterConfig, SegmentConfig, ExtremeConfig
+    from tsam import ClusterConfig, Distribution, SegmentConfig, ExtremeConfig
 
     result = tsam.aggregate(
         df,
@@ -21,7 +21,7 @@ This guide covers every change you need to make.
         period_duration=24,
         cluster=ClusterConfig(
             method="hierarchical",
-            representation="distribution_minmax",
+            representation=Distribution(preserve_minmax=True),
         ),
         segments=SegmentConfig(n_segments=12),
         preserve_column_means=True,
@@ -103,19 +103,17 @@ The table below maps every old parameter to its v3 equivalent.
 | `'meanRepresentation'` | `'mean'` |
 | `'medoidRepresentation'` | `'medoid'` |
 | `'maxoidRepresentation'` | `'maxoid'` |
-| `'distributionRepresentation'` | `'distribution'` |
-| `'durationRepresentation'` | `'distribution'` (both old parameters meant the same) |
-| `'distributionAndMinMaxRepresentation'` | `'distribution_minmax'` |
+| `'distributionRepresentation'` | `Distribution()`, see [typed representation objects](#typed-representation-objects) |
+| `'durationRepresentation'` | `Distribution()` (both old parameters meant the same) |
+| `'distributionAndMinMaxRepresentation'` | `Distribution(preserve_minmax=True)` |
 | `'minmaxmeanRepresentation'` | `MinMaxMean(...)`, see [typed representation objects](#typed-representation-objects) |
 
 ### Typed representation objects { #typed-representation-objects }
 
-For the distribution and min/max/mean representations, v3 offers typed objects
-that expose options previously controlled by separate parameters
-(`distributionPeriodWise`, `representationDict`). The `distribution` and
-`distribution_minmax` string shortcuts still work for the common cases;
-min/max/mean is only available as `MinMaxMean(...)`, because the columns have
-to be named.
+The distribution and min/max/mean representations are typed objects,
+`Distribution(...)` and `MinMaxMean(...)`, that expose options previously
+controlled by separate parameters (`distributionPeriodWise`,
+`representationDict`).
 
 **Distribution with global scope** (`distributionPeriodWise=False`):
 
@@ -204,15 +202,14 @@ to be named.
 Columns not listed in `max_columns` or `min_columns` default to mean.
 
 !!! note
-    The string shortcuts `"distribution"` and `"distribution_minmax"` remain
-    valid and are equivalent to:
+    The string shortcuts that v3 accepted for these representations raise a
+    `ValueError`. Pass the typed object instead:
 
     - `"distribution"` -> `Distribution()`
     - `"distribution_minmax"` -> `Distribution(preserve_minmax=True)`
-
-    The `"minmax_mean"` string raises a `ValueError`: it cannot name the
-    columns that keep their min or max, and it used to fall back to the plain
-    mean. Use `MinMaxMean(...)` instead.
+    - `"minmax_mean"` -> `MinMaxMean(...)`; the string could not name the
+      columns that keep their min or max, and it used to fall back to the
+      plain mean.
 
 ### Extreme method values { #extreme-method-values }
 

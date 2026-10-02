@@ -50,7 +50,7 @@ def test_durationRepresentation():
         cluster=ClusterConfig(
             method="kmeans",
             use_duration_curves=False,
-            representation="distribution",
+            representation=Distribution(),
         ),
         preserve_column_means=False,
     )

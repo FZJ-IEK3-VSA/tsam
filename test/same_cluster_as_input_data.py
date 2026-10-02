@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 import tsam
-from tsam import ClusterConfig
+from tsam import ClusterConfig, Distribution
 
 # All clustering methods (excluding "averaging" which does not cluster into n_clusters)
 _METHODS = ["kmeans", "kmedoids", "kmaxoids", "hierarchical", "contiguous"]
@@ -14,7 +14,10 @@ _METHODS = ["kmeans", "kmedoids", "kmaxoids", "hierarchical", "contiguous"]
 _REPRESENTATIONS = ["mean", "medoid", "maxoid", "distribution", "distribution_minmax"]
 
 # Use duration curves when clustering by value distribution
-_DISTRIBUTION_REPS = {"distribution", "distribution_minmax"}
+_DISTRIBUTION_REPS = {
+    "distribution": Distribution(),
+    "distribution_minmax": Distribution(preserve_minmax=True),
+}
 
 _PARAMS = [
     pytest.param(
@@ -69,7 +72,7 @@ def test_same_cluster_as_input_data(
         period_duration=1,
         cluster=ClusterConfig(
             method=method,
-            representation=representation,
+            representation=_DISTRIBUTION_REPS.get(representation, representation),
             use_duration_curves=use_duration_curves,
         ),
     )
