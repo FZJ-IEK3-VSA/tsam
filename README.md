@@ -119,7 +119,7 @@ raw = pd.read_csv("testdata.csv", index_col=0, parse_dates=True)
 
 Run the aggregation - specify the number of typical periods and configure clustering/segmentation options:
 ```python
-from tsam import aggregate, ClusterConfig, SegmentConfig
+from tsam import aggregate, ClusterConfig, Distribution, SegmentConfig
 
 result = tsam.aggregate(
     raw,
@@ -127,7 +127,7 @@ result = tsam.aggregate(
     period_duration="24h",  # or 24, '1d'
     cluster=ClusterConfig(
         method="hierarchical",
-        representation="distribution_minmax",
+        representation=Distribution(preserve_minmax=True),
     ),
     segments=SegmentConfig(n_segments=8),
 )

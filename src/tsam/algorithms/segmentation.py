@@ -18,7 +18,6 @@ def segmentation(
     n_timesteps_per_period: int,
     representation_method: str | Distribution | MinMaxMean | None = None,
     representation_dict: dict[str, str] | None = None,
-    distribution_period_wise: bool = True,
     predef_segment_order: list | None = None,
     predef_segment_durations: list | None = None,
     predef_segment_centers: list | None = None,
@@ -40,9 +39,6 @@ def segmentation(
             values; ``None`` falls back to the default ("mean").
         representation_dict: Per-column method overrides for the min/max/mean
             representation.
-        distribution_period_wise: For the distribution representation, preserve
-            the per-cluster duration curve (``True``) or the global one
-            (``False``).
         predef_segment_order: Predefined segment assignments per timestep, per
             typical period. If provided, skips clustering and uses these
             assignments directly. List of lists/arrays, one per typical period.
@@ -166,7 +162,6 @@ def segmentation(
                     default="mean",
                     representation_method=representation_method,
                     representation_dict=representation_dict,
-                    distribution_period_wise=distribution_period_wise,
                     n_timesteps_per_period=1,
                 )
         else:
@@ -203,7 +198,6 @@ def segmentation(
                 default="mean",
                 representation_method=representation_method,
                 representation_dict=representation_dict,
-                distribution_period_wise=distribution_period_wise,
                 n_timesteps_per_period=1,
             )
             # Reorder segment center indices to match temporal order (cluster_order_unique)
