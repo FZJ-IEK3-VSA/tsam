@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version-file: pyproject.toml
 
       # mypy runs as a repo:local hook against the project's own environment,
       # so install the project before pre-commit runs.

@@ -20,7 +20,7 @@ jobs:
           enable-cache: true
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version-file: pyproject.toml
       # mypy runs as a repo:local hook against the project's own environment,
       # so install the project before pre-commit runs. Other hooks use their
       # own isolated envs and are unaffected.
@@ -35,7 +35,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [self-hosted]
-        python-version: ["3.10", "3.14"]
+        # The newest Python is covered by test-conda-forge below.
+        python-version: ["3.10"]
         include:
           - os: macos-latest
             python-version: "3.12"
@@ -59,6 +60,16 @@ jobs:
 
       - name: Run tests
         run: pytest -n auto -vv
+
+  # environment.yml as is: the solver picks the newest versions allowed by its
+  # upper bounds, so every PR is tested against conda-forge, not only PyPI.
+  test-conda-forge:
+    name: Test (conda-forge, environment.yml)
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/run_conda_forge_test.yml@v1
+    with:
+      runner_tag: self-hosted
+      requirements_file_name: environment.yml
+      multiprocessing_pytest_string: "-n auto"
 
 
   # Renovate: test max versions of changed dependencies
@@ -112,7 +123,7 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version-file: pyproject.toml
 
       - name: Install
         run: uv pip install --system ".[develop]"
@@ -126,7 +137,15 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [pre-commit, test, docs]
+    # Skipped jobs (e.g. the renovate ones on other PRs) don't fail the gate.
+    needs:
+      - pre-commit
+      - test
+      - test-conda-forge
+      - docs
+      - detect-renovate-changes
+      - extract-renovate-versions
+      - test-renovate
     runs-on: ubuntu-26.04
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
