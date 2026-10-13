@@ -21,7 +21,7 @@ jobs:
           enable-cache: true
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version-file: pyproject.toml
       # mypy runs as a repo:local hook against the project's own environment,
       # so install the project before pre-commit runs. Other hooks use their
       # own isolated envs and are unaffected.
@@ -131,7 +131,7 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version-file: pyproject.toml
 
       - name: Install
         run: uv pip install --system ".[develop]"
@@ -145,7 +145,15 @@ jobs:
   ci-success:
     name: CI Success
     if: ${{ always() && !startsWith(github.head_ref, 'release-please--') }}
-    needs: [pre-commit, test, docs]
+    # Skipped jobs (e.g. conda-forge tests on renovate PRs) don't fail the gate.
+    needs:
+      - pre-commit
+      - test
+      - extract-python-versions
+      - test-conda-forge
+      - extract-versions
+      - test-dependency-bounds
+      - docs
     runs-on: ubuntu-26.04
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')

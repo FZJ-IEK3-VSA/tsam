@@ -88,12 +88,6 @@
             "commitMessageTopic": "GitHub Actions"
         },
         {
-            "description": "Replace (don't widen) Python version in setup-python",
-            "matchDepNames": ["python"],
-            "matchManagers": ["github-actions"],
-            "rangeStrategy": "replace"
-        },
-        {
             "description": "Disable pep621 for deps that are also tracked in environment.yml; the custom.regex manager above handles them via conda-forge so PRs only open once the new version is on both PyPI and conda-forge. This covers every pinned dep in pyproject.toml — pep621 stays enabled only as a fallback for a dep that has not been mirrored into environment.yml yet. IMPORTANT: keep this list in sync with the regex alternation in the pyproject.toml customManager above.",
             "matchManagers": ["pep621"],
             "matchPackageNames": [

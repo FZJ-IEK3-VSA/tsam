@@ -52,6 +52,8 @@ dependencies = [
   "highspy>=1.7.2,<=1.15.1",
 ]
 
+# The CI workflows read this via `python-version-file: pyproject.toml` and run
+# on the newest Python it allows, so raising the upper bound moves CI as well.
 requires-python = ">=3.10,<3.15"
 
 [project.optional-dependencies]
