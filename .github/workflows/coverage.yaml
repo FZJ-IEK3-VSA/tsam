@@ -12,13 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10.1.0
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version-file: pyproject.toml
 
       - name: Install
         run: uv pip install --system ".[develop]"

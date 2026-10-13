@@ -15,20 +15,20 @@ permissions:
 jobs:
   autofix:
     name: Run pre-commit and open PR
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.target_branch }}
           fetch-depth: 0
 
-      - uses: astral-sh/setup-uv@v10.1.0
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version-file: pyproject.toml
 
       # mypy runs as a repo:local hook against the project's own environment,
       # so install the project before pre-commit runs.

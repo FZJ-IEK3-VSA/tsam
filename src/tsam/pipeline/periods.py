@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import warnings
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -155,7 +156,8 @@ def add_period_sum_features(
     Note:
         `cluster_periods` consumes the (possibly augmented) candidate matrix.
     """
-    period_sums = (
-        profiles_df.stack(future_stack=True, level=0).sum(axis=1).unstack(level=1)  # type: ignore[arg-type]
-    )
+    # Stacking level 0 of the period MultiIndex leaves the timesteps as columns,
+    # i.e. a DataFrame; the stubs widen the result to `Self | Series`.
+    stacked = cast("pd.DataFrame", profiles_df.stack(future_stack=True, level=0))
+    period_sums = stacked.sum(axis=1).unstack(level=1)
     return np.concatenate((candidates, period_sums.values), axis=1)

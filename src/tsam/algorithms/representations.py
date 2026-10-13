@@ -21,8 +21,8 @@ def representations(
     """Compute each cluster's representative profile with the chosen method.
 
     Dispatches to the representation named by ``representation_method`` — a
-    string (``"mean"``, ``"medoid"``, ``"maxoid"``, ``"minmax_mean"``,
-    ``"distribution"``, ``"distribution_minmax"``) or a ``Distribution`` /
+    string (``"mean"``, ``"medoid"``, ``"maxoid"``, ``"distribution"``,
+    ``"distribution_minmax"``) or a ``Distribution`` /
     ``MinMaxMean`` object — returning one representative period per cluster, in
     cluster order.
 
@@ -103,13 +103,6 @@ def representations(
     elif representation_method == "maxoid":
         cluster_centers, cluster_center_indices = maxoid_representation(
             candidates, cluster_order
-        )
-    elif representation_method == "minmax_mean":
-        cluster_centers = minmax_mean_representation(
-            candidates,
-            cluster_order,
-            representation_dict,  # type: ignore[arg-type]
-            n_timesteps_per_period,  # type: ignore[arg-type]
         )
     elif representation_method == "distribution":
         cluster_centers = duration_representation(

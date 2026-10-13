@@ -116,6 +116,18 @@ def test_minmax_mean_rejects_unknown_column():
         )
 
 
+def test_minmax_mean_string_is_rejected_for_clusters():
+    """The bare string used to fall back to the plain mean without a signal (#490)."""
+    with pytest.raises(ValueError, match=r"Pass MinMaxMean\(max_columns"):
+        ClusterConfig(method="hierarchical", representation="minmax_mean")  # type: ignore[arg-type]
+
+
+def test_minmax_mean_string_is_rejected_for_segments():
+    """Segments had the same silent fallback to the plain mean (#490)."""
+    with pytest.raises(ValueError, match=r"Pass MinMaxMean\(max_columns"):
+        SegmentConfig(n_segments=6, representation="minmax_mean")  # type: ignore[arg-type]
+
+
 def test_representation_with_duration_curves_warns():
     """The duration-curve path ignores the configured representation."""
     with pytest.warns(UserWarning, match="no effect together with"):

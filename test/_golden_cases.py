@@ -516,8 +516,8 @@ _NEW_KWARGS: dict[str, dict] = {
         "preserve_column_means": False,
     },
     # --- Representations not otherwise reached by name ---
-    # "medoid" and "minmax_mean" are only ever exercised implicitly (as the
-    # hierarchical default) or via the MinMaxMean object; pin the string forms.
+    # "medoid" is only ever exercised implicitly (as the hierarchical default);
+    # pin the string form.
     "hierarchical_medoid": {
         "n_clusters": 8,
         "period_duration": 24,
@@ -527,11 +527,6 @@ _NEW_KWARGS: dict[str, dict] = {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(method="kmeans", representation="medoid"),
-    },
-    "minmax_mean_string": {
-        "n_clusters": 8,
-        "period_duration": 24,
-        "cluster": ClusterConfig(method="hierarchical", representation="minmax_mean"),
     },
     # --- SegmentConfig.representation axis (only "mean" and a global
     # Distribution were pinned) ---
@@ -1090,7 +1085,6 @@ _META: dict[str, dict] = {
     # dataset, and a reconstructed golden costs ~0.5 MB per dataset.
     "hierarchical_medoid": _DETERMINISTIC_TESTDATA,
     "kmeans_medoid": _STOCHASTIC_TESTDATA,
-    "minmax_mean_string": _DETERMINISTIC_TESTDATA,
     "segmentation_medoid": _DETERMINISTIC_TESTDATA,
     "segmentation_maxoid": _DETERMINISTIC_TESTDATA,
     "segmentation_minmax_mean": _DETERMINISTIC_TESTDATA,
