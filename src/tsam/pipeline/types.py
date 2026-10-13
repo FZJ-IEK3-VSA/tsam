@@ -17,7 +17,7 @@ if TYPE_CHECKING:
         ExtremeConfig,
         SegmentConfig,
     )
-    from tsam.result import ClusteringResult, ExtremeReplacement
+    from tsam.result import ClusteringResult
 
 
 ExtremeKind = Literal["max", "min", "mean_max", "mean_min"]
@@ -97,6 +97,48 @@ class ExtremePeriod:
             # `idxmax`/`idxmin` returns is the row index.
             period_row_index=int(row_label),
             profile=np.asarray(profiles_df.loc[row_label, :].values),
+        )
+
+
+@dataclass(frozen=True)
+class ExtremeReplacement:
+    """One ``replace`` extreme injection, recorded for exact transfer.
+
+    Records that column ``column`` of cluster ``cluster``'s representative was
+    overwritten with the values of period ``period``. `ClusteringResult.apply()`
+    replays these on new data so the ``replace`` method reproduces exactly.
+
+    Attributes:
+        cluster: Index of the cluster whose representative was modified.
+        column: Name of the attribute column that was overwritten.
+        period: Index of the original period supplying the injected values.
+    """
+
+    cluster: int
+    column: str
+    period: int
+
+    @classmethod
+    def from_extreme(
+        cls, extreme: ExtremePeriod, cluster_order: list | np.ndarray
+    ) -> ExtremeReplacement:
+        """Record the injection ``replace`` made for one extreme period.
+
+        ``replace`` splices the extreme into the cluster the period was already
+        assigned to and leaves the assignment alone, so *cluster_order* still
+        names the cluster that was modified.
+
+        Args:
+            extreme: The preserved period, as `add_extreme_periods` returned it.
+            cluster_order: Per-period cluster assignment from the same run.
+        """
+        return cls(
+            cluster=int(cluster_order[extreme.period_row_index]),
+            # Column names are `str` everywhere a ClusteringResult records
+            # them; `ExtremePeriod` only widens the type for MultiIndex input,
+            # which never reaches this path.
+            column=cast("str", extreme.column),
+            period=int(extreme.period_row_index),
         )
 
 

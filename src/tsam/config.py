@@ -708,7 +708,8 @@ class ExtremeConfig:
             result["max_period"] = self.max_period
         if self.min_period:
             result["min_period"] = self.min_period
-        if self.preserve_n_clusters:
+        # A no-op under "replace"; storing it would re-warn on every load.
+        if self.preserve_n_clusters and self.method != "replace":
             result["preserve_n_clusters"] = True
         return result
 

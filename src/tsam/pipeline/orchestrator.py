@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import time
 import warnings
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -37,15 +37,13 @@ from tsam.pipeline.segmentation import segment_typical_periods
 from tsam.pipeline.types import (
     ClusterAssignment,
     ExtremePeriod,
+    ExtremeReplacement,
     PipelineConfig,
     PipelineResult,
     PredefParams,  # noqa: F401 (re-exported)
     PreparedData,
     RefinedRepresentatives,
 )
-
-if TYPE_CHECKING:
-    from tsam.result import ExtremeReplacement
 
 # Only the orchestration entry points are public API of this module. Setting
 # __all__ keeps the imported stage functions (normalize, cluster_periods, …)
@@ -210,17 +208,18 @@ def _resolve_preserve_n_clusters(
         ValueError: if the distinct extremes leave no budget for regular clusters
             (``n_clusters - D < 1``).
     """
-    preserve_n_clusters = (
-        cfg.predef is None
-        and cfg.extremes is not None
-        and getattr(cfg.extremes, "preserve_n_clusters", False)
-        and cfg.extremes.method in ("append", "new_cluster")
-    )
-    if not preserve_n_clusters or cfg.extremes is None:
+    if (
+        cfg.predef is not None
+        or cfg.extremes is None
+        or not cfg.extremes.preserve_n_clusters
+        or cfg.extremes.method not in ("append", "new_cluster")
+    ):
         return False, None, []
 
     predetected_extremes = detect_extreme_periods(profiles_for_extremes, cfg.extremes)
-    extreme_row_indices = [int(extreme.period_row_index) for extreme in predetected_extremes]
+    extreme_row_indices = [
+        int(extreme.period_row_index) for extreme in predetected_extremes
+    ]
     n_distinct_extremes = len(extreme_row_indices)
     if n_distinct_extremes and cfg.n_clusters - n_distinct_extremes < 1:
         raise ValueError(
@@ -262,6 +261,15 @@ def _cluster_carving_extremes(
         candidates[mask], n_regular, subset_rep
     )
     subset_order = np.asarray(subset_order)
+    # Clustering drops the clusters it leaves empty, which would silently break
+    # the exact-count promise.
+    if len(cluster_centers) < n_regular:
+        raise ValueError(
+            f"preserve_n_clusters: clustering the non-extreme periods produced "
+            f"{len(cluster_centers)} non-empty clusters instead of {n_regular}, so "
+            f"exactly n_clusters typical periods cannot be guaranteed. The data "
+            f"has fewer distinct period shapes than clusters; lower n_clusters."
+        )
 
     cluster_order = np.empty(candidates.shape[0], dtype=int)
     cluster_order[mask] = subset_order
@@ -272,17 +280,11 @@ def _cluster_carving_extremes(
         cluster_center_indices: list[int] | None = regular_reps
     else:
         cluster_center_indices = None
-        regular_reps = []
-        for k in range(n_regular):
-            members = np.where(subset_order == k)[0]
-            if members.size == 0:
-                raise ValueError(
-                    f"preserve_n_clusters: the clustering backend produced an empty "
-                    f"regular cluster ({k}), so exactly n_clusters typical periods "
-                    f"cannot be guaranteed. Use a method that yields non-empty "
-                    f"clusters (e.g. 'hierarchical')."
-                )
-            regular_reps.append(int(original_indices[members[0]]))
+        # Labels are dense after the check above, so every cluster has a member.
+        regular_reps = [
+            int(original_indices[np.flatnonzero(subset_order == k)[0]])
+            for k in range(n_regular)
+        ]
     return cluster_centers, cluster_center_indices, cluster_order, regular_reps
 
 
@@ -747,10 +749,12 @@ def cluster_candidates(
     # fewer distinct period shapes than clusters, some methods leave one empty.
     # `assign_clusters` drops those so ids stay usable as positions, which makes
     # the shortfall invisible unless it is said out loud.
-    if cfg.predef is None and len(cluster_periods_list) < cfg.n_clusters:
+    # The carved path asks for fewer clusters, and raises itself on a shortfall.
+    n_requested = cfg.n_clusters - len(extreme_row_indices)
+    if cfg.predef is None and len(cluster_periods_list) < n_requested:
         warnings.warn(
             f"Clustering produced {len(cluster_periods_list)} non-empty clusters "
-            f"for the requested n_clusters={cfg.n_clusters}: "
+            f"for the requested n_clusters={n_requested}: "
             f"'{cluster.method}' found fewer distinct period shapes than "
             f"clusters, and empty clusters are dropped rather than kept as "
             f"typical periods representing no periods. The aggregation is valid "
@@ -848,9 +852,9 @@ def refine_representatives(
                 cfg.predef.extreme_replacements,
                 profiles_for_extremes,
             )
-            extreme_cluster_idx = list(
-                dict.fromkeys(extreme_cluster_idx + injected_clusters)
-            )
+            # The stored ids name every cluster the original run injected into;
+            # on this run only those that received an injection are extreme.
+            extreme_cluster_idx = list(dict.fromkeys(injected_clusters))
 
     # Unconditional: extremes are one way to empty a cluster, not the only one,
     # and every id below indexes into cluster_periods_list.

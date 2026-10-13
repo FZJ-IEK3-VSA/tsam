@@ -201,6 +201,30 @@ class TestFixedTotalCount:
                 ),
             )
 
+    def test_clustering_shortfall_raises(self):
+        """Fewer distinct regular shapes than the budget cannot give n_clusters.
+
+        Clustering drops the clusters it leaves empty, so without a check the
+        carved run would quietly return fewer typical periods than promised.
+        """
+        day = np.sin(np.linspace(0, 2 * np.pi, PERIOD_HOURS))
+        values = np.tile(day, 12)
+        values[5 * PERIOD_HOURS + 12] = 10.0  # one spike; every other day identical
+        data = pd.DataFrame(
+            {"a": values},
+            index=pd.date_range("2020-01-01", periods=values.size, freq="h"),
+        )
+        with pytest.raises(ValueError, match="instead of 4"):
+            aggregate(
+                data,
+                n_clusters=5,
+                period_duration=PERIOD_HOURS,
+                cluster=ClusterConfig(method="kmeans"),
+                extremes=ExtremeConfig(
+                    method="append", preserve_n_clusters=True, max_value=["a"]
+                ),
+            )
+
     def test_replace_ignores_preserve_n_clusters_with_warning(self, real_data):
         with pytest.warns(UserWarning, match="preserve_n_clusters has no effect"):
             extremes = ExtremeConfig(
@@ -261,6 +285,22 @@ class TestFixedTotalCount:
         direct = carve(real_data, method=method)
         applied = direct.clustering.apply(real_data)
         assert n_typical_periods(applied) == N_CLUSTERS
+        assert_same_representatives(direct, applied)
+
+    def test_append_transfers_exactly_with_a_computed_representation(
+        self, real_data, tmp_path
+    ):
+        """No period moves after clustering, so a computed representation replays.
+
+        Plain ``append`` moves the extreme out of a cluster that was already
+        represented, which is why it warns with ``"mean"``. Carving takes the
+        extremes out first, so there is nothing to warn about.
+        """
+        direct = carve(real_data, cluster=ClusterConfig(representation="mean"))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            applied = direct.clustering.apply(real_data)
+            direct.clustering.to_json(str(tmp_path / "clustering.json"))
         assert_same_representatives(direct, applied)
 
 
@@ -383,6 +423,32 @@ class TestReplaceTransfer:
         )
         assert n_typical_periods(transferred) == N_CLUSTERS
 
+    def test_skipped_injection_leaves_an_ordinary_cluster(self, real_data):
+        """A cluster whose only injection was skipped is rescaled like any other.
+
+        Nothing was spliced into it, so excluding it from rescaling as an
+        extreme cluster would leave the column means off. The transfer must
+        match the same assignment replayed with no extreme handling at all.
+        """
+        fitted = aggregate(
+            real_data,
+            n_clusters=N_CLUSTERS,
+            period_duration=PERIOD_HOURS,
+            extremes=ExtremeConfig(method="replace", max_value=["GHI"]),
+        )
+        without_ghi = real_data.drop(columns=["GHI"])
+        no_extremes = dataclasses.replace(
+            fitted.clustering,
+            extreme_cluster_indices=None,
+            extreme_replacements=None,
+            extremes_config=None,
+        )
+
+        with pytest.warns(UserWarning, match="Cannot replay the 'replace' extreme"):
+            transferred = fitted.clustering.apply(without_ghi)
+
+        assert_same_representatives(no_extremes.apply(without_ghi), transferred)
+
     def test_no_warning_for_fresh_replace(self, replaced, real_data, tmp_path):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
@@ -413,6 +479,26 @@ class TestExtremeConfigSerialization:
         )
         assert config.to_dict()["preserve_n_clusters"] is True
         assert ExtremeConfig.from_dict(config.to_dict()).preserve_n_clusters is True
+
+    def test_ignored_flag_is_not_stored_for_replace(self, real_data, tmp_path):
+        """The flag is a no-op under ``replace``, so loading must not re-warn."""
+        with pytest.warns(UserWarning, match="preserve_n_clusters has no effect"):
+            extremes = ExtremeConfig(
+                method="replace", preserve_n_clusters=True, max_value=["GHI"]
+            )
+        assert "preserve_n_clusters" not in extremes.to_dict()
+
+        result = aggregate(
+            real_data,
+            n_clusters=N_CLUSTERS,
+            period_duration=PERIOD_HOURS,
+            extremes=extremes,
+        )
+        path = tmp_path / "clustering.json"
+        result.clustering.to_json(str(path))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            ClusteringResult.from_json(str(path))
 
     def test_preserve_n_clusters_omitted_when_false(self):
         config = ExtremeConfig(method="append", max_value=["GHI"])

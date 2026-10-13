@@ -25,10 +25,10 @@ from tsam.config import (
     representation_from_dict,
     representation_to_dict,
 )
+from tsam.pipeline.types import ExtremePeriod, ExtremeReplacement
 
 if TYPE_CHECKING:
     from tsam.config import Representation
-    from tsam.pipeline.types import ExtremePeriod
     from tsam.plot import ResultPlotAccessor
 
 
@@ -670,48 +670,6 @@ def _expand_periods(
 
 
 @dataclass(frozen=True)
-class ExtremeReplacement:
-    """One ``replace`` extreme injection, recorded for exact transfer.
-
-    Records that column ``column`` of cluster ``cluster``'s representative was
-    overwritten with the values of period ``period``. `ClusteringResult.apply()`
-    replays these on new data so the ``replace`` method reproduces exactly.
-
-    Attributes:
-        cluster: Index of the cluster whose representative was modified.
-        column: Name of the attribute column that was overwritten.
-        period: Index of the original period supplying the injected values.
-    """
-
-    cluster: int
-    column: str
-    period: int
-
-    @classmethod
-    def from_extreme(
-        cls, extreme: ExtremePeriod, cluster_order: list | np.ndarray
-    ) -> ExtremeReplacement:
-        """Record the injection ``replace`` made for one extreme period.
-
-        ``replace`` splices the extreme into the cluster the period was already
-        assigned to and leaves the assignment alone, so *cluster_order* still
-        names the cluster that was modified.
-
-        Args:
-            extreme: The preserved period, as `add_extreme_periods` returned it.
-            cluster_order: Per-period cluster assignment from the same run.
-        """
-        return cls(
-            cluster=int(cluster_order[extreme.period_row_index]),
-            # Column names are `str` everywhere a ClusteringResult records
-            # them; `ExtremePeriod` only widens the type for MultiIndex input,
-            # which never reaches this path.
-            column=cast("str", extreme.column),
-            period=int(extreme.period_row_index),
-        )
-
-
-@dataclass(frozen=True)
 class ClusteringResult:
     """Clustering assignments that can be saved/loaded and applied to new data.
 
@@ -1172,6 +1130,13 @@ class ClusteringResult:
                 "transfer uses the stored cluster centers directly, without it. "
                 "Re-run the original aggregation for an exact transfer"
             )
+        if (
+            self.extremes_config.method == "append"
+            and self.extremes_config.preserve_n_clusters
+        ):
+            # The extremes were taken out before clustering, so no period moves
+            # after the representatives are computed.
+            return None
         if self.cluster_centers is None:
             return (
                 f"the {self.extremes_config.method!r} extreme method moves a "
@@ -1326,6 +1291,7 @@ class ClusteringResult:
             |---|---|---|
             | none | exact | exact |
             | `"replace"` | exact | exact |
+            | `"append"` with `preserve_n_clusters=True` | exact | exact |
             | `"append"`, `"new_cluster"` | exact | **differs**, warns |
 
             `"medoid"` and `"maxoid"` name an existing period, so the index is
@@ -1337,6 +1303,9 @@ class ClusteringResult:
             cluster therefore differs, and with `preserve_column_means=True`
             the rescaling spreads the difference across every cluster. For an
             exact transfer with these methods, use `"medoid"` or `"maxoid"`.
+            `"append"` with `preserve_n_clusters=True` is exact either way: the
+            extremes are taken out before clustering, so no period moves
+            afterwards.
 
             `"replace"` escapes this because it moves no period between
             clusters. The values it splices in are stored as
