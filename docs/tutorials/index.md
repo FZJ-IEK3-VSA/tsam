@@ -25,9 +25,10 @@ each carves the data differently, and what each one costs to run.
 basic rules on one small cluster. See which rules select whole days and which calculate values
 at individual timesteps, then compare their means, extremes, and paths.
 
-**[Duration representations](duration_representations.ipynb)** — lever 2 on a full year of hourly
-data. Compare distribution fitting with the basic rules, distinguish local/global scope and
-min/max preservation, then hold duration curves fixed while comparing five concurrency orderings.
+**[Duration representations](duration_representations.ipynb)** — lever 2 on a dataset built to
+show the differences. Fit duration-curve levels and order them in time, choose whether each
+cluster's or the whole dataset's distribution and extremes are retained, and compare five ways
+to pair the attributes.
 
 ---
 

@@ -23,6 +23,14 @@ To compare chronological paths with consistent colours and shared axes:
 To compare full series or their duration curves across several runs:
     >>> tsam.plot.compare_series(series, mode="duration_curve", reference="original")
 
+To explain a duration representation: how member days are fitted and ordered,
+where a reconstruction's error lies in time and in the duration curve, how each
+cluster's duration curve is matched, and which reference each ordering follows:
+    >>> tsam.plot.duration_fit(days, "solar", representative=profile)
+    >>> tsam.plot.error_areas(original, {"mean": reconstructed}, "solar")
+    >>> tsam.plot.cluster_duration_curves({"sunny": {"members": days}}, "solar")
+    >>> tsam.plot.profile_panels(profiles, ["solar", "load"], background=days)
+
 For exploring raw data before aggregation, use plotly directly with
 ``tsam.unstack_to_periods()`` to reshape data for heatmaps:
     >>> import plotly.express as px
@@ -776,6 +784,1016 @@ def compare_series(
         height=270 * len(columns) + 120,
         legend={"orientation": "h", "y": -0.16, "groupclick": "togglegroup"},
         margin={"l": 65, "r": 35, "t": 65, "b": 115},
+    )
+    return fig
+
+
+_TIMESTEP_SYMBOLS = (
+    "circle",
+    "square",
+    "diamond",
+    "triangle-up",
+    "triangle-down",
+    "cross",
+    "x",
+    "star",
+    "pentagon",
+    "hexagon",
+    "star-square",
+    "hourglass",
+)
+
+
+def _rank_numbers(values: np.ndarray) -> np.ndarray:
+    """Rank 1 for the highest value, ties resolved in index order.
+
+    This is the tie-breaking the distribution representation uses when it
+    places its levels by the ranks of a profile.
+    """
+    ascending = np.argsort(np.round(values, 10), kind="stable")
+    ranks = np.empty(len(values), dtype=int)
+    ranks[ascending] = np.arange(len(values), 0, -1)
+    return ranks
+
+
+def _validate_days(days: dict[str, pd.DataFrame], attr: str) -> int:
+    """Check named days of equal length for ``attr`` and return that length."""
+    if not days:
+        raise ValueError("days is empty — pass at least one named member day.")
+    lengths = {len(frame) for frame in days.values()}
+    if len(lengths) != 1 or 0 in lengths:
+        raise ValueError("All member days must have the same, non-zero length.")
+    for name, frame in days.items():
+        if attr not in frame:
+            raise ValueError(f"Day {name!r} has no column {attr!r}.")
+        if not np.isfinite(frame[attr].to_numpy(dtype=float)).all():
+            raise ValueError(f"Day {name!r} contains non-finite values.")
+    return lengths.pop()
+
+
+def _duration_steps(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Descending duration curve of ``values`` as steps over the share of time."""
+    sorted_values = np.sort(values)[::-1]
+    return (
+        np.linspace(0, 100, len(values) + 1),
+        np.asarray(np.r_[sorted_values, sorted_values[-1]]),
+    )
+
+
+_SYMBOL_GLYPHS = {
+    "circle": "●",
+    "square": "■",
+    "diamond": "◆",
+    "triangle-up": "▲",
+    "triangle-down": "▼",
+    "cross": "✚",
+    "x": "✖",
+    "star": "★",
+    "pentagon": "⬟",
+    "hexagon": "⬢",
+    "star-square": "❖",
+    "hourglass": "⧗",
+}
+
+
+def _label_trace(
+    x: np.ndarray,
+    y: np.ndarray,
+    labels: list[str],
+    offset: float,
+    color: str,
+    legendgroup: str,
+) -> go.Scatter:
+    """Text labels drawn a fixed distance above (or below) their markers."""
+    return go.Scatter(
+        x=x,
+        y=np.asarray(y, dtype=float) + offset,
+        legendgroup=legendgroup,
+        showlegend=False,
+        mode="text",
+        text=labels,
+        textposition="middle center",
+        textfont={"size": 11, "color": color},
+        hoverinfo="skip",
+    )
+
+
+def duration_fit(
+    days: dict[str, pd.DataFrame],
+    attr: str,
+    *,
+    representative: pd.DataFrame | None = None,
+    ordering_profile: pd.DataFrame | None = None,
+    ordering_label: str = "mean profile",
+    n_levels: int | None = None,
+    units: dict[str, str] | None = None,
+    colors: dict[str, str] | None = None,
+    title: str | None = None,
+) -> go.Figure:
+    """Show how member days are fitted and ordered into a duration representation.
+
+    Three panels. The upper left draws each day's values of ``attr`` over its
+    timesteps, with one marker symbol per timestep, listed in the legend and
+    in a key below the panel title, and the ordering profile on top with the
+    rank of every timestep printed below its marker: rank 1 is the timestep
+    where the profile is highest, ties are resolved in timestep order. The
+    upper right pools all values, sorts them in descending order and draws one
+    marker per value in the colour of its day and the symbol of its timestep,
+    so that every sorted value can be traced back; the sorted values are
+    divided into ``n_levels`` equal slices, and a numbered segment marks the
+    average of each slice, the level the representation uses. The lower panel
+    draws the duration curves of the pooled days, of the ordering profile and
+    of the representative; each step of the two profiles is labelled with the
+    timestep it comes from and its rank. The representative, if given, is
+    drawn dashed in the upper left panel with the ranks printed above its
+    markers: the timestep of rank *k* holds the level of slice *k*.
+
+    Args:
+        days: Named member days of equal length, rows in chronological order.
+        attr: Column to show.
+        representative: The cluster's representative profile with a column
+            ``attr``.
+        ordering_profile: The profile whose ranks place the levels. Defaults to
+            the mean of ``days``, which is what the default ordering uses.
+        ordering_label: Legend label of the ordering profile.
+        n_levels: Number of slices. Defaults to the number of timesteps per day,
+            which is what the cluster representation uses.
+        units: Optional unit for the value axis, keyed by attribute.
+        colors: Colours keyed by day name or by ``ordering_label``. Unspecified
+            names use the Plotly qualitative palette.
+        title: Optional figure title.
+
+    Returns:
+        A Plotly figure with three panels, one legend entry per day and one
+        per timestep symbol.
+
+    Raises:
+        ValueError: If ``days`` is empty, the days differ in length, ``attr``
+            is missing, values are non-finite, the pooled values cannot be
+            divided into ``n_levels`` equal slices, or a profile does not
+            match the days.
+    """
+    from plotly.subplots import make_subplots
+
+    n_steps = _validate_days(days, attr)
+    n_levels = n_steps if n_levels is None else n_levels
+    n_pooled = n_steps * len(days)
+    if n_levels < 1 or n_pooled % n_levels:
+        raise ValueError(
+            f"{n_pooled} pooled values cannot be divided into {n_levels} equal slices."
+        )
+    slice_size = n_pooled // n_levels
+    for name, profile in {
+        "ordering_profile": ordering_profile,
+        "representative": representative,
+    }.items():
+        if profile is not None and (attr not in profile or len(profile) != n_steps):
+            raise ValueError(f"{name} needs a column {attr!r} with {n_steps} rows.")
+
+    palette = px.colors.qualitative.Plotly
+    color_map = {name: palette[i % len(palette)] for i, name in enumerate(days)}
+    color_map[ordering_label] = "#0072B2"
+    color_map.update(colors or {})
+    ordering_color = color_map[ordering_label]
+    label = f"{attr} [{units[attr]}]" if units and attr in units else attr
+    steps = np.arange(n_steps)
+    symbols = [_TIMESTEP_SYMBOLS[t % len(_TIMESTEP_SYMBOLS)] for t in steps]
+    values_by_day = {
+        name: frame[attr].to_numpy(dtype=float) for name, frame in days.items()
+    }
+    pooled_values = np.concatenate(list(values_by_day.values()))
+    if ordering_profile is None:
+        profile_values = np.mean(list(values_by_day.values()), axis=0)
+    else:
+        profile_values = ordering_profile[attr].to_numpy(dtype=float)
+    ranks = _rank_numbers(profile_values)
+    representative_values = (
+        None if representative is None else representative[attr].to_numpy(dtype=float)
+    )
+    drawn = [pooled_values, profile_values]
+    if representative_values is not None:
+        drawn.append(representative_values)
+    lo, hi = float(np.min(np.concatenate(drawn))), float(np.max(np.concatenate(drawn)))
+    span = hi - lo or max(abs(hi), 1.0)
+    offset = 0.07 * span
+
+    pooled = pd.DataFrame(
+        {
+            "value": pooled_values,
+            "day": np.repeat(list(days), n_steps),
+            "timestep": np.tile(steps, len(days)),
+        }
+    )
+    pooled = pooled.sort_values("value", ascending=False, kind="stable")
+    pooled["rank"] = np.arange(1, n_pooled + 1)
+    levels = pooled["value"].to_numpy().reshape(n_levels, slice_size).mean(axis=1)
+
+    key = "  ".join(f"t{t} {_SYMBOL_GLYPHS[s]}" for t, s in zip(steps, symbols))
+    fig = make_subplots(
+        rows=2,
+        cols=2,
+        specs=[[{}, {}], [{"colspan": 2}, None]],
+        row_heights=[0.55, 0.45],
+        vertical_spacing=0.14,
+        subplot_titles=(
+            f"1 · in time: colour = day, symbol = timestep<br><sup>{key}</sup>",
+            "2 · pooled and sorted, averaged in numbered slices",
+            "3 · duration curves · step labels: timestep (rank)",
+        ),
+    )
+    for name, values in values_by_day.items():
+        fig.add_trace(
+            go.Scatter(
+                x=steps,
+                y=values,
+                name=name,
+                legendgroup=name,
+                showlegend=True,
+                mode="lines+markers",
+                line={"color": color_map[name], "width": 1.5},
+                marker={"symbol": symbols, "size": 9},
+                hovertemplate=f"{name}<br>t%{{x}}<br>{label} = %{{y:.4g}}<extra></extra>",
+            ),
+            row=1,
+            col=1,
+        )
+        own = pooled[pooled["day"] == name]
+        fig.add_trace(
+            go.Scatter(
+                x=own["rank"],
+                y=own["value"],
+                name=name,
+                legendgroup=name,
+                showlegend=False,
+                mode="markers",
+                marker={
+                    "color": color_map[name],
+                    "size": 9,
+                    "symbol": [symbols[t] for t in own["timestep"]],
+                },
+                customdata=own["timestep"],
+                hovertemplate=(
+                    f"{name} at t%{{customdata}}<br>sorted position %{{x}}<br>"
+                    f"{label} = %{{y:.4g}}<extra></extra>"
+                ),
+            ),
+            row=1,
+            col=2,
+        )
+    for t, symbol in zip(steps, symbols):
+        fig.add_trace(
+            go.Scatter(
+                x=[None],
+                y=[None],
+                name=f"t{t}",
+                legendgroup="timestep",
+                legendgrouptitle={"text": "timestep"} if t == 0 else None,
+                showlegend=True,
+                mode="markers",
+                marker={"symbol": symbol, "color": "#68717c", "size": 9},
+            ),
+            row=1,
+            col=1,
+        )
+    fig.add_trace(
+        go.Scatter(
+            x=steps,
+            y=profile_values,
+            name=ordering_label,
+            legendgroup="ordering",
+            showlegend=True,
+            mode="lines+markers",
+            text=[str(rank) for rank in ranks],
+            line={"color": ordering_color, "width": 2.5},
+            marker={"size": 6},
+            hovertemplate=(
+                f"{ordering_label}<br>t%{{x}} has rank %{{text}}<br>"
+                f"{label} = %{{y:.4g}}<extra></extra>"
+            ),
+        ),
+        row=1,
+        col=1,
+    )
+    fig.add_trace(
+        _label_trace(
+            steps,
+            profile_values,
+            [str(rank) for rank in ranks],
+            -offset,
+            ordering_color,
+            "ordering",
+        ),
+        row=1,
+        col=1,
+    )
+    if representative_values is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=steps,
+                y=representative_values,
+                name="representative",
+                legendgroup="representative",
+                showlegend=True,
+                mode="lines+markers",
+                text=[str(rank) for rank in ranks],
+                line={"color": "#222222", "width": 3, "dash": "dash"},
+                marker={"symbol": symbols, "size": 9},
+                hovertemplate=(
+                    f"representative<br>t%{{x}} has rank %{{text}} and holds "
+                    f"slice %{{text}}<br>{label} = %{{y:.4g}}<extra></extra>"
+                ),
+            ),
+            row=1,
+            col=1,
+        )
+        fig.add_trace(
+            _label_trace(
+                steps,
+                representative_values,
+                [str(rank) for rank in ranks],
+                offset,
+                "#222222",
+                "representative",
+            ),
+            row=1,
+            col=1,
+        )
+    for k, level in enumerate(levels):
+        start, end = k * slice_size + 0.5, (k + 1) * slice_size + 0.5
+        if k:
+            fig.add_vline(
+                x=start, line={"color": "#b0b6bd", "dash": "dot"}, row=1, col=2
+            )
+        fig.add_trace(
+            go.Scatter(
+                x=[start, (start + end) / 2, end],
+                y=[level, level, level],
+                name="level (slice average)",
+                legendgroup="level",
+                showlegend=k == 0,
+                mode="lines+text",
+                text=["", str(k + 1), ""],
+                textposition="top center",
+                textfont={"size": 11, "color": "#222222"},
+                line={"color": "#222222", "width": 3},
+                hovertemplate=f"slice {k + 1}<br>{label} = {level:.4g}<extra></extra>",
+            ),
+            row=1,
+            col=2,
+        )
+
+    x, y = _duration_steps(pooled_values)
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=y,
+            name="member days, pooled",
+            legendgroup="pooled",
+            showlegend=True,
+            mode="lines",
+            line={"color": "#7b8490", "width": 3, "shape": "hv"},
+            hovertemplate=(
+                f"member days, pooled<br>sorted time = %{{x:.1f}}%<br>"
+                f"{label} = %{{y:.4g}}<extra></extra>"
+            ),
+        ),
+        row=2,
+        col=1,
+    )
+    curves = [(ordering_label, profile_values, ordering_color, "solid", -offset)]
+    if representative_values is not None:
+        curves.append(
+            ("representative", representative_values, "#222222", "dash", offset)
+        )
+    for name, values, color, dash, label_offset in curves:
+        x, y = _duration_steps(values)
+        group = "ordering" if name == ordering_label else name
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=y,
+                name=name,
+                legendgroup=group,
+                showlegend=False,
+                mode="lines",
+                line={"color": color, "width": 2.5, "shape": "hv", "dash": dash},
+                hovertemplate=(
+                    f"{name}<br>sorted time = %{{x:.1f}}%<br>"
+                    f"{label} = %{{y:.4g}}<extra></extra>"
+                ),
+            ),
+            row=2,
+            col=1,
+        )
+        order = np.argsort(ranks, kind="stable")
+        fig.add_trace(
+            _label_trace(
+                (np.arange(n_steps) + 0.5) / n_steps * 100,
+                values[order],
+                [f"t{t} ({ranks[t]})" for t in order],
+                label_offset,
+                color,
+                group,
+            ),
+            row=2,
+            col=1,
+        )
+    fig.update_xaxes(title_text="timestep", row=1, col=1)
+    fig.update_xaxes(title_text="sorted position", row=1, col=2)
+    fig.update_xaxes(title_text="share of time [%]", range=[0, 100], row=2, col=1)
+    for row, col in ((1, 1), (1, 2), (2, 1)):
+        fig.update_yaxes(
+            title_text=label,
+            range=[lo - 0.25 * span, hi + 0.25 * span],
+            row=row,
+            col=col,
+        )
+    fig.update_layout(
+        title=title,
+        template="plotly_white",
+        height=1000,
+        legend={"orientation": "h", "y": -0.08},
+        margin={"l": 65, "r": 35, "t": 110, "b": 130},
+    )
+    return fig
+
+
+def error_areas(
+    original: pd.DataFrame,
+    reconstructions: dict[str, pd.DataFrame],
+    attr: str,
+    *,
+    units: dict[str, str] | None = None,
+    colors: dict[str, str] | None = None,
+    title: str | None = None,
+) -> go.Figure:
+    """Shade the error between an original series and its reconstructions.
+
+    One row per reconstruction and two columns: the series in time and their
+    duration curves, i.e. the same values sorted in descending order over the
+    share of time. The area between the original and the reconstruction is
+    filled, and each panel's title states the root mean square error of
+    ``attr`` in physical units, so that the timing error and the
+    duration-curve error of a representation can be compared at a glance.
+
+    Args:
+        original: The original series with a column ``attr``.
+        reconstructions: Named reconstructed series of the same length.
+        attr: Column to show.
+        units: Optional unit for the value axis, keyed by attribute.
+        colors: Colours keyed by reconstruction name. Unspecified names use
+            the Plotly qualitative palette.
+        title: Optional figure title.
+
+    Returns:
+        A Plotly figure with two panels per reconstruction.
+
+    Raises:
+        ValueError: If ``reconstructions`` is empty, a frame lacks ``attr``,
+            lengths differ, or values are non-finite.
+    """
+    from plotly.subplots import make_subplots
+
+    if not reconstructions:
+        raise ValueError("reconstructions is empty — pass at least one series.")
+    frames = {"original": original, **reconstructions}
+    for name, frame in frames.items():
+        if attr not in frame:
+            raise ValueError(f"Series {name!r} has no column {attr!r}.")
+        if len(frame) != len(original):
+            raise ValueError(f"Series {name!r} differs in length from the original.")
+        if not np.isfinite(frame[attr].to_numpy(dtype=float)).all():
+            raise ValueError(f"Series {name!r} contains non-finite values.")
+
+    palette = px.colors.qualitative.Plotly
+    color_map = {
+        name: palette[i % len(palette)] for i, name in enumerate(reconstructions)
+    }
+    color_map.update(colors or {})
+    unit = units.get(attr, "") if units else ""
+    label = f"{attr} [{unit}]" if unit else attr
+    original_values = original[attr].to_numpy(dtype=float)
+
+    titles = []
+    for name, frame in reconstructions.items():
+        values = frame[attr].to_numpy(dtype=float)
+        rmse = np.sqrt(np.mean((original_values - values) ** 2))
+        rmse_sorted = np.sqrt(
+            np.mean((np.sort(original_values) - np.sort(values)) ** 2)
+        )
+        titles += [
+            f"{name} in time · RMSE {rmse:.3g} {unit}".rstrip(),
+            f"{name} sorted · RMSE {rmse_sorted:.3g} {unit}".rstrip(),
+        ]
+    fig = make_subplots(rows=len(reconstructions), cols=2, subplot_titles=titles)
+    for row, (name, frame) in enumerate(reconstructions.items(), start=1):
+        values = frame[attr].to_numpy(dtype=float)
+        share, sorted_original = _duration_steps(original_values)
+        _, sorted_values = _duration_steps(values)
+        for col, (x, y_original, y_values, shape) in enumerate(
+            [
+                (original.index, original_values, values, "linear"),
+                (share, sorted_original, sorted_values, "hv"),
+            ],
+            start=1,
+        ):
+            fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=y_original,
+                    name="original",
+                    legendgroup="original",
+                    showlegend=row == 1 and col == 1,
+                    mode="lines",
+                    line={"color": "#7b8490", "width": 3, "shape": shape},
+                    hovertemplate=f"original<br>{label} = %{{y:.4g}}<extra></extra>",
+                ),
+                row=row,
+                col=col,
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=y_values,
+                    name=name,
+                    legendgroup=name,
+                    showlegend=col == 1,
+                    mode="lines",
+                    line={"color": color_map[name], "width": 2, "shape": shape},
+                    fill="tonexty",
+                    fillcolor=_to_rgba(color_map[name], 0.3),
+                    hovertemplate=f"{name}<br>{label} = %{{y:.4g}}<extra></extra>",
+                ),
+                row=row,
+                col=col,
+            )
+        fig.update_yaxes(title_text=label, row=row, col=1)
+    fig.update_xaxes(title_text="time", row=len(reconstructions), col=1)
+    fig.update_xaxes(
+        title_text="Share of time [%], sorted descending",
+        row=len(reconstructions),
+        col=2,
+    )
+    fig.update_layout(
+        title=title,
+        template="plotly_white",
+        height=260 * len(reconstructions) + 150,
+        legend={"orientation": "h", "y": -0.16},
+        margin={"l": 65, "r": 35, "t": 80, "b": 110},
+    )
+    return fig
+
+
+def _duration_on_grid(values: np.ndarray, grid: np.ndarray) -> np.ndarray:
+    """Evaluate the descending duration curve of ``values`` at shares of time.
+
+    ``grid`` holds shares of time in percent, ascending from 0 to 100. The
+    curve is a step function: the share interval ``[k/n, (k+1)/n)`` carries
+    the ``k``-th largest value. The last grid point repeats the last value so
+    that the result can be drawn with ``line.shape="hv"``.
+    """
+    sorted_values = np.sort(values)[::-1]
+    index = np.minimum(np.floor(grid / 100 * len(values)).astype(int), len(values) - 1)
+    return np.asarray(sorted_values[index])
+
+
+def cluster_duration_curves(
+    clusters: dict[str, dict[str, pd.DataFrame]],
+    attr: str,
+    *,
+    reference: str | None = None,
+    fill: bool = False,
+    fill_alpha: float = 0.3,
+    split: bool = False,
+    units: dict[str, str] | None = None,
+    colors: dict[str, str] | None = None,
+    dashes: dict[str, str] | None = None,
+    widths: dict[str, float] | None = None,
+    title: str | None = None,
+) -> go.Figure:
+    """Compare duration curves cluster by cluster, one row per cluster.
+
+    Each panel sorts the values of ``attr`` of every named series in
+    descending order and draws them as steps over the share of time, so that
+    series of different lengths, such as a cluster's pooled member days and
+    its representative, are comparable. A series name keeps its colour in
+    every panel and has one legend entry. With a reference and ``fill``, the
+    area between the reference and every other series is shaded and each
+    panel's title states the root mean square error between the curves in
+    physical units. With ``split``, every series other than the reference
+    gets its own column, so that the shaded areas do not overlap.
+
+    Args:
+        clusters: Named rows, each a mapping of series name to data frame.
+        attr: Column to show.
+        reference: Series name drawn as a thicker grey line in every panel.
+        fill: Shade the error against the reference and state its RMSE.
+        fill_alpha: Opacity of the shaded areas.
+        split: One column per series other than the reference.
+        units: Optional unit for the value axis, keyed by attribute.
+        colors: Colours keyed by series name. Unspecified names use the Plotly
+            qualitative palette.
+        dashes: Line styles keyed by series name, such as ``"dash"`` or
+            ``"dot"``; unspecified names are solid.
+        widths: Line widths keyed by series name.
+        title: Optional figure title.
+
+    Returns:
+        A Plotly figure with one row per cluster.
+
+    Raises:
+        ValueError: If ``clusters`` or a row is empty, a frame lacks ``attr``,
+            values are non-finite, or ``fill`` or ``split`` is requested
+            without a reference present in every row.
+    """
+    from plotly.subplots import make_subplots
+
+    if not clusters or any(not series for series in clusters.values()):
+        raise ValueError("clusters must map each panel to at least one series.")
+    names: list[str] = []
+    for panel, series in clusters.items():
+        for name, frame in series.items():
+            if attr not in frame:
+                raise ValueError(
+                    f"Series {name!r} in {panel!r} has no column {attr!r}."
+                )
+            if frame.empty or not np.isfinite(frame[attr].to_numpy(dtype=float)).all():
+                raise ValueError(
+                    f"Series {name!r} in {panel!r} is empty or non-finite."
+                )
+            if name not in names:
+                names.append(name)
+        if (fill or split) and reference not in series:
+            raise ValueError(
+                f"fill and split need the reference {reference!r} in {panel!r}."
+            )
+    ref: str = reference or ""
+    palette = px.colors.qualitative.Plotly
+    color_map = {name: palette[i % len(palette)] for i, name in enumerate(names)}
+    if reference is not None:
+        color_map[ref] = "#7b8490"
+    color_map.update(colors or {})
+    dashes = dashes or {}
+    widths = widths or {}
+    unit = units.get(attr, "") if units else ""
+    label = f"{attr} [{unit}]" if unit else attr
+    others = [name for name in names if name != ref]
+    columns: list[list[str]] = [[name] for name in others] if split else [others]
+
+    def rmse_sorted(values: np.ndarray, reference_values: np.ndarray) -> float:
+        grid = np.unique(
+            np.r_[
+                np.linspace(0, 100, len(values) + 1),
+                np.linspace(0, 100, len(reference_values) + 1),
+            ]
+        )
+        gap = _duration_on_grid(values, grid[:-1]) - _duration_on_grid(
+            reference_values, grid[:-1]
+        )
+        return float(np.sqrt(np.sum(np.diff(grid) / 100 * gap**2)))
+
+    titles = []
+    for panel, series in clusters.items():
+        for column in columns:
+            present = [name for name in column if name in series]
+            heading = f"{panel} · {present[0]}" if split and present else panel
+            if not fill or not present:
+                titles.append(heading)
+                continue
+            reference_values = series[ref][attr].to_numpy(dtype=float)
+            errors = {
+                name: rmse_sorted(
+                    series[name][attr].to_numpy(dtype=float), reference_values
+                )
+                for name in present
+            }
+            if split:
+                titles.append(f"{heading} · RMSE {errors[present[0]]:.3g} {unit}")
+            else:
+                parts = ", ".join(f"{n} {e:.3g}" for n, e in errors.items())
+                titles.append(f"{heading} · RMSE sorted: {parts} {unit}")
+    titles = [t.rstrip() for t in titles]
+
+    fig = make_subplots(
+        rows=len(clusters),
+        cols=len(columns),
+        shared_xaxes=True,
+        shared_yaxes=split,
+        subplot_titles=titles,
+    )
+    shown: set[str] = set()
+    for row, series in enumerate(clusters.values(), start=1):
+        for col, column in enumerate(columns, start=1):
+            if not fill and not split and ref in series:
+                column = [*column, ref]
+            for name in column:
+                if name not in series:
+                    continue
+                frame = series[name]
+                x, y = _duration_steps(frame[attr].to_numpy(dtype=float))
+                if fill and name != ref:
+                    reference_x, _ = _duration_steps(
+                        series[ref][attr].to_numpy(dtype=float)
+                    )
+                    x = np.unique(np.r_[x, reference_x])
+                    y = _duration_on_grid(frame[attr].to_numpy(dtype=float), x)
+                    fig.add_trace(
+                        go.Scatter(
+                            x=x,
+                            y=_duration_on_grid(
+                                series[ref][attr].to_numpy(dtype=float), x
+                            ),
+                            showlegend=False,
+                            hoverinfo="skip",
+                            mode="lines",
+                            line={"color": "rgba(0,0,0,0)", "shape": "hv"},
+                        ),
+                        row=row,
+                        col=col,
+                    )
+                fig.add_trace(
+                    go.Scatter(
+                        x=x,
+                        y=y,
+                        name=name,
+                        legendgroup=name,
+                        showlegend=name not in shown,
+                        mode="lines",
+                        line={
+                            "color": color_map[name],
+                            "width": widths.get(name, 3 if name == ref else 2),
+                            "shape": "hv",
+                            "dash": dashes.get(name, "solid"),
+                        },
+                        fill="tonexty" if fill and name != ref else None,
+                        fillcolor=_to_rgba(color_map[name], fill_alpha)
+                        if fill and name != ref
+                        else None,
+                        hovertemplate=(
+                            f"{name}<br>sorted time = %{{x:.2f}}%<br>"
+                            f"{label} = %{{y:.4g}}<extra></extra>"
+                        ),
+                    ),
+                    row=row,
+                    col=col,
+                )
+                shown.add(name)
+            if (fill or split) and ref in series:
+                x, y = _duration_steps(series[ref][attr].to_numpy(dtype=float))
+                fig.add_trace(
+                    go.Scatter(
+                        x=x,
+                        y=y,
+                        name=ref,
+                        legendgroup=ref,
+                        showlegend=ref not in shown,
+                        mode="lines",
+                        line={"color": color_map[ref], "width": 3, "shape": "hv"},
+                        hovertemplate=(
+                            f"{ref}<br>sorted time = %{{x:.2f}}%<br>"
+                            f"{label} = %{{y:.4g}}<extra></extra>"
+                        ),
+                    ),
+                    row=row,
+                    col=col,
+                )
+                shown.add(ref)
+            if col == 1:
+                fig.update_yaxes(title_text=label, row=row, col=col)
+            if row == len(clusters):
+                fig.update_xaxes(
+                    title_text="share of time [%], sorted descending",
+                    row=row,
+                    col=col,
+                )
+    fig.update_xaxes(range=[0, 100], nticks=6)
+    fig.update_layout(
+        title=title,
+        template="plotly_white",
+        height=250 * len(clusters) + 140,
+        legend={"orientation": "h", "y": -0.16, "groupclick": "togglegroup"},
+        margin={"l": 65, "r": 35, "t": 80, "b": 110},
+    )
+    return fig
+
+
+def profile_panels(
+    profiles: dict[str, pd.DataFrame],
+    attrs: list[str],
+    *,
+    background: dict[str, pd.DataFrame] | None = None,
+    references: dict[str, pd.DataFrame] | None = None,
+    rank_sources: dict[str, dict[str, tuple[str, str] | str]] | None = None,
+    units: dict[str, str] | None = None,
+    colors: dict[str, str] | None = None,
+    title: str | None = None,
+) -> go.Figure:
+    """Draw profiles in time, one row per profile and one column per attribute.
+
+    Every panel shows the background days faded and the row's own profile in
+    black, with the rank of each value among the profile's values of that
+    attribute printed above its marker, 1 for the highest. Profiles that hold
+    the same values in a different order therefore show the same numbers
+    permuted. ``rank_sources`` names, per profile and attribute, the
+    reference profile and the attribute whose ranks placed the values. The
+    panel title states this source, and when the source attribute is the
+    panel's own, the reference is drawn in colour with its ranks printed
+    below its markers, so that the ranks of the reference and of the profile
+    can be compared marker by marker. A plain string describes a source that
+    is not a drawable profile, such as a shared order.
+
+    Args:
+        profiles: Named profiles, one row each, with the columns ``attrs``.
+        attrs: Columns, one panel column each.
+        background: Named days drawn faded in every panel, such as the
+            cluster's member days.
+        references: Named reference profiles, such as a mean profile or a
+            medoid day, that ``rank_sources`` can refer to.
+        rank_sources: Per profile name and attribute, either a tuple of
+            reference name and source attribute, or a description string.
+        units: Optional units for the value axes, keyed by attribute.
+        colors: Colours keyed by reference name. Unspecified names use the
+            Plotly qualitative palette.
+        title: Optional figure title.
+
+    Returns:
+        A Plotly figure with ``len(profiles)`` rows and ``len(attrs)`` columns.
+
+    Raises:
+        ValueError: If ``profiles`` or ``attrs`` is empty, a frame lacks one
+            of ``attrs`` or contains non-finite values, or a rank source
+            names an unknown profile, reference or attribute.
+    """
+    from plotly.subplots import make_subplots
+
+    if not profiles or not attrs:
+        raise ValueError("profiles and attrs must not be empty.")
+    background = background or {}
+    references = references or {}
+    rank_sources = rank_sources or {}
+    for name, frame in {**profiles, **background, **references}.items():
+        missing = [attr for attr in attrs if attr not in frame]
+        if missing:
+            raise ValueError(f"Profile {name!r} lacks columns {missing}.")
+        if not np.isfinite(frame[attrs].to_numpy(dtype=float)).all():
+            raise ValueError(f"Profile {name!r} contains non-finite values.")
+    for name, sources in rank_sources.items():
+        if name not in profiles:
+            raise ValueError(f"rank_sources names an unknown profile {name!r}.")
+        for attr, source in sources.items():
+            if attr not in attrs:
+                raise ValueError(f"rank_sources names an unknown attribute {attr!r}.")
+            if isinstance(source, tuple) and (
+                source[0] not in references or source[1] not in attrs
+            ):
+                raise ValueError(f"rank source {source!r} is not available.")
+    palette = px.colors.qualitative.Plotly
+    color_map = {name: palette[i % len(palette)] for i, name in enumerate(references)}
+    color_map.update(colors or {})
+
+    def source_of(name: str, attr: str) -> tuple[str, str] | str | None:
+        return rank_sources.get(name, {}).get(attr)
+
+    def drawn_reference(name: str, attr: str) -> str | None:
+        source = source_of(name, attr)
+        if isinstance(source, tuple) and source[1] == attr:
+            return source[0]
+        return None
+
+    titles = []
+    for name in profiles:
+        for attr in attrs:
+            rank_source = source_of(name, attr)
+            if rank_source is None:
+                titles.append(f"{name} · {attr}")
+            elif isinstance(rank_source, tuple):
+                titles.append(
+                    f"{name} · {attr}<br><sup>ranks of {rank_source[0]} "
+                    f"({rank_source[1]})</sup>"
+                )
+            else:
+                titles.append(f"{name} · {attr}<br><sup>ranks of {rank_source}</sup>")
+    spans = {}
+    for attr in attrs:
+        stacked = np.concatenate(
+            [frame[attr].to_numpy(dtype=float) for frame in profiles.values()]
+            + [frame[attr].to_numpy(dtype=float) for frame in background.values()]
+            + [frame[attr].to_numpy(dtype=float) for frame in references.values()]
+        )
+        lo, hi = float(stacked.min()), float(stacked.max())
+        spans[attr] = (lo, hi, hi - lo or max(abs(hi), 1.0))
+
+    fig = make_subplots(
+        rows=len(profiles),
+        cols=len(attrs),
+        shared_xaxes=True,
+        vertical_spacing=0.14 / max(len(profiles) - 1, 1) + 0.04,
+        subplot_titles=titles,
+    )
+    shown: set[str] = set()
+    for row, (name, profile) in enumerate(profiles.items(), start=1):
+        for col, attr in enumerate(attrs, start=1):
+            label = f"{attr} [{units[attr]}]" if units and attr in units else attr
+            lo, hi, span = spans[attr]
+            offset = 0.09 * span
+            for day, frame in background.items():
+                fig.add_trace(
+                    go.Scatter(
+                        x=frame.index,
+                        y=frame[attr].to_numpy(dtype=float),
+                        name="member days",
+                        legendgroup="background",
+                        showlegend="background" not in shown,
+                        mode="lines",
+                        line={"color": "#c3c8ce", "width": 1.5},
+                        hovertemplate=f"{day}<br>{label} = %{{y:.4g}}<extra></extra>",
+                    ),
+                    row=row,
+                    col=col,
+                )
+                shown.add("background")
+            ref = drawn_reference(name, attr)
+            if ref is not None:
+                frame = references[ref]
+                values = frame[attr].to_numpy(dtype=float)
+                ranks = [str(rank) for rank in _rank_numbers(values)]
+                fig.add_trace(
+                    go.Scatter(
+                        x=frame.index,
+                        y=values,
+                        name=ref,
+                        legendgroup=ref,
+                        showlegend=ref not in shown,
+                        mode="lines+markers",
+                        text=ranks,
+                        line={"color": color_map[ref], "width": 2},
+                        marker={"size": 6},
+                        hovertemplate=(
+                            f"{ref}<br>rank %{{text}}<br>{label} = %{{y:.4g}}"
+                            "<extra></extra>"
+                        ),
+                    ),
+                    row=row,
+                    col=col,
+                )
+                fig.add_trace(
+                    _label_trace(
+                        np.asarray(frame.index),
+                        values,
+                        ranks,
+                        -offset,
+                        color_map[ref],
+                        ref,
+                    ),
+                    row=row,
+                    col=col,
+                )
+                shown.add(ref)
+            values = profile[attr].to_numpy(dtype=float)
+            ranks = [str(rank) for rank in _rank_numbers(values)]
+            fig.add_trace(
+                go.Scatter(
+                    x=profile.index,
+                    y=values,
+                    name="representative",
+                    legendgroup="representative",
+                    showlegend="representative" not in shown,
+                    mode="lines+markers",
+                    text=ranks,
+                    line={"color": "#222222", "width": 3},
+                    marker={"size": 6},
+                    hovertemplate=(
+                        f"{name}<br>level %{{text}}<br>{label} = %{{y:.4g}}"
+                        "<extra></extra>"
+                    ),
+                ),
+                row=row,
+                col=col,
+            )
+            fig.add_trace(
+                _label_trace(
+                    np.asarray(profile.index),
+                    values,
+                    ranks,
+                    offset,
+                    "#222222",
+                    "representative",
+                ),
+                row=row,
+                col=col,
+            )
+            shown.add("representative")
+            fig.update_yaxes(range=[lo - 0.3 * span, hi + 0.3 * span], row=row, col=col)
+            if row == 1:
+                fig.update_yaxes(title_text=label, row=row, col=col)
+            if row == len(profiles):
+                fig.update_xaxes(title_text="timestep", row=row, col=col)
+    fig.update_layout(
+        title=title,
+        template="plotly_white",
+        height=260 * len(profiles) + 180,
+        legend={"orientation": "h", "y": -0.1 - 0.03 * (6 - min(len(profiles), 6))},
+        margin={"l": 65, "r": 35, "t": 90, "b": 100},
     )
     return fig
 

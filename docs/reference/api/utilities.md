@@ -27,7 +27,11 @@ Use `AttributeSpace` to overlay chronological paths, or `path_panels` to compare
 one highlighted path per panel with shared axes. Pass a `colors` mapping keyed
 by path name to keep reference days identifiable across figures.
 Use `compare_series` to compare named time series or duration curves with a
-separate physical scale for each attribute.
+separate physical scale for each attribute. Four functions explain duration
+representations: `duration_fit` shows how member days are fitted and ordered,
+`error_areas` shades a reconstruction's error in time and in the duration
+curve, `cluster_duration_curves` compares duration curves cluster by cluster,
+and `profile_panels` draws profiles over their member days and references.
 
 ::: tsam.plot
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
@@ -39,6 +43,14 @@ separate physical scale for each attribute.
 already calculated by aggregation results.
 
 ::: tsam.metrics
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
+
+## Designed datasets
+
+Small series whose properties are chosen to make the differences between
+aggregation options visible. The tutorials load them from here.
+
+::: tsam.datasets
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 
 ## Low-level aggregation
