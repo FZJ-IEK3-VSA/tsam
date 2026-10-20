@@ -15,7 +15,7 @@ import pandas as pd
 import pytest
 
 from conftest import TESTDATA_CSV
-from tsam import ClusterConfig, ExtremeConfig, SegmentConfig, aggregate
+from tsam import ClusterConfig, Distribution, ExtremeConfig, SegmentConfig, aggregate
 
 pytestmark = pytest.mark.filterwarnings(
     "ignore:KMeans is known to have a memory leak on Windows with MKL.*:UserWarning"
@@ -62,7 +62,7 @@ class ClusteringTestCase(NamedTuple):
 
     id: str
     method: str
-    representation: str
+    representation: str | Distribution
     n_segments: int | None = None
     extreme_method: str | None = None
     extreme_columns: list[str] | None = None
@@ -107,7 +107,7 @@ TEST_CASES = [
     ClusteringTestCase(
         id="hierarchical_distribution_8clusters",
         method="hierarchical",
-        representation="distribution",
+        representation=Distribution(),
     ),
     # With segmentation
     ClusteringTestCase(

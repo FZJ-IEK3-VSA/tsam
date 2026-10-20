@@ -105,7 +105,7 @@ _NEW_KWARGS: dict[str, dict] = {
     "hierarchical_distribution": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(method="hierarchical", representation="distribution"),
+        "cluster": ClusterConfig(method="hierarchical", representation=Distribution()),
     },
     "hierarchical_distribution_medoid": {
         "n_clusters": 8,
@@ -187,7 +187,7 @@ _NEW_KWARGS: dict[str, dict] = {
         "n_clusters": 8,
         "period_duration": 24,
         "cluster": ClusterConfig(
-            method="hierarchical", representation="distribution_minmax"
+            method="hierarchical", representation=Distribution(preserve_minmax=True)
         ),
     },
     "distribution_global": {
@@ -447,7 +447,7 @@ _NEW_KWARGS: dict[str, dict] = {
         "period_duration": 24,
         "cluster": ClusterConfig(
             method="kmeans",
-            representation="distribution",
+            representation=Distribution(),
         ),
         "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
     },
@@ -462,7 +462,7 @@ _NEW_KWARGS: dict[str, dict] = {
     "kmeans_distribution": {
         "n_clusters": 8,
         "period_duration": 24,
-        "cluster": ClusterConfig(method="kmeans", representation="distribution"),
+        "cluster": ClusterConfig(method="kmeans", representation=Distribution()),
     },
     "extremes_replace_segmentation": {
         "n_clusters": 8,
@@ -495,7 +495,7 @@ _NEW_KWARGS: dict[str, dict] = {
         "period_duration": 24,
         "cluster": ClusterConfig(
             method="hierarchical",
-            representation="distribution",
+            representation=Distribution(),
         ),
         "weights": {"Load": 5.0, "GHI": 1.0, "T": 1.0, "Wind": 1.0},
         "segments": SegmentConfig(n_segments=4),
