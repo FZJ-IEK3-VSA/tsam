@@ -51,5 +51,5 @@ dependencies:
   # Linting and formatting
   - ruff <=0.17.1
   - mypy <=2.4.0
-  - pre-commit <=4.6.2
+  - pre-commit <=4.7.0
   - pandas-stubs <=3.0.5.260914
