@@ -39,12 +39,13 @@ def test_extremePeriods():
         extremes=ExtremeConfig(method="replace", max_value=["GHI"]),
     )
 
-    # make sure that the RMSE for new cluster centers (reassigning points to the exxtreme point if the distance to it is
-    # smaller)is bigger than for appending just one extreme period
-    np.testing.assert_array_less(
-        aggregation1.accuracy.rmse["GHI"],
-        aggregation2.accuracy.rmse["GHI"],
-    )
+    # new_cluster reassigns periods that are closer to the extreme than to their
+    # cluster's centroid, so it keeps the extreme as a cluster of its own like
+    # append does. Its RMSE is not ordered against append's: the reassignment
+    # baseline is the centroid clustering minimised (#492), not the
+    # representation a period is reconstructed from.
+    assert aggregation1.n_clusters == aggregation2.n_clusters == noTypicalPeriods + 1
+    assert aggregation1.cluster_counts[noTypicalPeriods] >= 1
 
     # make sure that the RMSE for appending the extreme period is smaller than for replacing the cluster center by the
     # extreme period (conservative assumption)
@@ -78,13 +79,16 @@ def test_extremePeriods():
     )
 
 
-def test_new_cluster_emptying_a_regular_cluster():
-    """`new_cluster` can absorb every period of a regular cluster.
+def test_new_cluster_compares_against_centroid_not_representation():
+    """`new_cluster` measures the incumbent distance to the cluster centroid.
 
-    The emptied cluster is then missing from the occurrence counts, which used
-    to leave rescaling with a weighting vector too short to index by cluster id
-    (issue #478). Such a cluster is now dropped before rescaling runs, so the
-    label space stays dense; test_empty_clusters.py covers that invariant.
+    With a ``distribution_minmax`` representation the cluster center is a
+    duration curve, not chronologically aligned with real periods, so measuring
+    against it made every member look far away. Here both extremes land in the
+    same 29-period cluster and all 29 used to flip, emptying it (#492, and the
+    rescaling crash of #478). Against the centroid only 11 flip, so all eight
+    regular clusters survive. Dropping an emptied cluster is still covered in
+    test_empty_clusters.py.
     """
     raw = pd.read_csv(TESTDATA_CSV, index_col=0)
 
@@ -100,11 +104,13 @@ def test_new_cluster_emptying_a_regular_cluster():
         ),
     )
 
-    # Two extremes on top of 8 clusters would be 10; one fewer means a regular
-    # cluster lost every period to them and was dropped.
-    assert aggregation.n_clusters < 10, (
-        "expected this configuration to empty a regular cluster"
-    )
+    # Two extremes on top of 8 clusters: no regular cluster may be emptied.
+    assert aggregation.n_clusters == 10
+    counts = aggregation.cluster_counts
+    assert all(counts[c] >= 1 for c in range(10))
+    assert sum(counts.values()) == 365
+    # 29 - 11 periods stay in the cluster that holds both extremes.
+    assert sorted(counts[c] for c in range(8))[0] == 18
 
     reconstructed = aggregation.reconstructed
     np.testing.assert_array_almost_equal(
