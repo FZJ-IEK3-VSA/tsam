@@ -64,6 +64,7 @@ nav:
     - Choosing a method: tutorials/choosing_a_method.ipynb
     - Comparing clustering methods: tutorials/comparing_clustering_methods.ipynb
     - Comparing representations: tutorials/comparing_representations.ipynb
+    - Duration representations: tutorials/duration_representations.ipynb
   - How-to guides:
     - Overview: how-to/index.md
     - Aggregate a time series: how-to/how_to_aggregate.ipynb
