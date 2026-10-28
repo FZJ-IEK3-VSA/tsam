@@ -1,34 +1,33 @@
 # Tutorials
 
-Learning-oriented lessons. Each one is a guided walk you can follow start to finish, from small
-examples you can check by eye to comparisons on a full hourly year. If you want to *understand by doing*, start here; if you already know what
+Tutorials are meant to teach you something about ETHOS.TSAM, by providing you with an example to try out TSAM functionality. Each example defines one and guides you to reach that goal. If you already know what
 you need and want a recipe, go to the [how-to guides](../how-to/index.md).
 
 ## Start here
 
-**[Your first aggregation](quickstart.ipynb)** — load a series, shrink six weeks of hourly data to a
-handful of typical days, read the results a downstream model needs, and measure what the reduction
-cost you. Assumes nothing.
+**[Your first aggregation](quickstart.ipynb)** — run an aggregation with `tsam.aggregate()`, read
+its typical periods, their weights and its accuracy, reconstruct the original timeline to judge the
+error, and trade size for accuracy.
 
-**[Choosing a method](choosing_a_method.ipynb)** — the four levers `aggregate()` sets for you, what
-each one throws away, and how to read a configuration off what you are modelling. Read this second:
-it is the map of every decision, and the tutorials below are the detailed tours of the first
-two levers.
+**[Choosing a method](choosing_a_method.ipynb)** — name the four levers and what each one throws
+away, choose a clustering method and a representation independently, decide between the three ways
+to preserve a peak, and read a configuration off what you are modelling.
 
 ## Going deeper
 
-**[Comparing clustering methods](comparing_clustering_methods.ipynb)** — lever 1 in depth. Give six
-clustering methods the same twelve days and the same budget, and watch them disagree. Explains *why*
-each carves the data differently, and what each one costs to run.
+**[Comparing clustering methods](comparing_clustering_methods.ipynb)** — predict which methods group
+days by value and which by calendar position, explain why they split the same days differently, and
+weigh what each grouping costs in accuracy and runtime.
 
-**[Comparing representations](comparing_representations.ipynb)** — lever 2, starting with four
-basic rules on one small cluster. See which rules select whole days and which calculate values
-at individual timesteps, then compare their means, extremes, and paths.
+**[Comparing representations](comparing_representations.ipynb)** — tell the rules that select a
+whole observed day (`medoid`, `maxoid`) from those that calculate each attribute at each timestep
+separately (`mean`, `minmax_mean`), and predict what each one keeps of the cluster's means,
+extremes and paths.
 
-**[Duration representations](duration_representations.ipynb)** — lever 2 on a dataset built to
-show the differences. Fit duration-curve levels and order them in time, choose whether each
-cluster's or the whole dataset's distribution and extremes are retained, and compare five ways
-to pair the attributes.
+**[Duration representations](duration_representations.ipynb)** — treat a distribution
+representation as two separate choices (fit each attribute's duration curve, then order the fitted
+values in time), and choose its scope, min/max preservation and concurrency ordering by measuring
+what each one changes.
 
 ---
 

@@ -13,13 +13,9 @@ from tsam.plot import (
     AttributeSpace,
     ResultPlotAccessor,
     _validate_columns,
-    cluster_duration_curves,
     compare_partitions,
     compare_series,
-    duration_fit,
-    error_areas,
     path_panels,
-    profile_panels,
 )
 
 
@@ -517,6 +513,43 @@ class TestPathPanels:
         fig = path_panels(paths, "a", "b", n_cols=1)
         assert len(list(fig.select_xaxes())) == 12
 
+    @pytest.mark.parametrize("first_name", ["day1", "background"])
+    def test_grouped_member_lines_keep_hover_identity_and_separate_highlights(
+        self, first_name
+    ):
+        members = {
+            first_name: pd.DataFrame({"a": [0, 3, 0], "b": [1, 5, 2]}),
+            "day2": pd.DataFrame({"a": [0, 2, 0], "b": [2, 4, 1]}),
+        }
+        fig = path_panels(
+            members,
+            "a",
+            "b",
+            background=members,
+            background_label="cluster members",
+            background_markers=False,
+            label_steps=False,
+        )
+        group = next(t.legendgroup for t in fig.data if t.name == "cluster members")
+        backgrounds = [t for t in fig.data if t.legendgroup == group]
+        assert len(backgrounds) == 5  # two members in each panel, plus the legend
+        assert {t.name for t in backgrounds[:-1]} == set(members)
+        assert all(t.mode == "lines" for t in backgrounds)
+        for trace in backgrounds[:-1]:
+            np.testing.assert_array_equal(trace.x, members[trace.name]["a"])
+            np.testing.assert_array_equal(trace.y, members[trace.name]["b"])
+            assert trace.customdata[-1] == "t2"
+            assert "%{customdata}" in trace.hovertemplate
+        assert {t.name for t in fig.data if t.showlegend is not False} == {
+            first_name,
+            "day2",
+            "cluster members",
+        }
+        # Clicking the background legend must not hide the selected real days.
+        assert all(
+            t.legendgroup != group for t in fig.data if t.marker.symbol == "arrow"
+        )
+
     @pytest.mark.parametrize(
         "paths, kwargs, message",
         [
@@ -559,6 +592,69 @@ class TestCompareSeries:
         assert list(fig.data[0].x) == list(frame.index)
         assert list(fig.data[0].y) == [3, 1, 2]
         assert fig.data[0].line.shape == "linear"
+
+    @pytest.mark.parametrize("profile_name", ["mean", "background"])
+    def test_member_background_keeps_all_days_and_sets_limits(self, profile_name):
+        members = {
+            "April 1": pd.DataFrame({"load": [10, 40, 20]}, index=[0, 1, 2]),
+            "April 2": pd.DataFrame({"load": [50, 20, 30]}, index=[0, 1, 2]),
+        }
+        copies = {name: frame.copy(deep=True) for name, frame in members.items()}
+        representative = pd.DataFrame({"load": [30, 30, 25]})
+        fig = compare_series(
+            {profile_name: representative},
+            background=members,
+            background_label="cluster members",
+            colors={"April 1": "#aaaaaa", profile_name: "#009E73"},
+        )
+        assert [t.name for t in fig.data if t.showlegend] == [
+            "cluster members",
+            profile_name,
+        ]
+        assert fig.data[0].legendgroup == fig.data[1].legendgroup
+        assert fig.data[0].legendgroup != fig.data[2].legendgroup
+        assert fig.data[0].line.color == "#aaaaaa"
+        assert fig.data[0].line.color != fig.data[1].line.color
+        assert fig.data[2].line.color == "#009E73"
+        for trace, (name, frame) in zip(fig.data, members.items()):
+            np.testing.assert_array_equal(trace.x, frame.index)
+            np.testing.assert_array_equal(trace.y, frame["load"])
+            assert name in trace.hovertemplate
+            assert trace.line.width < fig.data[2].line.width
+            pd.testing.assert_frame_equal(frame, copies[name])
+        assert fig.layout.yaxis.range[0] < 10 < 50 < fig.layout.yaxis.range[1]
+
+    def test_duration_background_is_sorted_per_member_without_changing_target(self):
+        members = {
+            "day1": pd.DataFrame({"a": [2, 8], "b": [6, 4]}),
+            "day2": pd.DataFrame({"a": [3, 1, 5], "b": [7, 1, 9]}),
+        }
+        pooled = pd.concat(members.values())
+        fig = compare_series(
+            {"pooled": pooled}, background=members, mode="duration_curve"
+        )
+        for column, traces in zip(["a", "b"], [fig.data[:3], fig.data[3:]]):
+            for trace, frame in zip(traces, [*members.values(), pooled]):
+                np.testing.assert_array_equal(
+                    trace.y[:-1], sorted(frame[column], reverse=True)
+                )
+                assert trace.x[0] == 0 and trace.x[-1] == 100
+                assert trace.line.shape == "hv"
+        assert [t.name for t in fig.data if t.showlegend] == ["members", "pooled"]
+
+    @pytest.mark.parametrize(
+        "member, message",
+        [
+            (pd.DataFrame({"other": [1]}), "missing columns"),
+            (pd.DataFrame({"load": []}), "empty"),
+            (pd.DataFrame({"load": [np.nan]}), "non-finite"),
+        ],
+    )
+    def test_invalid_member_background_raises(self, member, message):
+        with pytest.raises(ValueError, match=message):
+            compare_series(
+                {"fit": pd.DataFrame({"load": [1]})}, background={"member": member}
+            )
 
     def test_attribute_scales_and_series_colours_stay_distinct(self):
         frame = pd.DataFrame({"solar": [0, 2], "load": [400, 600]})
@@ -764,327 +860,3 @@ class TestComparePartitions:
     def test_wrong_label_count_raises(self, designed_result):
         with pytest.raises(ValueError, match="labels has"):
             compare_partitions({"run": designed_result}, labels=["one"])
-
-
-class TestDurationFit:
-    def test_levels_ranks_symbols_and_duration_curves(self):
-        days = {
-            "a": pd.DataFrame({"solar": [3, 1]}),
-            "b": pd.DataFrame({"solar": [2, 4]}),
-        }
-        representative = pd.DataFrame({"solar": [1.5, 3.5]})
-        fig = duration_fit(
-            days, "solar", representative=representative, colors={"a": "#123456"}
-        )
-        level_traces = [t for t in fig.data if t.legendgroup == "level"]
-        assert [t.y[0] for t in level_traces] == [3.5, 1.5]
-        assert [t.text[1] for t in level_traces] == ["1", "2"]
-        assert [t.showlegend for t in level_traces] == [True, False]
-        markers = {
-            t.name: t for t in fig.data if t.mode == "markers" and t.name in days
-        }
-        assert list(markers["a"].x) == [2, 4] and list(markers["a"].y) == [3, 1]
-        assert list(markers["b"].x) == [1, 3] and list(markers["b"].y) == [4, 2]
-        assert markers["a"].marker.color == "#123456"
-        assert list(markers["a"].marker.symbol) == ["circle", "square"]
-        assert list(markers["b"].marker.symbol) == ["square", "circle"]
-        timestep_legend = [t for t in fig.data if t.legendgroup == "timestep"]
-        assert [t.name for t in timestep_legend] == ["t0", "t1"]
-        assert [t.marker.symbol for t in timestep_legend] == ["circle", "square"]
-        assert "t0 ●  t1 ■" in fig.layout.annotations[0].text
-        mean_line, mean_sorted = (t for t in fig.data if t.name == "mean profile")
-        assert list(mean_line.y) == [2.5, 2.5] and list(mean_line.text) == ["2", "1"]
-        assert list(mean_sorted.y) == [2.5, 2.5, 2.5] and mean_sorted.xaxis == "x3"
-        mean_labels = [
-            t for t in fig.data if t.legendgroup == "ordering" and t.mode == "text"
-        ]
-        assert list(mean_labels[0].text) == ["2", "1"]
-        assert list(mean_labels[0].y) == pytest.approx([2.5 - 0.21, 2.5 - 0.21])
-        assert list(mean_labels[1].text) == ["t1 (1)", "t0 (2)"]
-        assert list(mean_labels[1].x) == [25, 75]
-        placed, sorted_placed = (t for t in fig.data if t.name == "representative")
-        assert list(placed.y) == [1.5, 3.5] and list(placed.text) == ["2", "1"]
-        assert placed.line.dash == "dash" and placed.xaxis == "x"
-        assert list(sorted_placed.y) == [3.5, 1.5, 1.5] and sorted_placed.xaxis == "x3"
-        placed_labels = [
-            t
-            for t in fig.data
-            if t.legendgroup == "representative" and t.mode == "text"
-        ]
-        assert list(placed_labels[0].text) == ["2", "1"]
-        assert list(placed_labels[0].y) == pytest.approx([1.5 + 0.21, 3.5 + 0.21])
-        assert list(placed_labels[1].text) == ["t1 (1)", "t0 (2)"]
-        pooled = next(t for t in fig.data if t.name == "member days, pooled")
-        assert list(pooled.y) == [4, 3, 2, 1, 1] and list(pooled.x) == [
-            0,
-            25,
-            50,
-            75,
-            100,
-        ]
-        assert [t.name for t in fig.data if t.showlegend] == [
-            "a",
-            "b",
-            "t0",
-            "t1",
-            "mean profile",
-            "representative",
-            "level (slice average)",
-            "member days, pooled",
-        ]
-
-    def test_without_representative_and_explicit_slices(self):
-        days = {"a": pd.DataFrame({"load": [1, 2, 3, 4]})}
-        fig = duration_fit(days, "load", n_levels=2, units={"load": "MW"})
-        level_traces = [t for t in fig.data if t.legendgroup == "level"]
-        assert [t.y[0] for t in level_traces] == [3.5, 1.5]
-        assert not any(t.name == "representative" for t in fig.data)
-        assert fig.layout.yaxis.title.text == "load [MW]"
-
-    @pytest.mark.parametrize(
-        "days, kwargs, message",
-        [
-            ({}, {}, "empty"),
-            (
-                {"a": pd.DataFrame({"x": [1, 2]}), "b": pd.DataFrame({"x": [1]})},
-                {},
-                "same",
-            ),
-            ({"a": pd.DataFrame({"x": [1, 2]})}, {}, "no column"),
-            ({"a": pd.DataFrame({"solar": [1, np.nan]})}, {}, "non-finite"),
-            ({"a": pd.DataFrame({"solar": [1, 2, 3]})}, {"n_levels": 2}, "divided"),
-            (
-                {"a": pd.DataFrame({"solar": [1, 2]})},
-                {"representative": pd.DataFrame({"solar": [1]})},
-                "representative needs",
-            ),
-            (
-                {"a": pd.DataFrame({"solar": [1, 2]})},
-                {"ordering_profile": pd.DataFrame({"load": [1, 2]})},
-                "ordering_profile needs",
-            ),
-        ],
-    )
-    def test_invalid_input_raises(self, days, kwargs, message):
-        with pytest.raises(ValueError, match=message):
-            duration_fit(days, "solar", **kwargs)
-
-
-class TestErrorAreas:
-    def test_rmse_titles_and_filled_areas(self):
-        original = pd.DataFrame({"solar": [0, 4, 0, 2]})
-        fig = error_areas(
-            original,
-            {"mean": pd.DataFrame({"solar": [0, 3, 0, 3]})},
-            "solar",
-            units={"solar": "W/m²"},
-            colors={"mean": "#123456"},
-        )
-        titles = [a.text for a in fig.layout.annotations]
-        assert titles[0] == "mean in time · RMSE 0.707 W/m²"
-        assert titles[1] == "mean sorted · RMSE 0.707 W/m²"
-        filled = [t for t in fig.data if t.fill == "tonexty"]
-        assert len(filled) == 2 and all(t.name == "mean" for t in filled)
-        assert list(filled[0].y) == [0, 3, 0, 3]
-        assert list(filled[1].y) == [3, 3, 0, 0, 0]
-        assert filled[1].line.shape == "hv" and filled[1].x[-1] == 100
-        assert all(t.line.color == "#123456" for t in filled)
-        assert [t.name for t in fig.data if t.showlegend] == ["original", "mean"]
-
-    @pytest.mark.parametrize(
-        "reconstructions, message",
-        [
-            ({}, "empty"),
-            ({"a": pd.DataFrame({"x": [1, 2]})}, "no column"),
-            ({"a": pd.DataFrame({"solar": [1]})}, "length"),
-            ({"a": pd.DataFrame({"solar": [1, np.nan]})}, "non-finite"),
-        ],
-    )
-    def test_invalid_input_raises(self, reconstructions, message):
-        with pytest.raises(ValueError, match=message):
-            error_areas(pd.DataFrame({"solar": [1, 2]}), reconstructions, "solar")
-
-
-class TestClusterDurationCurves:
-    CLUSTERS = {
-        "sunny": {
-            "members": pd.DataFrame({"solar": [3, 1, 4, 2]}),
-            "local": pd.DataFrame({"solar": [1.5, 3.5]}),
-            "global": pd.DataFrame({"solar": [2.5, 2.5]}),
-        },
-        "cloudy": {
-            "members": pd.DataFrame({"solar": [1, 2]}),
-            "local": pd.DataFrame({"solar": [1.5, 1.5]}),
-        },
-    }
-
-    def test_one_panel_per_cluster_with_shared_colours(self):
-        fig = cluster_duration_curves(
-            self.CLUSTERS, "solar", reference="members", colors={"local": "#123456"}
-        )
-        assert [a.text for a in fig.layout.annotations] == ["sunny", "cloudy"]
-        traces = list(fig.data)
-        assert [t.name for t in traces] == [
-            "local",
-            "global",
-            "members",
-            "local",
-            "members",
-        ]
-        assert [t.showlegend for t in traces] == [True, True, True, False, False]
-        assert list(traces[2].y) == [4, 3, 2, 1, 1]
-        assert traces[2].line.width == 3 and traces[2].line.color == "#7b8490"
-        assert traces[0].line.color == "#123456"
-        assert traces[3].xaxis == "x2"
-
-    def test_fill_shades_against_reference_and_states_exact_rmse(self):
-        fig = cluster_duration_curves(
-            self.CLUSTERS, "solar", reference="members", fill=True, units={"solar": "W"}
-        )
-        # Sorted members 4,3,2,1 against 3.5,3.5,1.5,1.5: gaps 0.5 each.
-        assert [a.text for a in fig.layout.annotations] == [
-            "sunny · RMSE sorted: local 0.5, global 1.12 W",
-            "cloudy · RMSE sorted: local 0.5 W",
-        ]
-        filled = next(t for t in fig.data if t.fill == "tonexty")
-        assert filled.name == "local" and list(filled.x) == [0, 25, 50, 75, 100]
-        assert list(filled.y) == [3.5, 3.5, 1.5, 1.5, 1.5]
-        assert fig.data[-1].name == "members" and not fig.data[-1].showlegend
-        with pytest.raises(ValueError, match="need the reference"):
-            cluster_duration_curves(
-                self.CLUSTERS, "solar", reference="other", fill=True
-            )
-
-    def test_split_gives_each_series_its_own_column(self):
-        fig = cluster_duration_curves(
-            self.CLUSTERS, "solar", reference="members", fill=True, split=True
-        )
-        assert [a.text for a in fig.layout.annotations] == [
-            "sunny · local · RMSE 0.5",
-            "sunny · global · RMSE 1.12",
-            "cloudy · local · RMSE 0.5",
-            "cloudy",
-        ]
-        by_axis = {}
-        for t in fig.data:
-            by_axis.setdefault(t.xaxis, []).append(t.name)
-        assert by_axis["x"] == [None, "local", "members"]
-        assert by_axis["x2"] == [None, "global", "members"]
-        assert by_axis["x3"] == [None, "local", "members"]
-        assert by_axis["x4"] == ["members"]
-
-    @pytest.mark.parametrize(
-        "clusters, message",
-        [
-            ({}, "at least one"),
-            ({"a": {}}, "at least one"),
-            ({"a": {"s": pd.DataFrame({"x": [1]})}}, "no column"),
-            ({"a": {"s": pd.DataFrame({"solar": [np.nan]})}}, "non-finite"),
-        ],
-    )
-    def test_invalid_input_raises(self, clusters, message):
-        with pytest.raises(ValueError, match=message):
-            cluster_duration_curves(clusters, "solar")
-
-
-class TestProfilePanels:
-    def test_grid_titles_rank_labels_and_drawn_sources(self):
-        profile = pd.DataFrame({"solar": [0, 2], "load": [5, 6]})
-        swapped = profile.iloc[::-1].reset_index(drop=True)
-        fig = profile_panels(
-            {"independent": profile, "reference": swapped},
-            ["solar", "load"],
-            background={"day0": profile, "day1": profile + 1},
-            references={"mean profile": profile + 0.5},
-            rank_sources={
-                "independent": {
-                    "solar": ("mean profile", "solar"),
-                    "load": ("mean profile", "load"),
-                },
-                "reference": {
-                    "solar": ("mean profile", "solar"),
-                    "load": ("mean profile", "solar"),
-                },
-            },
-            units={"load": "MW"},
-            colors={"mean profile": "#123456"},
-        )
-        assert [a.text for a in fig.layout.annotations] == [
-            "independent · solar<br><sup>ranks of mean profile (solar)</sup>",
-            "independent · load<br><sup>ranks of mean profile (load)</sup>",
-            "reference · solar<br><sup>ranks of mean profile (solar)</sup>",
-            "reference · load<br><sup>ranks of mean profile (solar)</sup>",
-        ]
-        # Two background days, a representative and its labels in every panel;
-        # a reference and its labels in the three panels whose source attribute
-        # is their own.
-        assert len(fig.data) == 4 * 4 + 3 * 2
-        assert [t.name for t in fig.data if t.showlegend] == [
-            "member days",
-            "mean profile",
-            "representative",
-        ]
-        representatives = [t for t in fig.data if t.name == "representative"]
-        assert [list(t.text) for t in representatives] == [
-            ["2", "1"],
-            ["2", "1"],
-            ["1", "2"],
-            ["1", "2"],
-        ]
-        labels = [
-            t
-            for t in fig.data
-            if t.legendgroup == "representative" and t.mode == "text"
-        ]
-        assert [list(t.text) for t in labels] == [list(t.text) for t in representatives]
-        assert all(t.y[0] > r.y[0] for t, r in zip(labels, representatives))
-        references = [t for t in fig.data if t.name == "mean profile"]
-        assert [t.xaxis for t in references] == ["x", "x2", "x3"]
-        assert list(references[0].text) == ["2", "1"]
-        assert references[0].line.color == "#123456"
-        assert fig.layout.yaxis2.title.text == "load [MW]"
-        assert fig.layout.yaxis.range[0] < 0 < 3 < fig.layout.yaxis.range[1]
-
-    def test_string_source_is_only_named(self):
-        profile = pd.DataFrame({"solar": [0, 2]})
-        fig = profile_panels(
-            {"consensus": profile},
-            ["solar"],
-            rank_sources={"consensus": {"solar": "a shared order"}},
-        )
-        assert fig.layout.annotations[0].text == (
-            "consensus · solar<br><sup>ranks of a shared order</sup>"
-        )
-        assert [t.name for t in fig.data] == ["representative", None]
-
-    @pytest.mark.parametrize(
-        "profiles, kwargs, message",
-        [
-            ({}, {"attrs": ["solar"]}, "not be empty"),
-            ({"a": pd.DataFrame({"solar": [1]})}, {"attrs": []}, "not be empty"),
-            ({"a": pd.DataFrame({"solar": [1]})}, {"attrs": ["load"]}, "lacks"),
-            (
-                {"a": pd.DataFrame({"solar": [np.nan]})},
-                {"attrs": ["solar"]},
-                "non-finite",
-            ),
-            (
-                {"a": pd.DataFrame({"solar": [1]})},
-                {"attrs": ["solar"], "rank_sources": {"b": {}}},
-                "unknown profile",
-            ),
-            (
-                {"a": pd.DataFrame({"solar": [1]})},
-                {"attrs": ["solar"], "rank_sources": {"a": {"load": "x"}}},
-                "unknown attribute",
-            ),
-            (
-                {"a": pd.DataFrame({"solar": [1]})},
-                {"attrs": ["solar"], "rank_sources": {"a": {"solar": ("m", "solar")}}},
-                "not available",
-            ),
-        ],
-    )
-    def test_invalid_input_raises(self, profiles, kwargs, message):
-        with pytest.raises(ValueError, match=message):
-            profile_panels(profiles, **kwargs)
