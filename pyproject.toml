@@ -54,7 +54,7 @@ dependencies = [
 
 # The CI workflows read this via `python-version-file: pyproject.toml` and run
 # on the newest Python it allows, so raising the upper bound moves CI as well.
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 
 [project.optional-dependencies]
 # All deps below are mirrored in environment.yml and updated via conda-forge
@@ -164,7 +164,7 @@ known-first-party = ["tsam"]
 # fails to parse, and a parse error is a blocker that mypy refuses to let be
 # silenced. Renovate keeps this in sync with the newest CPython minor release on
 # conda-forge; see the matching customManager in .github/renovate.json.
-python_version = "3.14"
+python_version = "3.15"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
