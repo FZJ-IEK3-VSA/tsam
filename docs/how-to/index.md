@@ -18,7 +18,7 @@ all four levers on one dataset. For *why* each method works, see the
 | cut detail **inside** each period | `segments=SegmentConfig(…)` | [Segmentation](segmentation.ipynb) |
 | hit a **target size** | let tsam search both levers | [How small can you go?](tuning.ipynb) |
 | keep **calendar order** | `method="contiguous"` | [Clustering methods](clustering_methods.ipynb) |
-| preserve the **duration curve** | `representation="distribution"` | [Representations](representations.ipynb) |
+| preserve the **duration curve** | `representation=Distribution()` | [Representations](representations.ipynb) |
 | make it **finish faster** | `method=…`, `period_duration=…` | [How long will this take?](runtime.ipynb) |
 
 ## Start here
