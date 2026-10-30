@@ -1,8 +1,8 @@
 # How-to guides
 
 Task-focused recipes. They assume you already know what `aggregate()` does and which lever you
-want — if you are still deciding, [Choosing a method](../tutorials/choosing_a_method.ipynb) walks
-all four levers on one dataset. For *why* each method works, see the
+want — if you are still deciding, the [tutorials](../tutorials/index.md) teach
+one decision at a time. For *why* each method works, see the
 [How aggregation works](../explanation/how-aggregation-works/00_overview.ipynb) explanation series.
 
 ## Pick a lever
@@ -20,7 +20,24 @@ all four levers on one dataset. For *why* each method works, see the
 | keep **calendar order** | `method="contiguous"` | [Clustering methods](clustering_methods.ipynb) |
 | preserve the **duration curve** | `representation="distribution"` | [Representations](representations.ipynb) |
 | control **which attribute values occur together** | `Distribution(concurrency=…)` | [Representations: concurrency](representations.ipynb#choose-how-attributes-coincide) |
+| never underestimate a **combined peak** of several attributes | `Distribution(concurrency="assignment", preserve_minmax=True)` | [Representations: combined peak](representations.ipynb#size-for-a-combined-peak) |
 | make it **finish faster** | `method=…`, `period_duration=…` | [How long will this take?](runtime.ipynb) |
+
+## Start from your model
+
+Or start from what your downstream model reads. Each row is a starting point: change one lever
+at a time from there, and check what your model needs after every change.
+
+| You are modelling… | It reads | Start with | Page |
+|---|---|---|---|
+| energy balance, utilization, average cost | the **totals** | the default; keep `preserve_column_means=True` | [Aggregate a time series](how_to_aggregate.ipynb) |
+| a capacity sized by a peak, e.g. a grid connection | **one particular period** | `extremes=ExtremeConfig(max_value=[…])` | [Extreme periods](extreme_periods.ipynb) |
+| prices or limits that depend on how many hours exceed a value | the **value distribution** | `representation="distribution"` | [Representations](representations.ipynb) |
+| the same, with firm extremes | the distribution **and its extremes** | `representation="distribution_minmax"` | [Representations](representations.ipynb) |
+| physically realistic profiles | **real days** | `representation="medoid"`, the default of `hierarchical` | [Representations](representations.ipynb) |
+| unit commitment, ramping | the **shape within a day** | every timestep of the day; segment cautiously | [Segmentation](segmentation.ipynb) |
+| seasonal storage | the **energy in calendar order** | `method="averaging"`, or `"contiguous"` with `representation="mean"` | [Clustering methods](clustering_methods.ipynb) |
+| a very large system | the **size** | let tsam search periods and segments | [How small can you go?](tuning.ipynb) |
 
 ## Start here
 
