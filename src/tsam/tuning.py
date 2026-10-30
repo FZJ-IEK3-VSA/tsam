@@ -496,6 +496,13 @@ def find_optimal_combination(
     that achieve the specified data reduction, returning the one with
     minimum RMSE.
 
+    Note:
+        This method was introduced in Hoffmann et al. (2022), "The
+        Pareto-Optimal Temporal Aggregation of Energy System Models"
+        (https://www.sciencedirect.com/science/article/pii/S0306261922004342).
+        If you use it to produce scientific results, please cite that paper in
+        addition to the ETHOS.TSAM software paper.
+
     Args:
         data: Input time series data.
         data_reduction: Target reduction factor (e.g., 0.01 for 1% of original size).
@@ -662,6 +669,13 @@ def find_pareto_front(
     Uses a steepest-descent approach to efficiently explore the
     period/segment space, finding configurations that are optimal
     for their complexity level.
+
+    Note:
+        This method was introduced in Hoffmann et al. (2022), "The
+        Pareto-Optimal Temporal Aggregation of Energy System Models"
+        (https://www.sciencedirect.com/science/article/pii/S0306261922004342).
+        If you use it to produce scientific results, please cite that paper in
+        addition to the ETHOS.TSAM software paper.
 
     Args:
         data: Input time series data.

@@ -76,5 +76,16 @@ issues are welcome. It is part of the
 at ICE-2 and is tightly integrated with
 [ETHOS.FINE](https://github.com/FZJ-IEK3-VSA/FINE).
 
-If you use or reference ETHOS.TSAM in scientific work, please
-[cite one of our publications](explanation/further-reading.md).
+## Citation
+
+If you use ETHOS.TSAM or its documentation to produce scientific results, please
+cite our [software paper](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7590235).
+
+If you use the Pareto-optimal aggregation —
+[`find_pareto_front`][tsam.tuning.find_pareto_front] or
+[`find_optimal_combination`][tsam.tuning.find_optimal_combination] — please
+**additionally** cite the paper that introduced the method: Hoffmann et al. (2022),
+[The Pareto-Optimal Temporal Aggregation of Energy System Models](https://www.sciencedirect.com/science/article/pii/S0306261922004342).
+
+More publications behind the software and its methods are listed under
+[Further reading](explanation/further-reading.md).

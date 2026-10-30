@@ -61,9 +61,21 @@ nav:
   - Tutorials:
     - Overview: tutorials/index.md
     - Your first aggregation: tutorials/quickstart.ipynb
-    - Choosing a method: tutorials/choosing_a_method.ipynb
-    - Comparing clustering methods: tutorials/comparing_clustering_methods.ipynb
-    - Comparing representations: tutorials/comparing_representations.ipynb
+    - Clustering:
+      - Comparing clustering methods: tutorials/comparing_clustering_methods.ipynb
+      - Method or representation: tutorials/method_or_representation.ipynb
+      - "1. As similar as possible": tutorials/clustering/01_similar_days.ipynb
+      - "2. Seasonal storage": tutorials/clustering/02_seasonal_storage.ipynb
+    - Representations:
+      - Comparing representations: tutorials/comparing_representations.ipynb
+      - Duration curves:
+        - "1. Fitting a duration curve": tutorials/duration-curves/01_fitting.ipynb
+        - "2. Local or global": tutorials/duration-curves/02_scope.ipynb
+        - "3. Keeping the extremes": tutorials/duration-curves/03_extremes.ipynb
+        - "4. Which values occur together": tutorials/duration-curves/04_ordering.ipynb
+        - "5. Making peaks coincide on purpose": tutorials/duration-curves/05_coincident_peaks.ipynb
+    - Extreme periods:
+      - "1. Keeping the peak day": tutorials/extreme-periods/01_peak_day.ipynb
   - How-to guides:
     - Overview: how-to/index.md
     - Aggregate a time series: how-to/how_to_aggregate.ipynb
@@ -141,6 +153,11 @@ plugins:
       kernel_name: python3
       include_source: true
       allow_errors: false
+      # Cells tagged `remove-cell` still run in CI (e.g. asserts that keep a
+      # tutorial's "you should see" claims true) but are left out of the page.
+      remove_tag_config:
+        remove_cell_tags:
+          - remove-cell
       include_requirejs: true
       toc_depth: 3
 

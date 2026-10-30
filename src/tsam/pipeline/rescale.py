@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -92,9 +92,7 @@ def rescale_representatives(
             continue
 
         col_data = arr[:, ci, :]  # (n_clusters, n_timesteps)
-        # A top-level key of the period MultiIndex selects the column's whole
-        # timestep block as a DataFrame; the stubs only model the Series case.
-        sum_raw = cast("pd.DataFrame", profiles_df[column]).sum().sum()
+        sum_raw = profiles_df[column].sum().sum()
 
         # Sum of extreme periods (weighted)
         if len(extreme_cluster_idx_arr) > 0:
