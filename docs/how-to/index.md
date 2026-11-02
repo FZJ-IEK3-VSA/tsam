@@ -19,6 +19,7 @@ all four levers on one dataset. For *why* each method works, see the
 | hit a **target size** | let tsam search both levers | [How small can you go?](tuning.ipynb) |
 | keep **calendar order** | `method="contiguous"` | [Clustering methods](clustering_methods.ipynb) |
 | preserve the **duration curve** | `representation="distribution"` | [Representations](representations.ipynb) |
+| keep **attributes in sync** | `Distribution(concurrency=…)` | [Preserving concurrency](concurrency.ipynb) |
 | make it **finish faster** | `method=…`, `period_duration=…` | [How long will this take?](runtime.ipynb) |
 
 ## Start here
@@ -42,6 +43,9 @@ k-medoids, k-maxoids, averaging, and contiguous.
 
 **[Representations](representations.ipynb)** — how each cluster becomes one profile: mean, medoid,
 the value distribution, or per-step min/max.
+
+**[Preserving concurrency](concurrency.ipynb)** — keep the co-occurrence between attributes (solar
+low exactly when demand is high) that a `distribution` representation would otherwise discard.
 
 **[Extreme periods](extreme_periods.ipynb)** — force the peak (or trough) day to be kept exactly.
 
