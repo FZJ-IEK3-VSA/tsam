@@ -64,7 +64,7 @@ requires-python = ">=3.10,<3.15"
 # is missing from those lists silently falls back to the PyPI-only pep621
 # manager and drifts away from the conda environment.
 develop = [
-  "pytest<=9.1.1",
+  "pytest<=9.2.0",
   "pytest-cov<=7.1.0",
   "pytest-xdist<=3.8.0",
   "pytest-benchmark<=5.3.0",
