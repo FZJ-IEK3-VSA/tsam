@@ -31,7 +31,7 @@ dependencies:
   - pytest-xdist <=3.8.0
   - pytest-benchmark <=5.3.1
   - codecov <=2.1.13
-  - nbval <=0.11.0
+  - nbval >=0.10.0,<=0.11.0
   # nbclient and nbformat are imported directly by scripts/execute_notebooks.py.
   # Keep comments on their own line: Renovate's environment.yml matcher would
   # otherwise capture a trailing inline comment as part of the version range.
