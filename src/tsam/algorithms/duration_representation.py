@@ -89,12 +89,7 @@ def duration_representation(
             # (n_cands, n_attrs, timesteps) -> (n_attrs, n_cands, timesteps)
             cluster_data = candidates_3d[indice].transpose(1, 0, 2)
 
-            # Sort all values per attribute, then reshape to duration curve.
-            # Sort a copy: for a one-member cluster the reshape is a view of
-            # ``cluster_data`` (for several members it has to copy), and an
-            # in-place sort would rewrite the data the mean profile below is
-            # taken from, turning the temporal order into the identity and
-            # the representative into a sorted ramp in every attribute.
+            # use np.sort to create a copy instead of sorting inplace
             flat = np.sort(cluster_data.reshape(n_attrs, -1), axis=1, kind="stable")
             repr_values = flat.reshape(n_attrs, n_timesteps_per_period, n_cands).mean(
                 axis=2
