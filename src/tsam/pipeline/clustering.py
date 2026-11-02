@@ -67,9 +67,7 @@ def cluster_periods(
     | `"mean"` | Arithmetic mean of cluster members. |
     | `"medoid"` | The real period closest to the cluster center. Default. |
     | `"maxoid"` | The real period farthest from the center. |
-    | `"distribution"` | Duration-curve fit: sorts values to preserve the distribution. |
-    | `"distribution_minmax"` | Like `"distribution"` but also preserves extreme values. |
-    | `Distribution(...)` | Fine-grained control over distribution representation. |
+    | `Distribution(...)` | Duration-curve fit: sorts values to preserve the distribution; `preserve_minmax=True` also preserves extreme values. |
     | `MinMaxMean(...)` | Fine-grained control over which columns get min/max treatment. |
 
     Args:
