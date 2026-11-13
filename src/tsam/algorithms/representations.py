@@ -14,15 +14,13 @@ def representations(
     default: str,
     representation_method: str | Distribution | MinMaxMean | None = None,
     representation_dict: dict[str, str] | None = None,
-    distribution_period_wise: bool = True,
     n_timesteps_per_period: int | None = None,
     reference_attribute_idx: int | None = None,
 ) -> tuple[list[np.ndarray], list[int] | None]:
     """Compute each cluster's representative profile with the chosen method.
 
     Dispatches to the representation named by ``representation_method`` — a
-    string (``"mean"``, ``"medoid"``, ``"maxoid"``, ``"distribution"``,
-    ``"distribution_minmax"``) or a ``Distribution`` /
+    string (``"mean"``, ``"medoid"``, ``"maxoid"``) or a ``Distribution`` /
     ``MinMaxMean`` object — returning one representative period per cluster, in
     cluster order.
 
@@ -35,9 +33,6 @@ def representations(
             ``default``.
         representation_dict: Per-column method overrides for the min/max/mean
             representation.
-        distribution_period_wise: For the distribution representation, preserve
-            the per-cluster duration curve (``True``) or the global one
-            (``False``).
         n_timesteps_per_period: Timesteps per period; required by the
             distribution and min/max/mean representations.
 
@@ -103,22 +98,6 @@ def representations(
     elif representation_method == "maxoid":
         cluster_centers, cluster_center_indices = maxoid_representation(
             candidates, cluster_order
-        )
-    elif representation_method == "distribution":
-        cluster_centers = duration_representation(
-            candidates,
-            cluster_order,
-            distribution_period_wise,
-            n_timesteps_per_period,  # type: ignore[arg-type]
-            represent_min_max=False,
-        )
-    elif representation_method == "distribution_minmax":
-        cluster_centers = duration_representation(
-            candidates,
-            cluster_order,
-            distribution_period_wise,
-            n_timesteps_per_period,  # type: ignore[arg-type]
-            represent_min_max=True,
         )
     else:
         raise ValueError(f"Unknown representation method {representation_method!r}")

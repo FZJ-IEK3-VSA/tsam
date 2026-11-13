@@ -1,4 +1,5 @@
 import copy
+import re
 
 import numpy as np
 import pandas as pd
@@ -128,10 +129,28 @@ def test_minmax_mean_string_is_rejected_for_segments():
         SegmentConfig(n_segments=6, representation="minmax_mean")  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize(
+    ("string", "replacement"),
+    [
+        ("distribution", "Distribution()"),
+        ("distribution_minmax", "Distribution(preserve_minmax=True)"),
+    ],
+)
+def test_distribution_strings_are_rejected(string, replacement):
+    """The strings were redundant with ``Distribution(...)`` and are removed (#489)."""
+    match = re.escape(f"Pass {replacement} instead")
+    with pytest.raises(ValueError, match=match):
+        ClusterConfig(method="hierarchical", representation=string)
+    with pytest.raises(ValueError, match=match):
+        SegmentConfig(n_segments=6, representation=string)
+    with pytest.raises(ValueError, match=match):
+        ClusterConfig.from_dict({"method": "hierarchical", "representation": string})
+
+
 def test_representation_with_duration_curves_warns():
     """The duration-curve path ignores the configured representation."""
     with pytest.warns(UserWarning, match="no effect together with"):
-        ClusterConfig(representation="distribution", use_duration_curves=True)
+        ClusterConfig(representation="medoid", use_duration_curves=True)
 
 
 if __name__ == "__main__":
