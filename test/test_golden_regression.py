@@ -78,14 +78,10 @@ _APPEND_SHIFTS_MEAN = (
 
 
 # Configurations a stored ``ClusteringResult`` cannot replay exactly. Keyed by
-# config id, so they apply to that configuration on every dataset. Only the
-# first entry is a documented limitation; the rest are defects this test found.
+# config id, so they apply to that configuration on every dataset. These are
+# defects this test found, not documented limitations. ('replace' used to sit
+# here too; it now stores its injections and replays exactly.)
 _TRANSFER_NOT_EXACT: dict[str, str] = {
-    "extremes_replace": "documented: 'replace' builds a hybrid representative "
-    "(some columns from the medoid, some from the extreme period) that the "
-    "stored assignment cannot reconstruct — ClusteringResult.apply() warns",
-    "extremes_replace_segmentation": "same as extremes_replace, with segmentation",
-    # --- defects ---
     "kmeans_extremes_append": _APPEND_SHIFTS_MEAN,
     "averaging_extremes_append": _APPEND_SHIFTS_MEAN,
 }
