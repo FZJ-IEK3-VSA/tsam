@@ -69,6 +69,7 @@ def cluster_periods(
     | `"maxoid"` | The real period farthest from the center. |
     | `"distribution"` | Duration-curve fit: sorts values to preserve the distribution. |
     | `"distribution_minmax"` | Like `"distribution"` but also preserves extreme values. |
+    | `"minmax_mean"` | Separate min/max/mean per column. |
     | `Distribution(...)` | Fine-grained control over distribution representation. |
     | `MinMaxMean(...)` | Fine-grained control over which columns get min/max treatment. |
 
@@ -78,7 +79,7 @@ def cluster_periods(
         cluster: Clustering configuration: ``method``, ``representation``,
             ``solver``.
         representation_dict: Per-column representation overrides (e.g. for
-            ``MinMaxMean``).
+            ``minmax_mean``).
         n_timesteps_per_period: Timesteps per period, needed by
             distribution-style representations.
         representation_candidates: Alternative columns to compute representatives

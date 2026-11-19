@@ -23,7 +23,26 @@ aggregation of per-column metrics.
 
 ## Plotting
 
+Use `AttributeSpace` to overlay chronological paths, or `path_panels` to compare
+one highlighted path per panel with shared axes. Pass a `colors` mapping keyed
+by path name to keep reference days identifiable across figures.
+Use `compare_series` to compare named time series or duration curves with a
+separate physical scale for each attribute. Both functions accept named
+`background` frames to show the original member periods behind representatives.
+Set `background_label` to group those members under one legend toggle while
+retaining their names on hover. For dense path plots, use
+`background_markers=False` to show the members as thin lines.
+
 ::: tsam.plot
+    options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
+
+## Comparison statistics
+
+`series_statistics` reports minima, means, and maxima in physical units.
+`aggregation_summary` compares the normalized accuracy and correlation errors
+already calculated by aggregation results.
+
+::: tsam.metrics
     options: { show_root_heading: true, show_root_toc_entry: false, heading_level: 3 }
 
 ## Low-level aggregation
