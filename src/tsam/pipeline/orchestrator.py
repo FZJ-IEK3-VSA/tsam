@@ -27,7 +27,6 @@ from tsam.pipeline.accuracy import reconstruct
 from tsam.pipeline.clustering import (
     cluster_periods,
     cluster_sorted_periods,
-    represent_assignment,
     use_predefined_assignments,
 )
 from tsam.pipeline.extremes import add_extreme_periods
@@ -175,91 +174,6 @@ def _drop_empty_clusters(
         ]
 
     return kept_periods, dense_order, dense_extreme_idx, kept_center_indices
-
-
-def _represent_remaining_members(
-    prepared: PreparedData,
-    cfg: PipelineConfig,
-    cluster_periods_list: list[np.ndarray],
-    cluster_order: np.ndarray,
-    extreme_cluster_idx: list[int],
-    cluster_center_indices: list[int] | None,
-) -> tuple[list[np.ndarray], list[int] | None]:
-    """Represent the regular clusters again after extreme periods left them.
-
-    ``method="append"`` and ``method="new_cluster"`` move periods into extreme
-    clusters *after* every cluster was represented, so a representative still
-    describes members its cluster no longer has: under ``"mean"`` an extreme
-    period would count twice, once in its own cluster and once inside the mean
-    of the cluster it left. The regular clusters are therefore represented
-    again from the periods that stayed in them, by the rule the clustering
-    stage used. The extreme clusters keep the extreme period's own profile.
-
-    All regular clusters are passed in together and without the periods that
-    moved, because a representation need not be local to one cluster:
-    ``Distribution(scope="global")`` spreads one duration curve over all of
-    them. A cluster that kept its members gets the same representative back
-    from every representation that is local.
-
-    ``"maxoid"`` is left as it is. It scores each member against the whole
-    dataset, which the move does not change, and neither the maxoid nor the
-    medoid of a cluster ever moves: a period equal to a center is not added as
-    an extreme, and ``new_cluster`` never pulls a center away from itself. The
-    maxoid of the remaining members is therefore the one already chosen.
-
-    Args:
-        prepared: The prepared data; supplies the candidates the
-            representatives are computed from.
-        cfg: The pipeline configuration; supplies the representation.
-        cluster_periods_list: Representatives of the regular clusters followed
-            by the extreme profiles, as returned by `add_extreme_periods`.
-        cluster_order: Per-period assignment after the extremes were added.
-        extreme_cluster_idx: Ids of the extreme clusters.
-        cluster_center_indices: Period index of each regular representative,
-            if the representation selects a period.
-
-    Returns:
-        ``(cluster_periods_list, cluster_center_indices)`` with the entries of
-        every regular cluster that still has members replaced. A cluster left
-        without members keeps its entry; `_drop_empty_clusters` removes it.
-    """
-    cluster = cfg.cluster
-    cluster_representation = cluster.get_representation()
-    if cluster_representation == "maxoid" and not cluster.use_duration_curves:
-        return cluster_periods_list, cluster_center_indices
-
-    stayed = ~np.isin(cluster_order, extreme_cluster_idx)
-    if not stayed.any():
-        return cluster_periods_list, cluster_center_indices
-
-    # `represent_assignment` needs every label from 0 up, and a regular cluster
-    # can have lost all of its members.
-    remaining_ids, dense_order = np.unique(cluster_order[stayed], return_inverse=True)
-    centers, center_rows = represent_assignment(
-        prepared.candidates[stayed, : prepared.n_feature_cols],
-        dense_order,
-        cluster,
-        prepared.representation_dict,
-        cfg.n_timesteps_per_period,
-        n_columns=prepared.period_profiles.n_columns,
-        reference_attribute_idx=_resolve_reference_attribute_idx(
-            prepared.attribute_columns, cluster_representation
-        ),
-    )
-
-    represented = list(cluster_periods_list)
-    for position, cluster_id in enumerate(remaining_ids):
-        represented[int(cluster_id)] = centers[position]
-
-    if cluster_center_indices is None or center_rows is None:
-        return represented, cluster_center_indices
-
-    # The rows are positions among the periods that stayed.
-    period_index = np.flatnonzero(stayed)
-    center_indices = list(cluster_center_indices)
-    for position, cluster_id in enumerate(remaining_ids):
-        center_indices[int(cluster_id)] = int(period_index[center_rows[position]])
-    return represented, center_indices
 
 
 def _representatives_to_dataframe(
@@ -669,8 +583,7 @@ def refine_representatives(
       [`add_extreme_periods`][tsam.pipeline.extremes.add_extreme_periods])* —
       inject extreme-value periods so peaks/troughs survive the averaging.
       Runs before unweighting, in the weighted space the previous phase left
-      the representatives in. The clusters the extreme periods were taken
-      from are represented again from the periods that stayed in them.
+      the representatives in.
     - **Unweight · count** — divide the weights back out of every
       representative, count how many original periods each cluster stands for,
       and reduce the last count if the final period was padded.
@@ -718,16 +631,6 @@ def refine_representatives(
             cfg.extremes,
         )
         cluster_order = np.asarray(extended_order)
-        # "replace" edits centers in place and moves no period.
-        if extreme_periods and cfg.extremes.method != "replace":
-            cluster_periods_list, cluster_center_indices = _represent_remaining_members(
-                prepared,
-                cfg,
-                cluster_periods_list,
-                cluster_order,
-                extreme_cluster_idx,
-                cluster_center_indices,
-            )
     else:
         if cfg.predef is not None and cfg.predef.extreme_cluster_idx is not None:
             extreme_cluster_idx = list(cfg.predef.extreme_cluster_idx)

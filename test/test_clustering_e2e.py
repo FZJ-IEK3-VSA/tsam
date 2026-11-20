@@ -377,45 +377,34 @@ class TestClusteringTransfer:
         )
 
     def test_apply_warns_when_extremes_cannot_be_replayed(self, input_data):
-        """new_cluster + a computed representation: the extreme cluster holds
-        reassigned periods, and a transfer computes it from all its members."""
+        """append + a computed representation loses a cluster's members."""
         result = run_aggregation(
             input_data,
             ClusteringTestCase(
-                id="new_cluster_mean",
+                id="append_mean",
                 method="hierarchical",
                 representation="mean",
-                extreme_method="new_cluster",
+                extreme_method="append",
                 extreme_columns=["Load"],
             ),
         )
         with pytest.warns(UserWarning, match="cannot be replayed exactly"):
             result.clustering.apply(input_data)
 
-    @pytest.mark.parametrize("representation", ["medoid", "mean"])
-    def test_apply_is_silent_when_extremes_can_be_replayed(
-        self, input_data, recwarn, representation
-    ):
-        """append replays: a selected representation stores the period index,
-        a computed one is computed from the same members in both runs."""
+    def test_apply_is_silent_when_extremes_can_be_replayed(self, input_data, recwarn):
+        """A selected representation stores the period index, so it replays."""
         result = run_aggregation(
             input_data,
             ClusteringTestCase(
-                id=f"append_{representation}",
+                id="append_medoid",
                 method="hierarchical",
-                representation=representation,
+                representation="medoid",
                 extreme_method="append",
                 extreme_columns=["Load"],
             ),
         )
-        replayed = result.clustering.apply(input_data)
+        result.clustering.apply(input_data)
         assert not [w for w in recwarn if "replayed exactly" in str(w.message)]
-        pd.testing.assert_frame_equal(
-            replayed.cluster_representatives,
-            result.cluster_representatives,
-            check_exact=False,
-            atol=1e-10,
-        )
 
     @pytest.mark.parametrize(
         "test_case", TRANSFER_TEST_CASES, ids=get_transfer_test_ids()

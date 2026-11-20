@@ -181,36 +181,9 @@ def cluster_sorted_periods(
         `cluster_periods` performs standard clustering on the temporal profile.
     """
 
+    # Sort each period's timesteps descending for all columns.
     # Use candidates (already weighted) so that clustering distance respects
     # column weights — matching v3 behaviour.
-    sorted_values = _sort_periods_descending(
-        candidates, n_columns, n_timesteps_per_period
-    )
-
-    cluster_order = assign_clusters(
-        sorted_values,
-        n_clusters,
-        cluster.method,
-        n_iter=_N_ITER_SORTED,
-    )
-
-    cluster_centers, cluster_center_indices = _closest_to_sorted_centroid(
-        candidates, sorted_values, cluster_order
-    )
-    return cluster_centers, cluster_center_indices, cluster_order
-
-
-def _sort_periods_descending(
-    candidates: np.ndarray,
-    n_columns: int,
-    n_timesteps_per_period: int,
-) -> np.ndarray:
-    """Sort each period's timesteps descending, column by column.
-
-    Raises:
-        ValueError: If ``candidates`` does not split evenly into ``n_columns``
-            blocks of ``n_timesteps_per_period`` timesteps.
-    """
     n_periods, n_total = candidates.shape
     expected = n_columns * n_timesteps_per_period
     if n_total != expected:
@@ -222,20 +195,15 @@ def _sort_periods_descending(
         )
 
     values_3d = candidates.copy().reshape(n_periods, n_columns, n_timesteps_per_period)
-    return (-np.sort(-values_3d, axis=2, kind="stable")).reshape(n_periods, -1)
+    sorted_values = (-np.sort(-values_3d, axis=2, kind="stable")).reshape(n_periods, -1)
 
+    cluster_order = assign_clusters(
+        sorted_values,
+        n_clusters,
+        cluster.method,
+        n_iter=_N_ITER_SORTED,
+    )
 
-def _closest_to_sorted_centroid(
-    candidates: np.ndarray,
-    sorted_values: np.ndarray,
-    cluster_order: np.ndarray,
-) -> tuple[list[np.ndarray], list[int]]:
-    """Represent each cluster by the member closest to its sorted centroid.
-
-    The centroid is taken in sorted (duration-curve) space, the profile from
-    the unsorted candidates, so the typical period keeps a realistic temporal
-    shape.
-    """
     cluster_centers = []
     cluster_center_indices = []
     for cluster_num in np.unique(cluster_order):
@@ -247,60 +215,12 @@ def _closest_to_sorted_centroid(
             )
         else:
             closest = 0
+        # Take the profile from the unsorted candidates so the typical period
+        # keeps a realistic temporal shape.
         cluster_centers.append(candidates[indices[closest]])
         cluster_center_indices.append(int(indices[closest]))
 
-    return cluster_centers, cluster_center_indices
-
-
-def represent_assignment(
-    candidates: np.ndarray,
-    cluster_order: np.ndarray,
-    cluster: ClusterConfig,
-    representation_dict: dict | None,
-    n_timesteps_per_period: int,
-    n_columns: int,
-    reference_attribute_idx: int | None = None,
-) -> tuple[list[np.ndarray], list[int] | None]:
-    """Compute one representative per cluster for an assignment that is given.
-
-    Applies the same rule the clustering stage applied when it produced the
-    assignment: the configured representation after `cluster_periods`, the
-    member closest to the sorted centroid after `cluster_sorted_periods`. Used
-    to represent clusters again once a later stage has changed their members.
-
-    Args:
-        candidates: Candidate period matrix (possibly weighted), one row per
-            period, without appended period-sum features.
-        cluster_order: Cluster label of each row, using every label from 0 up.
-        cluster: Clustering configuration; supplies the representation.
-        representation_dict: Per-column representation overrides.
-        n_timesteps_per_period: Timesteps per period.
-        n_columns: Number of original columns.
-        reference_attribute_idx: Attribute (column) index used by the
-            ``"reference"`` concurrency strategy of the distribution
-            representations; ignored by all other representations.
-
-    Returns:
-        ``(cluster_centers, cluster_center_indices)``, in cluster order. The
-        indices are row positions in *candidates* and are ``None`` for a
-        representation that is computed rather than selected.
-    """
-    if cluster.use_duration_curves:
-        sorted_values = _sort_periods_descending(
-            candidates, n_columns, n_timesteps_per_period
-        )
-        return _closest_to_sorted_centroid(candidates, sorted_values, cluster_order)
-
-    return representations(
-        candidates,
-        cluster_order,
-        default=DEFAULT_REPRESENTATION[cluster.method_name],
-        representation_method=cluster.get_representation(),
-        representation_dict=representation_dict,
-        n_timesteps_per_period=n_timesteps_per_period,
-        reference_attribute_idx=reference_attribute_idx,
-    )
+    return cluster_centers, cluster_center_indices, cluster_order
 
 
 def use_predefined_assignments(

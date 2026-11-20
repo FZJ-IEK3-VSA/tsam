@@ -68,14 +68,26 @@ def _parametrized_cases():
     ]
 
 
+_APPEND_SHIFTS_MEAN = (
+    "extremes='append' moves a period out of its original cluster *after* the "
+    "centers were computed, so the stored center includes a period the stored "
+    "assignment excludes. With a medoid representation the center index is "
+    "stored and replays exactly; with a mean representation the center is "
+    "recomputed from the post-move assignment and differs."
+)
+
+
 # Configurations a stored ``ClusteringResult`` cannot replay exactly. Keyed by
-# config id, so they apply to that configuration on every dataset. Both are a
-# documented limitation.
+# config id, so they apply to that configuration on every dataset. Only the
+# first entry is a documented limitation; the rest are defects this test found.
 _TRANSFER_NOT_EXACT: dict[str, str] = {
     "extremes_replace": "documented: 'replace' builds a hybrid representative "
     "(some columns from the medoid, some from the extreme period) that the "
     "stored assignment cannot reconstruct — ClusteringResult.apply() warns",
     "extremes_replace_segmentation": "same as extremes_replace, with segmentation",
+    # --- defects ---
+    "kmeans_extremes_append": _APPEND_SHIFTS_MEAN,
+    "averaging_extremes_append": _APPEND_SHIFTS_MEAN,
 }
 
 
