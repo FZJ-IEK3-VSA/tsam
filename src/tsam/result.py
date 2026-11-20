@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import warnings
+from collections import Counter
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, cast
@@ -20,6 +21,7 @@ from tsam.commons import (
 )
 from tsam.config import (
     ClusterConfig,
+    Distribution,
     ExtremeConfig,
     SegmentConfig,
     representation_from_dict,
@@ -1089,10 +1091,10 @@ class ClusteringResult:
     def _inexact_transfer_reason(self) -> str | None:
         """Why replaying this clustering cannot reproduce it exactly, if it cannot.
 
-        Returns None when a transfer is exact. Both cases below come from
-        extreme-period handling changing the representatives after the fact:
-        `apply()` replays the stored assignment, and the stored assignment is
-        not what those representatives were built from.
+        Returns None when a transfer is exact. `apply()` represents every
+        cluster from the members the stored assignment gives it. The cases
+        below are the ones where extreme-period handling built a representative
+        that cannot be obtained that way.
         """
         if self.extremes_config is None:
             return None
@@ -1104,15 +1106,40 @@ class ClusteringResult:
                 "directly, without that injection. Use 'append' or "
                 "'new_cluster' for an exact transfer"
             )
-        if self.cluster_centers is None:
+        # A selected representation stores the period it chose, for the extreme
+        # clusters as well, and replays exactly.
+        if self.cluster_centers is not None or not self.extreme_cluster_indices:
+            return None
+
+        cluster = self.cluster_config or ClusterConfig(
+            representation=self.representation
+        )
+        representation = cluster.get_representation()
+        if (
+            isinstance(representation, Distribution)
+            and representation.scope == "global"
+        ):
             return (
-                f"the {self.extremes_config.method!r} extreme method moves a "
-                "period into its own cluster after that period's original "
-                "cluster was represented, and this representation is computed "
-                "from the cluster members rather than stored as a period index. "
-                "A transfer therefore recomputes that one cluster without the "
-                "moved period. Use a 'medoid' or 'maxoid' representation for an "
-                "exact transfer"
+                "Distribution(scope='global') spreads one duration curve over "
+                "all clusters. The aggregation keeps the periods of the extreme "
+                "clusters out of that curve and represents each extreme cluster "
+                "by its extreme period; a transfer spreads the curve of all "
+                "periods over all clusters, the extreme ones included. Use a "
+                "'medoid' or 'maxoid' representation for an exact transfer"
+            )
+
+        n_members = Counter(self.cluster_assignments)
+        if any(
+            n_members[cluster_id] > 1 for cluster_id in self.extreme_cluster_indices
+        ):
+            return (
+                f"the {self.extremes_config.method!r} extreme method represents "
+                "an extreme cluster by its extreme period, although the cluster "
+                "also holds the periods that were reassigned to it. This "
+                "representation is computed from the cluster members rather "
+                "than stored as a period index, so a transfer computes the "
+                "extreme cluster from all of its members. Use 'append', or a "
+                "'medoid' or 'maxoid' representation, for an exact transfer"
             )
         return None
 
@@ -1248,29 +1275,30 @@ class ClusteringResult:
             Aggregation result using this clustering.
 
         Note:
-            **Extreme period transfer limitations.** Extreme-period handling
-            runs *after* the representatives have been computed, and only the
-            assignment it leaves behind is stored. Two configurations therefore
-            cannot be replayed exactly, and both emit a `UserWarning`:
+            **Extreme period transfer limitations.** A transfer represents
+            every cluster from the members the stored assignment gives it.
+            Three configurations build a representative that cannot be
+            obtained that way, and each emits a `UserWarning`:
 
             - **`method="replace"`** builds a hybrid representative — some
               columns from the cluster representative, some from the extreme
               period. A transfer uses the stored cluster centers directly,
               without that injection.
-            - **`method="append"` or `"new_cluster"` with a representation that
-              is *computed* rather than *selected*** (`"mean"`, `"distribution"`,
-              `MinMaxMean(...)`, …). These methods move a period into its own
-              cluster after that period's original cluster was represented. A
-              selected representation (`"medoid"`, `"maxoid"`) stores the chosen
-              period's index and replays exactly; a computed one is recomputed
-              from the stored assignment, which no longer contains the moved
-              period, so that one cluster differs. With
-              `preserve_column_means=True` the rescaling then spreads the
-              difference across every cluster.
+            - **`method="new_cluster"` with a representation that is
+              *computed* rather than *selected*** (`"mean"`, `"distribution"`,
+              `MinMaxMean(...)`, …), when a period was reassigned to an extreme
+              cluster. The extreme cluster is represented by its extreme
+              period, but a transfer computes it from all of its members. The
+              other clusters replay exactly.
+            - **`Distribution(scope="global")` with `"append"` or
+              `"new_cluster"`.** One duration curve is spread over all
+              clusters. The aggregation keeps the periods of the extreme
+              clusters out of it; a transfer does not.
 
-            For an exact transfer with extreme periods, use `"append"` or
-            `"new_cluster"` together with a `"medoid"` or `"maxoid"`
-            representation.
+            A selected representation (`"medoid"`, `"maxoid"`) stores the chosen
+            period's index and replays exactly with `"append"` and
+            `"new_cluster"`. So does `"append"` with a computed representation
+            other than `Distribution(scope="global")`.
 
         Examples:
             >>> # Cluster on wind data, apply to full dataset
