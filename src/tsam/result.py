@@ -1258,7 +1258,7 @@ class ClusteringResult:
               period. A transfer uses the stored cluster centers directly,
               without that injection.
             - **`method="append"` or `"new_cluster"` with a representation that
-              is *computed* rather than *selected*** (`"mean"`, `"distribution"`,
+              is *computed* rather than *selected*** (`"mean"`, `Distribution(...)`,
               `MinMaxMean(...)`, …). These methods move a period into its own
               cluster after that period's original cluster was represented. A
               selected representation (`"medoid"`, `"maxoid"`) stores the chosen

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from conftest import RESULTS_DIR, TESTDATA_CSV
-from tsam import ClusterConfig, SegmentConfig, aggregate
+from tsam import ClusterConfig, Distribution, SegmentConfig, aggregate
 from tsam.algorithms.representations import representations
 
 
@@ -93,7 +93,6 @@ def test_representation_in_segmentation():
         clusterOrder,
         default="mean",
         representation_method="mean",
-        distribution_period_wise=False,
         n_timesteps_per_period=1,
     )
 
@@ -101,8 +100,7 @@ def test_representation_in_segmentation():
         segmentationCandidates,
         clusterOrder,
         default="mean",
-        representation_method="distribution",
-        distribution_period_wise=True,
+        representation_method=Distribution(),
         n_timesteps_per_period=1,
     )
 

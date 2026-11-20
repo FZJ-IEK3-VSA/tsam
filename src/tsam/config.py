@@ -20,8 +20,6 @@ RepresentationMethod = Literal[
     "mean",
     "medoid",
     "maxoid",
-    "distribution",
-    "distribution_minmax",
 ]
 
 # Representation each clustering method falls back to when
@@ -154,8 +152,7 @@ class Distribution:
             segment representation). "cluster" is accepted as a deprecated alias
             for "local" (the old name, which was misleading for segment
             representations where the group is a segment, not a cluster).
-        preserve_minmax: If True, also preserves min/max values per timestep
-            (equivalent to old "distribution_minmax").
+        preserve_minmax: If True, also preserves min/max values per timestep.
         reference_attribute: Name of a data column. If given, a single temporal
             ordering derived from this attribute is applied to all attributes,
             preserving their concurrency (co-incidence in time) with the
@@ -300,16 +297,24 @@ class MinMaxMean:
 Representation = RepresentationMethod | Distribution | MinMaxMean
 
 
-def _reject_minmax_mean_string(representation: object) -> None:
-    """Reject the bare ``"minmax_mean"`` string.
+def _reject_removed_string(representation: object) -> None:
+    """Reject the representation strings that typed objects have replaced.
 
-    The string cannot say which columns keep their min or max, so it used to
-    fall back to ``"mean"`` for every column without any signal (#490).
+    ``"minmax_mean"`` cannot say which columns keep their min or max, so it used
+    to fall back to ``"mean"`` for every column without any signal (#490).
+    ``"distribution"`` and ``"distribution_minmax"`` were redundant with
+    ``Distribution(...)`` and could not reach its other options (#489).
     """
     if representation == "minmax_mean":
         raise ValueError(
             'representation="minmax_mean" cannot specify which columns use min '
             "or max. Pass MinMaxMean(max_columns=[...], min_columns=[...]) instead."
+        )
+    if representation in ("distribution", "distribution_minmax"):
+        minmax = "preserve_minmax=True" if representation != "distribution" else ""
+        raise ValueError(
+            f'representation="{representation}" is no longer supported. '
+            f"Pass Distribution({minmax}) instead."
         )
 
 
@@ -397,15 +402,14 @@ class ClusterConfig:
             - "mean": Centroid (average of cluster members)
             - "medoid": Actual period closest to centroid
             - "maxoid": Actual period most dissimilar to others
-            - "distribution": Preserve value distribution (duration curve)
-            - "distribution_minmax": Distribution + preserve min/max values
 
             Typed objects (for additional options):
             - ``Distribution(scope="local"|"global", preserve_minmax=False)``:
-              Preserve value distribution. ``scope`` controls whether each
-              cluster's distribution is preserved separately ("local") or
-              only the overall time series distribution ("global"). ``"cluster"``
-              is a deprecated alias for ``"local"``.
+              Preserve value distribution (duration curve). ``scope`` controls
+              whether each cluster's distribution is preserved separately
+              ("local") or only the overall time series distribution
+              ("global"). ``preserve_minmax=True`` also preserves min/max
+              values. ``"cluster"`` is a deprecated alias for ``"local"``.
             - ``MinMaxMean(max_columns=[...], min_columns=[...])``:
               Combine min/max/mean per column. Columns not listed default to mean.
 
@@ -460,7 +464,7 @@ class ClusterConfig:
                 method = KMedoids(solver=solver)
             # solver has no effect for non-kmedoids methods (it never did); ignored.
 
-        _reject_minmax_mean_string(representation)
+        _reject_removed_string(representation)
 
         object.__setattr__(self, "method", method)
         object.__setattr__(self, "representation", representation)
@@ -572,8 +576,7 @@ class SegmentConfig:
         representation: How to represent each segment:
             - "mean": Average value of timesteps in segment
             - "medoid": Actual timestep closest to segment mean
-            - "distribution": Preserve distribution within segment
-            - ``Distribution(...)``: Distribution with additional options (see Note)
+            - ``Distribution(...)``: Preserve the value distribution (see Note)
             - ``MinMaxMean(...)``: Per-column min/max/mean
 
     Note:
@@ -599,7 +602,7 @@ class SegmentConfig:
             raise ValueError(f"n_segments must be positive, got {self.n_segments}")
         # Note: Upper bound validation (n_segments <= timesteps_per_period)
         # is performed in api.aggregate() when period_duration is known.
-        _reject_minmax_mean_string(self.representation)
+        _reject_removed_string(self.representation)
         if (
             isinstance(self.representation, Distribution)
             and self.representation.preserve_minmax

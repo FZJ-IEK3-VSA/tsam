@@ -19,12 +19,12 @@ Examples:
 
     For more control, use configuration objects:
 
-    >>> from tsam import aggregate, ClusterConfig, SegmentConfig
+    >>> from tsam import aggregate, ClusterConfig, Distribution, SegmentConfig
     >>>
     >>> result = aggregate(
     ...     df,
     ...     n_clusters=8,
-    ...     cluster=ClusterConfig(method="hierarchical", representation="distribution"),
+    ...     cluster=ClusterConfig(method="hierarchical", representation=Distribution()),
     ...     segments=SegmentConfig(n_segments=12),
     ... )
 """

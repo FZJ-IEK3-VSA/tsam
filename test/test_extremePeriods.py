@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from conftest import TESTDATA_CSV
-from tsam import ClusterConfig, ExtremeConfig, aggregate
+from tsam import ClusterConfig, Distribution, ExtremeConfig, aggregate
 
 
 def test_extremePeriods():
@@ -93,7 +93,7 @@ def test_new_cluster_emptying_a_regular_cluster():
         n_clusters=8,
         period_duration=24,
         cluster=ClusterConfig(
-            method="hierarchical", representation="distribution_minmax"
+            method="hierarchical", representation=Distribution(preserve_minmax=True)
         ),
         extremes=ExtremeConfig(
             method="new_cluster", max_value=["Load"], min_value=["T"]

@@ -17,6 +17,7 @@ you — these are the ones that do:
 | upgrade from **3.4.1 or earlier** and use `distribution_minmax` / `maxoid` | [Integral and min/max preservation](#integral-and-minmax-preservation) |
 | transfer a clustering built with `scale_by_column_means` | [Transferring a clustering](#transferring-a-clustering-clusteringresultapply) |
 | rely on a `MinMaxMean` column name that does not exist | [Configurations that now raise or warn](#configurations-that-now-raise-or-warn) |
+| pass `representation="distribution"` or `"distribution_minmax"` as a string | [Configurations that now raise or warn](#configurations-that-now-raise-or-warn) |
 
 Weight handling and representative tie-breaking also changed, but neither
 alters results for anyone coming from 3.4.2.
@@ -184,6 +185,8 @@ which case it was never reproducible anyway.
 | Column in both `MinMaxMean.max_columns` and `min_columns` | silently `max` | `ValueError` |
 | `MinMaxMean` naming a column not in the data | silently ignored | `ValueError` |
 | `representation="minmax_mean"` as a bare string | silently `mean` | `ValueError`; pass `MinMaxMean(...)` |
+| `representation="distribution"` as a bare string | accepted | `ValueError`; pass `Distribution()` |
+| `representation="distribution_minmax"` as a bare string | accepted | `ValueError`; pass `Distribution(preserve_minmax=True)` |
 | `ClusterConfig.representation` with `use_duration_curves=True` | silently ignored | `UserWarning` |
 | Series length not a whole number of periods | padded silently | padded, with a `UserWarning` |
 
@@ -199,7 +202,7 @@ The v3 deprecation shims have been **removed** in v4:
 | `AggregationResult.cluster_weights` | `AggregationResult.cluster_counts` |
 | `ClusterConfig(normalize_column_means=...)` | `ClusterConfig(scale_by_column_means=...)` |
 | `ClusterConfig(weights=...)` | top-level `aggregate(..., weights={...})` |
-| Verbose representation names (`"meanRepresentation"`, `"distributionRepresentation"`, …) | short names (`"mean"`, `"distribution"`, …) — see [representation values](v2-to-v3.md#representation-method-values) |
+| Verbose representation names (`"meanRepresentation"`, `"distributionRepresentation"`, …) | short names (`"mean"`, `"medoid"`, …) and typed objects — see [representation values](v2-to-v3.md#representation-method-values) |
 | `LegacyAPIWarning` | — (no longer needed; the legacy API is gone) |
 | `tsam.weights.MIN_WEIGHT` | `tsam.options.min_weight` |
 

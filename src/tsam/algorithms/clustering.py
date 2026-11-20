@@ -165,7 +165,6 @@ def cluster_and_represent(
     cluster_method: ClusterMethod = "kmeans",
     representation_method: str | Distribution | MinMaxMean | None = None,
     representation_dict: dict[str, str] | None = None,
-    distribution_period_wise: bool = True,
     n_timesteps_per_period: int | None = None,
     representation_candidates: np.ndarray | None = None,
     reference_attribute_idx: int | None = None,
@@ -197,7 +196,6 @@ def cluster_and_represent(
         default=DEFAULT_REPRESENTATION[method_name(cluster_method)],
         representation_method=representation_method,
         representation_dict=representation_dict,
-        distribution_period_wise=distribution_period_wise,
         n_timesteps_per_period=n_timesteps_per_period,
         reference_attribute_idx=reference_attribute_idx,
     )
