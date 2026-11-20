@@ -240,9 +240,8 @@ def use_predefined_assignments(
     candidates under the same assignment.
 
     This is the one path that does not run `assign_clusters`, so the stored
-    order is never densified. A label space with a gap is caught by
-    `representations` when centers are recomputed, but goes unchecked when
-    center indices were saved; `_drop_empty_clusters` closes it later.
+    order is validated rather than densified. Silently densifying it would make
+    a replay return fewer clusters than the stored clustering declares.
 
     Args:
         candidates: Candidate period matrix for the new data.
@@ -262,7 +261,20 @@ def use_predefined_assignments(
     Note:
         `cluster_periods` is the from-scratch clustering this path replaces.
     """
+    labels = np.unique(np.asarray(predef.cluster_order))
+    if labels.size and not np.array_equal(labels, np.arange(labels.size)):
+        raise ValueError(
+            "cluster_assignments must use every label from 0 to "
+            f"{int(labels.max())}; predefined assignments cannot contain "
+            "empty clusters."
+        )
+
     if predef.cluster_center_indices is not None:
+        if len(predef.cluster_center_indices) != labels.size:
+            raise ValueError(
+                "cluster_centers must contain one index for every cluster in "
+                "cluster_assignments."
+            )
         return (
             candidates[predef.cluster_center_indices],
             list(predef.cluster_center_indices),

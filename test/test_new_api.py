@@ -1,5 +1,7 @@
 """Tests for the new simplified API."""
 
+from dataclasses import replace
+
 import pandas as pd
 import pytest
 
@@ -326,6 +328,18 @@ class TestClusteringResult:
             result1.cluster_representatives,
             result2.cluster_representatives,
         )
+
+    def test_apply_rejects_empty_predefined_cluster(self, sample_data):
+        clustering = aggregate(sample_data, n_clusters=8).clustering
+        assignments = tuple(
+            0 if cluster == 3 else cluster for cluster in clustering.cluster_assignments
+        )
+        clustering = replace(clustering, cluster_assignments=assignments)
+
+        with pytest.raises(
+            ValueError, match="cluster_assignments must use every label"
+        ):
+            clustering.apply(sample_data)
 
     def test_clustering_from_dict_and_json(self, sample_data, tmp_path):
         """Test clustering transfer via dict and JSON file roundtrip."""
