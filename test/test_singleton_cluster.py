@@ -1,33 +1,33 @@
 """``Distribution(scope="local")`` must keep the temporal order of its clusters.
- 
+
 The local duration representation sorts each cluster's values to build the
 duration curve and then derives the temporal order from the cluster's data.
 If that sort happens in place on a reshape of the cluster data, it rewrites
 the data whenever the reshape is a view instead of a copy. That is the case
 for
- 
+
 * a cluster with a single member, whatever the number of attributes, and
 * data with a single attribute, whatever the size of the cluster.
- 
+
 The order then degenerates to the identity and every attribute comes back as
 a monotonically rising ramp, all perfectly correlated with each other. Only a
 cluster with several members in data with several attributes is unaffected.
 """
- 
+
 import numpy as np
 import pandas as pd
 import pytest
- 
+
 from tsam import ClusterConfig, Distribution, aggregate
- 
+
 T = 24
- 
- 
+
+
 @pytest.fixture(params=[["x"], ["x", "y"]], ids=["one_column", "two_columns"])
 def three_periods(request):
     """Two alike periods and one on its own: hierarchical clustering into two
     clusters yields one pair and one singleton (period 2).
- 
+
     Every test runs once with one attribute and once with two, because the
     two shapes fail for different clusters.
     """
@@ -39,8 +39,8 @@ def three_periods(request):
         index=pd.date_range("2025-01-01", periods=3 * T, freq="h"),
     )
     return frame[request.param]
- 
- 
+
+
 def _aggregate(frame, representation):
     return aggregate(
         frame,
@@ -48,8 +48,8 @@ def _aggregate(frame, representation):
         period_duration=T,
         cluster=ClusterConfig(method="hierarchical", representation=representation),
     )
- 
- 
+
+
 def _singleton_representative(frame, representation):
     result = _aggregate(frame, representation)
     (singleton,) = [c for c, n in result.cluster_counts.items() if n == 1]
@@ -57,8 +57,8 @@ def _singleton_representative(frame, representation):
     assert member == 2
     rep = result.cluster_representatives.loc[singleton].sort_index()
     return rep, frame.iloc[member * T : (member + 1) * T]
- 
- 
+
+
 @pytest.mark.parametrize(
     "representation",
     [
@@ -75,8 +75,8 @@ def test_singleton_cluster_is_represented_by_its_member(three_periods, represent
         np.testing.assert_allclose(
             rep[column].to_numpy(), member[column].to_numpy(), atol=1e-12
         )
- 
- 
+
+
 def test_singleton_cluster_is_not_a_sorted_ramp(three_periods):
     rep, member = _singleton_representative(three_periods, Distribution(scope="local"))
     for column in three_periods.columns:
@@ -85,12 +85,12 @@ def test_singleton_cluster_is_not_a_sorted_ramp(three_periods):
         np.testing.assert_allclose(np.sort(got), np.sort(member[column].to_numpy()))
         # ... but the values must keep the member's temporal order
         assert not np.all(np.diff(got) >= 0), f"{column} came back sorted ascending"
- 
- 
+
+
 def test_multi_member_cluster_follows_mean_profile(three_periods):
     """The pair cluster is a real duration representation: the per-rank mean
     of the two members, ordered by their mean profile.
- 
+
     With two attributes this cluster was never affected. With one attribute it
     came back as a sorted ramp, exactly like the singleton.
     """
