@@ -49,7 +49,7 @@ dependencies = [
   "numpy>=1.22.4,<=2.5.4",
   "pyomo>=6.4.3,<=6.10.1",
   "tqdm>=4.21.0,<=4.70.1",
-  "highspy>=1.7.2,<=1.15.1",
+  "highspy>=1.7.2,<=1.16.0",
 ]
 
 # The CI workflows read this via `python-version-file: pyproject.toml` and run
