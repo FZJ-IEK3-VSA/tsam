@@ -28,6 +28,7 @@
 [![Coverage](https://codecov.io/gh/FZJ-IEK3-VSA/tsam/branch/develop/graph/badge.svg)](https://codecov.io/gh/FZJ-IEK3-VSA/tsam)
 [![Documentation](https://readthedocs.org/projects/tsam/badge/?version=latest)](https://tsam.readthedocs.io/en/latest/)
 [![License](https://img.shields.io/pypi/l/tsam)](https://github.com/FZJ-IEK3-VSA/tsam/blob/develop/LICENSE.txt)
+[![DOI](https://img.shields.io/badge/DOI-10.2139%2Fssrn.7590235-blue)](https://doi.org/10.2139/ssrn.7590235)
 
 <!-- readme-only:start -->
 📖 **Read the full documentation at [tsam.readthedocs.io](https://tsam.readthedocs.io/).**
@@ -167,9 +168,14 @@ The example time series are based on a department [publication](https://www.mdpi
 
 ## Citation
 
-If you want to use ETHOS.TSAM in a published work, **please kindly cite**:
+If you use ETHOS.TSAM or its documentation to produce scientific results, **please cite our software paper**:
+* [**ETHOS.TSAM software paper**](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7590235) (SSRN)
+
+If you use the Pareto-optimal aggregation — `tsam.tuning.find_pareto_front` or
+`tsam.tuning.find_optimal_combination` — **please additionally cite** the paper that
+introduced the method:
 * Hoffmann et al. (2022):\
-[**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://www.sciencedirect.com/science/article/abs/pii/S0306261922004342)
+[**The Pareto-Optimal Temporal Aggregation of Energy System Models**](https://www.sciencedirect.com/science/article/pii/S0306261922004342)
 
 
 ## Further reading

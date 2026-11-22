@@ -15,7 +15,14 @@ handling complexity in energy system models.
 
 ## Citing ETHOS.TSAM
 
-If you use ETHOS.TSAM in scientific work, please cite **Hoffmann et al. (2022)**.
+If you use ETHOS.TSAM or its documentation to produce scientific results, please cite our
+[software paper](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7590235).
+
+If you use the Pareto-optimal aggregation —
+[`find_pareto_front`][tsam.tuning.find_pareto_front] or
+[`find_optimal_combination`][tsam.tuning.find_optimal_combination] — please
+**additionally** cite **Hoffmann et al. (2022)**, the paper that introduced the method
+(listed below).
 
 ## Publications
 
